@@ -1,0 +1,596 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { MonthCalendar } from "./MonthCalendar";
+import { LoadingScreen } from "./LoadingScreen";
+import { ErrorScreen, NoMatchScreen } from "./StatusScreens";
+import { ItineraryView } from "./ItineraryView";
+import { aboutName, possessiveName, pronounSet } from "@/lib/pronouns";
+import type { Area, GenerateResponse, Itinerary, PlanInputs, Pronoun } from "@/lib/types";
+
+/**
+ * The multi-step input flow: one question per screen with a slim progress
+ * indicator, exactly as designed — plus a pronoun/name field on the
+ * personalisation step so anyone can plan for anyone.
+ */
+
+type Phase =
+  | { name: "steps"; step: number }
+  | { name: "loading" }
+  | { name: "result"; itinerary: Itinerary }
+  | { name: "no_match"; data: Extract<GenerateResponse, { status: "no_match" }> }
+  | { name: "error"; message?: string };
+
+const TOTAL_STEPS = 7;
+const VIBES = ["Romantic", "Calm", "Lively", "Fun", "Adventurous", "Chill"];
+const START_TIMES = ["10:00", "13:00", "16:00", "17:30", "19:00"];
+const DURATIONS: { label: string; hours: number }[] = [
+  { label: "2h", hours: 2 },
+  { label: "4h", hours: 4 },
+  { label: "6h", hours: 6 },
+  { label: "All evening", hours: 7 },
+];
+const OCCASIONS = [
+  { id: "first_date", icon: "☼", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
+  { id: "anniversary", icon: "❦", title: "Anniversary", sub: "Pull out the stops — this one matters" },
+  { id: "date_night", icon: "☾", title: "Regular date night", sub: "Keep it fresh without the fuss" },
+  { id: "friend_outing", icon: "⚘", title: "Friend outing", sub: "Good food, good company, no candles" },
+] as const;
+
+function defaultDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); // next Saturday
+  return d.toISOString().slice(0, 10);
+}
+
+function defaultInputs(): PlanInputs {
+  return {
+    areaIds: [],
+    areaNames: [],
+    surpriseMe: false,
+    budget: 800,
+    date: defaultDate(),
+    startTime: "17:30",
+    hours: 4,
+    vibes: [],
+    occasion: "date_night",
+    partner: { name: "", pronoun: "they", food: "", place: "", interests: "", avoid: "" },
+  };
+}
+
+const STORE_KEY = "aduro.plan.v1";
+
+export function PlanFlow({ areas }: { areas: Area[] }) {
+  const [inputs, setInputs] = useState<PlanInputs>(defaultInputs);
+  const [phase, setPhase] = useState<Phase>({ name: "steps", step: 0 });
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore in-progress plans (survives the magic-link round trip).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.inputs) setInputs(saved.inputs);
+        if (saved.itinerary) setPhase({ name: "result", itinerary: saved.itinerary });
+        if (saved.shareSlug) setShareSlug(saved.shareSlug);
+      }
+    } catch {
+      /* fresh start */
+    }
+    setHydrated(true);
+  }, []);
+
+  const persist = useCallback(
+    (next: { inputs?: PlanInputs; itinerary?: Itinerary | null; shareSlug?: string | null }) => {
+      try {
+        const raw = sessionStorage.getItem(STORE_KEY);
+        const cur = raw ? JSON.parse(raw) : {};
+        const merged = { ...cur, ...next };
+        if (next.itinerary === null) delete merged.itinerary;
+        sessionStorage.setItem(STORE_KEY, JSON.stringify(merged));
+      } catch {
+        /* storage unavailable */
+      }
+    },
+    []
+  );
+
+  const update = (patch: Partial<PlanInputs>) => {
+    setInputs((cur) => {
+      const next = { ...cur, ...patch };
+      persist({ inputs: next });
+      return next;
+    });
+  };
+
+  async function generate(overrides?: Partial<PlanInputs>) {
+    const finalInputs = { ...inputs, ...overrides };
+    if (overrides) update(overrides);
+    setPhase({ name: "loading" });
+    setShareSlug(null);
+    persist({ shareSlug: null, itinerary: null });
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(finalInputs),
+      });
+      const data: GenerateResponse = await res.json();
+      if (data.status === "ok") {
+        setPhase({ name: "result", itinerary: data.itinerary });
+        persist({ itinerary: data.itinerary });
+      } else if (data.status === "no_match") {
+        setPhase({ name: "no_match", data });
+      } else {
+        setPhase({ name: "error", message: data.message });
+      }
+    } catch {
+      setPhase({ name: "error" });
+    }
+  }
+
+  // Auto-retry a pending save after the magic-link round trip.
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (sessionStorage.getItem("aduro.pendingSave") === "1" && phase.name === "result") {
+        sessionStorage.removeItem("aduro.pendingSave");
+        void savePlan(phase.itinerary);
+      }
+    } catch {
+      /* noop */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, phase.name]);
+
+  async function savePlan(itinerary: Itinerary): Promise<string | null> {
+    if (shareSlug) return shareSlug;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs, itinerary }),
+      });
+      if (res.status === 401) {
+        sessionStorage.setItem("aduro.pendingSave", "1");
+        window.location.href = "/login?next=/plan/new";
+        return null;
+      }
+      const data = await res.json();
+      if (data.share_slug) {
+        setShareSlug(data.share_slug);
+        persist({ shareSlug: data.share_slug });
+        return data.share_slug;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!hydrated) return <main className="min-h-screen bg-cream" />;
+
+  if (phase.name === "loading") return <LoadingScreen inputs={inputs} />;
+
+  if (phase.name === "no_match") {
+    return (
+      <NoMatchScreen
+        headline={phase.data.headline}
+        message={phase.data.message}
+        suggestions={phase.data.suggestions}
+        onSuggestion={(s) => {
+          if (s.action === "raise_budget" && s.value) {
+            void generate({ budget: s.value });
+          } else {
+            void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
+          }
+        }}
+        onStartOver={() => {
+          setInputs(defaultInputs());
+          sessionStorage.removeItem(STORE_KEY);
+          setPhase({ name: "steps", step: 0 });
+        }}
+      />
+    );
+  }
+
+  if (phase.name === "error") {
+    return <ErrorScreen message={phase.message} onRetry={() => void generate()} />;
+  }
+
+  if (phase.name === "result") {
+    return (
+      <ItineraryView
+        inputs={inputs}
+        itinerary={phase.itinerary}
+        onItineraryChange={(it) => {
+          setPhase({ name: "result", itinerary: it });
+          setShareSlug(null);
+          persist({ itinerary: it, shareSlug: null });
+        }}
+        onEdit={() => setPhase({ name: "steps", step: TOTAL_STEPS - 1 })}
+        shareSlug={shareSlug}
+        onSave={() => savePlan(phase.itinerary)}
+        saving={saving}
+      />
+    );
+  }
+
+  /* ── Step screens ── */
+  const step = phase.step;
+  const goBack = () =>
+    step === 0 ? (window.location.href = "/") : setPhase({ name: "steps", step: step - 1 });
+  const goNext = () =>
+    step === TOTAL_STEPS - 1 ? void generate() : setPhase({ name: "steps", step: step + 1 });
+
+  const ps = pronounSet(inputs.partner.pronoun);
+  const who = aboutName(inputs.partner.name, inputs.partner.pronoun);
+  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
+
+  const canContinue =
+    (step !== 0 || inputs.surpriseMe || inputs.areaIds.length > 0) &&
+    (step !== 3 || inputs.vibes.length > 0);
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col">
+      {/* Top bar + slim progress indicator */}
+      <div className="flex items-center justify-between px-6 pt-4">
+        <button className="backbtn" onClick={goBack} aria-label="Back">
+          ←
+        </button>
+        <div className="text-caption font-semibold text-mutedbrown">
+          {step + 1} of {TOTAL_STEPS}
+        </div>
+      </div>
+      <div className="flex gap-1.5 px-6 pt-[18px]">
+        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+          <i key={i} className={`prog-seg ${i <= step ? "prog-on" : ""}`} />
+        ))}
+      </div>
+
+      <div className="flex flex-1 flex-col px-6" key={step}>
+        {step === 0 && (
+          <>
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">Where in Accra?</h2>
+            <p className="mb-[26px] text-body text-mutedbrown">
+              Pick one or two areas — we&apos;ll keep the stops close together.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {areas.map((a) => {
+                const on = inputs.areaIds.includes(a.id);
+                return (
+                  <button
+                    key={a.id}
+                    className={`chip ${on ? "chip-on" : ""}`}
+                    onClick={() => {
+                      const ids = on
+                        ? inputs.areaIds.filter((x) => x !== a.id)
+                        : [...inputs.areaIds, a.id].slice(-2);
+                      update({
+                        areaIds: ids,
+                        areaNames: areas.filter((x) => ids.includes(x.id)).map((x) => x.name),
+                        surpriseMe: false,
+                      });
+                    }}
+                  >
+                    {a.name}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className={`mt-[22px] flex items-center gap-3 rounded-btn border-[1.5px] border-dashed px-[18px] py-4 text-left transition-colors ${
+                inputs.surpriseMe ? "border-flame bg-sand/60" : "border-amber-deep/60"
+              }`}
+              onClick={() =>
+                update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
+              }
+            >
+              <span className="vic bg-flame text-cream">✦</span>
+              <span>
+                <span className="block text-[16px] font-bold text-flame">Surprise me</span>
+                <span className="block text-[14px] text-mutedbrown">
+                  We&apos;ll choose a corner of the city you haven&apos;t tried.
+                </span>
+              </span>
+            </button>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
+              What&apos;s the budget?
+            </h2>
+            <p className="mb-[26px] text-body text-mutedbrown">For both of you, all in.</p>
+            <div className="my-2 text-center">
+              <span className="font-display text-[56px] font-bold tracking-[-0.02em]">
+                GHS {inputs.budget.toLocaleString()}
+              </span>
+            </div>
+            <div className="px-1.5 py-2">
+              <input
+                type="range"
+                min={100}
+                max={3000}
+                step={50}
+                value={inputs.budget}
+                onChange={(e) => update({ budget: Number(e.target.value) })}
+                className="budget-slider"
+                aria-label="Budget in Ghana cedis"
+              />
+            </div>
+            <div className="flex justify-between px-1.5 text-caption text-mutedbrown">
+              <span>GHS 100</span>
+              <span>GHS 3,000</span>
+            </div>
+            <div className="mt-6">
+              <span className="flbl">Or type it</span>
+              <input
+                className="inp w-[140px] font-mono font-bold"
+                type="number"
+                min={100}
+                max={3000}
+                value={inputs.budget}
+                onChange={(e) =>
+                  update({
+                    budget: Math.max(100, Math.min(3000, Number(e.target.value) || 100)),
+                  })
+                }
+              />
+            </div>
+            <div className="why mt-6">We keep the whole plan inside this — transport included.</div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
+              When&apos;s the date?
+            </h2>
+            <p className="mb-[26px] text-body text-mutedbrown">
+              We&apos;ll check what&apos;s open and what&apos;s on.
+            </p>
+            <MonthCalendar value={inputs.date} onChange={(date) => update({ date })} />
+            <div className="mt-5">
+              <span className="flbl">Start time</span>
+              <div className="flex flex-wrap gap-2.5">
+                {START_TIMES.map((t) => (
+                  <button
+                    key={t}
+                    className={`chip ${inputs.startTime === t ? "chip-on" : ""}`}
+                    onClick={() => update({ startTime: t })}
+                  >
+                    {new Date(`2000-01-01T${t}:00`).toLocaleTimeString("en-GB", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    }).toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5">
+              <span className="flbl">How long?</span>
+              <div className="flex flex-wrap gap-2.5">
+                {DURATIONS.map((d) => (
+                  <button
+                    key={d.label}
+                    className={`chip ${inputs.hours === d.hours ? "chip-on" : ""}`}
+                    onClick={() => update({ hours: d.hours })}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
+              What&apos;s the vibe?
+            </h2>
+            <p className="mb-[26px] text-body text-mutedbrown">
+              Choose up to three — we&apos;ll blend them.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {VIBES.map((v) => {
+                const val = v.toLowerCase();
+                const on = inputs.vibes.includes(val);
+                return (
+                  <button
+                    key={v}
+                    className={`chip px-6 py-4 text-[17px] ${on ? "chip-on" : ""}`}
+                    onClick={() =>
+                      update({
+                        vibes: on
+                          ? inputs.vibes.filter((x) => x !== val)
+                          : [...inputs.vibes, val].slice(-3),
+                      })
+                    }
+                  >
+                    {v}
+                  </button>
+                );
+              })}
+            </div>
+            {inputs.vibes.length > 0 && (
+              <div className="why mt-[26px]">
+                {vibeBlurb(inputs.vibes)}
+              </div>
+            )}
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
+              What&apos;s the occasion?
+            </h2>
+            <p className="mb-[26px] text-body text-mutedbrown">It changes the pace we plan for.</p>
+            <div className="flex flex-col gap-3">
+              {OCCASIONS.map((o) => {
+                const on = inputs.occasion === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    className={`card flex items-center gap-4 px-5 py-[18px] text-left transition-shadow ${
+                      on ? "border-2 border-flame" : "border-2 border-transparent"
+                    }`}
+                    onClick={() => update({ occasion: o.id })}
+                  >
+                    <span className={`vic ${on ? "bg-flame text-cream" : ""}`}>{o.icon}</span>
+                    <span className="flex-1">
+                      <span className="block text-[16px] font-bold">{o.title}</span>
+                      <span className="block text-[14px] text-mutedbrown">{o.sub}</span>
+                    </span>
+                    {on && <span className="font-extrabold text-flame">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {step === 5 && (
+          <>
+            {/* Extension in the design's language: who is this date for? The
+                design assumed "her"; the pronoun picker keeps copy personal
+                for anyone planning for anyone. */}
+            <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
+              Who are you planning for?
+            </h2>
+            <p className="mb-[26px] text-body text-mutedbrown">
+              A name is optional — it just makes the plan feel like theirs.
+            </p>
+            <div>
+              <span className="flbl">Their name (optional)</span>
+              <input
+                className="inp"
+                placeholder="e.g. Ama, Kofi…"
+                value={inputs.partner.name}
+                maxLength={60}
+                onChange={(e) => update({ partner: { ...inputs.partner, name: e.target.value } })}
+              />
+            </div>
+            <div className="mt-5">
+              <span className="flbl">How should we refer to them?</span>
+              <div className="flex flex-wrap gap-2.5">
+                {(
+                  [
+                    { id: "they", label: "They / them" },
+                    { id: "she", label: "She / her" },
+                    { id: "he", label: "He / him" },
+                  ] as { id: Pronoun; label: string }[]
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    className={`chip ${inputs.partner.pronoun === p.id ? "chip-on" : ""}`}
+                    onClick={() => update({ partner: { ...inputs.partner, pronoun: p.id } })}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="why mt-6">
+              Planning for a friend group? Pick &ldquo;they&rdquo; and skip the name.
+            </div>
+          </>
+        )}
+
+        {step === 6 && (
+          <>
+            <div className="kente mt-[26px] w-16" />
+            <h2 className="mb-2 mt-3.5 font-display text-stepq font-bold">
+              Now — tell us about {who}.
+            </h2>
+            <p className="mb-[22px] text-body text-mutedbrown">
+              Make it personal. The details you add here are what turn a plan into a thoughtful
+              date.
+            </p>
+            <div className="flex flex-col gap-[18px]">
+              <div>
+                <span className="flbl">A food or cuisine {ps.they} love{inputs.partner.pronoun === "they" ? "" : "s"}</span>
+                <input
+                  className="inp"
+                  placeholder="e.g. jollof, sushi, waakye…"
+                  value={inputs.partner.food}
+                  onChange={(e) => update({ partner: { ...inputs.partner, food: e.target.value } })}
+                />
+              </div>
+              <div>
+                <span className="flbl">{cap(ps.their)} kind of place</span>
+                <input
+                  className="inp"
+                  placeholder="rooftops? gardens? cosy corners?"
+                  value={inputs.partner.place}
+                  onChange={(e) =>
+                    update({ partner: { ...inputs.partner, place: e.target.value } })
+                  }
+                />
+              </div>
+              <div>
+                <span className="flbl">Something {ps.they}&apos;{inputs.partner.pronoun === "they" ? "re" : "s"} into</span>
+                <input
+                  className="inp"
+                  placeholder="a movie, artist, or hobby"
+                  value={inputs.partner.interests}
+                  onChange={(e) =>
+                    update({ partner: { ...inputs.partner, interests: e.target.value } })
+                  }
+                />
+              </div>
+              <div>
+                <span className="flbl">Anything to avoid?</span>
+                <textarea
+                  className="ta"
+                  placeholder="allergies, loud music, long walks…"
+                  value={inputs.partner.avoid}
+                  onChange={(e) =>
+                    update({ partner: { ...inputs.partner, avoid: e.target.value } })
+                  }
+                />
+              </div>
+            </div>
+            <p className="mt-[18px] text-[14px] italic leading-relaxed text-mutedbrown">
+              This stays between us — it&apos;s only used to shape {poss} evening.
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2.5 px-6 pb-7 pt-5">
+        <button className="btn" onClick={goNext} disabled={!canContinue}>
+          {step === TOTAL_STEPS - 1 ? `Build ${poss} evening` : "Continue"}
+        </button>
+      </div>
+    </main>
+  );
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function vibeBlurb(vibes: string[]): string {
+  const label = vibes.join(" + ");
+  const flavour: Record<string, string> = {
+    romantic: "warm light and room to talk",
+    calm: "quiet corners",
+    lively: "energy and a bit of noise",
+    fun: "games and easy laughs",
+    adventurous: "something neither of you has tried",
+    chill: "zero pressure, easy pace",
+  };
+  const bits = vibes.map((v) => flavour[v]).filter(Boolean).slice(0, 2);
+  return `${cap(label)} — think ${bits.join(", ")}.`;
+}

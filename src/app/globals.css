@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Shared component patterns from the design style tile
+  (buttons, chips, cards, kente strip, timeline connector, budget bar).
+  Colors/fonts come from tailwind.config.ts tokens only.
+*/
+
+@layer base {
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Primary button — .btn in design */
+  .btn {
+    @apply flex h-[54px] cursor-pointer items-center justify-center rounded-btn bg-flame text-[17px] font-bold tracking-[0.01em] text-cream transition-colors hover:bg-flame-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /* Secondary button — .btn2 in design */
+  .btn2 {
+    @apply flex h-[54px] cursor-pointer items-center justify-center rounded-btn border-[1.5px] border-line bg-transparent text-[16px] font-semibold text-ink transition-colors hover:bg-sand/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /* Small button variant — .btnsm in design */
+  .btnsm {
+    @apply h-11 rounded-icon px-5 text-[15px];
+  }
+
+  /* Selectable chip — .chip / .chip.on in design */
+  .chip {
+    @apply cursor-pointer rounded-chip border-[1.5px] border-chipborder bg-shell px-5 py-3 text-[16px] font-semibold text-cocoa transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+  }
+  .chip-on {
+    @apply border-flame bg-flame text-cream shadow-chip;
+  }
+
+  /* Card — .card / .stop in design */
+  .card {
+    @apply overflow-hidden rounded-card bg-shell shadow-card;
+  }
+
+  /* Kente accent strip — recolored to the new palette, same motif */
+  .kente {
+    @apply h-[5px] rounded-[3px];
+    background: repeating-linear-gradient(
+      90deg,
+      #f4501e 0 16px,
+      #ffb627 16px 24px,
+      #123b41 24px 40px,
+      #ffe9d2 40px 48px
+    );
+  }
+
+  /* Text input — .inp in design */
+  .inp {
+    @apply h-[54px] w-full rounded-input border-[1.5px] border-line bg-shell px-4 text-[16px] text-ink placeholder:text-mutedbrown/70 focus:border-flame focus:outline-none;
+  }
+
+  /* Textarea — .ta in design */
+  .ta {
+    @apply min-h-[76px] w-full resize-none rounded-input border-[1.5px] border-line bg-shell px-4 py-3.5 text-[16px] text-ink placeholder:text-mutedbrown/70 focus:border-flame focus:outline-none;
+  }
+
+  /* Field label — .flbl in design */
+  .flbl {
+    @apply mb-2 block text-[14px] font-bold tracking-[0.02em] text-lagoon;
+  }
+
+  /* "Why this fits" note — .why in design (serif italic → Poppins italic per font swap) */
+  .why {
+    @apply rounded-icon bg-whybg px-3.5 py-2.5 text-[14.5px] italic leading-relaxed text-cocoa;
+  }
+
+  /* Order line — .order in design */
+  .order-line {
+    @apply flex justify-between border-b border-dashed border-linesoft py-[7px] text-[15px] text-cocoa;
+  }
+
+  /* Time / label eyebrow — .stime in design */
+  .stime {
+    @apply font-mono text-[13px] font-bold tracking-[0.04em] text-flame;
+  }
+
+  /* "estimate" pill — .est in design */
+  .est {
+    @apply ml-1.5 rounded-md bg-sand px-[7px] py-[2px] font-mono text-[11px] text-mutedbrown;
+  }
+
+  /* Transport hop connector — .hop / .hopline in design */
+  .hopline {
+    @apply w-[2px];
+    background: repeating-linear-gradient(180deg, #e0b98a 0 6px, transparent 6px 12px);
+  }
+  .hopline-dark {
+    background: repeating-linear-gradient(180deg, #1e5058 0 6px, transparent 6px 12px);
+  }
+
+  /* Swap button — .swapbtn in design */
+  .swapbtn {
+    @apply flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-swap border-[1.5px] border-line bg-shell text-[16px] text-flame transition-colors hover:border-flame focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+  }
+
+  /* Skeleton shimmer — .shimmer in design */
+  .shimmer {
+    @apply relative overflow-hidden bg-track;
+  }
+  .shimmer::after {
+    content: "";
+    @apply absolute inset-0 animate-shimmer;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 253, 248, 0.67) 50%, transparent 80%);
+  }
+
+  /* Toast — .toast in design */
+  .toast {
+    @apply flex items-center gap-2.5 rounded-icon bg-lagoon px-[18px] py-3 text-[15px] font-semibold text-lagoon-faint shadow-toast;
+  }
+
+  /* Loading dot — .ldot in design */
+  .ldot {
+    @apply h-2.5 w-2.5 animate-pulsedot rounded-full bg-flame;
+  }
+
+  /* Icon tile — .vic in design */
+  .vic {
+    @apply flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-icon bg-sand text-[17px] text-flame;
+  }
+
+  /* Back button — .back in design */
+  .backbtn {
+    @apply flex h-10 w-10 cursor-pointer items-center justify-center rounded-icon border-[1.5px] border-line text-[18px] text-cocoa transition-colors hover:border-flame focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+  }
+
+  /* Progress rail — .prog in design */
+  .prog-seg {
+    @apply h-1 flex-1 rounded-sm bg-track transition-colors;
+  }
+  .prog-on {
+    @apply bg-flame;
+  }
+
+  /* Budget bar — .bbar / .bfill in design */
+  .bbar {
+    @apply rounded-bar bg-lagoon px-5 py-3.5 text-lagoon-faint;
+  }
+  .bfill {
+    @apply h-2 overflow-hidden rounded bg-lagoon-mid;
+  }
+  .bfill-i {
+    @apply block h-full rounded transition-[width] duration-500;
+    background: linear-gradient(90deg, #ffb627, #f4501e);
+  }
+
+  /* Admin table — .tbl in design */
+  .tbl th {
+    @apply border-b-[1.5px] border-track px-3.5 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.06em] text-mutedbrown;
+  }
+  .tbl td {
+    @apply border-b border-linesoft px-3.5 py-3 text-[14.5px] text-ink;
+  }
+  .tbl tbody tr:hover td {
+    @apply bg-sand/40;
+  }
+
+  /* Admin badges — .badge .b-ok .b-stale in design */
+  .badge {
+    @apply inline-block rounded-md px-[9px] py-[3px] text-[12px] font-bold;
+  }
+  .b-ok {
+    @apply bg-lagoon-faint text-lagoon;
+  }
+  .b-stale {
+    @apply bg-stale text-staletext;
+  }
+
+  /* Admin price input — .pinp in design */
+  .pinp {
+    @apply h-[34px] w-[88px] rounded-lg border-[1.5px] border-line bg-white px-2.5 font-mono text-[14px] text-ink focus:border-flame focus:outline-none focus:ring-[3px] focus:ring-flame/15;
+  }
+
+  /* Admin sidenav — .sidenav / .snav in design */
+  .snav {
+    @apply cursor-pointer px-6 py-[11px] text-[15px] font-semibold text-lagoon-soft transition-colors hover:text-lagoon-faint;
+  }
+  .snav-on {
+    @apply border-l-[3px] border-amber bg-lagoon-mid/50 pl-[21px] text-lagoon-faint;
+  }
+}
+
+/* Range slider styled to the design's budget slider */
+input[type="range"].budget-slider {
+  @apply h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-track;
+}
+input[type="range"].budget-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  @apply h-[26px] w-[26px] rounded-full border-[3px] border-flame bg-shell shadow-knob;
+}
+input[type="range"].budget-slider::-moz-range-thumb {
+  @apply h-[26px] w-[26px] rounded-full border-[3px] border-flame bg-shell shadow-knob;
+}
