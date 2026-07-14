@@ -74,7 +74,7 @@ export function MonthCalendar({
               onClick={() => onChange(iso)}
               className={`rounded-[10px] py-1.5 transition-colors ${
                 isSelected
-                  ? "bg-flame font-bold text-cream"
+                  ? "bg-flame font-bold text-blush"
                   : past
                     ? "cursor-not-allowed text-mutedbrown/50"
                     : "hover:bg-sand"

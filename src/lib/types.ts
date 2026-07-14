@@ -101,6 +101,7 @@ export interface ItineraryStop {
   image_url: string | null;
   google_maps_url?: string | null;
   reservation_required?: boolean;
+  reservation_requested?: boolean; // set client-side once a request is sent
 }
 
 export interface TransportHop {
@@ -132,6 +133,23 @@ export type GenerateResponse =
       suggestions: { label: string; action: "widen_area" | "raise_budget"; value?: number }[];
     }
   | { status: "error"; message: string };
+
+export type ReservationStatus = "requested" | "sent" | "confirmed" | "declined" | "cancelled";
+
+export interface ReservationRequest {
+  id: string;
+  venue_id: string | null;
+  venue_name: string;
+  user_id: string | null;
+  plan_slug: string | null;
+  party_size: number;
+  reservation_date: string;
+  arrival_time: string;
+  guest_name: string | null;
+  status: ReservationStatus;
+  channel: string;
+  created_at: string;
+}
 
 export interface SavedPlan {
   id: string;

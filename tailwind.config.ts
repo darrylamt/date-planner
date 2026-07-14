@@ -16,44 +16,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Surfaces
-        cream: "#FFF7ED", // app background (was #FAF3E3)
-        sand: "#FFE9D2", // secondary surface (was #F1E4CB)
-        shell: "#FFFDF8", // card background (was #FFFBF0)
-        parchment: "#FFF1DE", // itinerary page bg (was #F5EBD3)
+        // Surfaces — dark romantic: deep plum-black velvet
+        cream: "#1A0D14", // app background
+        sand: "#331A26", // secondary surface
+        shell: "#26131D", // card background
+        parchment: "#200F18", // itinerary page bg
+        blush: "#FFF1F6", // light text on accents / photos
         // Brand
         flame: {
-          DEFAULT: "#F4501E", // primary accent (was sunset rust #B04A17)
-          deep: "#D8430F", // hover (was #963D0F)
-          dark: "#C13A0B", // pressed / link hover (was #8F3A0E)
+          DEFAULT: "#E23D6D", // primary accent — deep rose
+          deep: "#C92C58", // hover
+          dark: "#AF2148", // pressed / link hover
         },
         amber: {
-          DEFAULT: "#FFB627", // gold accent (was #DE9E36)
-          deep: "#F5A300",
+          DEFAULT: "#E5B04E", // candlelight gold accent
+          deep: "#D19A32",
         },
         lagoon: {
-          DEFAULT: "#123B41", // dark surface (was dusk espresso #2E2013)
-          mid: "#1E5058", // budget bar track (was #4A3826)
-          soft: "#8FB8BD", // muted text on dark (was #C4AC8B)
-          faint: "#DCEBEC", // light text on dark (was #F6E9CF)
+          DEFAULT: "#3A1526", // raised dark surface — velvet wine
+          mid: "#55203A", // budget bar track
+          soft: "#BC8CA3", // muted text on dark
+          faint: "#F8E0EA", // light text on dark
         },
         // Ink & muted text
-        ink: "#211A14", // main text (was #382516)
-        cocoa: "#6B5442", // secondary text (was #66503B)
-        mutedbrown: "#94795F", // captions (was #7C6547)
+        ink: "#F7E9F0", // main text
+        cocoa: "#D6AFC1", // secondary text
+        mutedbrown: "#A87E92", // captions
         // Lines & chips
-        line: "#F1D8B8", // borders (was #DBC49D / #D6BE97)
-        linesoft: "#F7E6CC", // dashed dividers (was #E9D8B8)
-        chipborder: "#F0D2A8", // chip outline (was #DBC49D)
-        track: "#F3DDBE", // progress rail / slider rail (was #E5D3B3)
-        whybg: "#FFEFD6", // "why this fits" note bg (was #F5E8CE)
-        avoidbg: "#FFF0E3", // avoid-note bg
-        stale: "#FFE0C7", // stale badge bg
-        staletext: "#B33E0C", // stale badge text
+        line: "#4A2336", // borders
+        linesoft: "#3D1C2C", // dashed dividers
+        chipborder: "#5A2A40", // chip outline
+        track: "#40202F", // progress rail / slider rail
+        whybg: "#2E1522", // "why this fits" note bg
+        avoidbg: "#351726", // avoid-note bg
+        stale: "#4A2336", // stale badge bg
+        staletext: "#F2A2C0", // stale badge text
       },
       fontFamily: {
-        // Poppins for display + body (client request; replaces Newsreader / Familjen Grotesk)
-        display: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        // Playfair Display for headings (romantic serif); Poppins stays for body
+        display: ["var(--font-playfair)", "Georgia", "serif"],
         sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
         // Roboto Mono for prices, times and labels (design used ui-monospace)
         mono: ["var(--font-roboto-mono)", "ui-monospace", "monospace"],
@@ -78,11 +79,11 @@ const config: Config = {
         swap: "11px", // swap button
       },
       boxShadow: {
-        card: "0 4px 18px rgba(33, 26, 20, 0.07)",
-        phone: "0 16px 48px rgba(33, 26, 20, 0.14)",
-        chip: "0 4px 14px rgba(244, 80, 30, 0.30)",
-        knob: "0 3px 10px rgba(244, 80, 30, 0.35)",
-        toast: "0 8px 24px rgba(18, 59, 65, 0.35)",
+        card: "0 6px 22px rgba(0, 0, 0, 0.45)",
+        phone: "0 16px 48px rgba(0, 0, 0, 0.6)",
+        chip: "0 4px 14px rgba(226, 61, 109, 0.45)",
+        knob: "0 3px 10px rgba(226, 61, 109, 0.5)",
+        toast: "0 8px 24px rgba(0, 0, 0, 0.55)",
       },
       keyframes: {
         shimmer: {

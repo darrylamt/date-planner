@@ -41,6 +41,7 @@ export const itineraryStopSchema = z.object({
   image_url: z.string().nullable().default(null),
   google_maps_url: z.string().nullable().optional(),
   reservation_required: z.boolean().optional(),
+  reservation_requested: z.boolean().optional(),
 });
 
 export const itinerarySchema = z.object({

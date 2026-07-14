@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BackArrow } from "@/components/BackArrow";
 import { createClient } from "@/lib/supabase/server";
 import { SmartImage } from "@/components/SmartImage";
 import { ghs, shortDate } from "@/lib/format";
@@ -48,7 +49,7 @@ export default async function PlansPage() {
             {plan.itinerary.summary_route}
           </div>
         </div>
-        <div className="whitespace-nowrap font-mono font-bold text-lagoon">
+        <div className="whitespace-nowrap font-mono font-bold text-amber">
           {ghs(plan.estimated_total_ghs)}
         </div>
       </div>
@@ -71,7 +72,7 @@ export default async function PlansPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col">
       <div className="flex items-center justify-between px-6 pt-[22px]">
         <Link href="/" className="backbtn" aria-label="Home">
-          ←
+          <BackArrow />
         </Link>
         <div className="font-display text-[20px] font-bold">Your plans</div>
         <div className="w-10" />

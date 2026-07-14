@@ -44,7 +44,9 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
       suggestions.push({ label: `Widen to ${widerAreas.join(" & ")}`, action: "widen_area" });
     }
     const nudge = Math.min(3000, Math.max(inputs.budget + 150, Math.ceil((inputs.budget * 1.5) / 50) * 50));
-    suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
+    if (nudge > inputs.budget) {
+      suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
+    }
 
     return NextResponse.json({
       status: "no_match",
@@ -59,14 +61,17 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   if (floor > inputs.budget) {
     const areaLabel = inputs.surpriseMe ? "Accra" : inputs.areaNames.join(" & ");
     const nudge = Math.min(3000, Math.ceil((floor * 1.15) / 50) * 50);
+    const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [
+      { label: "Widen the search area", action: "widen_area" },
+    ];
+    if (nudge > inputs.budget) {
+      suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
+    }
     return NextResponse.json({
       status: "no_match",
       headline: `We couldn't fill the whole evening in ${areaLabel} at GHS ${inputs.budget}.`,
       message: "Honestly? The spots there run pricier. Two easy fixes:",
-      suggestions: [
-        { label: "Widen the search area", action: "widen_area" },
-        { label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge },
-      ],
+      suggestions,
     });
   }
 

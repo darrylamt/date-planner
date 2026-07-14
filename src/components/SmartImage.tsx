@@ -34,7 +34,7 @@ export function SmartImage({
           className="absolute inset-0"
           style={{
             background:
-              "repeating-linear-gradient(135deg, #FFE3C2 0 14px, #FFD5A6 14px 28px)",
+              "repeating-linear-gradient(135deg, #331A26 0 14px, #2A1420 14px 28px)",
           }}
           aria-label={alt}
         />
@@ -54,7 +54,7 @@ export function SmartImage({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(244,80,30,0) 55%, rgba(18,59,65,0.30))",
+              "linear-gradient(180deg, rgba(226,61,109,0) 55%, rgba(26,13,20,0.45))",
           }}
         />
       )}

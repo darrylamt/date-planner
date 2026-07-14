@@ -11,13 +11,18 @@
 @layer base {
   body {
     @apply bg-cream text-ink font-sans antialiased;
+    /* Dark romantic backdrop: rose glow above, candlelight below, heart lattice throughout */
+    background-image:
+      radial-gradient(1100px 520px at 50% -8%, rgba(226, 61, 109, 0.16), transparent 62%),
+      radial-gradient(900px 600px at 100% 105%, rgba(229, 176, 78, 0.08), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23E23D6D' stroke-opacity='0.09' stroke-width='1.1'%3E%3Cpath d='M16 23c-3.8-3-7.5-5.7-7.5-9.2 0-2.6 1.9-4.2 3.9-4.2 1.4 0 2.8.7 3.6 2 .8-1.3 2.2-2 3.6-2 2 0 3.9 1.6 3.9 4.2 0 3.5-3.7 6.2-7.5 9.2z'/%3E%3Cpath d='M48 55c-3.8-3-7.5-5.7-7.5-9.2 0-2.6 1.9-4.2 3.9-4.2 1.4 0 2.8.7 3.6 2 .8-1.3 2.2-2 3.6-2 2 0 3.9 1.6 3.9 4.2 0 3.5-3.7 6.2-7.5 9.2z'/%3E%3C/g%3E%3C/svg%3E");
   }
 }
 
 @layer components {
   /* Primary button — .btn in design */
   .btn {
-    @apply flex h-[54px] cursor-pointer items-center justify-center rounded-btn bg-flame text-[17px] font-bold tracking-[0.01em] text-cream transition-colors hover:bg-flame-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame disabled:cursor-not-allowed disabled:opacity-60;
+    @apply flex h-[54px] cursor-pointer items-center justify-center rounded-btn bg-flame text-[17px] font-bold tracking-[0.01em] text-blush transition-colors hover:bg-flame-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   /* Secondary button — .btn2 in design */
@@ -35,23 +40,68 @@
     @apply cursor-pointer rounded-chip border-[1.5px] border-chipborder bg-shell px-5 py-3 text-[16px] font-semibold text-cocoa transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
   }
   .chip-on {
-    @apply border-flame bg-flame text-cream shadow-chip;
+    @apply border-flame bg-flame text-blush shadow-chip;
   }
 
-  /* Card — .card / .stop in design */
+  /* Area picker row — editorial numbered list, full-width (not a grid — long
+     area names like "Airport Residential" break a two-column layout on
+     narrow screens), not a pill chip */
+  .area-row {
+    @apply flex w-full cursor-pointer items-center justify-between border-b border-line/70 py-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+  }
+  .area-row-n {
+    @apply font-mono text-[11px] text-mutedbrown/70;
+  }
+  .area-row-name {
+    @apply font-display text-[17px] italic text-cocoa transition-colors;
+  }
+  .area-row-mark {
+    @apply h-1.5 w-1.5 shrink-0 rounded-full border border-line/70 transition-colors;
+  }
+  .area-row-on {
+    @apply border-flame;
+  }
+  .area-row-on .area-row-n {
+    @apply text-flame;
+  }
+  .area-row-on .area-row-name {
+    @apply font-bold text-flame not-italic;
+  }
+  .area-row-mark-on {
+    @apply border-flame bg-flame;
+  }
+
+  /* Time / duration selector — underline tabs, not pill chips */
+  .tsel-row {
+    @apply flex flex-wrap items-baseline;
+  }
+  .tsel {
+    @apply cursor-pointer border-b-2 border-transparent px-2.5 py-2 font-mono text-[14.5px] tracking-[0.02em] text-cocoa transition-colors first:pl-0 hover:text-flame focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+  }
+  .tsel-on {
+    @apply border-flame font-bold text-flame;
+  }
+  .tsel-lg {
+    @apply font-display text-[17px] not-italic tracking-normal;
+  }
+  .tsel-div {
+    @apply h-3.5 w-px bg-line/70;
+  }
+
+  /* Card — .card / .stop in design (faint edge so cards read on the dark backdrop) */
   .card {
-    @apply overflow-hidden rounded-card bg-shell shadow-card;
+    @apply overflow-hidden rounded-card border border-white/5 bg-shell shadow-card;
   }
 
-  /* Kente accent strip — recolored to the new palette, same motif */
+  /* Kente accent strip — rose, gold, wine and blush */
   .kente {
     @apply h-[5px] rounded-[3px];
     background: repeating-linear-gradient(
       90deg,
-      #f4501e 0 16px,
-      #ffb627 16px 24px,
-      #123b41 24px 40px,
-      #ffe9d2 40px 48px
+      #e23d6d 0 16px,
+      #e5b04e 16px 24px,
+      #55203a 24px 40px,
+      #f8e0ea 40px 48px
     );
   }
 
@@ -67,7 +117,7 @@
 
   /* Field label — .flbl in design */
   .flbl {
-    @apply mb-2 block text-[14px] font-bold tracking-[0.02em] text-lagoon;
+    @apply mb-2 block text-[14px] font-bold tracking-[0.02em] text-cocoa;
   }
 
   /* "Why this fits" note — .why in design (serif italic → Poppins italic per font swap) */
@@ -93,10 +143,10 @@
   /* Transport hop connector — .hop / .hopline in design */
   .hopline {
     @apply w-[2px];
-    background: repeating-linear-gradient(180deg, #e0b98a 0 6px, transparent 6px 12px);
+    background: repeating-linear-gradient(180deg, #6b3049 0 6px, transparent 6px 12px);
   }
   .hopline-dark {
-    background: repeating-linear-gradient(180deg, #1e5058 0 6px, transparent 6px 12px);
+    background: repeating-linear-gradient(180deg, #55203a 0 6px, transparent 6px 12px);
   }
 
   /* Swap button — .swapbtn in design */
@@ -111,7 +161,7 @@
   .shimmer::after {
     content: "";
     @apply absolute inset-0 animate-shimmer;
-    background: linear-gradient(100deg, transparent 20%, rgba(255, 253, 248, 0.67) 50%, transparent 80%);
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 241, 246, 0.12) 50%, transparent 80%);
   }
 
   /* Toast — .toast in design */
@@ -129,9 +179,9 @@
     @apply flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-icon bg-sand text-[17px] text-flame;
   }
 
-  /* Back button — .back in design */
+  /* Back button — borderless long-tail arrow, slides on hover */
   .backbtn {
-    @apply flex h-10 w-10 cursor-pointer items-center justify-center rounded-icon border-[1.5px] border-line text-[18px] text-cocoa transition-colors hover:border-flame focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
+    @apply -ml-2 flex h-10 w-10 cursor-pointer items-center justify-center rounded-icon text-cocoa transition-all hover:-translate-x-0.5 hover:text-flame focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flame;
   }
 
   /* Progress rail — .prog in design */
@@ -151,7 +201,7 @@
   }
   .bfill-i {
     @apply block h-full rounded transition-[width] duration-500;
-    background: linear-gradient(90deg, #ffb627, #f4501e);
+    background: linear-gradient(90deg, #e5b04e, #e23d6d);
   }
 
   /* Admin table — .tbl in design */
@@ -178,7 +228,7 @@
 
   /* Admin price input — .pinp in design */
   .pinp {
-    @apply h-[34px] w-[88px] rounded-lg border-[1.5px] border-line bg-white px-2.5 font-mono text-[14px] text-ink focus:border-flame focus:outline-none focus:ring-[3px] focus:ring-flame/15;
+    @apply h-[34px] w-[88px] rounded-lg border-[1.5px] border-line bg-shell px-2.5 font-mono text-[14px] text-ink focus:border-flame focus:outline-none focus:ring-[3px] focus:ring-flame/15;
   }
 
   /* Admin sidenav — .sidenav / .snav in design */

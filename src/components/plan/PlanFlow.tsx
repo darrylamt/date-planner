@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackArrow } from "@/components/BackArrow";
 import { MonthCalendar } from "./MonthCalendar";
 import { LoadingScreen } from "./LoadingScreen";
 import { ErrorScreen, NoMatchScreen } from "./StatusScreens";
@@ -31,10 +32,10 @@ const DURATIONS: { label: string; hours: number }[] = [
   { label: "All evening", hours: 7 },
 ];
 const OCCASIONS = [
-  { id: "first_date", icon: "☼", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
-  { id: "anniversary", icon: "❦", title: "Anniversary", sub: "Pull out the stops — this one matters" },
-  { id: "date_night", icon: "☾", title: "Regular date night", sub: "Keep it fresh without the fuss" },
-  { id: "friend_outing", icon: "⚘", title: "Friend outing", sub: "Good food, good company, no candles" },
+  { id: "first_date", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
+  { id: "anniversary", title: "Anniversary", sub: "Pull out the stops — this one matters" },
+  { id: "date_night", title: "Regular date night", sub: "Keep it fresh without the fuss" },
+  { id: "friend_outing", title: "Friend outing", sub: "Good food, good company, no candles" },
 ] as const;
 
 function defaultDate(): string {
@@ -242,7 +243,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
       {/* Top bar + slim progress indicator */}
       <div className="flex items-center justify-between px-6 pt-4">
         <button className="backbtn" onClick={goBack} aria-label="Back">
-          ←
+          <BackArrow />
         </button>
         <div className="text-caption font-semibold text-mutedbrown">
           {step + 1} of {TOTAL_STEPS}
@@ -261,13 +262,13 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             <p className="mb-[26px] text-body text-mutedbrown">
               Pick one or two areas — we&apos;ll keep the stops close together.
             </p>
-            <div className="flex flex-wrap gap-2.5">
-              {areas.map((a) => {
+            <div className="flex flex-col">
+              {areas.map((a, i) => {
                 const on = inputs.areaIds.includes(a.id);
                 return (
                   <button
                     key={a.id}
-                    className={`chip ${on ? "chip-on" : ""}`}
+                    className={`area-row ${on ? "area-row-on" : ""}`}
                     onClick={() => {
                       const ids = on
                         ? inputs.areaIds.filter((x) => x !== a.id)
@@ -279,26 +280,36 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
                       });
                     }}
                   >
-                    {a.name}
+                    <span className="flex items-baseline gap-3">
+                      <span className="area-row-n">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="area-row-name">{a.name}</span>
+                    </span>
+                    <span className={`area-row-mark ${on ? "area-row-mark-on" : ""}`} />
                   </button>
                 );
               })}
             </div>
             <button
-              className={`mt-[22px] flex items-center gap-3 rounded-btn border-[1.5px] border-dashed px-[18px] py-4 text-left transition-colors ${
-                inputs.surpriseMe ? "border-flame bg-sand/60" : "border-amber-deep/60"
+              className={`mt-2 flex w-full items-center justify-between border-t border-dashed py-4 text-left transition-colors ${
+                inputs.surpriseMe ? "border-flame" : "border-line"
               }`}
               onClick={() =>
                 update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
               }
             >
-              <span className="vic bg-flame text-cream">✦</span>
               <span>
-                <span className="block text-[16px] font-bold text-flame">Surprise me</span>
-                <span className="block text-[14px] text-mutedbrown">
+                <span
+                  className={`block font-display text-[17px] italic transition-colors ${
+                    inputs.surpriseMe ? "font-bold not-italic text-flame" : "text-cocoa"
+                  }`}
+                >
+                  Surprise me
+                </span>
+                <span className="mt-0.5 block text-[14px] text-mutedbrown">
                   We&apos;ll choose a corner of the city you haven&apos;t tried.
                 </span>
               </span>
+              <span className={`area-row-mark ${inputs.surpriseMe ? "area-row-mark-on" : ""}`} />
             </button>
           </>
         )}
@@ -358,35 +369,39 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
               We&apos;ll check what&apos;s open and what&apos;s on.
             </p>
             <MonthCalendar value={inputs.date} onChange={(date) => update({ date })} />
-            <div className="mt-5">
+            <div className="mt-6">
               <span className="flbl">Start time</span>
-              <div className="flex flex-wrap gap-2.5">
-                {START_TIMES.map((t) => (
-                  <button
-                    key={t}
-                    className={`chip ${inputs.startTime === t ? "chip-on" : ""}`}
-                    onClick={() => update({ startTime: t })}
-                  >
-                    {new Date(`2000-01-01T${t}:00`).toLocaleTimeString("en-GB", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    }).toUpperCase()}
-                  </button>
+              <div className="tsel-row">
+                {START_TIMES.map((t, i) => (
+                  <span key={t} className="flex items-baseline">
+                    {i > 0 && <span className="tsel-div" />}
+                    <button
+                      className={`tsel ${inputs.startTime === t ? "tsel-on" : ""}`}
+                      onClick={() => update({ startTime: t })}
+                    >
+                      {new Date(`2000-01-01T${t}:00`).toLocaleTimeString("en-GB", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      }).toUpperCase()}
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>
-            <div className="mt-5">
+            <div className="mt-6">
               <span className="flbl">How long?</span>
-              <div className="flex flex-wrap gap-2.5">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d.label}
-                    className={`chip ${inputs.hours === d.hours ? "chip-on" : ""}`}
-                    onClick={() => update({ hours: d.hours })}
-                  >
-                    {d.label}
-                  </button>
+              <div className="tsel-row">
+                {DURATIONS.map((d, i) => (
+                  <span key={d.label} className="flex items-baseline">
+                    {i > 0 && <span className="tsel-div" />}
+                    <button
+                      className={`tsel ${inputs.hours === d.hours ? "tsel-on" : ""}`}
+                      onClick={() => update({ hours: d.hours })}
+                    >
+                      {d.label}
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>
@@ -401,24 +416,26 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             <p className="mb-[26px] text-body text-mutedbrown">
               Choose up to three — we&apos;ll blend them.
             </p>
-            <div className="flex flex-wrap gap-3">
-              {VIBES.map((v) => {
+            <div className="tsel-row">
+              {VIBES.map((v, i) => {
                 const val = v.toLowerCase();
                 const on = inputs.vibes.includes(val);
                 return (
-                  <button
-                    key={v}
-                    className={`chip px-6 py-4 text-[17px] ${on ? "chip-on" : ""}`}
-                    onClick={() =>
-                      update({
-                        vibes: on
-                          ? inputs.vibes.filter((x) => x !== val)
-                          : [...inputs.vibes, val].slice(-3),
-                      })
-                    }
-                  >
-                    {v}
-                  </button>
+                  <span key={v} className="flex items-baseline">
+                    {i > 0 && <span className="tsel-div" />}
+                    <button
+                      className={`tsel tsel-lg ${on ? "tsel-on" : ""}`}
+                      onClick={() =>
+                        update({
+                          vibes: on
+                            ? inputs.vibes.filter((x) => x !== val)
+                            : [...inputs.vibes, val].slice(-3),
+                        })
+                      }
+                    >
+                      {v}
+                    </button>
+                  </span>
                 );
               })}
             </div>
@@ -436,23 +453,33 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
               What&apos;s the occasion?
             </h2>
             <p className="mb-[26px] text-body text-mutedbrown">It changes the pace we plan for.</p>
-            <div className="flex flex-col gap-3">
-              {OCCASIONS.map((o) => {
+            <div className="flex flex-col">
+              {OCCASIONS.map((o, i) => {
                 const on = inputs.occasion === o.id;
                 return (
                   <button
                     key={o.id}
-                    className={`card flex items-center gap-4 px-5 py-[18px] text-left transition-shadow ${
-                      on ? "border-2 border-flame" : "border-2 border-transparent"
+                    className={`flex items-center gap-4 border-b border-line/70 py-[18px] text-left transition-colors first:pt-0 ${
+                      on ? "border-flame" : ""
                     }`}
                     onClick={() => update({ occasion: o.id })}
                   >
-                    <span className={`vic ${on ? "bg-flame text-cream" : ""}`}>{o.icon}</span>
+                    <span
+                      className={`w-6 shrink-0 font-display text-[19px] italic transition-colors ${
+                        on ? "font-bold not-italic text-flame" : "text-amber"
+                      }`}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
                     <span className="flex-1">
-                      <span className="block text-[16px] font-bold">{o.title}</span>
+                      <span
+                        className={`block text-[16px] font-bold transition-colors ${on ? "text-flame" : "text-ink"}`}
+                      >
+                        {o.title}
+                      </span>
                       <span className="block text-[14px] text-mutedbrown">{o.sub}</span>
                     </span>
-                    {on && <span className="font-extrabold text-flame">✓</span>}
+                    <span className={`area-row-mark ${on ? "area-row-mark-on" : ""}`} />
                   </button>
                 );
               })}
@@ -483,21 +510,23 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             </div>
             <div className="mt-5">
               <span className="flbl">How should we refer to them?</span>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="tsel-row">
                 {(
                   [
                     { id: "they", label: "They / them" },
                     { id: "she", label: "She / her" },
                     { id: "he", label: "He / him" },
                   ] as { id: Pronoun; label: string }[]
-                ).map((p) => (
-                  <button
-                    key={p.id}
-                    className={`chip ${inputs.partner.pronoun === p.id ? "chip-on" : ""}`}
-                    onClick={() => update({ partner: { ...inputs.partner, pronoun: p.id } })}
-                  >
-                    {p.label}
-                  </button>
+                ).map((p, i) => (
+                  <span key={p.id} className="flex items-baseline">
+                    {i > 0 && <span className="tsel-div" />}
+                    <button
+                      className={`tsel ${inputs.partner.pronoun === p.id ? "tsel-on" : ""}`}
+                      onClick={() => update({ partner: { ...inputs.partner, pronoun: p.id } })}
+                    >
+                      {p.label}
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>

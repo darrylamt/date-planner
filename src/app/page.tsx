@@ -29,17 +29,17 @@ const COLLAGE = [
 
 const VALUE_PROPS = [
   {
-    icon: "₵",
+    n: "01",
     title: "Prices before you go",
     body: "Menus and costs up front — no surprises when the bill comes.",
   },
   {
-    icon: "◎",
+    n: "02",
     title: "Beyond the same old spots",
     body: "Places you'd never find scrolling the usual lists.",
   },
   {
-    icon: "♡",
+    n: "03",
     title: "Built around them",
     body: "Every plan starts with the person you're planning for.",
   },
@@ -82,7 +82,7 @@ export default function LandingPage() {
         {/* Hero photo */}
         <div className="relative mx-6 mt-7 overflow-hidden rounded-card md:mx-0">
           <SmartImage src={HERO_IMG} alt="Golden hour on the Labadi shoreline" className="h-[190px] md:h-[320px]" priority />
-          <div className="absolute bottom-3.5 left-4 z-[2] text-[16px] font-medium italic text-cream drop-shadow">
+          <div className="absolute bottom-3.5 left-4 z-[2] text-[16px] font-medium italic text-blush drop-shadow">
             Saturday, 6 PM · Osu → Labone · GHS 800
           </div>
         </div>
@@ -95,14 +95,17 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* Value props */}
-      <div className="mt-7 flex flex-col gap-[18px] px-6 md:grid md:grid-cols-3 md:gap-6">
+      {/* Value props — editorial numerals, no icon tiles */}
+      <div className="mt-8 flex flex-col gap-5 px-6 md:grid md:grid-cols-3 md:gap-6">
         {VALUE_PROPS.map((v) => (
-          <div key={v.title} className="flex items-start gap-3.5">
-            <div className="vic">{v.icon}</div>
+          <div key={v.title} className="flex items-start gap-4">
+            <div className="w-7 shrink-0 pt-[2px]">
+              <div className="font-display text-[19px] italic leading-none text-amber">{v.n}</div>
+              <div className="mt-2 h-px w-6 bg-flame/50" />
+            </div>
             <div>
               <div className="text-[16px] font-bold">{v.title}</div>
-              <div className="text-[14px] leading-normal text-mutedbrown">{v.body}</div>
+              <div className="mt-0.5 text-[14px] leading-normal text-mutedbrown">{v.body}</div>
             </div>
           </div>
         ))}

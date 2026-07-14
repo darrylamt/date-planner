@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { BackArrow } from "@/components/BackArrow";
 import { BudgetBar } from "@/components/BudgetBar";
 import { HopConnector } from "@/components/HopConnector";
 import { StopCard } from "@/components/StopCard";
 import { Toast } from "@/components/Toast";
 import { ghs, longDate } from "@/lib/format";
 import { downloadIcs } from "@/lib/ics";
-import type { Itinerary, PlanInputs } from "@/lib/types";
+import type { Itinerary, ItineraryOrder, PlanInputs } from "@/lib/types";
 
 /**
  * Itinerary result — mobile timeline at 390px and the two-column desktop
@@ -34,6 +35,7 @@ export function ItineraryView({
 }) {
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
+  const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -64,6 +66,76 @@ export function ItineraryView({
       showToast("Couldn't find a good swap.");
     } finally {
       setSwappingIndex(null);
+    }
+  }
+
+  /** Menu edits: replace a stop's orders and recompute food + overall totals. */
+  function handleOrdersChange(index: number, orders: ItineraryOrder[]) {
+    const stopCost = Math.round(orders.reduce((sum, o) => sum + Number(o.price_ghs), 0));
+    const stops = itinerary.stops.map((s, i) =>
+      i === index ? { ...s, orders, est_cost_for_two_ghs: stopCost } : s
+    );
+    const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_for_two_ghs), 0));
+    const est = Math.round(food + Number(itinerary.transport_total_ghs));
+    onItineraryChange({ ...itinerary, stops, food_total_ghs: food, est_total_ghs: est });
+    if (est > inputs.budget) {
+      showToast(`Heads up — now ${ghs(est - inputs.budget)} over budget`);
+    }
+  }
+
+  /**
+   * Reserve on the user's behalf: log the request (our system of record),
+   * then hand off to the venue's WhatsApp with a pre-written message.
+   */
+  async function handleReserve(index: number) {
+    if (reservingIndex !== null) return;
+    const stop = itinerary.stops[index];
+    setReservingIndex(index);
+    // Open the tab synchronously so popup blockers treat it as user-initiated.
+    const waWindow = window.open("", "_blank");
+    try {
+      const [venueRes] = await Promise.all([
+        fetch(`/api/venues/${stop.venue_id}`),
+        fetch("/api/reservations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            venueId: stop.venue_id,
+            venueName: stop.name,
+            planSlug: shareSlug,
+            partySize: 2,
+            date: inputs.date,
+            arrivalTime: stop.arrival_time,
+            guestName: inputs.partner.name,
+          }),
+        }),
+      ]);
+
+      const phone: string | null = venueRes.ok
+        ? ((await venueRes.json())?.venue?.phone ?? null)
+        : null;
+
+      if (phone && waWindow) {
+        const msg =
+          `Hello ${stop.name}! I'd like to reserve a table for two on ` +
+          `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
+          `Please confirm availability. — sent via aduro`;
+        waWindow.location.href = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+        showToast("Request sent — the venue will confirm on WhatsApp");
+      } else {
+        waWindow?.close();
+        showToast("Request logged — this venue has no WhatsApp number yet, we'll follow up");
+      }
+
+      const stops = itinerary.stops.map((s, i) =>
+        i === index ? { ...s, reservation_requested: true } : s
+      );
+      onItineraryChange({ ...itinerary, stops });
+    } catch {
+      waWindow?.close();
+      showToast("Couldn't send the reservation — try again in a moment.");
+    } finally {
+      setReservingIndex(null);
     }
   }
 
@@ -99,7 +171,7 @@ export function ItineraryView({
         <div className="sticky top-0 z-10 bg-parchment px-5 pb-3 pt-[18px] md:static">
           <div className="mb-3 flex items-center justify-between">
             <button className="backbtn" onClick={onEdit} aria-label="Back to inputs">
-              ←
+              <BackArrow />
             </button>
             <div className="font-display text-[16px] font-bold md:text-[24px]">
               {longDate(inputs.date)}
@@ -145,6 +217,11 @@ export function ItineraryView({
                   dimmed={swappingIndex !== null && swappingIndex !== i}
                   highlight={highlightIndex === i}
                   onSwap={readOnlyDemo ? undefined : () => handleSwap(i)}
+                  onOrdersChange={
+                    readOnlyDemo ? undefined : (orders) => handleOrdersChange(i, orders)
+                  }
+                  onReserve={readOnlyDemo ? undefined : () => handleReserve(i)}
+                  reserving={reservingIndex === i}
                   desktopRow
                 />
                 {i < stops.length - 1 && (
