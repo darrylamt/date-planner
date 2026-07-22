@@ -113,6 +113,40 @@ Safety rails around the model:
 - **Plan persistence** — in-progress inputs and results survive refreshes and the magic-link round trip (a pending save auto-completes after sign-in).
 - **Real photography everywhere** — venue cards, saved-plan thumbnails, hero collage, with a graceful woven-pattern fallback when an image is missing.
 
+## Install on your phone (PWA)
+
+aduro is an installable **Progressive Web App** — it lives on the iOS/Android
+home screen and launches full-screen with no browser chrome, no App Store, and
+no Apple Developer account.
+
+**iPhone (Safari):** open the site → tap the **Share** button → **Add to Home
+Screen** → **Add**. The aduro sunset icon appears on the home screen; opening it
+runs standalone with a black status bar.
+
+**Android (Chrome):** you'll get an **Install app** prompt, or use the ⋮ menu →
+**Install app**.
+
+How it's wired:
+
+- `src/app/manifest.ts` → served at `/manifest.webmanifest` (name, icons,
+  `display: standalone`, theme/background colors, app shortcuts).
+- Apple-specific meta (`apple-mobile-web-app-capable`, status-bar style,
+  `apple-touch-icon`) is set in `src/app/layout.tsx`.
+- `public/sw.js` is a service worker registered by `components/ServiceWorker.tsx`
+  (production only): network-first for pages with an `/offline` fallback,
+  cache-first for static assets. It never touches `/api/*`, `/auth/*`, `/admin`,
+  or Supabase requests.
+- Icons live in `public/` (`icon-192/512`, maskable, `apple-touch-icon`). To
+  regenerate them, restore a small SVG→PNG script with `sharp`
+  (`npm i -D sharp`) — the source PNGs are committed so `sharp` is not a runtime
+  or build dependency.
+
+No native shell is required, but because the app is a standard PWA it can later
+be wrapped with Capacitor for App Store distribution without changing the UI.
+
 ## Not in this version (by design)
 
-No payments, reservations/booking, bundled transport, reviews, or native apps.
+No payments, reservations/booking, bundled transport, or reviews. A native app
+shell is intentionally skipped — the **installable PWA above** covers home-screen
+install and offline, and Capacitor can wrap it later if App Store distribution is
+needed.
