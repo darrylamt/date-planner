@@ -1,3 +1,12 @@
+-- ⚠️  PLACEHOLDER DATA — DO NOT RUN AGAINST PRODUCTION ⚠️
+--
+-- The 25 venues below are INVENTED. They are not real Accra businesses, and
+-- every price is made up. This file exists only so a fresh clone has
+-- something to click through locally.
+--
+-- Production was cleared of this data on 2026-09-05. To load a real catalog,
+-- see supabase/templates/README.md and import at /admin/import.
+--
 -- aduro — seed data
 -- ⚠️ ALL PRICES BELOW ARE PLACEHOLDERS, to be replaced with researched, venue-confirmed data.
 -- Venue names are plausible Accra-style venues for development and demos.
