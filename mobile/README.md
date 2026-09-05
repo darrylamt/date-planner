@@ -40,8 +40,11 @@ eas build --profile production --platform ios   # TestFlight / App Store
 eas submit --profile production --platform ios
 ```
 
-Set your Apple identifiers in `eas.json` under `submit.production.ios` before
-the first submit.
+`eas.json` carries only `appleTeamId`. On the first submit, EAS prompts for
+your Apple ID and offers to create the App Store Connect app record; after
+that it remembers the `ascAppId`. Do not put placeholder strings in
+`submit.production.ios` — EAS validates those fields and fails rather than
+falling back to prompting.
 
 ## Layout
 
