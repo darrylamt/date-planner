@@ -1,0 +1,90 @@
+{
+  "expo": {
+    "name": "aduro",
+    "slug": "aduro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aduro",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.darrylamt.aduro",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "whatsapp",
+          "maps",
+          "comgooglemaps",
+          "tel",
+          "whatsapp",
+          "maps",
+          "comgooglemaps",
+          "tel"
+        ]
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
+    },
+    "android": {
+      "package": "com.darrylamt.aduro",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "aduro adds your date plan to your calendar so you don't lose track of the evening."
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "05671085-4481-486e-b052-1cf91c28fd79"
+      }
+    },
+    "owner": "darryl_amt",
+    "updates": {
+      "url": "https://u.expo.dev/05671085-4481-486e-b052-1cf91c28fd79"
+    }
+  }
+}
