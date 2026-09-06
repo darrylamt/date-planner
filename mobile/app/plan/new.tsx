@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
-import { router, useNavigation } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
@@ -18,6 +18,10 @@ import { possessiveName } from "../../src/lib/pronouns";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
+function isOccasion(v: string): v is PlanInputs["occasion"] {
+  return ["first_date", "anniversary", "date_night", "friend_outing"].includes(v);
+}
+
 type Phase =
   | { name: "steps"; step: number }
   | { name: "loading" }
@@ -29,6 +33,8 @@ export default function PlanNew() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  // Home can deep-link in with the occasion already chosen.
+  const params = useLocalSearchParams<{ occasion?: string }>();
 
   const [inputs, setInputs] = useState<PlanInputs>(defaultInputs);
   const [phase, setPhase] = useState<Phase>({ name: "steps", step: 0 });
@@ -52,6 +58,14 @@ export default function PlanNew() {
         else if (draft.step) setPhase({ name: "steps", step: draft.step });
         if (draft.shareSlug) setShareSlug(draft.shareSlug);
       }
+
+      // An occasion passed from home only seeds a fresh plan — it must not
+      // silently rewrite an answer already given in a draft being resumed.
+      const seeded = params.occasion;
+      if (active && seeded && !draft?.inputs && isOccasion(seeded)) {
+        setInputs((cur) => ({ ...cur, occasion: seeded }));
+      }
+
       if (active) setHydrated(true);
     })();
 

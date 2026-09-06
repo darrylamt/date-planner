@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { Text } from "../Text";
-import { radius, space } from "../../theme";
+import { Symbol } from "../Symbol";
+import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
 
@@ -72,24 +73,51 @@ export function BudgetBar({
   );
 }
 
-/** The travel leg drawn between two stops. */
+/**
+ * The travel leg between two stops, drawn as a timeline connector: a dashed
+ * rail with the cost floating on it, so the itinerary reads as one continuous
+ * evening rather than a stack of unrelated cards.
+ */
 export function Hop({ mins, cost }: { mins: number; cost: number }) {
   const c = useTheme();
 
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: space.sm,
-        paddingVertical: space.md,
-        paddingLeft: space.lg,
-      }}
-    >
-      <View style={{ width: 2, height: 20, backgroundColor: c.separator, borderRadius: 1 }} />
-      <Text variant="footnote" tone="secondary" tabular>
-        {mins} min · {ghs(cost)} est.
-      </Text>
+    <View style={{ alignItems: "center", paddingVertical: space.sm }}>
+      <Dashes />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: space.md,
+          paddingVertical: 6,
+          borderRadius: radius.pill,
+          backgroundColor: c.surface,
+          borderWidth: HAIRLINE,
+          borderColor: c.separator,
+        }}
+      >
+        <Symbol name="car.fill" size={12} color={c.secondaryLabel} />
+        <Text variant="caption1" tone="secondary" tabular>
+          {mins} min · {ghs(cost)} est.
+        </Text>
+      </View>
+      <Dashes />
+    </View>
+  );
+}
+
+/** Three short segments read as a dashed rail without a dashed-border hack. */
+function Dashes() {
+  const c = useTheme();
+  return (
+    <View style={{ alignItems: "center", gap: 3, paddingVertical: 6 }}>
+      {[0, 1, 2].map((i) => (
+        <View
+          key={i}
+          style={{ width: 2, height: 4, borderRadius: 1, backgroundColor: c.separator }}
+        />
+      ))}
     </View>
   );
 }

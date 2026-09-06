@@ -1,13 +1,13 @@
 import { View } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../Text";
 import { Group, Row } from "../List";
 import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
+import { DayStrip } from "./DayStrip";
 import { GUTTER, space } from "../../theme";
-import { useIsDark, useTheme } from "../../lib/useTheme";
+import { useTheme } from "../../lib/useTheme";
 import { aboutName, possessiveName, pronounSet } from "../../lib/pronouns";
 import {
   DURATIONS,
@@ -61,7 +61,6 @@ function GroupLabel({ children, first }: { children: React.ReactNode; first?: bo
 
 export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   const c = useTheme();
-  const isDark = useIsDark();
   const ps = pronounSet(inputs.partner.pronoun);
   const who = aboutName(inputs.partner.name, inputs.partner.pronoun);
   const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
@@ -132,28 +131,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           subtitle="We check what is open and what is on that day."
         />
 
-        <View
-          style={{
-            backgroundColor: c.surface,
-            borderRadius: 10,
-            marginHorizontal: GUTTER,
-            marginBottom: space.xxl,
-            paddingVertical: space.sm,
-            alignItems: "center",
-          }}
-        >
-          <DateTimePicker
-            value={new Date(`${inputs.date}T12:00:00`)}
-            mode="date"
-            display="inline"
-            minimumDate={new Date()}
-            accentColor={c.tint}
-            themeVariant={isDark ? "dark" : "light"}
-            onChange={(_event, picked) => {
-              if (picked) update({ date: toIsoDate(picked) });
-            }}
-          />
-        </View>
+        <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
 
         <GroupLabel first>Start time</GroupLabel>
         <ChipRow>
@@ -293,11 +271,4 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
       <Note>This stays between us. It only shapes {poss} evening.</Note>
     </>
   );
-}
-
-/** Local date to "YYYY-MM-DD" without the UTC shift toISOString would apply. */
-function toIsoDate(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${month}-${day}`;
 }

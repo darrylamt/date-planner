@@ -21,19 +21,14 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: c.groupedBackground },
           }}
         >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* The questionnaire is a focused task — no tab bar, no swipe-back
+              that would silently discard a half-answered plan. */}
           <Stack.Screen
             name="plan/new"
             options={{ title: "", headerBackTitle: "Back", gestureEnabled: false }}
           />
-          <Stack.Screen
-            name="plans"
-            options={{ title: "Saved plans", headerLargeTitle: true }}
-          />
-          <Stack.Screen
-            name="login"
-            options={{ presentation: "modal", title: "Sign in" }}
-          />
+          <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

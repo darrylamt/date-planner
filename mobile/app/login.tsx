@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -6,9 +6,8 @@ import { Screen } from "../src/components/Screen";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
-import { Group, Row } from "../src/components/List";
 import { GUTTER, space } from "../src/theme";
-import { useAuth, sendCode, signOut, verifyCode } from "../src/lib/useAuth";
+import { useAuth, sendCode, verifyCode } from "../src/lib/useAuth";
 
 type Phase = "email" | "code";
 
@@ -20,26 +19,11 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* Already signed in — this screen becomes the account screen. */
-  if (session) {
-    return (
-      <Screen grouped contentStyle={{ paddingTop: space.xl }}>
-        <Group header="Account" footer="Your saved plans stay on your account.">
-          <Row icon="envelope.fill" title={session.user.email ?? "Signed in"} />
-        </Group>
-        <View style={{ paddingHorizontal: GUTTER }}>
-          <Button
-            title="Sign out"
-            kind="gray"
-            onPress={async () => {
-              await signOut();
-              router.back();
-            }}
-          />
-        </View>
-      </Screen>
-    );
-  }
+  /* Signing in from anywhere dismisses this modal; the account itself lives
+     on the You tab, so there is nothing to show here once a session exists. */
+  useEffect(() => {
+    if (session) router.back();
+  }, [session]);
 
   async function submitEmail() {
     if (!email.includes("@")) {

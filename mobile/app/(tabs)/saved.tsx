@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Share, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Text } from "../src/components/Text";
-import { Button } from "../src/components/Button";
-import { Group, Row } from "../src/components/List";
-import { Symbol } from "../src/components/Symbol";
-import { GUTTER, space } from "../src/theme";
-import { useTheme } from "../src/lib/useTheme";
-import { useAuth } from "../src/lib/useAuth";
-import { deletePlan, listPlans } from "../src/lib/data";
-import { ghs, longDate } from "../src/lib/format";
-import type { SavedPlan } from "../src/lib/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text } from "../../src/components/Text";
+import { Button } from "../../src/components/Button";
+import { Group, Row } from "../../src/components/List";
+import { Symbol } from "../../src/components/Symbol";
+import { GUTTER, space } from "../../src/theme";
+import { useTheme } from "../../src/lib/useTheme";
+import { useAuth } from "../../src/lib/useAuth";
+import { deletePlan, listPlans } from "../../src/lib/data";
+import { ghs, longDate } from "../../src/lib/format";
+import type { SavedPlan } from "../../src/lib/types";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
+/** Tab bar is translucent and floats over content. */
+const TAB_BAR_CLEARANCE = 96;
+
 export default function Plans() {
   const c = useTheme();
+  const insets = useSafeAreaInsets();
   const { session, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<SavedPlan[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,8 +99,10 @@ export default function Plans() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.groupedBackground }}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingTop: space.lg }}
+      contentContainerStyle={{
+        paddingTop: insets.top + space.lg,
+        paddingBottom: TAB_BAR_CLEARANCE,
+      }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -108,6 +115,10 @@ export default function Plans() {
         />
       }
     >
+      <Text variant="largeTitle" style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}>
+        Saved plans
+      </Text>
+
       {plans.map((plan) => (
         <Group key={plan.id} header={longDate(plan.inputs.date)}>
           <Row

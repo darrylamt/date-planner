@@ -1,4 +1,4 @@
-import { Platform, View } from "react-native";
+import { Platform, View, type ColorValue } from "react-native";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
 import { useTheme } from "../lib/useTheme";
 
@@ -6,7 +6,8 @@ export interface SymbolProps {
   /** SF Symbol name, e.g. "chevron.right", "checkmark.circle.fill". */
   name: SymbolViewProps["name"];
   size?: number;
-  color?: string;
+  /** Accepts ColorValue so navigator-supplied tint colours pass straight through. */
+  color?: ColorValue;
   weight?: SymbolViewProps["weight"];
 }
 
@@ -23,7 +24,7 @@ export function Symbol({ name, size = 17, color, weight = "regular" }: SymbolPro
     <SymbolView
       name={name}
       size={size}
-      tintColor={color ?? c.tint}
+      tintColor={(color ?? c.tint) as string}
       weight={weight}
       resizeMode="scaleAspectFit"
       style={{ width: size, height: size }}
