@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-/** Magic-link landing: exchange the code for a session, then continue. */
+/**
+ * Landing point for emailed links — signup confirmation and password
+ * recovery. Exchanges the code for a session, then continues to `next`
+ * (/auth/reset for recovery, so the visitor can choose a password).
+ */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/plans";
+
+  // `next` comes from the URL, so only ever treat it as a path on this origin.
+  const requested = searchParams.get("next") ?? "/plans";
+  const next = /^\/(?!\/)/.test(requested) ? requested : "/plans";
 
   if (code) {
     const supabase = createClient();

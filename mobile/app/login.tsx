@@ -1,59 +1,94 @@
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Screen } from "../src/components/Screen";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
-import { GUTTER, space } from "../src/theme";
-import { useAuth, sendCode, verifyCode } from "../src/lib/useAuth";
+import { Segmented } from "../src/components/Segmented";
+import { GUTTER, radius, space } from "../src/theme";
+import { useTheme } from "../src/lib/useTheme";
+import {
+  MIN_PASSWORD,
+  sendPasswordReset,
+  signIn,
+  signUp,
+  useAuth,
+} from "../src/lib/useAuth";
 
-type Phase = "email" | "code";
+type Mode = "signin" | "signup";
 
 export default function Login() {
+  const c = useTheme();
   const { session } = useAuth();
-  const [phase, setPhase] = useState<Phase>("email");
+
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  /* Signing in from anywhere dismisses this modal; the account itself lives
-     on the You tab, so there is nothing to show here once a session exists. */
+  /* Signing in dismisses this modal; the account lives on the You tab. */
   useEffect(() => {
     if (session) router.back();
   }, [session]);
 
-  async function submitEmail() {
+  function switchMode(m: Mode) {
+    setMode(m);
+    setError(null);
+    setNotice(null);
+  }
+
+  async function submit() {
     if (!email.includes("@")) {
       setError("That doesn't look like an email address.");
       return;
     }
     setBusy(true);
     setError(null);
-    const { error: err } = await sendCode(email);
+    setNotice(null);
+
+    const outcome = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
     setBusy(false);
-    if (err) {
-      setError(err);
+
+    if (outcome.error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError(outcome.error);
       return;
     }
+
+    if (outcome.needsConfirmation) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setNotice(
+        `Almost there — confirm your address using the link we sent to ${email.trim()}, then sign in.`
+      );
+      setMode("signin");
+      return;
+    }
+
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setPhase("code");
+    // The session listener above dismisses the modal.
   }
 
-  async function submitCode() {
-    setBusy(true);
-    setError(null);
-    const { error: err } = await verifyCode(email, code);
-    setBusy(false);
-    if (err) {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError("That code didn't work. Check it and try again.");
+  async function forgot() {
+    if (!email.includes("@")) {
+      setError("Enter your email address first, then tap this again.");
       return;
     }
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.back();
+    setBusy(true);
+    setError(null);
+    const outcome = await sendPasswordReset(email);
+    setBusy(false);
+
+    if (outcome.error) {
+      setError(outcome.error);
+      return;
+    }
+    setNotice(
+      `If an account exists for ${email.trim()}, a reset link is on its way. Open it on this phone, set a password, then come back and sign in.`
+    );
   }
 
   return (
@@ -63,66 +98,79 @@ export default function Login() {
     >
       <Screen grouped contentStyle={{ paddingTop: space.xl }}>
         <View style={{ paddingHorizontal: GUTTER }}>
-          <Text variant="title1">
-            {phase === "email" ? "Sign in" : "Check your email"}
-          </Text>
-          <Text variant="body" tone="secondary" style={{ marginTop: space.xs, marginBottom: space.xl }}>
-            {phase === "email"
-              ? "No passwords. We'll email you a six-digit code."
-              : `We sent a six-digit code to ${email}.`}
+          <Segmented
+            options={[
+              { value: "signin", label: "Sign in" },
+              { value: "signup", label: "Create account" },
+            ]}
+            value={mode}
+            onChange={switchMode}
+          />
+
+          <Text variant="body" tone="secondary" style={{ marginBottom: space.xl }}>
+            {mode === "signin"
+              ? "Welcome back."
+              : "You only need an account to save and share plans."}
           </Text>
 
-          {phase === "email" ? (
-            <>
-              <Field
-                label="Email"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                autoFocus
-                returnKeyType="go"
-                onSubmitEditing={submitEmail}
-              />
-              <Button title="Email me a code" onPress={submitEmail} loading={busy} />
-            </>
-          ) : (
-            <>
-              <Field
-                label="Six-digit code"
-                placeholder="123456"
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                maxLength={6}
-                autoFocus
-                style={{ fontSize: 28, letterSpacing: 8, fontVariant: ["tabular-nums"] }}
-              />
-              <Button
-                title="Sign in"
-                onPress={submitCode}
-                loading={busy}
-                disabled={code.length < 6}
-              />
-              <Button
-                title="Use a different email"
-                kind="plain"
-                onPress={() => {
-                  setPhase("email");
-                  setCode("");
-                  setError(null);
-                }}
-                style={{ marginTop: space.md }}
-              />
-            </>
-          )}
+          <Field
+            label="Email"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoFocus
+          />
+
+          <Field
+            label="Password"
+            placeholder={mode === "signup" ? `At least ${MIN_PASSWORD} characters` : "••••••••"}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            // Lets iOS offer Keychain autofill and, on signup, a strong password.
+            textContentType={mode === "signup" ? "newPassword" : "password"}
+            returnKeyType="go"
+            onSubmitEditing={submit}
+          />
+
+          <Button
+            title={mode === "signin" ? "Sign in" : "Create account"}
+            onPress={submit}
+            loading={busy}
+            disabled={!email || password.length < (mode === "signup" ? MIN_PASSWORD : 1)}
+          />
+
+          {mode === "signin" ? (
+            <Pressable onPress={forgot} disabled={busy} style={{ marginTop: space.lg }}>
+              <Text variant="footnote" tone="tint" weight="600" center>
+                Forgot your password?
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {notice ? (
+            <View
+              style={{
+                marginTop: space.lg,
+                padding: space.md,
+                borderRadius: radius.control,
+                backgroundColor: c.tintMuted,
+              }}
+            >
+              <Text variant="footnote" style={{ color: c.tint }}>
+                {notice}
+              </Text>
+            </View>
+          ) : null}
 
           {error ? (
-            <Text variant="footnote" tone="red" style={{ marginTop: space.md }}>
+            <Text variant="footnote" tone="red" style={{ marginTop: space.lg }}>
               {error}
             </Text>
           ) : null}
