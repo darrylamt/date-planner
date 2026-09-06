@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { SmartImage } from "@/components/SmartImage";
+import { AuthErrorNotice } from "@/components/AuthErrorNotice";
 
 /**
  * Landing page — mobile-first at 390px per the design's "home / hero" frame,
@@ -48,6 +49,13 @@ const VALUE_PROPS = [
 export default function LandingPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col md:max-w-[1080px]">
+      {/* Supabase falls back to the Site URL when a redirect is not
+          allow-listed, which lands failed auth links here rather than on
+          /login. Explain it instead of showing a blank marketing page. */}
+      <div className="px-6 pt-[22px]">
+        <AuthErrorNotice />
+      </div>
+
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 pt-[22px]">
         <Logo size={22} />

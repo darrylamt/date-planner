@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
+import { AuthErrorNotice } from "@/components/AuthErrorNotice";
 
 /** Supabase's default minimum. Enforced here so the error arrives before the round trip. */
 const MIN_PASSWORD = 6;
@@ -108,6 +109,8 @@ function LoginInner() {
       </div>
 
       <div className="flex flex-1 flex-col justify-center pb-24">
+        <AuthErrorNotice />
+
         <div className="kente w-16" />
         <h1 className="mt-4 font-display text-stepq font-bold">{heading}</h1>
         <p className="mt-2 text-body text-mutedbrown">{blurb}</p>
