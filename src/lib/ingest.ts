@@ -137,14 +137,16 @@ export async function ingestMenu(
     do {
       response = await anthropic.messages.create({
         model: MODEL,
-        max_tokens: 16000,
-        output_config: { effort: "high" },
+        max_tokens: 8000,
+        // Reading a menu is transcription, not reasoning. `high` bought
+        // nothing here and cost enough latency to blow a serverless budget.
+        output_config: { effort: "medium" },
         // Only offer the fetch tool when there is a URL to fetch; web_fetch
         // can only reach URLs already present in the conversation.
         ...(input.menuUrl
           ? {
               tools: [
-                { type: "web_fetch_20260209" as const, name: "web_fetch", max_uses: 3 },
+                { type: "web_fetch_20260209" as const, name: "web_fetch", max_uses: 2 },
               ],
             }
           : {}),
@@ -155,7 +157,9 @@ export async function ingestMenu(
         messages.push({ role: "assistant", content: response.content });
       }
       guard++;
-    } while (response.stop_reason === "pause_turn" && guard < 4);
+      // Each pause_turn is another full round trip. A site that blocks the
+      // fetcher will pause every time, so the ceiling is low deliberately.
+    } while (response.stop_reason === "pause_turn" && guard < 2);
   } catch (e) {
     console.error("ingest call failed", e);
     if (e instanceof Anthropic.RateLimitError) {

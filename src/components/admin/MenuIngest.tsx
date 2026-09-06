@@ -28,6 +28,9 @@ interface Extracted {
   suggested_avg_cost: number;
 }
 
+/** Longer than the server's own budget, so the server's error wins when it can. */
+const CLIENT_TIMEOUT_MS = 150_000;
+
 /** Strip the data: prefix — the API takes raw base64. */
 function toBase64(file: File): Promise<{ mediaType: string; data: string }> {
   return new Promise((resolve, reject) => {
@@ -60,6 +63,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
   const [data, setData] = useState<Extracted | null>(null);
   const [avgCost, setAvgCost] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
 
   const canSubmit =
     venueName.trim().length > 0 && areaName && (files.length > 0 || menuUrl.trim());
@@ -69,6 +73,14 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
     setError(null);
     setData(null);
     setCopied(false);
+    setElapsed(0);
+
+    // Without this the button spins forever when the server is killed
+    // mid-request, which is indistinguishable from "still working".
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+    const ticker = setInterval(() => setElapsed((s) => s + 1), 1000);
+
     try {
       const images = await Promise.all(files.map(toBase64));
       const res = await fetch("/api/admin/ingest", {
@@ -82,17 +94,38 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
           notes: notes.trim(),
           images,
         }),
+        signal: controller.signal,
       });
-      const json = await res.json();
+
+      // A killed serverless function returns an HTML error page, not JSON.
+      const raw = await res.text();
+      let json: (Extracted & { error?: string }) | null = null;
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        setError(
+          res.status === 504 || res.status === 502
+            ? "The server gave up before the menu was read. Try fewer images, or use the menu link on its own."
+            : `The server returned an unexpected response (${res.status}).`
+        );
+        return;
+      }
+
       if (!res.ok) {
-        setError(json.error ?? "Extraction failed.");
+        setError(json?.error ?? "Extraction failed.");
         return;
       }
       setData(json as Extracted);
-      setAvgCost(json.suggested_avg_cost ?? 0);
-    } catch {
-      setError("Could not reach the server.");
+      setAvgCost((json as Extracted).suggested_avg_cost ?? 0);
+    } catch (e) {
+      setError(
+        (e as Error)?.name === "AbortError"
+          ? "That took too long and was stopped. Try fewer images at once, or paste the menu link instead."
+          : "Could not reach the server."
+      );
     } finally {
+      clearTimeout(timer);
+      clearInterval(ticker);
       setBusy(false);
     }
   }
@@ -218,7 +251,8 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
         </button>
         {busy && (
           <div className="mt-2 text-[13px] text-mutedbrown">
-            This takes up to a minute for several images.
+            Reading… {elapsed}s. Usually 20–45 seconds; giving up at{" "}
+            {Math.round(CLIENT_TIMEOUT_MS / 1000)}s.
           </div>
         )}
         {error && <div className="why mt-3 not-italic text-staletext">{error}</div>}
@@ -235,6 +269,24 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
                 fix them before running the migration.
               </div>
             )}
+
+          {data.items.length === 0 && (
+            <div className="card border border-staletext/50 px-5 py-4">
+              <div className="text-[15px] font-bold text-staletext">
+                No menu items were read
+              </div>
+              <p className="mt-1 text-[14px] leading-relaxed text-cocoa">
+                {menuUrl.trim()
+                  ? "That link could not be fetched — many venue sites block automated readers, and links straight to a PDF or image often fail. Screenshot or photograph the menu and upload it as images instead; that path is far more reliable."
+                  : "Nothing readable was found in those images. Sharper, straight-on photos of one page at a time work best."}
+              </p>
+              <p className="mt-2 text-[14px] leading-relaxed text-cocoa">
+                You can still generate the migration below to create the venue
+                without a menu — but the planner cannot build a food order from
+                it until items exist.
+              </p>
+            </div>
+          )}
 
           {data.warnings.length > 0 && (
             <div className="card px-5 py-4">
