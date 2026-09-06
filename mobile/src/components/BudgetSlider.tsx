@@ -5,10 +5,7 @@ import * as Haptics from "expo-haptics";
 import { Text } from "./Text";
 import { GUTTER, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
-
-const MIN = 100;
-const MAX = 3000;
-const STEP = 50;
+import { BUDGET_MAX as MAX, BUDGET_MIN as MIN, BUDGET_STEP as STEP } from "../lib/budget";
 
 /**
  * Budget picker. The big figure is the control's real feedback, so it updates

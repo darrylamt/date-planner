@@ -1,0 +1,416 @@
+"use client";
+
+import { useState } from "react";
+import { ghs } from "@/lib/format";
+import { buildVenueMigration, migrationFilename } from "@/lib/sqlgen";
+import { MENU_CATEGORIES, VENUE_TYPES, type IngestedItem } from "@/lib/ingest";
+import type { Area } from "@/lib/types";
+
+interface Extracted {
+  venue: {
+    name: string;
+    type: string;
+    price_band: string;
+    description: string;
+    vibe_tags: string[];
+    best_for: string[];
+    dress_code: string | null;
+    reservation_required: boolean;
+    instagram_handle: string | null;
+    phone: string | null;
+    google_maps_url: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+  items: IngestedItem[];
+  warnings: string[];
+  detected_currency: string | null;
+  suggested_avg_cost: number;
+}
+
+/** Strip the data: prefix — the API takes raw base64. */
+function toBase64(file: File): Promise<{ mediaType: string; data: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result);
+      resolve({ mediaType: file.type, data: url.slice(url.indexOf(",") + 1) });
+    };
+    reader.onerror = () => reject(new Error("Could not read the file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Menu → migration. An admin gives a name, an area and either a menu link or
+ * photos; the model reads the menu, and everything it extracted is editable
+ * before the SQL is generated. Nothing is written to the database from here —
+ * the output is a migration the admin runs themselves.
+ */
+export function MenuIngest({ areas }: { areas: Area[] }) {
+  const [venueName, setVenueName] = useState("");
+  const [areaName, setAreaName] = useState(areas[0]?.name ?? "");
+  const [venueType, setVenueType] = useState<string>("restaurant");
+  const [menuUrl, setMenuUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<Extracted | null>(null);
+  const [avgCost, setAvgCost] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  const canSubmit =
+    venueName.trim().length > 0 && areaName && (files.length > 0 || menuUrl.trim());
+
+  async function extract() {
+    setBusy(true);
+    setError(null);
+    setData(null);
+    setCopied(false);
+    try {
+      const images = await Promise.all(files.map(toBase64));
+      const res = await fetch("/api/admin/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          venueName: venueName.trim(),
+          areaName,
+          venueType,
+          menuUrl: menuUrl.trim(),
+          notes: notes.trim(),
+          images,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Extraction failed.");
+        return;
+      }
+      setData(json as Extracted);
+      setAvgCost(json.suggested_avg_cost ?? 0);
+    } catch {
+      setError("Could not reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function updateItem(index: number, patch: Partial<IngestedItem>) {
+    if (!data) return;
+    const items = data.items.map((it, i) => (i === index ? { ...it, ...patch } : it));
+    setData({ ...data, items });
+  }
+
+  function removeItem(index: number) {
+    if (!data) return;
+    setData({ ...data, items: data.items.filter((_, i) => i !== index) });
+  }
+
+  const sql = data
+    ? buildVenueMigration(
+        {
+          name: data.venue.name,
+          type: data.venue.type,
+          areaName,
+          price_band: data.venue.price_band,
+          avg_cost_per_person_ghs: avgCost,
+          description: data.venue.description,
+          vibe_tags: data.venue.vibe_tags,
+          best_for: data.venue.best_for,
+          dress_code: data.venue.dress_code,
+          reservation_required: data.venue.reservation_required,
+          instagram_handle: data.venue.instagram_handle,
+          phone: data.venue.phone,
+          google_maps_url: data.venue.google_maps_url,
+          // Added later by editing the venue, per the admin workflow.
+          image_url: null,
+          lat: data.venue.lat,
+          lng: data.venue.lng,
+        },
+        data.items
+      )
+    : "";
+
+  return (
+    <div className="mt-6 flex flex-col gap-6">
+      {/* ── Input ── */}
+      <div className="card px-5 py-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <span className="flbl">Venue name</span>
+            <input
+              className="inp"
+              placeholder="e.g. Republic Bar &amp; Grill"
+              value={venueName}
+              onChange={(e) => setVenueName(e.target.value)}
+            />
+          </div>
+          <div>
+            <span className="flbl">Area</span>
+            <select
+              className="inp"
+              value={areaName}
+              onChange={(e) => setAreaName(e.target.value)}
+            >
+              {areas.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <span className="flbl">Type</span>
+            <select
+              className="inp"
+              value={venueType}
+              onChange={(e) => setVenueType(e.target.value)}
+            >
+              {VENUE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <span className="flbl">Menu link (optional)</span>
+            <input
+              className="inp"
+              placeholder="https://…"
+              value={menuUrl}
+              onChange={(e) => setMenuUrl(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <span className="flbl">Menu images (optional, up to 8)</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="block w-full text-[14px] text-cocoa file:mr-3 file:rounded-btn file:border-0 file:bg-flame file:px-4 file:py-2 file:text-[14px] file:font-semibold file:text-blush"
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 8))}
+          />
+          {files.length > 0 && (
+            <div className="mt-2 text-[13px] text-mutedbrown">
+              {files.length} image{files.length === 1 ? "" : "s"}:{" "}
+              {files.map((f) => f.name).join(", ")}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4">
+          <span className="flbl">Anything we should know? (optional)</span>
+          <textarea
+            className="ta"
+            placeholder="e.g. ignore the breakfast page, prices went up in June"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        <button className="btn mt-4" onClick={extract} disabled={!canSubmit || busy}>
+          {busy ? "Reading the menu…" : "Read menu"}
+        </button>
+        {busy && (
+          <div className="mt-2 text-[13px] text-mutedbrown">
+            This takes up to a minute for several images.
+          </div>
+        )}
+        {error && <div className="why mt-3 not-italic text-staletext">{error}</div>}
+      </div>
+
+      {/* ── Review ── */}
+      {data && (
+        <>
+          {data.detected_currency &&
+            !/ghs|cedi|₵/i.test(data.detected_currency) && (
+              <div className="card border border-staletext px-5 py-4 text-staletext">
+                The menu appears to be priced in <b>{data.detected_currency}</b>, not
+                cedis. The numbers below are as printed and have NOT been converted —
+                fix them before running the migration.
+              </div>
+            )}
+
+          {data.warnings.length > 0 && (
+            <div className="card px-5 py-4">
+              <div className="text-[15px] font-bold">What it could not read</div>
+              <ul className="mt-2 list-disc pl-5 text-[14px] text-cocoa">
+                {data.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="card px-5 py-5">
+            <div className="text-[15px] font-bold">Venue</div>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <div>
+                <span className="flbl">Name</span>
+                <input
+                  className="inp"
+                  value={data.venue.name}
+                  onChange={(e) =>
+                    setData({ ...data, venue: { ...data.venue, name: e.target.value } })
+                  }
+                />
+              </div>
+              <div>
+                <span className="flbl">Average cost per person (GHS)</span>
+                <input
+                  className="inp font-mono"
+                  type="number"
+                  value={avgCost}
+                  onChange={(e) => setAvgCost(Number(e.target.value) || 0)}
+                />
+                <div className="mt-1 text-[12.5px] text-mutedbrown">
+                  Suggested from a typical main plus a drink. This drives which
+                  budgets the venue appears for — a wrong value silently hides it.
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <span className="flbl">Description</span>
+              <textarea
+                className="ta"
+                value={data.venue.description}
+                onChange={(e) =>
+                  setData({
+                    ...data,
+                    venue: { ...data.venue, description: e.target.value },
+                  })
+                }
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[13px] text-mutedbrown">
+              <span className="badge b-ok">{data.venue.price_band}</span>
+              {data.venue.vibe_tags.map((t) => (
+                <span key={t} className="badge b-ok">
+                  {t}
+                </span>
+              ))}
+              {data.venue.phone && (
+                <span className="badge b-ok font-mono">{data.venue.phone}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="card px-5 py-5">
+            <div className="flex items-center justify-between">
+              <div className="text-[15px] font-bold">
+                Menu items ({data.items.length})
+              </div>
+              <div className="font-mono text-[14px] text-mutedbrown">
+                {data.items.length > 0 &&
+                  `${ghs(Math.min(...data.items.map((i) => i.price_ghs)))} – ${ghs(
+                    Math.max(...data.items.map((i) => i.price_ghs))
+                  )}`}
+              </div>
+            </div>
+
+            <div className="mt-3 overflow-x-auto">
+              <table className="tbl w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Price (GHS)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((it, i) => (
+                    <tr key={i}>
+                      <td>
+                        <input
+                          className="inp h-[38px]"
+                          value={it.name}
+                          onChange={(e) => updateItem(i, { name: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          className="inp h-[38px]"
+                          value={it.category}
+                          onChange={(e) =>
+                            updateItem(i, {
+                              category: e.target.value as IngestedItem["category"],
+                            })
+                          }
+                        >
+                          {MENU_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          className="inp h-[38px] w-[110px] font-mono"
+                          type="number"
+                          value={it.price_ghs}
+                          onChange={(e) =>
+                            updateItem(i, { price_ghs: Number(e.target.value) || 0 })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <button
+                          className="font-semibold text-staletext"
+                          onClick={() => removeItem(i)}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {data.items.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-mutedbrown">
+                        No items were extracted.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="card px-5 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[15px] font-bold">Migration</div>
+                <div className="font-mono text-[12.5px] text-mutedbrown">
+                  {migrationFilename(data.venue.name)}
+                </div>
+              </div>
+              <button
+                className="btn btnsm"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(sql);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2500);
+                }}
+              >
+                {copied ? "Copied ✓" : "Copy SQL"}
+              </button>
+            </div>
+            <pre className="mt-3 max-h-[420px] overflow-auto rounded-card bg-sand p-4 font-mono text-[12px] leading-relaxed text-cocoa">
+              {sql}
+            </pre>
+            <div className="mt-3 text-[13px] text-mutedbrown">
+              Paste into the Supabase SQL editor. Nothing has been written yet. Add the
+              venue photo afterwards by editing it at <b>/admin/venues</b>.
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

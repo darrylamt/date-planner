@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { anthropic, MODEL, parseModelJson, textFromResponse } from "@/lib/anthropic";
 import { itinerarySchema, planInputsSchema } from "@/lib/schemas";
 import { fetchCandidates, cheapestTwoStopEstimate } from "@/lib/matching";
+import { BUDGET_MAX } from "@/lib/budget";
 import { buildGenerateUserMessage, buildSystemPrompt } from "@/lib/prompt";
 import { coordsForStops, hopTableFor, recomputeItinerary, stopsAreGrounded } from "@/lib/itinerary";
 import { createClient } from "@/lib/supabase/server";
@@ -33,7 +34,20 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
     );
   }
 
-  // Too few real venues → honest guidance, never a fabricated plan.
+  // Nothing in the catalog at all. Blaming the user's budget or area here is
+  // simply wrong — and it sent people round a loop raising the budget against
+  // an empty table.
+  if (candidates.totalActiveVenues < 2) {
+    return NextResponse.json({
+      status: "no_match",
+      headline: "We are still building the Accra catalog.",
+      message:
+        "There are not enough venues loaded yet to plan a real evening, and we will not invent one. Check back shortly.",
+      suggestions: [],
+    });
+  }
+
+  // Real venues exist, but this request filtered them out.
   if (candidates.venues.length < 2) {
     const areaLabel = inputs.surpriseMe ? "Accra" : inputs.areaNames.join(" & ");
     const widerAreas = candidates.allAreaNames
@@ -43,7 +57,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
     if (widerAreas.length) {
       suggestions.push({ label: `Widen to ${widerAreas.join(" & ")}`, action: "widen_area" });
     }
-    const nudge = Math.min(3000, Math.max(inputs.budget + 150, Math.ceil((inputs.budget * 1.5) / 50) * 50));
+    const nudge = Math.min(BUDGET_MAX, Math.max(inputs.budget + 150, Math.ceil((inputs.budget * 1.5) / 50) * 50));
     if (nudge > inputs.budget) {
       suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
     }
@@ -60,7 +74,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   const floor = cheapestTwoStopEstimate(candidates.venues);
   if (floor > inputs.budget) {
     const areaLabel = inputs.surpriseMe ? "Accra" : inputs.areaNames.join(" & ");
-    const nudge = Math.min(3000, Math.ceil((floor * 1.15) / 50) * 50);
+    const nudge = Math.min(BUDGET_MAX, Math.ceil((floor * 1.15) / 50) * 50);
     const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [
       { label: "Widen the search area", action: "widen_area" },
     ];

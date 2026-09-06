@@ -11,6 +11,12 @@ export interface Candidates {
   menuItems: MenuItem[];
   events: EventRow[];
   allAreaNames: string[];
+  /**
+   * Active venues in the whole catalog, ignoring every filter. Lets the caller
+   * tell "your budget/area excluded everything" from "there is nothing to
+   * choose from yet", which are very different messages to show a user.
+   */
+  totalActiveVenues: number;
 }
 
 /** "chill" chip maps onto calm/casual venue tags. */
@@ -93,13 +99,20 @@ export async function fetchCandidates(
     events = events.filter((e) => inputs.areaIds.includes(e.area_id));
   }
 
-  const { data: allAreas } = await supabase.from("areas").select("name");
+  const [{ data: allAreas }, { count: totalActiveVenues }] = await Promise.all([
+    supabase.from("areas").select("name"),
+    supabase
+      .from("venues")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
+  ]);
 
   return {
     venues: picked,
     menuItems: (menuItems ?? []) as MenuItem[],
     events,
     allAreaNames: (allAreas ?? []).map((a: { name: string }) => a.name),
+    totalActiveVenues: totalActiveVenues ?? 0,
   };
 }
 

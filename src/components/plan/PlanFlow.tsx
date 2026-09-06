@@ -8,6 +8,7 @@ import { ErrorScreen, NoMatchScreen } from "./StatusScreens";
 import { ItineraryView } from "./ItineraryView";
 import { aboutName, possessiveName, pronounSet } from "@/lib/pronouns";
 import type { Area, GenerateResponse, Itinerary, PlanInputs, Pronoun } from "@/lib/types";
+import { BUDGET_MAX, BUDGET_MIN, BUDGET_STEP } from "@/lib/budget";
 
 /**
  * The multi-step input flow: one question per screen with a slim progress
@@ -328,9 +329,9 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             <div className="px-1.5 py-2">
               <input
                 type="range"
-                min={100}
-                max={3000}
-                step={50}
+                min={BUDGET_MIN}
+                max={BUDGET_MAX}
+                step={BUDGET_STEP}
                 value={inputs.budget}
                 onChange={(e) => update({ budget: Number(e.target.value) })}
                 className="budget-slider"
@@ -338,20 +339,20 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
               />
             </div>
             <div className="flex justify-between px-1.5 text-caption text-mutedbrown">
-              <span>GHS 100</span>
-              <span>GHS 3,000</span>
+              <span>GHS {BUDGET_MIN}</span>
+              <span>GHS {BUDGET_MAX.toLocaleString()}</span>
             </div>
             <div className="mt-6">
               <span className="flbl">Or type it</span>
               <input
                 className="inp w-[140px] font-mono font-bold"
                 type="number"
-                min={100}
-                max={3000}
+                min={BUDGET_MIN}
+                max={BUDGET_MAX}
                 value={inputs.budget}
                 onChange={(e) =>
                   update({
-                    budget: Math.max(100, Math.min(3000, Number(e.target.value) || 100)),
+                    budget: Math.max(BUDGET_MIN, Math.min(BUDGET_MAX, Number(e.target.value) || BUDGET_MIN)),
                   })
                 }
               />

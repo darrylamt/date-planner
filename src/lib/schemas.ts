@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { BUDGET_MAX, BUDGET_MIN } from "./budget";
 
 export const planInputsSchema = z.object({
   areaIds: z.array(z.string().uuid()).default([]),
   areaNames: z.array(z.string()).default([]),
   surpriseMe: z.boolean().default(false),
-  budget: z.number().min(100).max(3000),
+  budget: z.number().min(BUDGET_MIN).max(BUDGET_MAX),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.number().min(1).max(12),

@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/admin/reservations", label: "Reservations" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/areas", label: "Areas" },
+  { href: "/admin/ingest", label: "Add from menu" },
   { href: "/admin/import", label: "Import CSV" },
 ];
 
