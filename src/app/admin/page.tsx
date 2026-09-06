@@ -39,10 +39,16 @@ export default async function AdminVenuesPage() {
       avgForTwo: Math.round(Number(v.avg_cost_per_person_ghs) * 2),
       staleDays,
       isStale: staleDays === null || staleDays > 90,
+      verification: v.verification_status as string,
+      verifiedAt: v.verified_at as string | null,
+      discrepancies: (v.verification_discrepancies ?? []).length as number,
     };
   });
 
   const staleCount = rows.filter((r) => r.isStale).length;
+  // Anything not corroborated can still be recommended to a real person, so
+  // it is surfaced next to the stale count rather than buried in the table.
+  const unverifiedCount = rows.filter((r) => r.verification !== "real").length;
 
   return (
     <div>
@@ -50,7 +56,10 @@ export default async function AdminVenuesPage() {
         <div>
           <h1 className="font-display text-[24px] font-bold">Venues</h1>
           <div className="text-[14px] text-mutedbrown">
-            {rows.length} venues · {staleCount} stale
+            {rows.length} venues · {staleCount} stale ·{" "}
+            <span className={unverifiedCount ? "font-semibold text-staletext" : ""}>
+              {unverifiedCount} unverified
+            </span>
           </div>
         </div>
         <Link href="/admin/venues/new" className="btn btnsm">
