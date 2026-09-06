@@ -1,4 +1,4 @@
-import type { IngestedItem } from "./ingest";
+import type { IngestedItem } from "./catalog";
 
 /**
  * Migration generation for ingested venues.

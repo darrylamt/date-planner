@@ -1,6 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-/** Server-side only — never import from client components. */
+/**
+ * Server-side only — never import from a client component.
+ *
+ * The client is constructed at module load, so importing this (or anything
+ * that imports it) into a "use client" file throws in the browser for want of
+ * an API key, and takes the whole page down with it. Shared vocabulary that
+ * both sides need lives in ./catalog, which has no SDK dependency.
+ */
 export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });

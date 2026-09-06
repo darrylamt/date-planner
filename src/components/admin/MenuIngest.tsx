@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ghs } from "@/lib/format";
 import { buildVenueMigration, migrationFilename } from "@/lib/sqlgen";
-import { MENU_CATEGORIES, VENUE_TYPES, type IngestedItem } from "@/lib/ingest";
+import { MENU_CATEGORIES, VENUE_TYPES, type IngestedItem } from "@/lib/catalog";
 import type { Area } from "@/lib/types";
 
 interface Extracted {
