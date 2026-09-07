@@ -1,15 +1,32 @@
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
-import { Elevation, GUTTER, HAIRLINE, Radius, Spacing } from "../../src/theme";
+import {
+  Elevation,
+  GUTTER,
+  HAIRLINE,
+  Radius,
+  Spacing,
+  TAB_BAR,
+} from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
+import { startNewPlan } from "../../src/lib/startPlan";
 import type { PlanInputs } from "../../src/lib/types";
+import type { SymbolViewProps } from "expo-symbols";
+
+/** One icon per occasion, so a card is recognisable before it is read. */
+const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
+  first_date: "sparkles",
+  anniversary: "heart.fill",
+  date_night: "moon.stars.fill",
+  friend_outing: "person.2.fill",
+};
 
 export default function Home() {
   const c = useTheme();
@@ -29,46 +46,16 @@ export default function Home() {
   const hasDraft = Boolean(draftInputs && (draft?.itinerary || draft?.step));
   const draftDone = draft?.itinerary ? TOTAL_STEPS : Math.min(draft?.step ?? 0, TOTAL_STEPS);
   const draftPct = Math.round((draftDone / TOTAL_STEPS) * 100);
-
-  /**
-   * Always starts a NEW plan. Resuming is the In progress card's job and
-   * nothing else's — when every entry point resumed, a finished plan made it
-   * impossible to start another one.
-   */
-  function start(occasion?: PlanInputs["occasion"]) {
-    const go = () => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.push(
-        occasion ? `/plan/new?fresh=1&occasion=${occasion}` : "/plan/new?fresh=1"
-      );
-    };
-
-    // Replacing real work should never be silent.
-    if (hasDraft) {
-      Alert.alert(
-        "Start a new plan?",
-        draft?.itinerary
-          ? "Your current plan will be replaced. Save or share it first if you want to keep it."
-          : "Your answers so far will be discarded.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Start new", style: "destructive", onPress: go },
-        ]
-      );
-      return;
-    }
-    go();
-  }
+  /** First stop's photo stands in for the plan, the way a cover image would. */
+  const draftImage = draft?.itinerary?.stops?.[0]?.image_url ?? null;
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.background }}
-      // Lets the native tab bar and status bar contribute their own insets.
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingBottom: Spacing.section }}
+      contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Masthead. No box: the wordmark and the space under it do the work. */}
       <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.three }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.two }}>
           <Symbol name="flame.fill" size={15} color={c.accent} />
@@ -80,141 +67,169 @@ export default function Home() {
         <Text variant="display" style={{ marginTop: Spacing.four }}>
           Plan a date worth turning up for.
         </Text>
-        <Text variant="body" tone="secondary" style={{ marginTop: Spacing.three }}>
-          Seven questions. A whole evening across Accra — real menus, real prices,
-          transport included.
-        </Text>
       </View>
 
-      {/* Resume: the one lifted surface here, because it is the only thing that
-          is not part of the page's own hierarchy. */}
+      {/* In progress */}
       {hasDraft && draftInputs ? (
-        <Pressable
-          onPress={() => router.push("/plan/new")}
-          style={({ pressed }) => [
-            {
-              marginHorizontal: GUTTER,
-              marginTop: Spacing.five,
-              padding: Spacing.card,
-              borderRadius: Radius.lg,
-              borderWidth: HAIRLINE,
-              borderColor: c.border,
-              backgroundColor: c.backgroundElement,
-              opacity: pressed ? 0.7 : 1,
-            },
-            Elevation.card,
-          ]}
-        >
-          <Text variant="eyebrow" tone="secondary" uppercase>
-            In progress
-          </Text>
-          <Text variant="title3" numberOfLines={1} style={{ marginTop: Spacing.two }}>
-            {draft?.itinerary
-              ? draft.itinerary.title
-              : `Plan for ${longDate(draftInputs.date)}`}
-          </Text>
-          <Text variant="footnote" tone="secondary" style={{ marginTop: Spacing.half }}>
-            {draft?.itinerary ? "Ready to view" : `${draftPct}% complete`}
-          </Text>
+        <>
+          <SectionHeading title="In progress" />
+          <Pressable
+            onPress={() => router.push("/plan/new")}
+            style={({ pressed }) => [
+              {
+                marginHorizontal: GUTTER,
+                padding: Spacing.three,
+                borderRadius: Radius.xl,
+                borderWidth: HAIRLINE,
+                borderColor: c.border,
+                backgroundColor: c.backgroundElement,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: Spacing.three,
+                opacity: pressed ? 0.7 : 1,
+              },
+              Elevation.card,
+            ]}
+          >
+            {draftImage ? (
+              <Image
+                source={{ uri: draftImage }}
+                style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: 29,
+                  backgroundColor: c.skeleton,
+                }}
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: 29,
+                  backgroundColor: c.backgroundSunken,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Symbol name="calendar" size={22} color={c.textTertiary} />
+              </View>
+            )}
 
-          {!draft?.itinerary ? (
+            <View style={{ flex: 1, gap: Spacing.one }}>
+              <Text variant="title3" numberOfLines={1}>
+                {draft?.itinerary
+                  ? draft.itinerary.title
+                  : `Plan for ${longDate(draftInputs.date)}`}
+              </Text>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Symbol
+                  name={draft?.itinerary ? "checkmark.circle" : "clock"}
+                  size={12}
+                  color={c.textSecondary}
+                />
+                <Text variant="footnote" tone="secondary">
+                  {draft?.itinerary ? "Ready to view" : `${draftPct}% complete`}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  height: 6,
+                  borderRadius: Radius.pill,
+                  backgroundColor: c.backgroundSelected,
+                  marginTop: Spacing.one,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: `${draftPct}%`,
+                    height: "100%",
+                    backgroundColor: c.accent,
+                  }}
+                />
+              </View>
+            </View>
+
             <View
               style={{
-                height: 3,
-                borderRadius: Radius.pill,
-                backgroundColor: c.backgroundSelected,
-                marginTop: Spacing.three,
-                overflow: "hidden",
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: c.accentSoft,
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <View
-                style={{ width: `${draftPct}%`, height: "100%", backgroundColor: c.accent }}
-              />
+              <Symbol name="play.fill" size={15} color={c.accent} />
             </View>
-          ) : null}
-        </Pressable>
+          </Pressable>
+        </>
       ) : null}
 
-      {/* Occasions — rows separated by hairlines, not fills. */}
-      <Text
-        variant="eyebrow"
-        tone="secondary"
-        uppercase
-        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
+      {/* Occasions */}
+      <SectionHeading title="Occasions" />
+      <View
+        style={{
+          paddingHorizontal: GUTTER,
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: Spacing.three,
+        }}
       >
-        Start with the occasion
-      </Text>
-
-      <View style={{ marginTop: Spacing.three }}>
-        {OCCASIONS.map((o, i) => (
+        {OCCASIONS.map((o) => (
           <Pressable
             key={o.id}
-            onPress={() => start(o.id)}
+            onPress={() => void startNewPlan(o.id)}
             style={({ pressed }) => ({
-              paddingHorizontal: GUTTER,
-              paddingVertical: Spacing.three,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: Spacing.three,
-              borderTopWidth: i === 0 ? HAIRLINE : 0,
-              borderBottomWidth: HAIRLINE,
+              // Two per row, accounting for the gap between them.
+              width: "47.5%",
+              flexGrow: 1,
+              padding: Spacing.three,
+              borderRadius: Radius.xl,
+              borderWidth: HAIRLINE,
               borderColor: c.border,
-              backgroundColor: pressed ? c.backgroundSelected : "transparent",
+              backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
             })}
           >
-            <Text variant="caption" tone="tertiary" tabular style={{ width: 22 }}>
-              {String(i + 1).padStart(2, "0")}
-            </Text>
-            <View style={{ flex: 1 }}>
-              <Text variant="headline">{o.title}</Text>
-              <Text variant="footnote" tone="secondary" style={{ marginTop: 1 }}>
-                {o.sub}
-              </Text>
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: c.backgroundSunken,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Symbol
+                name={OCCASION_ICON[o.id] ?? "sparkles"}
+                size={17}
+                color={c.accent}
+              />
             </View>
-            <Symbol
-              name="chevron.right"
-              size={13}
-              color={c.textTertiary}
-              weight="semibold"
-            />
+            <Text variant="headline" style={{ marginTop: Spacing.three }}>
+              {o.title}
+            </Text>
+            <Text
+              variant="footnote"
+              tone="secondary"
+              numberOfLines={2}
+              style={{ marginTop: 1 }}
+            >
+              {o.sub}
+            </Text>
           </Pressable>
         ))}
       </View>
 
-      <Pressable
-        onPress={() => start()}
-        style={({ pressed }) => ({
-          marginHorizontal: GUTTER,
-          marginTop: Spacing.four,
-          height: 52,
-          borderRadius: Radius.md,
-          backgroundColor: c.brand,
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "row",
-          gap: Spacing.two,
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
-        <Text variant="headline" style={{ color: c.textOnBrand }}>
-          Start planning
-        </Text>
-        <Symbol name="arrow.right" size={14} color={c.textOnBrand} weight="semibold" />
-      </Pressable>
-
-      {/* How it works — numbered, unboxed. */}
-      <Text
-        variant="eyebrow"
-        tone="secondary"
-        uppercase
-        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
-      >
-        How it works
-      </Text>
-
-      <View
-        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.four }}
-      >
+      {/* How it works */}
+      <SectionHeading title="How it works" />
+      <View style={{ paddingHorizontal: GUTTER, gap: Spacing.four }}>
         <Step
           n="01"
           title="Pick an area and a budget"
@@ -241,6 +256,21 @@ export default function Home() {
         estimate.
       </Text>
     </ScrollView>
+  );
+}
+
+function SectionHeading({ title }: { title: string }) {
+  return (
+    <Text
+      variant="title2"
+      style={{
+        paddingHorizontal: GUTTER,
+        marginTop: Spacing.section,
+        marginBottom: Spacing.three,
+      }}
+    >
+      {title}
+    </Text>
   );
 }
 

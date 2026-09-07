@@ -6,7 +6,7 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, Spacing, space } from "../../src/theme";
+import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
@@ -34,7 +34,7 @@ export default function Profile() {
       style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={{
         paddingTop: insets.top + space.lg,
-        paddingBottom: Spacing.section,
+        paddingBottom: TAB_BAR.clearance,
       }}
     >
       <Text

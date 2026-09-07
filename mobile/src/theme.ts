@@ -255,6 +255,12 @@ export const GUTTER = Spacing.gutter;
 export const HAIRLINE = 0.5;
 
 /**
+ * The floating nav sits over content rather than reserving space, so every
+ * scroll view has to pad past it by `clearance`.
+ */
+export const TAB_BAR = { height: 58, clearance: 120 } as const;
+
+/**
  * Named spacing kept from the previous scale, remapped onto the new rhythm —
  * the large steps are deliberately bigger, because space is what groups things
  * now that fills do not.
