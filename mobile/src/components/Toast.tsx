@@ -42,7 +42,7 @@ export function Toast({ message, onDone }: { message: string | null; onDone: () 
       <View
         style={[
           {
-            backgroundColor: c.label,
+            backgroundColor: c.text,
             borderRadius: radius.control,
             paddingHorizontal: space.lg,
             paddingVertical: space.md,

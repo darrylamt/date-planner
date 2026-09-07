@@ -42,26 +42,26 @@ export function Button({
   const bg =
     kind === "filled"
       ? inert
-        ? c.fill
-        : c.tint
+        ? c.backgroundSelected
+        : c.accent
       : kind === "tinted"
-        ? c.tintMuted
+        ? c.accentSoft
         : kind === "gray"
-          ? c.fill
+          ? c.backgroundSelected
           : "transparent";
 
   const fg =
     kind === "filled"
       ? inert
-        ? c.quaternaryLabel
-        : c.onTint
+        ? c.textTertiary
+        : c.textOnBrand
       : kind === "destructive"
-        ? c.red
+        ? c.danger
         : inert
-          ? c.quaternaryLabel
+          ? c.textTertiary
           : kind === "gray"
-            ? c.label
-            : c.tint;
+            ? c.text
+            : c.accent;
 
   const isBlock = block ?? size === "large";
 
@@ -119,7 +119,7 @@ export function ActionBar({ children, style }: { children: React.ReactNode; styl
           paddingTop: space.md,
           gap: space.sm,
           borderTopWidth: 0.5,
-          borderTopColor: c.separator,
+          borderTopColor: c.border,
           backgroundColor: c.background,
         },
         style,

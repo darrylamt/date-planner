@@ -6,7 +6,7 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, TAB_BAR, space } from "../../src/theme";
+import { GUTTER, Spacing, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
@@ -31,10 +31,10 @@ export default function Profile() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: c.groupedBackground }}
+      style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={{
         paddingTop: insets.top + space.lg,
-        paddingBottom: TAB_BAR.clearance,
+        paddingBottom: Spacing.section,
       }}
     >
       <Text
@@ -53,13 +53,13 @@ export default function Profile() {
         <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xxl }}>
           <View
             style={{
-              backgroundColor: c.surface,
+              backgroundColor: c.backgroundElement,
               borderRadius: 12,
               padding: space.xl,
               alignItems: "center",
             }}
           >
-            <Symbol name="person.crop.circle" size={40} color={c.secondaryLabel} />
+            <Symbol name="person.crop.circle" size={40} color={c.textSecondary} />
             <Text variant="headline" center style={{ marginTop: space.md }}>
               Sign in to save plans
             </Text>
@@ -80,7 +80,7 @@ export default function Profile() {
       <Group header="This device">
         <Row
           icon="trash"
-          iconColor={c.red}
+          iconColor={c.danger}
           title="Clear in-progress plan"
           subtitle={hasDraft ? "A saved draft is on this device" : "Nothing in progress"}
           destructive

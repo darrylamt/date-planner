@@ -6,7 +6,7 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, TAB_BAR, space } from "../../src/theme";
+import { GUTTER, Spacing, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
 import { deletePlan, listPlans } from "../../src/lib/data";
@@ -67,8 +67,8 @@ export default function Plans() {
 
   if (authLoading || plans === null) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.groupedBackground, justifyContent: "center" }}>
-        <ActivityIndicator color={c.tint} />
+      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
+        <ActivityIndicator color={c.accent} />
       </View>
     );
   }
@@ -97,15 +97,15 @@ export default function Plans() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: c.groupedBackground }}
+      style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={{
         paddingTop: insets.top + space.lg,
-        paddingBottom: TAB_BAR.clearance,
+        paddingBottom: Spacing.section,
       }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
-          tintColor={c.secondaryLabel}
+          tintColor={c.textSecondary}
           onRefresh={async () => {
             setRefreshing(true);
             await load();
@@ -141,7 +141,7 @@ export default function Plans() {
           />
           <Row
             icon="trash"
-            iconColor={c.red}
+            iconColor={c.danger}
             title="Delete"
             destructive
             onPress={() => confirmDelete(plan)}
@@ -169,13 +169,13 @@ function Empty({
     <View
       style={{
         flex: 1,
-        backgroundColor: c.groupedBackground,
+        backgroundColor: c.background,
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: GUTTER + space.sm,
       }}
     >
-      <Symbol name={icon} size={44} color={c.secondaryLabel} />
+      <Symbol name={icon} size={44} color={c.textSecondary} />
       <Text variant="title3" center style={{ marginTop: space.lg }}>
         {title}
       </Text>

@@ -91,7 +91,7 @@ export function DayStrip({
       {showCalendar ? (
         <View
           style={{
-            backgroundColor: c.surface,
+            backgroundColor: c.backgroundElement,
             borderRadius: radius.card,
             marginHorizontal: GUTTER,
             paddingVertical: space.sm,
@@ -103,7 +103,7 @@ export function DayStrip({
             mode="date"
             display="inline"
             minimumDate={new Date()}
-            accentColor={c.tint}
+            accentColor={c.accent}
             themeVariant={isDark ? "dark" : "light"}
             onChange={(_e, picked) => {
               if (picked) onChange(toIso(picked));
@@ -135,7 +135,7 @@ export function DayStrip({
                   width: ITEM_WIDTH,
                   paddingVertical: space.md,
                   borderRadius: radius.pill,
-                  backgroundColor: on ? c.tint : c.surface,
+                  backgroundColor: on ? c.accent : c.backgroundElement,
                   alignItems: "center",
                   gap: 4,
                 }}
@@ -143,14 +143,14 @@ export function DayStrip({
                 <Text
                   variant="caption2"
                   weight="600"
-                  style={{ color: on ? c.onTint : c.secondaryLabel }}
+                  style={{ color: on ? c.textOnBrand : c.textSecondary }}
                 >
                   {d.weekday.toUpperCase()}
                 </Text>
                 <Text
                   variant="headline"
                   tabular
-                  style={{ color: on ? c.onTint : c.label }}
+                  style={{ color: on ? c.textOnBrand : c.text }}
                 >
                   {d.day}
                 </Text>
@@ -160,7 +160,7 @@ export function DayStrip({
                       width: 4,
                       height: 4,
                       borderRadius: 2,
-                      backgroundColor: on ? c.onTint : c.tint,
+                      backgroundColor: on ? c.textOnBrand : c.accent,
                     }}
                   />
                 ) : (

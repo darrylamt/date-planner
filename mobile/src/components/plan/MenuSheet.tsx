@@ -77,7 +77,7 @@ export function MenuSheet({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: c.groupedBackground }}>
+      <View style={{ flex: 1, backgroundColor: c.background }}>
         {/* Sheet header */}
         <View
           style={{
@@ -87,7 +87,7 @@ export function MenuSheet({
             paddingHorizontal: GUTTER,
             paddingVertical: space.md,
             borderBottomWidth: HAIRLINE,
-            borderBottomColor: c.separator,
+            borderBottomColor: c.border,
             backgroundColor: c.background,
           }}
         >
@@ -104,7 +104,7 @@ export function MenuSheet({
 
         <ScrollView contentContainerStyle={{ paddingVertical: space.lg, paddingBottom: insets.bottom + space.xxxl }}>
           {loading ? (
-            <ActivityIndicator style={{ marginTop: space.xxxl }} color={c.tint} />
+            <ActivityIndicator style={{ marginTop: space.xxxl }} color={c.accent} />
           ) : failed ? (
             <Text variant="body" tone="secondary" center style={{ marginTop: space.xxxl }}>
               We could not load the menu. Check your connection and try again.
@@ -130,7 +130,7 @@ export function MenuSheet({
 
                 <View
                   style={{
-                    backgroundColor: c.surface,
+                    backgroundColor: c.backgroundElement,
                     borderRadius: radius.row,
                     marginHorizontal: GUTTER,
                     overflow: "hidden",
@@ -141,9 +141,9 @@ export function MenuSheet({
                       key={item.id}
                       onPress={() => addItem(item)}
                       style={({ pressed }) => ({
-                        backgroundColor: pressed ? c.fillSecondary : "transparent",
+                        backgroundColor: pressed ? c.backgroundSunken : "transparent",
                         borderTopWidth: i === 0 ? 0 : HAIRLINE,
-                        borderTopColor: c.separator,
+                        borderTopColor: c.border,
                       })}
                     >
                       <View

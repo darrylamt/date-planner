@@ -34,22 +34,22 @@ export function Text({
 
   const color =
     tone === "label"
-      ? c.label
+      ? c.text
       : tone === "secondary"
-        ? c.secondaryLabel
+        ? c.textSecondary
         : tone === "tertiary"
-          ? c.tertiaryLabel
+          ? c.textTertiary
           : tone === "quaternary"
-            ? c.quaternaryLabel
+            ? c.textTertiary
             : tone === "tint"
-              ? c.tint
+              ? c.accent
               : tone === "onTint"
-                ? c.onTint
+                ? c.textOnBrand
                 : tone === "red"
-                  ? c.red
+                  ? c.danger
                   : tone === "green"
-                    ? c.green
-                    : c.orange;
+                    ? c.success
+                    : c.warning;
 
   return (
     <RNText

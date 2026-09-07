@@ -1,189 +1,264 @@
 /**
- * aduro design system — Apple HIG aligned.
+ * aduro design tokens — monochrome.
  *
- * Semantic colours mirror the iOS system palette so the app feels native and
- * follows the phone's appearance setting automatically. Nothing here is a
- * hard-coded literal at the call site: screens ask for `c.label`, `c.separator`
- * or `c.tint` and get the right value for the current scheme.
+ * Ported from the Gavel system. The visual language is a printed itinerary:
+ * white paper, black type, hierarchy built from size and space rather than
+ * boxes and colour. Venue photography is the only thing that brings colour,
+ * which is the point — the plan should look like the places, not like the app.
  *
- * Brand presence is deliberately narrow — a single rose tint. Colour otherwise
- * comes from venue photography, which is the point of the product.
+ * One brand colour sits on top of that, and `ACCENT` below is the only place
+ * it is written down; every tint, border and dark-mode variant is derived from
+ * it, so trying a different hue is a one-line change.
+ *
+ * Rules of the system:
+ *  - Surfaces are white on white. Separation comes from space, then hairlines.
+ *  - Never fill a container just to group things; increase the gap instead.
+ *  - Status keeps its own palette. Red means over budget, green means money
+ *    left. The brand colour must never be used for either, or the one thing
+ *    colour reliably told you stops being reliable.
  */
 
-export interface Palette {
-  /** Page background for plain (non-grouped) screens. */
-  background: string;
-  /** Background behind grouped/inset lists — iOS systemGroupedBackground. */
-  groupedBackground: string;
-  /** Card / row surface sitting on groupedBackground. */
-  surface: string;
-  /** A surface raised above `surface` (sheets, nested cards). */
-  surfaceRaised: string;
-
-  /** Primary text. */
-  label: string;
-  /** Supporting text. */
-  secondaryLabel: string;
-  /** De-emphasised text, placeholders. */
-  tertiaryLabel: string;
-  /** Disabled text. */
-  quaternaryLabel: string;
-
-  /** Hairline between rows — translucent, sits over content. */
-  separator: string;
-  /** Opaque divider for full-bleed edges. */
-  opaqueSeparator: string;
-  /** Neutral filled control background (unselected segment, track). */
-  fill: string;
-  /** A lighter neutral fill. */
-  fillSecondary: string;
-
-  /** Brand accent — buttons, selection, links. */
-  tint: string;
-  /** Accent at low opacity, for selected row backgrounds. */
-  tintMuted: string;
-  /** Text/icon colour on top of `tint`. */
-  onTint: string;
-
-  green: string;
-  orange: string;
-  red: string;
-
-  /** Placeholder block behind loading imagery. */
-  imagePlaceholder: string;
-}
-
-const light: Palette = {
-  background: "#FFFFFF",
-  groupedBackground: "#F2F2F7",
-  surface: "#FFFFFF",
-  surfaceRaised: "#FFFFFF",
-
-  label: "#000000",
-  secondaryLabel: "rgba(60, 60, 67, 0.60)",
-  tertiaryLabel: "rgba(60, 60, 67, 0.30)",
-  quaternaryLabel: "rgba(60, 60, 67, 0.18)",
-
-  separator: "rgba(60, 60, 67, 0.29)",
-  opaqueSeparator: "#C6C6C8",
-  fill: "rgba(120, 120, 128, 0.12)",
-  fillSecondary: "rgba(120, 120, 128, 0.08)",
-
-  // Deepened rose: 5.9:1 on white, so it is legible as text, not just as a fill.
-  tint: "#C9184A",
-  tintMuted: "rgba(201, 24, 74, 0.10)",
-  onTint: "#FFFFFF",
-
-  green: "#248A3D",
-  orange: "#C93400",
-  red: "#D70015",
-
-  imagePlaceholder: "#E5E5EA",
-};
-
-const dark: Palette = {
-  background: "#000000",
-  groupedBackground: "#000000",
-  surface: "#1C1C1E",
-  surfaceRaised: "#2C2C2E",
-
-  label: "#FFFFFF",
-  secondaryLabel: "rgba(235, 235, 245, 0.60)",
-  tertiaryLabel: "rgba(235, 235, 245, 0.30)",
-  quaternaryLabel: "rgba(235, 235, 245, 0.18)",
-
-  separator: "rgba(84, 84, 88, 0.65)",
-  opaqueSeparator: "#38383A",
-  fill: "rgba(120, 120, 128, 0.24)",
-  fillSecondary: "rgba(120, 120, 128, 0.16)",
-
-  tint: "#FF5C8A",
-  tintMuted: "rgba(255, 92, 138, 0.16)",
-  onTint: "#FFFFFF",
-
-  green: "#30D158",
-  orange: "#FF9F0A",
-  red: "#FF453A",
-
-  imagePlaceholder: "#2C2C2E",
-};
-
-export const palettes = { light, dark };
+import { Platform } from "react-native";
 
 /**
- * Apple's text styles. Sizes match the default (Large) Dynamic Type setting;
- * `fontWeight` values are the ones SF uses for each style.
+ * The one colour to change.
+ *
+ * A deep rose rather than the brighter #E23D6D: white text on this clears
+ * 4.5:1, which the brighter tone does not, and it is used behind white type on
+ * every primary button.
  */
-export const type = {
-  /**
-   * Display face for page titles: heavy, tight and set uppercase at the call
-   * site. Line height is deliberately below the font size so two stacked
-   * lines read as one block rather than two sentences.
-   */
-  display: { fontSize: 40, lineHeight: 40, fontWeight: "800", letterSpacing: -1.4 },
-  displaySmall: { fontSize: 30, lineHeight: 31, fontWeight: "800", letterSpacing: -1 },
-  largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: "700", letterSpacing: 0.37 },
-  title1: { fontSize: 28, lineHeight: 34, fontWeight: "700", letterSpacing: 0.36 },
-  title2: { fontSize: 22, lineHeight: 28, fontWeight: "700", letterSpacing: 0.35 },
-  title3: { fontSize: 20, lineHeight: 25, fontWeight: "600", letterSpacing: 0.38 },
-  headline: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.41 },
-  body: { fontSize: 17, lineHeight: 22, fontWeight: "400", letterSpacing: -0.41 },
-  callout: { fontSize: 16, lineHeight: 21, fontWeight: "400", letterSpacing: -0.32 },
-  subheadline: { fontSize: 15, lineHeight: 20, fontWeight: "400", letterSpacing: -0.24 },
-  footnote: { fontSize: 13, lineHeight: 18, fontWeight: "400", letterSpacing: -0.08 },
-  caption1: { fontSize: 12, lineHeight: 16, fontWeight: "400", letterSpacing: 0 },
-  caption2: { fontSize: 11, lineHeight: 13, fontWeight: "400", letterSpacing: 0.07 },
+export const ACCENT = "#C9184A";
+
+function channels(hex: string): [number, number, number] {
+  const value = hex.replace("#", "");
+  const full =
+    value.length === 3
+      ? value
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : value;
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+/**
+ * Blends `hex` toward `target` by `amount` (0–1).
+ *
+ * Tints are derived rather than hand-picked so a new accent cannot leave a
+ * stale soft-fill or border behind — the failure mode of a palette written out
+ * by hand, where one swatch gets missed and only shows up on one screen.
+ */
+function mix(hex: string, target: string, amount: number): string {
+  const [r1, g1, b1] = channels(hex);
+  const [r2, g2, b2] = channels(target);
+  const blend = (a: number, b: number) => Math.round(a + (b - a) * amount);
+  return `#${[blend(r1, r2), blend(g1, g2), blend(b1, b2)]
+    .map((c) => c.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase()}`;
+}
+
+const WHITE = "#FFFFFF";
+const BLACK = "#000000";
+
+/** Lifted for dark surfaces, where the deep rose is too low-contrast for text. */
+const ACCENT_DARK = mix(ACCENT, WHITE, 0.38);
+
+export const Colors = {
+  light: {
+    background: "#FFFFFF",
+    /** Cards sit on the same white; space separates them, not fill. */
+    backgroundElement: "#FFFFFF",
+    /** Pressed / selected chip and row states. */
+    backgroundSelected: "#F0F0F0",
+    /** The one tinted surface, for genuinely inset wells. */
+    backgroundSunken: "#F7F7F7",
+
+    text: "#0A0A0A",
+    textSecondary: "#717171",
+    textTertiary: "#949494",
+    textOnBrand: "#FFFFFF",
+
+    border: "#DDDDDD",
+    borderStrong: "#B0B0B0",
+
+    brand: ACCENT,
+    accent: ACCENT,
+    accentSoft: mix(ACCENT, WHITE, 0.93),
+    accentBorder: mix(ACCENT, WHITE, 0.76),
+
+    /** Over budget. */
+    danger: "#DC2626",
+    dangerSoft: "#FEF2F2",
+    /** Comfortably inside the budget. */
+    success: "#15803D",
+    successSoft: "#F1FBF4",
+    /** Deliberately grey: an estimate is information, not an alarm. */
+    warning: "#52525B",
+    warningSoft: "#FAFAFA",
+
+    overlay: "rgba(0, 0, 0, 0.38)",
+    skeleton: "#F4F4F5",
+  },
+  dark: {
+    background: "#000000",
+    backgroundElement: "#000000",
+    backgroundSelected: "#1C1C1E",
+    backgroundSunken: "#0C0C0D",
+
+    text: "#FAFAFA",
+    textSecondary: "#A1A1AA",
+    textTertiary: "#71717A",
+    textOnBrand: "#0A0A0A",
+
+    border: "#1F1F22",
+    borderStrong: "#2E2E32",
+
+    brand: ACCENT_DARK,
+    accent: ACCENT_DARK,
+    accentSoft: mix(ACCENT, BLACK, 0.82),
+    accentBorder: mix(ACCENT, BLACK, 0.66),
+
+    danger: "#FF453A",
+    dangerSoft: "#231110",
+    success: "#30D158",
+    successSoft: "#0C1F13",
+    warning: "#A1A1AA",
+    warningSoft: "#141416",
+
+    overlay: "rgba(0, 0, 0, 0.62)",
+    skeleton: "#18181B",
+  },
 } as const;
 
-/** Corner radii — iOS uses continuous curvature; these are the visual matches. */
-export const radius = {
-  row: 10, // grouped list container
-  card: 12, // standalone card
-  control: 12, // buttons, inputs
-  sheet: 16,
-  pill: 999,
+/** Widened so both schemes satisfy the same shape. */
+export type ThemeColors = { [K in keyof (typeof Colors)["light"]]: string };
+export type ThemeColor = keyof ThemeColors;
+
+export const Fonts = Platform.select({
+  ios: {
+    sans: "system-ui",
+    serif: "ui-serif",
+    rounded: "ui-rounded",
+    mono: "ui-monospace",
+  },
+  default: { sans: "normal", serif: "serif", rounded: "normal", mono: "monospace" },
+});
+
+/**
+ * Generous by default. In a layout with no borders or fills, spacing is the
+ * only thing doing the grouping, so these run larger than a boxed design needs.
+ */
+export const Spacing = {
+  half: 2,
+  one: 4,
+  two: 8,
+  three: 16,
+  four: 24,
+  five: 32,
+  six: 64,
+  /** Padding inside a card. */
+  card: 20,
+  /** Screen side margins. */
+  gutter: 24,
+  /** Air between major sections — the workhorse of the layout. */
+  section: 40,
 } as const;
 
-/** 4pt spacing scale. */
-export const space = {
-  xs: 4,
+export const Radius = {
   sm: 8,
   md: 12,
   lg: 16,
   xl: 20,
-  xxl: 24,
-  xxxl: 32,
+  xxl: 28,
+  pill: 999,
 } as const;
-
-/** Standard iOS content inset. */
-export const GUTTER = 16;
 
 /**
- * Floating pill tab bar. It sits above content rather than in a docked bar,
- * so every scroll view has to pad past it by TAB_BAR_CLEARANCE.
+ * Soft, wide, low-opacity shadows — a surface should look lifted, never
+ * outlined in grey. Paired with a hairline border so cards still hold their
+ * edge on a white page where a shadow alone would disappear.
  */
-export const TAB_BAR = {
-  height: 64,
-  inset: 16,
-  clearance: 108,
-} as const;
-
-/** Hairline that stays 1px on every screen density. */
-export const HAIRLINE = 0.5;
-
-export const shadow = {
+export const Elevation = {
   card: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
   raised: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
 } as const;
+
+/** Shared timing so every micro-interaction feels like one system. */
+export const Motion = {
+  fast: 140,
+  base: 240,
+  slow: 420,
+} as const;
+
+/**
+ * Type scale. Sizes carry the hierarchy, because nothing else does — there are
+ * no boxes or rules to lean on.
+ */
+export const type = {
+  display: { fontSize: 40, lineHeight: 44, fontWeight: "700", letterSpacing: -1.1 },
+  title1: { fontSize: 30, lineHeight: 35, fontWeight: "700", letterSpacing: -0.6 },
+  title2: { fontSize: 24, lineHeight: 29, fontWeight: "700", letterSpacing: -0.4 },
+  title3: { fontSize: 19, lineHeight: 24, fontWeight: "600", letterSpacing: -0.2 },
+  headline: { fontSize: 17, lineHeight: 22, fontWeight: "600", letterSpacing: -0.3 },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: "400", letterSpacing: -0.2 },
+  callout: { fontSize: 15, lineHeight: 21, fontWeight: "400", letterSpacing: -0.2 },
+  subheadline: { fontSize: 14, lineHeight: 20, fontWeight: "400", letterSpacing: -0.1 },
+  footnote: { fontSize: 13, lineHeight: 18, fontWeight: "400", letterSpacing: 0 },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: "500", letterSpacing: 0.2 },
+  /** Section eyebrows: small, spaced, uppercase at the call site. */
+  eyebrow: { fontSize: 11, lineHeight: 14, fontWeight: "700", letterSpacing: 0.8 },
+
+  // Aliases kept so the port did not have to touch every call site at once.
+  largeTitle: { fontSize: 34, lineHeight: 39, fontWeight: "700", letterSpacing: -0.8 },
+  displaySmall: { fontSize: 30, lineHeight: 35, fontWeight: "700", letterSpacing: -0.6 },
+  caption1: { fontSize: 12, lineHeight: 16, fontWeight: "500", letterSpacing: 0.2 },
+  caption2: { fontSize: 11, lineHeight: 14, fontWeight: "600", letterSpacing: 0.3 },
+} as const;
+
+/** Screen side margin. */
+export const GUTTER = Spacing.gutter;
+
+/** Hairlines stay crisp at any density. */
+export const HAIRLINE = 0.5;
+
+/**
+ * Named spacing kept from the previous scale, remapped onto the new rhythm —
+ * the large steps are deliberately bigger, because space is what groups things
+ * now that fills do not.
+ */
+export const space = {
+  xs: Spacing.one,
+  sm: Spacing.two,
+  md: 12,
+  lg: Spacing.three,
+  xl: Spacing.card,
+  xxl: Spacing.four,
+  xxxl: Spacing.section,
+} as const;
+
+export const radius = {
+  row: Radius.md,
+  card: Radius.xl,
+  control: Radius.md,
+  sheet: Radius.lg,
+  pill: Radius.pill,
+} as const;
+
+export const shadow = Elevation;

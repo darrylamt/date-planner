@@ -27,17 +27,17 @@ export function Field({
       <TextInput
         {...rest}
         multiline={multiline}
-        placeholderTextColor={c.tertiaryLabel}
+        placeholderTextColor={c.textTertiary}
         style={[
           {
-            backgroundColor: c.surface,
+            backgroundColor: c.backgroundElement,
             borderRadius: radius.control,
             paddingHorizontal: space.md,
             paddingTop: multiline ? space.md : 0,
             paddingVertical: multiline ? space.md : 0,
             height: multiline ? 92 : 44,
             textAlignVertical: multiline ? "top" : "center",
-            color: c.label,
+            color: c.text,
             fontSize: typeScale.body.fontSize,
           },
           style,

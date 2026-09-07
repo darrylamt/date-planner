@@ -28,7 +28,7 @@ export function BudgetBar({
   return (
     <View
       style={{
-        backgroundColor: c.surface,
+        backgroundColor: c.backgroundElement,
         borderRadius: radius.card,
         padding: space.lg,
         gap: space.sm,
@@ -47,7 +47,7 @@ export function BudgetBar({
         style={{
           height: 8,
           borderRadius: radius.pill,
-          backgroundColor: c.fill,
+          backgroundColor: c.backgroundSelected,
           overflow: "hidden",
         }}
       >
@@ -56,7 +56,7 @@ export function BudgetBar({
             width: `${pct * 100}%`,
             height: "100%",
             borderRadius: radius.pill,
-            backgroundColor: over ? c.red : c.tint,
+            backgroundColor: over ? c.danger : c.accent,
           }}
         />
       </View>
@@ -92,12 +92,12 @@ export function Hop({ mins, cost }: { mins: number; cost: number }) {
           paddingHorizontal: space.md,
           paddingVertical: 6,
           borderRadius: radius.pill,
-          backgroundColor: c.surface,
+          backgroundColor: c.backgroundElement,
           borderWidth: HAIRLINE,
-          borderColor: c.separator,
+          borderColor: c.border,
         }}
       >
-        <Symbol name="car.fill" size={12} color={c.secondaryLabel} />
+        <Symbol name="car.fill" size={12} color={c.textSecondary} />
         <Text variant="caption1" tone="secondary" tabular>
           {mins} min · {ghs(cost)} est.
         </Text>
@@ -115,7 +115,7 @@ function Dashes() {
       {[0, 1, 2].map((i) => (
         <View
           key={i}
-          style={{ width: 2, height: 4, borderRadius: 1, backgroundColor: c.separator }}
+          style={{ width: 2, height: 4, borderRadius: 1, backgroundColor: c.border }}
         />
       ))}
     </View>

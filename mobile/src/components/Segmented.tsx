@@ -30,10 +30,10 @@ export function Segmented<T extends string>({
         values={options.map((o) => o.label)}
         selectedIndex={index}
         onChange={(e) => onChange(options[e.nativeEvent.selectedSegmentIndex].value)}
-        tintColor={c.surfaceRaised}
-        backgroundColor={c.fill}
-        fontStyle={{ color: c.label }}
-        activeFontStyle={{ color: c.label, fontWeight: "600" }}
+        tintColor={c.backgroundElement}
+        backgroundColor={c.backgroundSelected}
+        fontStyle={{ color: c.text }}
+        activeFontStyle={{ color: c.text, fontWeight: "600" }}
         style={{ height: 36 }}
       />
     </View>

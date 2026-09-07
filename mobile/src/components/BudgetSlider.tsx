@@ -37,8 +37,8 @@ export function BudgetSlider({
         maximumValue={MAX}
         step={STEP}
         value={value}
-        minimumTrackTintColor={c.tint}
-        maximumTrackTintColor={c.fill}
+        minimumTrackTintColor={c.accent}
+        maximumTrackTintColor={c.backgroundSelected}
         onValueChange={(v) => {
           if (v !== live) {
             setLive(v);

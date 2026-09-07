@@ -177,7 +177,7 @@ export function ItineraryView({
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.groupedBackground }}>
+    <View style={{ flex: 1, backgroundColor: c.background }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: space.xxxl }}
         contentInsetAdjustmentBehavior="automatic"
@@ -191,7 +191,7 @@ export function ItineraryView({
             {itinerary.title}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: space.sm }}>
-            <Symbol name="arrow.triangle.turn.up.right.diamond" size={13} color={c.secondaryLabel} />
+            <Symbol name="arrow.triangle.turn.up.right.diamond" size={13} color={c.textSecondary} />
             <Text variant="footnote" tone="secondary">
               {itinerary.summary_route}
             </Text>
@@ -215,7 +215,7 @@ export function ItineraryView({
               marginBottom: space.lg,
               padding: space.md,
               borderRadius: radius.card,
-              backgroundColor: over ? c.tintMuted : c.fillSecondary,
+              backgroundColor: over ? c.accentSoft : c.backgroundSunken,
             }}
           >
             <Text variant="footnote" tone={over ? "red" : "secondary"}>
@@ -232,7 +232,7 @@ export function ItineraryView({
               marginBottom: space.xl,
               padding: space.lg,
               borderRadius: radius.card,
-              backgroundColor: c.surface,
+              backgroundColor: c.backgroundElement,
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginBottom: space.xs }}>

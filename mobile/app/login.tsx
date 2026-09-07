@@ -160,10 +160,10 @@ export default function Login() {
                 marginTop: space.lg,
                 padding: space.md,
                 borderRadius: radius.control,
-                backgroundColor: c.tintMuted,
+                backgroundColor: c.accentSoft,
               }}
             >
-              <Text variant="footnote" style={{ color: c.tint }}>
+              <Text variant="footnote" style={{ color: c.accent }}>
                 {notice}
               </Text>
             </View>

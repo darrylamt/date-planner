@@ -1,32 +1,18 @@
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, TAB_BAR, radius, shadow, space } from "../../src/theme";
+import { Elevation, GUTTER, HAIRLINE, Radius, Spacing } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import type { PlanInputs } from "../../src/lib/types";
 
-/**
- * Colour-blocked occasion rows. Fixed colours rather than theme tokens: these
- * are solid blocks whose whole job is to be distinct from each other, and each
- * carries the text colour that stays legible on it.
- */
-const OCCASION_STYLE: Record<string, { bg: string; fg: string }> = {
-  first_date: { bg: "#6C4CF1", fg: "#FFFFFF" },
-  anniversary: { bg: "#E23D6D", fg: "#FFFFFF" },
-  date_night: { bg: "#141416", fg: "#FFFFFF" },
-  friend_outing: { bg: "#C6E36B", fg: "#141416" },
-};
-
 export default function Home() {
   const c = useTheme();
-  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState<Draft | null>(null);
 
   useFocusEffect(
@@ -51,301 +37,197 @@ export default function Home() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: c.groupedBackground }}
-      contentContainerStyle={{
-        paddingTop: insets.top + space.md,
-        paddingBottom: TAB_BAR.clearance,
-      }}
+      style={{ flex: 1, backgroundColor: c.background }}
+      // Lets the native tab bar and status bar contribute their own insets.
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ paddingBottom: Spacing.section }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Masthead */}
-      <View
-        style={{
-          paddingHorizontal: GUTTER,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-          <View
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              backgroundColor: c.tint,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Symbol name="flame.fill" size={17} color={c.onTint} />
-          </View>
-          <View>
-            <Text variant="callout" weight="700">
-              aduro
-            </Text>
-            <Text variant="caption2" tone="secondary">
-              Accra
-            </Text>
-          </View>
+      {/* Masthead. No box: the wordmark and the space under it do the work. */}
+      <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.three }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.two }}>
+          <Symbol name="flame.fill" size={15} color={c.accent} />
+          <Text variant="eyebrow" tone="secondary" uppercase>
+            aduro · Accra
+          </Text>
         </View>
 
-        <Pressable
-          onPress={() => router.push("/saved")}
-          style={({ pressed }) => ({
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: c.surface,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.6 : 1,
-          })}
-          accessibilityLabel="Saved plans"
-        >
-          <Symbol name="bookmark.fill" size={16} color={c.label} />
-        </Pressable>
-      </View>
-
-      {/* Display title */}
-      <View style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}>
-        <Text variant="display" uppercase>
-          Plan your date
+        <Text variant="display" style={{ marginTop: Spacing.four }}>
+          Plan a date worth turning up for.
         </Text>
-        <Text variant="subheadline" tone="secondary" style={{ marginTop: space.md }}>
-          Seven questions. A full evening across Accra — real menus, real prices,
+        <Text variant="body" tone="secondary" style={{ marginTop: Spacing.three }}>
+          Seven questions. A whole evening across Accra — real menus, real prices,
           transport included.
         </Text>
       </View>
 
-      {/* Resume */}
+      {/* Resume: the one lifted surface here, because it is the only thing that
+          is not part of the page's own hierarchy. */}
       {hasDraft && draftInputs ? (
         <Pressable
           onPress={() => router.push("/plan/new")}
           style={({ pressed }) => [
             {
               marginHorizontal: GUTTER,
-              marginTop: space.xl,
-              backgroundColor: c.surface,
-              borderRadius: radius.card,
-              padding: space.lg,
+              marginTop: Spacing.five,
+              padding: Spacing.card,
+              borderRadius: Radius.lg,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+              backgroundColor: c.backgroundElement,
               opacity: pressed ? 0.7 : 1,
             },
-            shadow.card,
+            Elevation.card,
           ]}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: c.tintMuted,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Symbol name="arrow.right" size={16} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="headline" numberOfLines={1}>
-                {draft?.itinerary
-                  ? draft.itinerary.title
-                  : `Plan for ${longDate(draftInputs.date)}`}
-              </Text>
-              <Text variant="footnote" tone="secondary">
-                {draft?.itinerary ? "Ready to view" : `${draftPct}% complete`}
-              </Text>
-            </View>
-          </View>
+          <Text variant="eyebrow" tone="secondary" uppercase>
+            In progress
+          </Text>
+          <Text variant="title3" numberOfLines={1} style={{ marginTop: Spacing.two }}>
+            {draft?.itinerary
+              ? draft.itinerary.title
+              : `Plan for ${longDate(draftInputs.date)}`}
+          </Text>
+          <Text variant="footnote" tone="secondary" style={{ marginTop: Spacing.half }}>
+            {draft?.itinerary ? "Ready to view" : `${draftPct}% complete`}
+          </Text>
+
           {!draft?.itinerary ? (
             <View
               style={{
-                height: 5,
-                borderRadius: radius.pill,
-                backgroundColor: c.fill,
-                marginTop: space.md,
+                height: 3,
+                borderRadius: Radius.pill,
+                backgroundColor: c.backgroundSelected,
+                marginTop: Spacing.three,
                 overflow: "hidden",
               }}
             >
               <View
-                style={{
-                  width: `${draftPct}%`,
-                  height: "100%",
-                  backgroundColor: c.tint,
-                  borderRadius: radius.pill,
-                }}
+                style={{ width: `${draftPct}%`, height: "100%", backgroundColor: c.accent }}
               />
             </View>
           ) : null}
         </Pressable>
       ) : null}
 
-      {/* Occasion blocks */}
+      {/* Occasions — rows separated by hairlines, not fills. */}
       <Text
-        variant="footnote"
+        variant="eyebrow"
         tone="secondary"
         uppercase
-        weight="600"
-        style={{ paddingHorizontal: GUTTER, marginTop: space.xxxl, marginBottom: space.md }}
+        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
       >
-        What is the occasion?
+        Start with the occasion
       </Text>
 
-      <View style={{ paddingHorizontal: GUTTER, gap: space.md }}>
-        {OCCASIONS.map((o) => {
-          const style = OCCASION_STYLE[o.id] ?? { bg: c.surface, fg: c.label };
-          return (
-            <Pressable
-              key={o.id}
-              onPress={() => start(o.id)}
-              style={({ pressed }) => ({
-                backgroundColor: style.bg,
-                borderRadius: 22,
-                paddingVertical: space.lg,
-                paddingLeft: space.xl,
-                paddingRight: space.md,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: space.md,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <View style={{ flex: 1 }}>
-                <Text variant="title3" weight="700" style={{ color: style.fg }}>
-                  {o.title}
-                </Text>
-                <Text
-                  variant="footnote"
-                  style={{ color: style.fg, opacity: 0.75, marginTop: 2 }}
-                >
-                  {o.sub}
-                </Text>
-              </View>
-              <View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
-                  backgroundColor: style.fg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Symbol name="arrow.up.right" size={15} color={style.bg} weight="bold" />
-              </View>
-            </Pressable>
-          );
-        })}
+      <View style={{ marginTop: Spacing.three }}>
+        {OCCASIONS.map((o, i) => (
+          <Pressable
+            key={o.id}
+            onPress={() => start(o.id)}
+            style={({ pressed }) => ({
+              paddingHorizontal: GUTTER,
+              paddingVertical: Spacing.three,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: Spacing.three,
+              borderTopWidth: i === 0 ? HAIRLINE : 0,
+              borderBottomWidth: HAIRLINE,
+              borderColor: c.border,
+              backgroundColor: pressed ? c.backgroundSelected : "transparent",
+            })}
+          >
+            <Text variant="caption" tone="tertiary" tabular style={{ width: 22 }}>
+              {String(i + 1).padStart(2, "0")}
+            </Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="headline">{o.title}</Text>
+              <Text variant="footnote" tone="secondary" style={{ marginTop: 1 }}>
+                {o.sub}
+              </Text>
+            </View>
+            <Symbol
+              name="chevron.right"
+              size={13}
+              color={c.textTertiary}
+              weight="semibold"
+            />
+          </Pressable>
+        ))}
       </View>
 
       <Pressable
         onPress={() => start()}
         style={({ pressed }) => ({
           marginHorizontal: GUTTER,
-          marginTop: space.md,
-          paddingVertical: space.lg,
-          borderRadius: 22,
-          borderWidth: 1.5,
-          borderColor: c.separator,
+          marginTop: Spacing.four,
+          height: 52,
+          borderRadius: Radius.md,
+          backgroundColor: c.brand,
           alignItems: "center",
-          opacity: pressed ? 0.6 : 1,
+          justifyContent: "center",
+          flexDirection: "row",
+          gap: Spacing.two,
+          opacity: pressed ? 0.85 : 1,
         })}
       >
-        <Text variant="callout" weight="700">
-          Start without picking one
+        <Text variant="headline" style={{ color: c.textOnBrand }}>
+          Start planning
         </Text>
+        <Symbol name="arrow.right" size={14} color={c.textOnBrand} weight="semibold" />
       </Pressable>
 
-      {/* How it works */}
+      {/* How it works — numbered, unboxed. */}
       <Text
-        variant="footnote"
+        variant="eyebrow"
         tone="secondary"
         uppercase
-        weight="600"
-        style={{ paddingHorizontal: GUTTER, marginTop: space.xxxl, marginBottom: space.md }}
+        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
       >
         How it works
       </Text>
+
       <View
-        style={{
-          marginHorizontal: GUTTER,
-          backgroundColor: c.surface,
-          borderRadius: radius.card,
-          paddingVertical: space.xs,
-        }}
+        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.four }}
       >
         <Step
-          icon="mappin.and.ellipse"
+          n="01"
           title="Pick an area and a budget"
-          body="Osu, Labone, Cantonments — or let us surprise you"
+          body="Osu, Labone, Cantonments — or let us surprise you."
         />
         <Step
-          icon="heart.text.square"
+          n="02"
           title="Tell us about them"
-          body="Food they love, places they like, anything to avoid"
+          body="Food they love, places they like, anything to avoid."
         />
         <Step
-          icon="list.bullet.rectangle"
+          n="03"
           title="Get a full itinerary"
-          body="Back-to-back stops that stay inside your budget"
-          last
+          body="Back-to-back stops that stay inside your budget."
         />
       </View>
 
       <Text
-        variant="caption1"
+        variant="footnote"
         tone="tertiary"
-        center
-        style={{ paddingHorizontal: GUTTER, marginTop: space.xl }}
+        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
       >
-        Prices are estimates and change. Transport is always an estimate.
+        Menu prices come from our catalogue and can change. Transport is always an
+        estimate.
       </Text>
     </ScrollView>
   );
 }
 
-function Step({
-  icon,
-  title,
-  body,
-  last,
-}: {
-  icon: Parameters<typeof Symbol>[0]["name"];
-  title: string;
-  body: string;
-  last?: boolean;
-}) {
-  const c = useTheme();
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        gap: space.md,
-        paddingHorizontal: space.lg,
-        paddingVertical: space.md,
-        borderBottomWidth: last ? 0 : 0.5,
-        borderBottomColor: c.separator,
-        alignItems: "center",
-      }}
-    >
-      <View
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 10,
-          backgroundColor: c.tintMuted,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Symbol name={icon} size={17} />
-      </View>
+    <View style={{ flexDirection: "row", gap: Spacing.three }}>
+      <Text variant="caption" tone="tertiary" tabular style={{ width: 22, marginTop: 2 }}>
+        {n}
+      </Text>
       <View style={{ flex: 1 }}>
-        <Text variant="callout" weight="600">
-          {title}
-        </Text>
-        <Text variant="footnote" tone="secondary">
+        <Text variant="headline">{title}</Text>
+        <Text variant="footnote" tone="secondary" style={{ marginTop: 1 }}>
           {body}
         </Text>
       </View>

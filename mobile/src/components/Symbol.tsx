@@ -24,7 +24,7 @@ export function Symbol({ name, size = 17, color, weight = "regular" }: SymbolPro
     <SymbolView
       name={name}
       size={size}
-      tintColor={(color ?? c.tint) as string}
+      tintColor={(color ?? c.accent) as string}
       weight={weight}
       resizeMode="scaleAspectFit"
       style={{ width: size, height: size }}

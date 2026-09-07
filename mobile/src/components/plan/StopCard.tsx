@@ -63,7 +63,7 @@ export function StopCard({
   return (
     <View
       style={{
-        backgroundColor: c.surface,
+        backgroundColor: c.backgroundElement,
         borderRadius: radius.card,
         overflow: "hidden",
         opacity: swapping ? 0.5 : 1,
@@ -72,7 +72,7 @@ export function StopCard({
       {stop.image_url ? (
         <Image
           source={{ uri: stop.image_url }}
-          style={{ width: "100%", height: 168, backgroundColor: c.imagePlaceholder }}
+          style={{ width: "100%", height: 168, backgroundColor: c.skeleton }}
           contentFit="cover"
           transition={200}
         />
@@ -92,7 +92,7 @@ export function StopCard({
         <Text variant="title3">{stop.name}</Text>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
-          <Symbol name="mappin" size={12} color={c.secondaryLabel} />
+          <Symbol name="mappin" size={12} color={c.textSecondary} />
           <Text variant="footnote" tone="secondary">
             {stop.area}
           </Text>
@@ -110,7 +110,7 @@ export function StopCard({
             style={{
               marginTop: space.sm,
               borderTopWidth: HAIRLINE,
-              borderTopColor: c.separator,
+              borderTopColor: c.border,
               paddingTop: space.sm,
             }}
           >
@@ -135,7 +135,7 @@ export function StopCard({
                       hitSlop={8}
                       accessibilityLabel={`Remove one ${o.item}`}
                     >
-                      <Symbol name="minus.circle" size={22} color={c.secondaryLabel} />
+                      <Symbol name="minus.circle" size={22} color={c.textSecondary} />
                     </Pressable>
                     <Text variant="subheadline" tabular weight="600" style={{ minWidth: 16, textAlign: "center" }}>
                       {o.qty}
@@ -168,7 +168,7 @@ export function StopCard({
             flexDirection: "row",
             justifyContent: "space-between",
             borderTopWidth: HAIRLINE,
-            borderTopColor: c.separator,
+            borderTopColor: c.border,
             paddingTop: space.sm,
           }}
         >
@@ -184,13 +184,13 @@ export function StopCard({
         {stop.why_this_fits ? (
           <View
             style={{
-              backgroundColor: c.tintMuted,
+              backgroundColor: c.accentSoft,
               borderRadius: 10,
               padding: space.md,
               marginTop: space.xs,
             }}
           >
-            <Text variant="footnote" style={{ color: c.tint }}>
+            <Text variant="footnote" style={{ color: c.accent }}>
               {stop.why_this_fits}
             </Text>
           </View>
@@ -198,7 +198,7 @@ export function StopCard({
 
         {stop.reservation_requested ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: space.xs }}>
-            <Symbol name="checkmark.circle.fill" size={14} color={c.green} />
+            <Symbol name="checkmark.circle.fill" size={14} color={c.success} />
             <Text variant="footnote" tone="green">
               Reservation requested
             </Text>
@@ -213,7 +213,7 @@ export function StopCard({
             gap: space.sm,
             marginTop: space.sm,
             borderTopWidth: HAIRLINE,
-            borderTopColor: c.separator,
+            borderTopColor: c.border,
             paddingTop: space.md,
           }}
         >
@@ -269,12 +269,12 @@ function StopAction({
         paddingHorizontal: space.md,
         height: 32,
         borderRadius: radius.pill,
-        backgroundColor: c.fill,
+        backgroundColor: c.backgroundSelected,
         opacity: pressed ? 0.6 : busy ? 0.5 : 1,
       })}
     >
-      {busy ? <ActivityIndicator size="small" color={c.tint} /> : <Symbol name={icon} size={13} weight="semibold" />}
-      <Text variant="footnote" weight="600" style={{ color: c.tint }}>
+      {busy ? <ActivityIndicator size="small" color={c.accent} /> : <Symbol name={icon} size={13} weight="semibold" />}
+      <Text variant="footnote" weight="600" style={{ color: c.accent }}>
         {label}
       </Text>
     </Pressable>

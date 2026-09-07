@@ -25,7 +25,7 @@ export function Screen({
   const c = useTheme();
   const isDark = useIsDark();
   const insets = useSafeAreaInsets();
-  const bg = grouped ? c.groupedBackground : c.background;
+  const bg = grouped ? c.background : c.background;
 
   const inner = scroll ? (
     <ScrollView

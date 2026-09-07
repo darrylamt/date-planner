@@ -32,11 +32,11 @@ export function Chip({
         height: 36,
         justifyContent: "center",
         borderRadius: radius.pill,
-        backgroundColor: selected ? c.tint : c.fill,
+        backgroundColor: selected ? c.accent : c.backgroundSelected,
         opacity: pressed ? 0.6 : disabled ? 0.4 : 1,
       })}
     >
-      <Text variant="subheadline" weight="600" style={{ color: selected ? c.onTint : c.label }}>
+      <Text variant="subheadline" weight="600" style={{ color: selected ? c.textOnBrand : c.text }}>
         {label}
       </Text>
     </Pressable>

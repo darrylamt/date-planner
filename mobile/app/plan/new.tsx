@@ -152,8 +152,8 @@ export default function PlanNew() {
 
   if (!hydrated) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.groupedBackground, justifyContent: "center" }}>
-        <ActivityIndicator color={c.tint} />
+      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
+        <ActivityIndicator color={c.accent} />
       </View>
     );
   }
@@ -223,7 +223,7 @@ export default function PlanNew() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.groupedBackground }}
+      style={{ flex: 1, backgroundColor: c.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={insets.top + 44}
     >
@@ -236,7 +236,7 @@ export default function PlanNew() {
               flex: 1,
               height: 4,
               borderRadius: radius.pill,
-              backgroundColor: i <= step ? c.tint : c.fill,
+              backgroundColor: i <= step ? c.accent : c.backgroundSelected,
             }}
           />
         ))}
@@ -255,7 +255,7 @@ export default function PlanNew() {
                 We could not load areas. Check your connection and try again.
               </Text>
             ) : (
-              <ActivityIndicator color={c.tint} />
+              <ActivityIndicator color={c.accent} />
             )}
           </View>
         ) : (

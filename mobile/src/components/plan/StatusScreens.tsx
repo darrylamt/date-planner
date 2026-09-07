@@ -62,7 +62,7 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
 
   return (
     <Centred>
-      <ActivityIndicator size="large" color={c.tint} />
+      <ActivityIndicator size="large" color={c.accent} />
 
       <Text variant="title2" center style={{ marginTop: space.xxl }}>
         Putting {poss} evening together
@@ -79,7 +79,7 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
           marginTop: space.xxxl,
           paddingHorizontal: space.lg,
           paddingVertical: space.md,
-          backgroundColor: c.fillSecondary,
+          backgroundColor: c.backgroundSunken,
           borderRadius: 12,
         }}
       >
@@ -106,7 +106,7 @@ export function NoMatch({
   return (
     <View style={{ flex: 1, justifyContent: "center" }}>
       <View style={{ alignItems: "center", paddingHorizontal: GUTTER + space.sm }}>
-        <Symbol name="magnifyingglass" size={44} color={c.secondaryLabel} />
+        <Symbol name="magnifyingglass" size={44} color={c.textSecondary} />
         <Text variant="title2" center style={{ marginTop: space.lg }}>
           {data.headline}
         </Text>
@@ -140,7 +140,7 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry: ()
 
   return (
     <Centred>
-      <Symbol name="exclamationmark.triangle.fill" size={44} color={c.orange} />
+      <Symbol name="exclamationmark.triangle.fill" size={44} color={c.warning} />
       <Text variant="title2" center style={{ marginTop: space.lg }}>
         That one is on us.
       </Text>

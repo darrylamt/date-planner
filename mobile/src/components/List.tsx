@@ -45,7 +45,7 @@ export function Group({
 
       <View
         style={{
-          backgroundColor: c.surface,
+          backgroundColor: c.backgroundElement,
           borderRadius: inset ? radius.row : 0,
           marginHorizontal: inset ? GUTTER : 0,
           overflow: "hidden",
@@ -57,7 +57,7 @@ export function Group({
               <View
                 style={{
                   height: HAIRLINE,
-                  backgroundColor: c.separator,
+                  backgroundColor: c.border,
                   // Hairlines start after the text, not at the card edge.
                   marginLeft: space.lg,
                 }}
@@ -129,13 +129,13 @@ export function Row({
         minHeight: 44, // HIG minimum touch target
       }}
     >
-      {icon ? <Symbol name={icon} size={20} color={iconColor ?? c.tint} /> : null}
+      {icon ? <Symbol name={icon} size={20} color={iconColor ?? c.accent} /> : null}
 
       <View style={{ flex: 1, gap: 1 }}>
         <Text
           variant="body"
           weight={selected ? "600" : "400"}
-          style={{ color: destructive ? c.red : selected ? c.tint : c.label }}
+          style={{ color: destructive ? c.danger : selected ? c.accent : c.text }}
         >
           {title}
         </Text>
@@ -155,7 +155,7 @@ export function Row({
 
       {selected && !trailing ? <Symbol name="checkmark" size={16} weight="semibold" /> : null}
       {chevron && !trailing ? (
-        <Symbol name="chevron.right" size={14} color={c.tertiaryLabel} weight="semibold" />
+        <Symbol name="chevron.right" size={14} color={c.textTertiary} weight="semibold" />
       ) : null}
     </View>
   );
@@ -172,7 +172,7 @@ export function Row({
         onPress();
       }}
       style={({ pressed }) => ({
-        backgroundColor: pressed ? c.fillSecondary : "transparent",
+        backgroundColor: pressed ? c.backgroundSunken : "transparent",
         opacity: disabled ? 0.4 : 1,
       })}
     >
