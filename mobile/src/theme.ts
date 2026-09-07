@@ -258,7 +258,7 @@ export const HAIRLINE = 0.5;
  * The floating nav sits over content rather than reserving space, so every
  * scroll view has to pad past it by `clearance`.
  */
-export const TAB_BAR = { height: 58, clearance: 120 } as const;
+export const TAB_BAR = { height: 66, clearance: 128 } as const;
 
 /**
  * Named spacing kept from the previous scale, remapped onto the new rhythm —

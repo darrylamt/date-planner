@@ -69,8 +69,10 @@ export function TabBar({
       <View
         style={[
           {
+            flex: 1,
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "flex-start",
             height: TAB_BAR.height,
             paddingHorizontal: Spacing.two,
             borderRadius: Radius.pill,
@@ -100,9 +102,9 @@ export function TabBar({
                 navigation.navigate(route.name);
               }}
               style={({ pressed }) => ({
-                width: 50,
-                height: 50,
-                borderRadius: 25,
+                width: 54,
+                height: 54,
+                borderRadius: 27,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: focused ? c.backgroundSelected : "transparent",
@@ -111,7 +113,7 @@ export function TabBar({
             >
               <Symbol
                 name={ICONS[route.name] ?? "circle"}
-                size={20}
+                size={23}
                 color={focused ? c.text : c.textTertiary}
                 weight={focused ? "semibold" : "regular"}
               />
@@ -119,8 +121,6 @@ export function TabBar({
           );
         })}
       </View>
-
-      <View style={{ flex: 1 }} />
 
       {/* Primary action. The only accent-filled control on screen. */}
       <Pressable
@@ -143,7 +143,7 @@ export function TabBar({
           Elevation.raised,
         ]}
       >
-        <Symbol name="plus" size={22} color={c.textOnBrand} weight="semibold" />
+        <Symbol name="plus" size={25} color={c.textOnBrand} weight="semibold" />
       </Pressable>
     </View>
   );
