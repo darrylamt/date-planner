@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ensureAreaId } from "@/lib/areas";
 import { csvToObjects } from "@/lib/csv";
 import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
@@ -38,9 +39,23 @@ export function CsvImporter({
     let ok = 0;
 
     if (mode === "venues") {
+      // Areas are created on demand, so a spreadsheet can introduce a new
+      // neighbourhood without a separate trip to /admin/areas first.
       const areaByName = new Map(areas.map((a) => [a.name.toLowerCase(), a.id] as [string, string]));
+
+      async function areaIdFor(name: string): Promise<string | null> {
+        const key = (name ?? "").trim().toLowerCase();
+        if (!key) return null;
+        const known = areaByName.get(key);
+        if (known) return known;
+        const resolved = await ensureAreaId(supabase, name);
+        if (!resolved) return null;
+        areaByName.set(key, resolved.id);
+        if (resolved.created) log.push(`Created area "${name.trim()}"`);
+        return resolved.id;
+      }
       for (const [i, r] of rows.entries()) {
-        const areaId = areaByName.get((r.area ?? "").toLowerCase());
+        const areaId = await areaIdFor(r.area ?? "");
         if (!r.name || !areaId) {
           log.push(`Row ${i + 2}: skipped — missing name or unknown area "${r.area}"`);
           continue;

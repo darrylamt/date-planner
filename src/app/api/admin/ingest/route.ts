@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ingestMenu, suggestAvgCost, VENUE_TYPES } from "@/lib/ingest";
+import { ensureAreaId } from "@/lib/areas";
 
 /**
  * Read a menu (images and/or a URL) into a structured venue + menu items.
@@ -64,16 +65,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message ?? "Invalid request." }, { status: 400 });
   }
 
-  // The area must already exist — the generated migration resolves it by name.
-  const { data: area } = await supabase
-    .from("areas")
-    .select("name")
-    .eq("name", body.areaName)
-    .maybeSingle();
-
+  // A new neighbourhood is created rather than refused: the venue's location
+  // IS an area, and failing here made adding somewhere new a two-step job.
+  const area = await ensureAreaId(supabase, body.areaName);
   if (!area) {
     return NextResponse.json(
-      { error: `No area named "${body.areaName}". Create it first at /admin/areas.` },
+      { error: `Could not resolve or create the area "${body.areaName}".` },
       { status: 400 }
     );
   }

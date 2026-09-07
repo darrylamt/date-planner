@@ -142,17 +142,15 @@ ${venueValues}
 -- approved at /admin/phones — the reservation flow dials this number under
 -- our own name, so it never goes live on an import alone.
 --
--- Run in the Supabase SQL editor. Wrapped in a transaction: if the area name
--- does not resolve, nothing is inserted.
+-- Run in the Supabase SQL editor. Wrapped in a transaction, and the area is
+-- created if this is the first venue in that neighbourhood.
 
 begin;
 
-do $$
-begin
-  if not exists (select 1 from public.areas where name = ${lit(venue.areaName)}) then
-    raise exception 'Area % does not exist — create it first at /admin/areas', ${lit(venue.areaName)};
-  end if;
-end $$;
+-- Create the neighbourhood if this is the first venue in it.
+insert into public.areas (name, city)
+select ${lit(venue.areaName)}, 'Accra'
+where not exists (select 1 from public.areas where name = ${lit(venue.areaName)});
 
 ${insertBlock}
 

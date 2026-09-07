@@ -56,14 +56,7 @@ export default function Home() {
       contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.three }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.two }}>
-          <Symbol name="flame.fill" size={15} color={c.accent} />
-          <Text variant="eyebrow" tone="secondary" uppercase>
-            aduro · Accra
-          </Text>
-        </View>
-
+      <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.five }}>
         <Text variant="display" style={{ marginTop: Spacing.four }}>
           Plan a date worth turning up for.
         </Text>

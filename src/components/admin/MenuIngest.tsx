@@ -182,17 +182,21 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
           </div>
           <div>
             <span className="flbl">Area</span>
-            <select
+            <input
               className="inp"
+              list="known-areas"
+              placeholder="Osu, or type a new one"
               value={areaName}
               onChange={(e) => setAreaName(e.target.value)}
-            >
+            />
+            <datalist id="known-areas">
               {areas.map((a) => (
-                <option key={a.id} value={a.name}>
-                  {a.name}
-                </option>
+                <option key={a.id} value={a.name} />
               ))}
-            </select>
+            </datalist>
+            <div className="mt-1 text-[12.5px] text-mutedbrown">
+              Pick one or type a new neighbourhood — it gets created with the venue.
+            </div>
           </div>
           <div>
             <span className="flbl">Type</span>
