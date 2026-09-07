@@ -103,6 +103,9 @@ export const Colors = {
 
     overlay: "rgba(0, 0, 0, 0.38)",
     skeleton: "#F4F4F5",
+    /** Tint laid over a blur. Translucent by definition — never opaque. */
+    glass: "rgba(255, 255, 255, 0.55)",
+    glassBorder: "rgba(0, 0, 0, 0.08)",
   },
   dark: {
     background: "#000000",
@@ -132,6 +135,8 @@ export const Colors = {
 
     overlay: "rgba(0, 0, 0, 0.62)",
     skeleton: "#18181B",
+    glass: "rgba(28, 28, 30, 0.45)",
+    glassBorder: "rgba(255, 255, 255, 0.12)",
   },
 } as const;
 

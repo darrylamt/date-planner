@@ -1,9 +1,10 @@
-import { Pressable, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Symbol } from "./Symbol";
 import { Elevation, HAIRLINE, Radius, Spacing, TAB_BAR } from "../theme";
-import { useTheme } from "../lib/useTheme";
+import { useIsDark, useTheme } from "../lib/useTheme";
 import type { SymbolViewProps } from "expo-symbols";
 
 /**
@@ -51,6 +52,7 @@ export function TabBar({
   onCreate,
 }: TabBarProps & { onCreate: () => void }) {
   const c = useTheme();
+  const isDark = useIsDark();
   const insets = useSafeAreaInsets();
 
   return (
@@ -65,20 +67,26 @@ export function TabBar({
         gap: Spacing.two,
       }}
     >
-      {/* Destinations */}
-      <View
+      {/* Destinations. Blurred glass so scrolled content reads through it. */}
+      <BlurView
+        intensity={Platform.OS === "ios" ? 40 : 0}
+        tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
         style={[
           {
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "flex-start",
+            // Evenly spread rather than packed left, so the three targets
+            // divide the bar instead of clustering at one end.
+            justifyContent: "space-around",
             height: TAB_BAR.height,
             paddingHorizontal: Spacing.two,
             borderRadius: Radius.pill,
             borderWidth: HAIRLINE,
-            borderColor: c.border,
-            backgroundColor: c.backgroundElement,
+            borderColor: c.glassBorder,
+            backgroundColor: c.glass,
+            // Required, or the blur paints past the rounded corners.
+            overflow: "hidden",
           },
           Elevation.raised,
         ]}
@@ -107,20 +115,20 @@ export function TabBar({
                 borderRadius: 27,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: focused ? c.backgroundSelected : "transparent",
+                backgroundColor: focused ? c.accentSoft : "transparent",
                 opacity: pressed ? 0.6 : 1,
               })}
             >
               <Symbol
                 name={ICONS[route.name] ?? "circle"}
                 size={23}
-                color={focused ? c.text : c.textTertiary}
+                color={focused ? c.accent : c.textSecondary}
                 weight={focused ? "semibold" : "regular"}
               />
             </Pressable>
           );
         })}
-      </View>
+      </BlurView>
 
       {/* Primary action. The only accent-filled control on screen. */}
       <Pressable
