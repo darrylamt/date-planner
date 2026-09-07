@@ -6,12 +6,12 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, space } from "../../src/theme";
+import { GUTTER, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 
-const TAB_BAR_CLEARANCE = 96;
+
 
 export default function Profile() {
   const c = useTheme();
@@ -34,10 +34,14 @@ export default function Profile() {
       style={{ flex: 1, backgroundColor: c.groupedBackground }}
       contentContainerStyle={{
         paddingTop: insets.top + space.lg,
-        paddingBottom: TAB_BAR_CLEARANCE,
+        paddingBottom: TAB_BAR.clearance,
       }}
     >
-      <Text variant="largeTitle" style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}>
+      <Text
+        variant="display"
+        uppercase
+        style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}
+      >
         You
       </Text>
 

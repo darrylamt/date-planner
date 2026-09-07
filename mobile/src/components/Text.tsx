@@ -12,6 +12,7 @@ export interface AppTextProps extends TextProps {
   /** Tabular figures — use for prices, times and any column of numbers. */
   tabular?: boolean;
   center?: boolean;
+  uppercase?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function Text({
   weight,
   tabular,
   center,
+  uppercase,
   style,
   ...rest
 }: AppTextProps) {
@@ -62,6 +64,7 @@ export function Text({
         },
         tabular && { fontVariant: ["tabular-nums"] },
         center && { textAlign: "center" },
+        uppercase && { textTransform: "uppercase" },
         style,
       ]}
     />

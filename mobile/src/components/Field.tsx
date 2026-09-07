@@ -57,7 +57,7 @@ export function Field({
 export function StepHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}>
-      <Text variant="largeTitle">{title}</Text>
+      <Text variant="displaySmall">{title}</Text>
       {subtitle ? (
         <Text variant="body" tone="secondary" style={{ marginTop: space.xs }}>
           {subtitle}

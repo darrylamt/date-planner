@@ -115,6 +115,13 @@ export const palettes = { light, dark };
  * `fontWeight` values are the ones SF uses for each style.
  */
 export const type = {
+  /**
+   * Display face for page titles: heavy, tight and set uppercase at the call
+   * site. Line height is deliberately below the font size so two stacked
+   * lines read as one block rather than two sentences.
+   */
+  display: { fontSize: 40, lineHeight: 40, fontWeight: "800", letterSpacing: -1.4 },
+  displaySmall: { fontSize: 30, lineHeight: 31, fontWeight: "800", letterSpacing: -1 },
   largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: "700", letterSpacing: 0.37 },
   title1: { fontSize: 28, lineHeight: 34, fontWeight: "700", letterSpacing: 0.36 },
   title2: { fontSize: 22, lineHeight: 28, fontWeight: "700", letterSpacing: 0.35 },
@@ -150,6 +157,16 @@ export const space = {
 
 /** Standard iOS content inset. */
 export const GUTTER = 16;
+
+/**
+ * Floating pill tab bar. It sits above content rather than in a docked bar,
+ * so every scroll view has to pad past it by TAB_BAR_CLEARANCE.
+ */
+export const TAB_BAR = {
+  height: 64,
+  inset: 16,
+  clearance: 108,
+} as const;
 
 /** Hairline that stays 1px on every screen density. */
 export const HAIRLINE = 0.5;
