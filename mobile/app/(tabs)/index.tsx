@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
@@ -30,9 +30,34 @@ export default function Home() {
   const draftDone = draft?.itinerary ? TOTAL_STEPS : Math.min(draft?.step ?? 0, TOTAL_STEPS);
   const draftPct = Math.round((draftDone / TOTAL_STEPS) * 100);
 
+  /**
+   * Always starts a NEW plan. Resuming is the In progress card's job and
+   * nothing else's — when every entry point resumed, a finished plan made it
+   * impossible to start another one.
+   */
   function start(occasion?: PlanInputs["occasion"]) {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push(occasion ? `/plan/new?occasion=${occasion}` : "/plan/new");
+    const go = () => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      router.push(
+        occasion ? `/plan/new?fresh=1&occasion=${occasion}` : "/plan/new?fresh=1"
+      );
+    };
+
+    // Replacing real work should never be silent.
+    if (hasDraft) {
+      Alert.alert(
+        "Start a new plan?",
+        draft?.itinerary
+          ? "Your current plan will be replaced. Save or share it first if you want to keep it."
+          : "Your answers so far will be discarded.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Start new", style: "destructive", onPress: go },
+        ]
+      );
+      return;
+    }
+    go();
   }
 
   return (

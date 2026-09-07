@@ -34,8 +34,15 @@ export default function PlanNew() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  // Home can deep-link in with the occasion already chosen.
-  const params = useLocalSearchParams<{ occasion?: string }>();
+  /**
+   * `fresh` starts a new plan; without it this screen resumes the saved draft.
+   *
+   * Resuming used to be unconditional, which meant that once a plan had been
+   * generated every entry point landed back on that finished itinerary — the
+   * only available action was "Edit my answers", so a new plan could not be
+   * started at all.
+   */
+  const params = useLocalSearchParams<{ occasion?: string; fresh?: string }>();
 
   const [inputs, setInputs] = useState<PlanInputs>(defaultInputs);
   const [phase, setPhase] = useState<Phase>({ name: "steps", step: 0 });
@@ -52,19 +59,29 @@ export default function PlanNew() {
     let active = true;
 
     void (async () => {
-      const draft = await loadDraft();
-      if (active && draft) {
-        if (draft.inputs) setInputs(draft.inputs);
-        if (draft.itinerary) setPhase({ name: "result", itinerary: draft.itinerary });
-        else if (draft.step) setPhase({ name: "steps", step: draft.step });
-        if (draft.shareSlug) setShareSlug(draft.shareSlug);
-      }
-
-      // An occasion passed from home only seeds a fresh plan — it must not
-      // silently rewrite an answer already given in a draft being resumed.
+      const startFresh = params.fresh === "1";
       const seeded = params.occasion;
-      if (active && seeded && !draft?.inputs && isOccasion(seeded)) {
-        setInputs((cur) => ({ ...cur, occasion: seeded }));
+
+      if (startFresh) {
+        // Home has already confirmed replacing any existing draft.
+        await clearDraft();
+        const base = defaultInputs();
+        const withOccasion =
+          seeded && isOccasion(seeded) ? { ...base, occasion: seeded } : base;
+        if (active) {
+          setInputs(withOccasion);
+          setPhase({ name: "steps", step: 0 });
+          setShareSlug(null);
+        }
+        void saveDraft({ inputs: withOccasion, step: 0, itinerary: null, shareSlug: null });
+      } else {
+        const draft = await loadDraft();
+        if (active && draft) {
+          if (draft.inputs) setInputs(draft.inputs);
+          if (draft.itinerary) setPhase({ name: "result", itinerary: draft.itinerary });
+          else if (draft.step) setPhase({ name: "steps", step: draft.step });
+          if (draft.shareSlug) setShareSlug(draft.shareSlug);
+        }
       }
 
       if (active) setHydrated(true);
