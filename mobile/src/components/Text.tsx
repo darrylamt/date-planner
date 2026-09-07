@@ -1,5 +1,5 @@
 import { Text as RNText, type TextProps, type TextStyle } from "react-native";
-import { type as typeScale } from "../theme";
+import { fontFamilyFor, type as typeScale } from "../theme";
 import { useTheme } from "../lib/useTheme";
 
 type Variant = keyof typeof typeScale;
@@ -16,8 +16,9 @@ export interface AppTextProps extends TextProps {
 }
 
 /**
- * Themed text. Defaults to the system face (SF Pro on iOS) — deliberately no
- * custom font, so Dynamic Type and the native look come for free.
+ * Themed text. One sans face throughout, stated explicitly rather than left to
+ * the platform default, so nothing can quietly fall back to a serif. On iOS
+ * this resolves to SF Pro, which keeps Dynamic Type and the native look.
  */
 export function Text({
   variant = "body",
@@ -51,15 +52,21 @@ export function Text({
                     ? c.success
                     : c.warning;
 
+  // The family carries the weight; fontWeight alone cannot synthesise a custom
+  // face, and asking it to produces a fake bold on some devices and nothing
+  // on others.
+  const resolvedWeight = (weight ?? base.fontWeight) as TextStyle["fontWeight"];
+
   return (
     <RNText
       {...rest}
       style={[
         {
+          fontFamily: fontFamilyFor(resolvedWeight),
           fontSize: base.fontSize,
           lineHeight: base.lineHeight,
           letterSpacing: base.letterSpacing,
-          fontWeight: (weight ?? base.fontWeight) as TextStyle["fontWeight"],
+          fontWeight: resolvedWeight,
           color,
         },
         tabular && { fontVariant: ["tabular-nums"] },

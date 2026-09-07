@@ -71,9 +71,12 @@ export function buildVenueMigration(venue: VenueSql, items: IngestedItem[]): str
     )
     .join(",\n");
 
+  // phone lands in phone_pending, never phone. An imported number has had no
+  // human check, and the reservation flow dials `phone` under our own name.
   const venueColumns = `    name, type, area_id, vibe_tags, dress_code, price_band,
     avg_cost_per_person_ghs, description, best_for, reservation_required,
-    instagram_handle, phone, google_maps_url, image_url, lat, lng, is_active`;
+    instagram_handle, phone_pending, phone_status, phone_source,
+    google_maps_url, image_url, lat, lng, is_active`;
 
   const venueValues = `    ${lit(venue.name)},
     ${lit(venue.type)}::venue_type,
@@ -87,6 +90,8 @@ export function buildVenueMigration(venue: VenueSql, items: IngestedItem[]): str
     ${bool(venue.reservation_required)},
     ${lit(venue.instagram_handle)},
     ${lit(venue.phone)},
+    ${venue.phone ? "'pending'" : "'none'"}::phone_status,
+    'admin ingest — unreviewed',
     ${lit(venue.google_maps_url)},
     ${lit(venue.image_url)},
     ${num(venue.lat)},
@@ -132,6 +137,10 @@ ${venueValues}
 -- Review before running. Prices came from a menu the model read; anything it
 -- could not read was left out rather than guessed. Add image_url afterwards by
 -- editing the venue at /admin/venues.
+--
+-- Any phone number goes to phone_pending, not phone. It stays unusable until
+-- approved at /admin/phones — the reservation flow dials this number under
+-- our own name, so it never goes live on an import alone.
 --
 -- Run in the Supabase SQL editor. Wrapped in a transaction: if the area name
 -- does not resolve, nothing is inserted.

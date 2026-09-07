@@ -1,20 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Poppins, Roboto_Mono } from "next/font/google";
+import { Figtree, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  style: ["normal", "italic"],
-  variable: "--font-playfair",
-  display: "swap",
-});
-
-const poppins = Poppins({
+/**
+ * One sans face across the whole product, web and iOS.
+ *
+ * Figtree: a geometric sans with friendly terminals and a large x-height —
+ * the closest freely licensed face to the warm geometric sans this kind of
+ * travel/booking product is usually set in. The previous serif display font
+ * read as a different brand from the app.
+ */
+const sans = Figtree({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
-  variable: "--font-poppins",
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -37,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${poppins.variable} ${robotoMono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${robotoMono.variable}`}>
       <body>{children}</body>
     </html>
   );

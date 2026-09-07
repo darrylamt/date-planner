@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import { Alert, Linking, ScrollView, Share, View } from "react-native";
+import { router } from "expo-router";
 import * as Calendar from "expo-calendar";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
@@ -270,6 +271,14 @@ export function ItineraryView({
         <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl, gap: space.sm }}>
           <Button title="Add to calendar" kind="gray" icon="calendar" onPress={handleAddToCalendar} />
           <Button title="Edit my answers" kind="plain" onPress={onEdit} />
+          {/* A second way out. The header back button is the primary one, but
+              this screen is where people stop, so the exit should be visible
+              at the point they finish reading rather than only at the top. */}
+          <Button
+            title="Done — back to home"
+            kind="plain"
+            onPress={() => router.dismissTo("/")}
+          />
         </View>
 
         <Text

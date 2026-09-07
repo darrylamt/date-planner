@@ -15,6 +15,7 @@ import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import { TOTAL_STEPS, defaultInputs } from "../../src/lib/planConstants";
 import { possessiveName } from "../../src/lib/pronouns";
+import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
@@ -142,13 +143,34 @@ export default function PlanNew() {
     return () => sub.subscription.unsubscribe();
   }, [phase, shareSlug, handleSave]);
 
-  /* The header title tracks progress through the questionnaire. */
+  /*
+   * Header per phase. The result screen previously had no back button and sits
+   * outside the tab group, so finishing a plan was a dead end — the only way
+   * out was to force-quit. Every phase except generation now offers an exit.
+   */
   useEffect(() => {
+    if (phase.name === "steps") {
+      navigation.setOptions({
+        title: `${phase.step + 1} of ${TOTAL_STEPS}`,
+        headerBackVisible: phase.step === 0,
+        gestureEnabled: phase.step === 0,
+      });
+      return;
+    }
+
+    if (phase.name === "loading") {
+      // Nothing to go back to mid-generation, and leaving would strand the call.
+      navigation.setOptions({ title: "", headerBackVisible: false, gestureEnabled: false });
+      return;
+    }
+
     navigation.setOptions({
-      title: phase.name === "steps" ? `${phase.step + 1} of ${TOTAL_STEPS}` : "",
-      headerBackVisible: phase.name === "steps" && phase.step === 0,
+      title: phase.name === "result" ? longDate(inputs.date) : "",
+      headerBackVisible: true,
+      headerBackTitle: "Done",
+      gestureEnabled: true,
     });
-  }, [navigation, phase]);
+  }, [navigation, phase, inputs.date]);
 
   if (!hydrated) {
     return (

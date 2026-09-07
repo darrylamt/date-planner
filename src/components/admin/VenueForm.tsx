@@ -72,7 +72,11 @@ export function VenueForm({
         ...v,
         dress_code: v.dress_code || null,
         instagram_handle: v.instagram_handle || null,
-        phone: v.phone || null,
+        // Even an admin edit routes through review, so approval happens in
+        // exactly one place and is always recorded with who and when.
+        phone_pending: v.phone || null,
+        phone_status: v.phone ? "pending" : "none",
+        phone_source: "admin edit — unreviewed",
         google_maps_url: v.google_maps_url || null,
         image_url: v.image_url || null,
         lat: v.lat === "" ? null : Number(v.lat),
@@ -262,6 +266,11 @@ export function VenueForm({
         <div className={field}>
           <span className="flbl">Phone</span>
           <input className="inp" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} />
+          <div className="mt-1 text-[12.5px] text-mutedbrown">
+            Saved as a proposal. It stays unusable until approved at{" "}
+            <b className="text-ink">Phone review</b> — this number gets dialled
+            under our name, so it never goes live on an edit alone.
+          </div>
         </div>
         <div className={field}>
           <span className="flbl">Google Maps URL</span>

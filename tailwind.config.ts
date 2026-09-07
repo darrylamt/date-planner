@@ -53,9 +53,10 @@ const config: Config = {
         staletext: "#F2A2C0", // stale badge text
       },
       fontFamily: {
-        // Playfair Display for headings (romantic serif); Poppins stays for body
-        display: ["var(--font-playfair)", "Georgia", "serif"],
-        sans: ["var(--font-poppins)", "system-ui", "sans-serif"],
+        // One sans face throughout — matches the iOS app, which uses the
+        // system sans. Weight and size carry hierarchy, not a change of face.
+        display: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         // Roboto Mono for prices, times and labels (design used ui-monospace)
         mono: ["var(--font-roboto-mono)", "ui-monospace", "monospace"],
       },

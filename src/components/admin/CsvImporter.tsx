@@ -57,7 +57,11 @@ export function CsvImporter({
           reservation_required: /^(true|yes|1)$/i.test(r.reservation_required ?? ""),
           dress_code: r.dress_code || null,
           instagram_handle: r.instagram_handle || null,
-          phone: r.phone || null,
+          // Imported numbers are proposals, never live. The reservation flow
+          // dials `phone` under our own name, so it needs a human first.
+          phone_pending: r.phone || null,
+          phone_status: r.phone ? "pending" : "none",
+          phone_source: "CSV import — unreviewed",
           google_maps_url: r.google_maps_url || null,
           image_url: r.image_url || null,
           lat: r.lat ? Number(r.lat) : null,

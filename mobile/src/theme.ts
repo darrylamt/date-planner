@@ -139,14 +139,30 @@ export const Colors = {
 export type ThemeColors = { [K in keyof (typeof Colors)["light"]]: string };
 export type ThemeColor = keyof ThemeColors;
 
+/**
+ * One sans face, web and iOS. Figtree is the closest freely licensed match to
+ * the warm geometric sans this kind of booking product is usually set in.
+ *
+ * A custom family cannot synthesise weights reliably, so each weight is its
+ * own family name and `fontFamilyFor` maps a numeric weight onto it. Falling
+ * back to the system face keeps text readable if the asset has not loaded.
+ */
+export const FONT_FAMILIES = {
+  "400": "Figtree_400Regular",
+  "500": "Figtree_500Medium",
+  "600": "Figtree_600SemiBold",
+  "700": "Figtree_700Bold",
+  "800": "Figtree_800ExtraBold",
+} as const;
+
+export function fontFamilyFor(weight: string | number | undefined): string {
+  const key = String(weight ?? "400") as keyof typeof FONT_FAMILIES;
+  return FONT_FAMILIES[key] ?? FONT_FAMILIES["400"];
+}
+
 export const Fonts = Platform.select({
-  ios: {
-    sans: "system-ui",
-    serif: "ui-serif",
-    rounded: "ui-rounded",
-    mono: "ui-monospace",
-  },
-  default: { sans: "normal", serif: "serif", rounded: "normal", mono: "monospace" },
+  ios: { sans: "Figtree_400Regular", mono: "ui-monospace" },
+  default: { sans: "Figtree_400Regular", mono: "monospace" },
 });
 
 /**

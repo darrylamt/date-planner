@@ -68,6 +68,26 @@ export async function fetchCandidates(
     venues = venues.filter((v) => !opts.excludeVenueIds!.includes(v.id));
   }
 
+  /*
+   * A venue with no menu rows AND no average cost is unpriced, not free — the
+   * catalog simply has no price for it yet. Left in, it is the cheapest option
+   * in every search, so it wins constantly and lands in plans at GHS 0, which
+   * quietly makes the whole budget meaningless. Withhold it until someone
+   * gives it a price.
+   */
+  const pricedVenueIds = new Set(
+    (
+      await supabase
+        .from("menu_items")
+        .select("venue_id")
+        .in("venue_id", venues.map((v) => v.id))
+    ).data?.map((m: { venue_id: string }) => m.venue_id) ?? []
+  );
+
+  venues = venues.filter(
+    (v) => Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(v.id)
+  );
+
   // Score: vibe overlap (heavily weighted) + occasion fit; keep a fallback
   // pool so a low-overlap request still gets real options rather than none.
   const scored = venues
