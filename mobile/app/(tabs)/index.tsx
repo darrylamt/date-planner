@@ -67,6 +67,21 @@ export default function Home() {
         </Text>
       </View>
 
+      {/* A scene rather than a mascot: two figures at one table read as an
+          evening, which is what the app makes. Decorative only, so it is
+          hidden from screen readers. */}
+      <Image
+        source={require("../../assets/mascots/scene_table.png")}
+        style={{
+          width: "100%",
+          height: 128,
+          marginTop: Spacing.three,
+        }}
+        contentFit="contain"
+        transition={0}
+        accessible={false}
+      />
+
       {/* In progress */}
       {hasDraft && draftInputs ? (
         <>
