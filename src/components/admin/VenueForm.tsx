@@ -5,6 +5,9 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import { VenueResearch } from "@/components/admin/VenueResearch";
+import { PlacesLookup } from "@/components/admin/PlacesLookup";
+import { bandFromPriceLevel, venueTypeFromPlace } from "@/lib/places";
+import type { PlaceDetails } from "@/lib/places";
 import { ensureAreaId } from "@/lib/areas";
 import type { VenueDraft } from "@/lib/research";
 import type { Area, MenuCategory, MenuItem, Venue } from "@/lib/types";
@@ -47,6 +50,9 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    google_place_id: venue?.google_place_id ?? "",
+    business_status: venue?.business_status ?? "",
+    price_level: venue?.price_level ?? "",
     lat: venue?.lat != null ? String(venue.lat) : "",
     lng: venue?.lng != null ? String(venue.lng) : "",
   });
@@ -153,6 +159,47 @@ export function VenueForm({
   }
 
   /**
+   * Fill the form from a Google Places result.
+   *
+   * Only the factual fields, and only ones Google actually returned. The price
+   * bucket becomes our price band and stops there: it can say a place is
+   * expensive, it cannot say a main course costs GHS 180, and plans are built
+   * on the second kind of number.
+   */
+  function applyPlace(d: PlaceDetails) {
+    const mappedType = venueTypeFromPlace(d.primaryType, d.types);
+    const band = bandFromPriceLevel(d.priceLevel);
+
+    setV((cur) => ({
+      ...cur,
+      name: d.name || cur.name,
+      type: mappedType ?? cur.type,
+      price_band: band ?? cur.price_band,
+      phone: d.phone ?? cur.phone,
+      google_maps_url: d.googleMapsUri ?? cur.google_maps_url,
+      lat: d.lat != null ? String(d.lat) : cur.lat,
+      lng: d.lng != null ? String(d.lng) : cur.lng,
+      google_place_id: d.id,
+      business_status: d.businessStatus ?? "",
+      price_level: d.priceLevel ?? "",
+    }));
+
+    const notes: string[] = [];
+    if (d.businessStatus && d.businessStatus !== "OPERATIONAL") {
+      notes.push(`Google says this place is ${d.businessStatus.replace(/_/g, " ").toLowerCase()}`);
+    }
+    if (!mappedType) notes.push("pick the type yourself — no confident mapping");
+    if (d.priceRange) {
+      notes.push(
+        `Google lists ${d.priceRange.currency} ${d.priceRange.min ?? "?"}-${d.priceRange.max ?? "?"}`
+      );
+    }
+    setToast(
+      notes.length ? `Linked — ${notes.join("; ")}.` : "Linked to Google. Check it before saving."
+    );
+  }
+
+  /**
    * Fill the form from a research draft.
    *
    * Only fields the research actually found are overwritten — a null comes
@@ -207,7 +254,12 @@ export function VenueForm({
         {venue ? `Edit — ${venue.name}` : "Add venue"}
       </h1>
 
-      <div className="mt-5">
+      <div className="mt-5 grid gap-3">
+        <PlacesLookup
+          initialName={v.name}
+          linkedPlaceId={v.google_place_id || null}
+          onApply={applyPlace}
+        />
         <VenueResearch initialName={v.name} onApply={applyDraft} />
       </div>
 

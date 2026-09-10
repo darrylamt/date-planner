@@ -35,6 +35,10 @@ export interface Venue {
    * stop legitimately total zero.
    */
   is_free: boolean;
+  /** Google Places link — the join key, and how closures get noticed. */
+  google_place_id: string | null;
+  business_status: string | null;
+  price_level: string | null;
   lat: number | null;
   lng: number | null;
   areas?: { name: string } | null;

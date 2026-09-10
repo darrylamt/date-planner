@@ -24,6 +24,8 @@ export interface AdminCounts {
   unverified: number;
   /** Menus untouched for more than 90 days, or never priced at all. */
   staleMenus: number;
+  /** Active venues with no Google link, so a closure would go unnoticed. */
+  unlinked: number;
 }
 
 const STALE_DAYS = 90;
@@ -68,6 +70,7 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     phonesPending: rows.filter((v: any) => v.phone_status === "pending").length,
     phonesReported: rows.filter((v: any) => (v.phone_report_count ?? 0) > 0).length,
     unverified: active.filter((v: any) => v.verification_status !== "real").length,
+    unlinked: active.filter((v: any) => !v.google_place_id).length,
     staleMenus: active.filter((v: any) => {
       const latest = menuLatest.get(v.id);
       // A venue priced by its per-person figure has no menu to go stale.

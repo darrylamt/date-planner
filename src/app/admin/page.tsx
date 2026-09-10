@@ -117,6 +117,13 @@ function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> })
       hint: "Not corroborated against the web",
       urgent: false,
     },
+    {
+      href: "/admin",
+      n: counts.unlinked,
+      label: "not linked to Google",
+      hint: "Nothing will notice if these close",
+      urgent: false,
+    },
   ].filter((c) => c.n > 0);
 
   if (!cards.length) {
