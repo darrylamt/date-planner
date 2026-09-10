@@ -20,6 +20,47 @@ import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
+/**
+ * The step progress rail.
+ *
+ * Its own component so it reads the theme from inside OccasionThemeProvider.
+ * The screen's own useTheme() runs above that provider in the tree, so a
+ * colour taken from there is resolved before the occasion theme exists — which
+ * is why this bar stayed teal on every pathway.
+ */
+function ProgressRail({ total, current }: { total: number; current: number }) {
+  const c = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        gap: 4,
+        paddingHorizontal: GUTTER,
+        paddingBottom: space.lg,
+        backgroundColor: c.background,
+      }}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: radius.pill,
+            backgroundColor: i <= current ? c.accent : c.backgroundSelected,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Page fill, likewise resolved inside the provider. */
+function ThemedPage({ children }: { children: React.ReactNode }) {
+  const c = useTheme();
+  return <View style={{ flex: 1, backgroundColor: c.background }}>{children}</View>;
+}
+
 function isOccasion(v: string): v is PlanInputs["occasion"] {
   return ["first_date", "anniversary", "date_night", "friend_outing"].includes(v);
 }
@@ -227,7 +268,9 @@ export default function PlanNew() {
 
   /** Everything below is inside the pathway, so it wears the occasion's theme. */
   const themed = (node: React.ReactNode) => (
-    <OccasionThemeProvider occasion={inputs.occasion}>{node}</OccasionThemeProvider>
+    <OccasionThemeProvider occasion={inputs.occasion}>
+      <ThemedPage>{node}</ThemedPage>
+    </OccasionThemeProvider>
   );
 
   if (phase.name === "loading") return themed(<LoadingPlan inputs={inputs} />);
@@ -300,24 +343,11 @@ export default function PlanNew() {
 
   return themed(
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.background }}
+      style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={insets.top + 44}
     >
-      {/* Progress rail */}
-      <View style={{ flexDirection: "row", gap: 4, paddingHorizontal: GUTTER, paddingBottom: space.lg }}>
-        {Array.from({ length: totalSteps }, (_, i) => (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              height: 4,
-              borderRadius: radius.pill,
-              backgroundColor: i <= stepIndex ? c.accent : c.backgroundSelected,
-            }}
-          />
-        ))}
-      </View>
+      <ProgressRail total={totalSteps} current={stepIndex} />
 
       <ScrollView
         ref={scrollRef}
