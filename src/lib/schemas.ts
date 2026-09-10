@@ -55,6 +55,21 @@ export const itineraryStopSchema = z.object({
   google_maps_url: z.string().nullable().optional(),
   reservation_required: z.boolean().optional(),
   reservation_requested: z.boolean().optional(),
+  alternates: z
+    .array(
+      z.object({
+        venue_id: z.string(),
+        name: z.string(),
+        area: z.string(),
+        image_url: z.string().nullable().default(null),
+        google_maps_url: z.string().nullable().default(null),
+        reservation_required: z.boolean().default(false),
+        orders: z.array(itineraryOrderSchema).default([]),
+        est_cost_ghs: z.number().min(0),
+        why_this_fits: z.string().default(""),
+      })
+    )
+    .optional(),
 });
 
 export const itinerarySchema = z.object({

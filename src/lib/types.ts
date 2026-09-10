@@ -130,6 +130,23 @@ export interface ItineraryStop {
   google_maps_url?: string | null;
   reservation_required?: boolean;
   reservation_requested?: boolean; // set client-side once a request is sent
+  /**
+   * Runners-up for this slot, chosen at the same time as the stop itself.
+   * A swap is then a local substitution rather than another model call.
+   */
+  alternates?: StopAlternate[];
+}
+
+export interface StopAlternate {
+  venue_id: string;
+  name: string;
+  area: string;
+  image_url: string | null;
+  google_maps_url: string | null;
+  reservation_required: boolean;
+  orders: ItineraryOrder[];
+  est_cost_ghs: number;
+  why_this_fits: string;
 }
 
 export interface TransportHop {

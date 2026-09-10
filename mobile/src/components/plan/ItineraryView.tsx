@@ -12,9 +12,13 @@ import { StopCard } from "./StopCard";
 import { GUTTER, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
-import { swapStop } from "../../lib/api";
 import { createReservation, fetchVenueContact } from "../../lib/data";
-import type { Itinerary, ItineraryOrder, PlanInputs } from "../../lib/types";
+import type {
+  Itinerary,
+  ItineraryOrder,
+  PlanInputs,
+  StopAlternate,
+} from "../../lib/types";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -37,28 +41,84 @@ export function ItineraryView({
   saving: boolean;
 }) {
   const c = useTheme();
-  const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const over = itinerary.est_total_ghs > inputs.budget;
 
-  async function handleSwap(index: number) {
-    if (swappingIndex !== null) return;
-    setSwappingIndex(index);
-    try {
-      const res = await swapStop(inputs, itinerary, index);
-      if (res.status === "ok") {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onItineraryChange(res.itinerary);
-        const buffer = inputs.budget - res.itinerary.est_total_ghs;
-        setToast(`Swapped — still ${ghs(buffer)} under budget`);
-      } else {
-        setToast(res.message ?? "Could not find a good swap.");
-      }
-    } finally {
-      setSwappingIndex(null);
+  /**
+   * Swap a stop for its next alternate.
+   *
+   * Alternates are chosen by the planner at the same time as the stop itself,
+   * so this is a local substitution: no request, no wait, and no chance of the
+   * swap costing more than the budget allows. The old venue rotates to the
+   * back of the list, so tapping repeatedly cycles the options rather than
+   * running out after one.
+   *
+   * Transport is left alone. A different venue would shift the hop estimate,
+   * but most of the catalogue has no coordinates and falls back to a flat
+   * per-hop figure anyway, so recomputing here would imply a precision the
+   * number does not have.
+   */
+  function handleSwap(index: number) {
+    const stop = itinerary.stops[index];
+    const alternates = stop.alternates ?? [];
+
+    if (!alternates.length) {
+      setToast("No other spot fits this slot — try widening the area or budget.");
+      return;
     }
+
+    const next = alternates[0];
+    const rotated: StopAlternate[] = [
+      ...alternates.slice(1),
+      {
+        venue_id: stop.venue_id,
+        name: stop.name,
+        area: stop.area,
+        image_url: stop.image_url,
+        google_maps_url: stop.google_maps_url ?? null,
+        reservation_required: stop.reservation_required ?? false,
+        orders: stop.orders,
+        est_cost_ghs: stop.est_cost_ghs,
+        why_this_fits: stop.why_this_fits,
+      },
+    ];
+
+    const swapped: typeof stop = {
+      ...stop,
+      venue_id: next.venue_id,
+      name: next.name,
+      area: next.area,
+      image_url: next.image_url,
+      google_maps_url: next.google_maps_url,
+      reservation_required: next.reservation_required,
+      reservation_requested: false,
+      orders: next.orders,
+      est_cost_ghs: next.est_cost_ghs,
+      why_this_fits: next.why_this_fits,
+      alternates: rotated,
+    };
+
+    const stops = itinerary.stops.map((s, i) => (i === index ? swapped : s));
+    const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_ghs), 0));
+    const est = Math.round(food + Number(itinerary.transport_total_ghs));
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onItineraryChange({
+      ...itinerary,
+      stops,
+      summary_route: Array.from(new Set(stops.map((s) => s.area).filter(Boolean))).join(" → "),
+      food_total_ghs: food,
+      est_total_ghs: est,
+    });
+
+    const buffer = inputs.budget - est;
+    setToast(
+      buffer >= 0
+        ? `Swapped — still ${ghs(buffer)} under budget`
+        : `Swapped — now ${ghs(Math.abs(buffer))} over budget`
+    );
   }
 
   /** Menu edits recompute food and overall totals locally — no round trip. */
@@ -255,9 +315,9 @@ export function ItineraryView({
               <StopCard
                 stop={stop}
                 index={i}
-                swapping={swappingIndex === i}
+                swapping={false}
                 reserving={reservingIndex === i}
-                onSwap={() => void handleSwap(i)}
+                onSwap={() => handleSwap(i)}
                 onReserve={() => void handleReserve(i)}
                 onOrdersChange={(orders) => handleOrdersChange(i, orders)}
               />

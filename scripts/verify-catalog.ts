@@ -46,7 +46,8 @@ async function confirm(question: string): Promise<boolean> {
 
 async function main() {
   const { createClient } = await import("@supabase/supabase-js");
-  const { verifyVenue } = await import("../src/lib/verify");
+  const { submitVerificationBatch, verificationBatchStatus, readVerificationBatch } =
+    await import("../src/lib/verify");
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -81,30 +82,44 @@ async function main() {
   }
 
   console.log(`\n${venues.length} venue(s) to verify.`);
-  console.log(`Roughly ${Math.ceil((venues.length * 50) / 60)} min and a few US$ in API spend.`);
+  console.log("Runs as a batch: half price, and it does not need watching.");
   if (!(await confirm("Proceed? (y/N) "))) {
     console.log("Cancelled.");
     return;
   }
 
+  const areaOf = (v: unknown) =>
+    (v as { areas?: { name: string } | null }).areas?.name ?? "Accra";
+
+  console.log("\nSubmitting as one batch — half price, and nobody is waiting on it.");
+  const batchId = await submitVerificationBatch(
+    venues.map((v) => ({ venue: v as never, areaName: areaOf(v) })),
+    { maxSearches: 6, effort: "high" }
+  );
+  console.log(`Batch ${batchId} submitted.`);
+
+  // Polled rather than blocked: a dropped connection should not lose the run,
+  // and the id above resumes it.
+  let status = await verificationBatchStatus(batchId);
+  while (status.status !== "ended") {
+    const done = (status.counts.succeeded ?? 0) + (status.counts.errored ?? 0);
+    process.stdout.write(`  ${status.status} — ${done}/${venues.length} done…      `);
+    await new Promise((r) => setTimeout(r, 15000));
+    status = await verificationBatchStatus(batchId);
+  }
+  console.log("\nBatch finished. Writing results.\n");
+
+  const verdicts = await readVerificationBatch(batchId);
+  const byId = new Map(venues.map((v) => [v.id, v]));
+
   const tally: Record<string, number> = {};
   let failures = 0;
 
-  for (const [i, venue] of venues.entries()) {
-    const areaName =
-      (venue as { areas?: { name: string } | null }).areas?.name ?? "Accra";
-    const label = `[${i + 1}/${venues.length}] ${venue.name} (${areaName})`;
-    process.stdout.write(`${label} … `);
+  for (const result of verdicts) {
+    const name = byId.get(result.venueId)?.name ?? result.venueId;
 
-    const t0 = Date.now();
-    const result = await verifyVenue(venue as never, areaName, {
-      maxSearches: 6,
-      effort: "high",
-    });
-    const secs = ((Date.now() - t0) / 1000).toFixed(0);
-
-    if (!result.ok) {
-      console.log(`FAILED (${secs}s): ${result.error}`);
+    if (!result.verification) {
+      console.log(`${name}: FAILED — ${result.error}`);
       failures++;
       continue;
     }
@@ -122,13 +137,14 @@ async function main() {
         verification_discrepancies: v.discrepancies,
         verified_at: new Date().toISOString(),
       })
-      .eq("id", venue.id);
+      .eq("id", result.venueId);
 
     console.log(
-      `${v.verdict} (${v.confidence}) ${v.discrepancies.length} discrepancy(ies) ` +
-        `${secs}s${writeError ? "  [WRITE FAILED: " + writeError.message + "]" : ""}`
+      `${name}: ${v.verdict} (${v.confidence}) ${v.discrepancies.length} discrepancy(ies)` +
+        (writeError ? `  [WRITE FAILED: ${writeError.message}]` : "")
     );
   }
+
 
   console.log("\n" + "=".repeat(50));
   for (const [verdict, n] of Object.entries(tally).sort((a, b) => b[1] - a[1])) {

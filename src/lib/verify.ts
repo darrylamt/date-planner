@@ -98,6 +98,97 @@ Rules that matter more than completeness:
 - Every entry in "sources" must be a page you actually consulted.`;
 }
 
+/* ── batch verification ──────────────────────────────────────────────── */
+
+export interface BatchVenue {
+  venue: Venue;
+  areaName: string;
+}
+
+export interface BatchVerdict {
+  venueId: string;
+  verification?: Verification;
+  error?: string;
+}
+
+/**
+ * Verify many venues through the Batch API.
+ *
+ * Catalogue verification is the opposite of latency-sensitive — nobody is
+ * waiting on it — and batching halves the cost. Results come back keyed by
+ * custom_id in any order, so they are matched by id rather than by position.
+ *
+ * Returns the batch id; poll it with `pollVerificationBatch`.
+ */
+export async function submitVerificationBatch(
+  venues: BatchVenue[],
+  options: VerifyOptions = {}
+): Promise<string> {
+  const maxSearches = options.maxSearches ?? 6;
+  const effort = options.effort ?? "high";
+
+  const batch = await anthropic.messages.batches.create({
+    requests: venues.map(({ venue, areaName }) => ({
+      custom_id: venue.id,
+      params: {
+        model: MODEL,
+        max_tokens: 8000,
+        output_config: { effort },
+        tools: [
+          { type: "web_search_20260209" as const, name: "web_search", max_uses: maxSearches },
+        ],
+        messages: [{ role: "user" as const, content: buildPrompt(venue, areaName) }],
+      },
+    })),
+  });
+
+  return batch.id;
+}
+
+/** Batch status. `ended` means every request has a result, success or not. */
+export async function verificationBatchStatus(
+  batchId: string
+): Promise<{ status: string; counts: Record<string, number> }> {
+  const batch = await anthropic.messages.batches.retrieve(batchId);
+  return {
+    status: batch.processing_status,
+    counts: batch.request_counts as unknown as Record<string, number>,
+  };
+}
+
+/** Read a finished batch. Order is not guaranteed, so verdicts carry their id. */
+export async function readVerificationBatch(batchId: string): Promise<BatchVerdict[]> {
+  const out: BatchVerdict[] = [];
+
+  for await (const entry of await anthropic.messages.batches.results(batchId)) {
+    const venueId = entry.custom_id;
+
+    if (entry.result.type !== "succeeded") {
+      out.push({ venueId, error: `Batch request ${entry.result.type}.` });
+      continue;
+    }
+
+    const message = entry.result.message;
+    if (message.stop_reason === "refusal") {
+      out.push({ venueId, error: "The model declined to answer for this venue." });
+      continue;
+    }
+
+    try {
+      out.push({
+        venueId,
+        verification: verificationSchema.parse(
+          parseModelJson<Verification>(textFromResponse(message as never))
+        ),
+      });
+    } catch {
+      out.push({ venueId, error: "Unreadable verification." });
+    }
+  }
+
+  return out;
+}
+
 export interface VerifyResult {
   ok: true;
   verification: Verification;
