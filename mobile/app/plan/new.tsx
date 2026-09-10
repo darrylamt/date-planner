@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
+import { Symbol } from "../../src/components/Symbol";
 import { Button, ActionBar } from "../../src/components/Button";
 import { PlanSteps } from "../../src/components/plan/PlanSteps";
 import { StepMascot } from "../../src/components/plan/StepMascot";
@@ -14,7 +22,12 @@ import { OccasionThemeProvider, useTheme } from "../../src/lib/useTheme";
 import { generatePlan } from "../../src/lib/api";
 import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
-import { clampParty, defaultInputs, stepsFor } from "../../src/lib/planConstants";
+import {
+  OCCASION_IDS,
+  clampParty,
+  defaultInputs,
+  stepsFor,
+} from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
@@ -61,8 +74,14 @@ function ThemedPage({ children }: { children: React.ReactNode }) {
   return <View style={{ flex: 1, backgroundColor: c.background }}>{children}</View>;
 }
 
+/**
+ * Derived from the occasion list rather than written out, because a hand-kept
+ * copy silently fell behind when four occasions were added: those cards passed
+ * an occasion this rejected, so the pathway neither preselected it nor applied
+ * it, and a birthday quietly started a date night.
+ */
 function isOccasion(v: string): v is PlanInputs["occasion"] {
-  return ["first_date", "anniversary", "date_night", "friend_outing"].includes(v);
+  return (OCCASION_IDS as readonly string[]).includes(v);
 }
 
 type Phase =
@@ -235,18 +254,43 @@ export default function PlanNew() {
    * out was to force-quit. Every phase except generation now offers an exit.
    */
   useEffect(() => {
+    /**
+     * Close is always available, and always safe: answers are written to the
+     * draft on every change, so leaving keeps the plan on the home screen
+     * under In progress rather than throwing it away.
+     */
+    const closeButton = () => (
+      <Pressable
+        onPress={() => router.dismissTo("/")}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        style={{ padding: 4 }}
+      >
+        <Symbol name="xmark" size={17} weight="semibold" />
+      </Pressable>
+    );
+
     if (phase.name === "steps") {
       navigation.setOptions({
         title: `${phase.step + 1} of ${totalSteps}`,
         headerBackVisible: phase.step === 0,
         gestureEnabled: phase.step === 0,
+        headerRight: closeButton,
       });
       return;
     }
 
     if (phase.name === "loading") {
       // Nothing to go back to mid-generation, and leaving would strand the call.
-      navigation.setOptions({ title: "", headerBackVisible: false, gestureEnabled: false });
+      // No close mid-generation: the request is already in flight and
+      // leaving would strand it.
+      navigation.setOptions({
+        title: "",
+        headerBackVisible: false,
+        gestureEnabled: false,
+        headerRight: undefined,
+      });
       return;
     }
 
@@ -255,6 +299,7 @@ export default function PlanNew() {
       headerBackVisible: true,
       headerBackTitle: "Done",
       gestureEnabled: true,
+      headerRight: closeButton,
     });
   }, [navigation, phase, inputs.date, totalSteps]);
 
