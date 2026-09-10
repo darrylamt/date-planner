@@ -1,8 +1,6 @@
 /**
  * MIRRORED from the web app: ../../src/lib/planConstants.ts
- * Pure domain logic with no web dependencies — kept byte-identical so the
- * two clients agree on shapes and formatting. Edit the web copy first,
- * then copy it here.
+ * Edit the web copy first, then copy it here.
  */
 import type { Occasion, PlanInputs } from "./types";
 
@@ -90,6 +88,7 @@ export function defaultInputs(): PlanInputs {
     hours: 4,
     vibes: [],
     occasion: "date_night",
+    occasionDetail: {},
     partner: { name: "", gender: "unspecified", food: "", place: "", interests: "", avoid: "" },
   };
 }
@@ -126,4 +125,111 @@ export function partyLabel(size: number): string {
   if (size <= 1) return "just you";
   if (size === 2) return "the two of you";
   return `all ${size} of you`;
+}
+
+/* ── occasion pathways ────────────────────────────────────────────────── */
+
+export type StepId =
+  | "occasion"
+  | "party"
+  | "extra"
+  | "area"
+  | "budget"
+  | "when"
+  | "vibe"
+  | "details";
+
+export interface OccasionExtra {
+  /** The screen's question. */
+  title: string;
+  subtitle: string;
+  fields: { key: string; label: string; placeholder: string; multiline?: boolean }[];
+}
+
+/**
+ * The question that only makes sense for one occasion.
+ *
+ * This is what makes a pathway a pathway rather than a relabelled form: a
+ * birthday plan that never asks whose birthday it is has nothing specific to
+ * design around, and the model ends up writing something generically pleasant.
+ *
+ * Occasions with nothing worth asking are absent, and simply have no extra step.
+ */
+export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
+  first_date: {
+    title: "How did you two meet?",
+    subtitle: "A sentence is plenty. It gives us something to build a first evening around.",
+    fields: [
+      {
+        key: "how_met",
+        label: "How you met (optional)",
+        placeholder: "a friend's party, matched online, work…",
+      },
+    ],
+  },
+  anniversary: {
+    title: "How long has it been?",
+    subtitle: "And anything the two of you always come back to.",
+    fields: [
+      { key: "years", label: "Years together (optional)", placeholder: "e.g. 3" },
+      {
+        key: "tradition",
+        label: "Something you always do (optional)",
+        placeholder: "the place you had your first date…",
+      },
+    ],
+  },
+  birthday: {
+    title: "Whose birthday is it?",
+    subtitle: "We will make sure the day is pointed at them.",
+    fields: [
+      { key: "celebrant", label: "Their name", placeholder: "e.g. Ama" },
+      { key: "age", label: "Turning (optional)", placeholder: "e.g. 30" },
+    ],
+  },
+  graduation: {
+    title: "What did they finish?",
+    subtitle: "Worth marking properly.",
+    fields: [
+      { key: "celebrant", label: "Who is graduating", placeholder: "e.g. Kofi, or you" },
+      { key: "programme", label: "What they studied (optional)", placeholder: "e.g. Law at Legon" },
+    ],
+  },
+  celebration: {
+    title: "What are we celebrating?",
+    subtitle: "The more specific, the better the evening.",
+    fields: [
+      {
+        key: "reason",
+        label: "The good news",
+        placeholder: "a promotion, a new job, closing on a house…",
+      },
+    ],
+  },
+  solo_day: {
+    title: "What do you need today?",
+    subtitle: "A day to yourself can go a few different ways.",
+    fields: [
+      {
+        key: "intent",
+        label: "What you are after",
+        placeholder: "somewhere quiet to read, try something new, treat myself…",
+      },
+    ],
+  },
+};
+
+/**
+ * The steps for one pathway, in order.
+ *
+ * Arriving from an occasion card means that question is already answered, so
+ * asking it again is a step nobody should have to tap through.
+ */
+export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] {
+  const steps: StepId[] = [];
+  if (!occasionPreset) steps.push("occasion");
+  steps.push("party");
+  if (OCCASION_EXTRA[occasion]) steps.push("extra");
+  steps.push("area", "budget", "when", "vibe", "details");
+  return steps;
 }

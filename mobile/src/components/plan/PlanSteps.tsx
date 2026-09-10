@@ -11,6 +11,7 @@ import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
   DURATIONS,
+  OCCASION_EXTRA,
   OCCASIONS,
   PARTY_SIZES,
   VIBES,
@@ -20,10 +21,12 @@ import {
   vibeBlurb,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
+import type { StepId } from "../../lib/planConstants";
 import type { Area, Gender, PlanInputs } from "../../lib/types";
 
 export interface StepProps {
-  step: number;
+  /** Named, not numbered: the order changes per occasion pathway. */
+  step: StepId;
   inputs: PlanInputs;
   areas: Area[];
   update: (patch: Partial<PlanInputs>) => void;
@@ -69,7 +72,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   const verbS = pronoun === "they" || !pair ? "" : "s";
   const contraction = pronoun === "they" || !pair ? "re" : "s";
 
-  if (step === 0) {
+  if (step === "area") {
     return (
       <>
         <StepHeading
@@ -113,7 +116,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     );
   }
 
-  if (step === 1) {
+  if (step === "budget") {
     return (
       <>
         <StepHeading
@@ -126,7 +129,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     );
   }
 
-  if (step === 2) {
+  if (step === "when") {
     return (
       <>
         <StepHeading title="When is it?" subtitle="We check what is open and what is on." />
@@ -150,7 +153,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     );
   }
 
-  if (step === 3) {
+  if (step === "vibe") {
     return (
       <>
         <StepHeading title="What is the vibe?" subtitle="Choose up to three and we blend them." />
@@ -179,7 +182,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     );
   }
 
-  if (step === 4) {
+  if (step === "occasion") {
     return (
       <>
         <StepHeading title="What is the occasion?" subtitle="It changes the pace we plan for." />
@@ -198,7 +201,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     );
   }
 
-  if (step === 5) {
+  if (step === "party") {
     return (
       <>
         <StepHeading
@@ -274,6 +277,30 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
             seats, somewhere comfortable to just be.
           </Note>
         ) : null}
+      </>
+    );
+  }
+
+  if (step === "extra") {
+    const extra = OCCASION_EXTRA[inputs.occasion];
+    if (!extra) return null;
+    return (
+      <>
+        <StepHeading title={extra.title} subtitle={extra.subtitle} />
+        <View style={{ paddingHorizontal: GUTTER }}>
+          {extra.fields.map((f) => (
+            <Field
+              key={f.key}
+              label={f.label}
+              placeholder={f.placeholder}
+              multiline={f.multiline}
+              value={inputs.occasionDetail[f.key] ?? ""}
+              onChangeText={(v) =>
+                update({ occasionDetail: { ...inputs.occasionDetail, [f.key]: v } })
+              }
+            />
+          ))}
+        </View>
       </>
     );
   }

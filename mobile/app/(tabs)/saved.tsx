@@ -6,6 +6,7 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
+import { Mascot, SpeechBubble } from "../../src/components/Mascot";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
@@ -76,7 +77,7 @@ export default function Plans() {
   if (!session) {
     return (
       <Empty
-        icon="person.crop.circle"
+        bubble="Nothing saved here yet."
         title="Sign in to see your plans"
         body="Saved plans live on your account, so you can open them on any device."
         action={<Button title="Sign in" onPress={() => router.push("/login")} />}
@@ -87,7 +88,7 @@ export default function Plans() {
   if (plans.length === 0) {
     return (
       <Empty
-        icon="bookmark"
+        bubble="This shelf is looking empty."
         title="No saved plans yet"
         body="Build a plan and save it — it will show up here with its share link."
         action={<Button title="Plan a date" icon="sparkles" onPress={() => router.push("/plan/new")} />}
@@ -153,12 +154,12 @@ export default function Plans() {
 }
 
 function Empty({
-  icon,
+  bubble,
   title,
   body,
   action,
 }: {
-  icon: Parameters<typeof Symbol>[0]["name"];
+  bubble: string;
   title: string;
   body: string;
   action: React.ReactNode;
@@ -175,7 +176,8 @@ function Empty({
         paddingHorizontal: GUTTER + space.sm,
       }}
     >
-      <Symbol name={icon} size={44} color={c.textSecondary} />
+      <SpeechBubble text={bubble} />
+      <Mascot occasion="date_night" size={110} style={{ marginTop: Spacing.two }} />
       <Text variant="title3" center style={{ marginTop: space.lg }}>
         {title}
       </Text>

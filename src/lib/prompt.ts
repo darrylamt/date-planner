@@ -63,6 +63,40 @@ ${ITINERARY_TYPE}
  * and hoping the model adapts produced plans addressed to a partner who did
  * not exist.
  */
+/** Human labels for the occasion-specific answers. */
+const DETAIL_LABELS: Record<string, string> = {
+  how_met: "How they met",
+  years: "Years together",
+  tradition: "Something they always do",
+  celebrant: "Who this is for",
+  age: "Turning",
+  programme: "What they studied",
+  reason: "What is being celebrated",
+  intent: "What they want from the day",
+};
+
+/**
+ * The occasion's own answers. These are the specifics that separate a plan
+ * built for someone from one that is merely appropriate, so they are stated
+ * plainly and the model is told to use them.
+ */
+function occasionBlock(inputs: PlanInputs): string {
+  const entries = Object.entries(inputs.occasionDetail ?? {}).filter(
+    ([, v]) => v && v.trim()
+  );
+  if (!entries.length) return "";
+
+  const lines = entries
+    .map(([k, v]) => `- ${DETAIL_LABELS[k] ?? k}: ${v.trim()}`)
+    .join("\n");
+  return [
+    "",
+    "ABOUT THIS OCCASION (use these specifics — they are why this plan is for them and not for anyone):",
+    lines,
+    "",
+  ].join("\n");
+}
+
 function peopleBlock(inputs: PlanInputs): string {
   const p = inputs.partner;
   const size = inputs.partySize;
@@ -119,7 +153,7 @@ export function buildGenerateUserMessage(
 - Vibe: ${inputs.vibes.join(", ")}
 - Occasion: ${inputs.occasion.replace(/_/g, " ")}
 
-${peopleBlock(inputs)}
+${peopleBlock(inputs)}${occasionBlock(inputs)}
 
 AVAILABLE VENUES (the ONLY venues you may use):
 ${JSON.stringify(
@@ -208,7 +242,7 @@ The replacement must:
 - NOT be any venue already in the plan (including the one being replaced)
 - still honour the partner details and the vibe
 
-${peopleBlock(inputs)}
+${peopleBlock(inputs)}${occasionBlock(inputs)}
 Vibe: ${inputs.vibes.join(", ")} · Occasion: ${inputs.occasion.replace(/_/g, " ")}
 
 CANDIDATE VENUES (the ONLY options):

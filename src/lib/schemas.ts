@@ -22,6 +22,7 @@ export const planInputsSchema = z.object({
     "celebration",
     "solo_day",
   ]),
+  occasionDetail: z.record(z.string().max(300)).default({}),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

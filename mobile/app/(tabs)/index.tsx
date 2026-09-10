@@ -4,6 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
+import { Mascot } from "../../src/components/Mascot";
 import {
   Elevation,
   GUTTER,
@@ -241,20 +242,24 @@ function OccasionCard({
         backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
       })}
     >
+      {/* The costume, not a glyph — the card is recognisable at a glance and
+          the character appears where people actually choose a pathway. */}
       <View
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+          width: 52,
+          height: 52,
+          borderRadius: 26,
           backgroundColor: hue.bg,
           alignItems: "center",
           justifyContent: "center",
+          overflow: "hidden",
         }}
       >
-        <Symbol
-          name={OCCASION_ICON[occasion.id] ?? "sparkles"}
-          size={17}
-          color={hue.fg}
+        <Mascot
+          occasion={occasion.id as PlanInputs["occasion"]}
+          size={46}
+          animate={false}
+          style={{ marginTop: 6 }}
         />
       </View>
       <Text variant="headline" style={{ marginTop: Spacing.three }}>

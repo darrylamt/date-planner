@@ -23,6 +23,7 @@ const EXAMPLE_INPUTS: PlanInputs = {
   surpriseMe: false,
   partySize: 2,
   companions: [],
+  occasionDetail: {},
   budget: 800,
   date: DATE,
   startTime: "17:30",

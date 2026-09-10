@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
 import { Button, ActionBar } from "../../src/components/Button";
 import { PlanSteps } from "../../src/components/plan/PlanSteps";
+import { StepMascot } from "../../src/components/plan/StepMascot";
 import { ErrorState, LoadingPlan, NoMatch } from "../../src/components/plan/StatusScreens";
 import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
@@ -13,7 +14,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { generatePlan } from "../../src/lib/api";
 import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
-import { TOTAL_STEPS, defaultInputs } from "../../src/lib/planConstants";
+import { defaultInputs, stepsFor } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
@@ -43,6 +44,12 @@ export default function PlanNew() {
    * started at all.
    */
   const params = useLocalSearchParams<{ occasion?: string; fresh?: string }>();
+
+  /**
+   * Arriving from an occasion card means that question is answered, so the
+   * pathway drops it rather than asking again.
+   */
+  const occasionPreset = Boolean(params.occasion && isOccasion(params.occasion));
 
   const [inputs, setInputs] = useState<PlanInputs>(defaultInputs);
   const [phase, setPhase] = useState<Phase>({ name: "steps", step: 0 });
@@ -150,6 +157,14 @@ export default function PlanNew() {
     }
   }, [inputs, phase, shareSlug]);
 
+  /**
+   * The pathway for this occasion. Recomputed from inputs, so changing the
+   * occasion mid-flow reshapes the remaining questions rather than leaving
+   * someone on a step that no longer applies.
+   */
+  const steps = stepsFor(inputs.occasion, occasionPreset);
+  const totalSteps = steps.length;
+
   /* Saving was blocked on sign-in — finish it once a session appears. */
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -168,7 +183,7 @@ export default function PlanNew() {
   useEffect(() => {
     if (phase.name === "steps") {
       navigation.setOptions({
-        title: `${phase.step + 1} of ${TOTAL_STEPS}`,
+        title: `${phase.step + 1} of ${totalSteps}`,
         headerBackVisible: phase.step === 0,
         gestureEnabled: phase.step === 0,
       });
@@ -187,7 +202,7 @@ export default function PlanNew() {
       headerBackTitle: "Done",
       gestureEnabled: true,
     });
-  }, [navigation, phase, inputs.date]);
+  }, [navigation, phase, inputs.date, totalSteps]);
 
   if (!hydrated) {
     return (
@@ -234,7 +249,7 @@ export default function PlanNew() {
           setShareSlug(null);
           void saveDraft({ itinerary: it, shareSlug: null });
         }}
-        onEdit={() => setPhase({ name: "steps", step: TOTAL_STEPS - 1 })}
+        onEdit={() => setPhase({ name: "steps", step: totalSteps - 1 })}
         onSave={handleSave}
         shareSlug={shareSlug}
         saving={saving}
@@ -251,12 +266,17 @@ export default function PlanNew() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
-  const goBack = () => (step === 0 ? router.back() : goTo(step - 1));
-  const goNext = () => (step === TOTAL_STEPS - 1 ? void generate() : goTo(step + 1));
+  // Clamped: changing the occasion mid-flow can shorten the pathway under us.
+  const stepIndex = Math.min(step, totalSteps - 1);
+  const stepId = steps[stepIndex];
+
+  const goBack = () => (stepIndex === 0 ? router.back() : goTo(stepIndex - 1));
+  const goNext = () =>
+    stepIndex === totalSteps - 1 ? void generate() : goTo(stepIndex + 1);
 
   const canContinue =
-    (step !== 0 || inputs.surpriseMe || inputs.areaIds.length > 0) &&
-    (step !== 3 || inputs.vibes.length > 0);
+    (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0) &&
+    (stepId !== "vibe" || inputs.vibes.length > 0);
 
   const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
@@ -268,14 +288,14 @@ export default function PlanNew() {
     >
       {/* Progress rail */}
       <View style={{ flexDirection: "row", gap: 4, paddingHorizontal: GUTTER, paddingBottom: space.lg }}>
-        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+        {Array.from({ length: totalSteps }, (_, i) => (
           <View
             key={i}
             style={{
               flex: 1,
               height: 4,
               borderRadius: radius.pill,
-              backgroundColor: i <= step ? c.accent : c.backgroundSelected,
+              backgroundColor: i <= stepIndex ? c.accent : c.backgroundSelected,
             }}
           />
         ))}
@@ -287,7 +307,7 @@ export default function PlanNew() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        {step === 0 && areas.length === 0 ? (
+        {stepId === "area" && areas.length === 0 ? (
           <View style={{ paddingTop: space.xxxl, paddingHorizontal: GUTTER }}>
             {areasFailed ? (
               <Text variant="body" tone="secondary" center>
@@ -298,14 +318,17 @@ export default function PlanNew() {
             )}
           </View>
         ) : (
-          <PlanSteps step={step} inputs={inputs} areas={areas} update={update} />
+          <>
+            <PlanSteps step={stepId} inputs={inputs} areas={areas} update={update} />
+            <StepMascot step={stepId} occasion={inputs.occasion} />
+          </>
         )}
       </ScrollView>
 
       <ActionBar style={{ paddingBottom: insets.bottom || space.lg }}>
         <Button
-          title={step === TOTAL_STEPS - 1 ? `Build ${poss} evening` : "Continue"}
-          icon={step === TOTAL_STEPS - 1 ? "sparkles" : undefined}
+          title={stepIndex === totalSteps - 1 ? `Build ${poss} evening` : "Continue"}
+          icon={stepIndex === totalSteps - 1 ? "sparkles" : undefined}
           onPress={goNext}
           disabled={!canContinue}
         />

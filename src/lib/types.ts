@@ -79,6 +79,12 @@ export interface PlanInputs {
   hours: number; // duration of the outing
   vibes: string[];
   occasion: Occasion;
+  /**
+   * Answers to the occasion's own question, keyed by field. Whose birthday it
+   * is, what someone graduated in, what a solo day is for — the things that
+   * make a plan specific rather than generically correct.
+   */
+  occasionDetail: Record<string, string>;
   partner: {
     name: string; // optional display name ("" allowed)
     gender: Gender;
