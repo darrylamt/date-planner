@@ -57,6 +57,12 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
           <Stack.Screen name="plan/new" options={{ title: "" }} />
           <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
+          {/* Full screen and gesture-locked: a half-swiped intro that lands
+              back on an empty app is worse than no intro. */}
+          <Stack.Screen
+            name="onboarding"
+            options={{ headerShown: false, gestureEnabled: false, animation: "fade" }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

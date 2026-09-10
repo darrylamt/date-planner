@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { Text } from "../Text";
 import { Button } from "../Button";
 import { Group, Row } from "../List";
 import { Symbol } from "../Symbol";
-import { GUTTER, space } from "../../theme";
+import { Mascot, SpeechBubble } from "../Mascot";
+import { GUTTER, Spacing, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { possessiveName, pronounForGender } from "../../lib/pronouns";
+import { loadingLines } from "../../lib/mascotLines";
 import type { GenerateResponse, PlanInputs } from "../../lib/types";
 
 /** Shared centred layout for the full-screen states. */
@@ -32,61 +34,37 @@ function Centred({ children }: { children: React.ReactNode }) {
  */
 export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
   const c = useTheme();
-  const areaLabel = inputs.surpriseMe ? "Accra" : (inputs.areaNames[0] ?? "Accra");
-  const messages = [
-    `Checking menus in ${areaLabel}`,
-    `Balancing your GHS ${inputs.budget.toLocaleString()}`,
-    "Adding a personal touch",
-  ];
-
+  const lines = loadingLines(inputs);
   const [active, setActive] = useState(0);
-  const fade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      Animated.sequence([
-        Animated.timing(fade, { toValue: 0, duration: 220, useNativeDriver: true }),
-        Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }),
-      ]).start();
-      // Swap the text at the midpoint of the crossfade.
-      setTimeout(() => setActive((a) => (a + 1) % messages.length), 220);
-    }, 2400);
+    // Slower than the mascot's frame cycle so the two do not beat against
+    // each other; generation runs 25-40s, which is 6-8 lines.
+    const timer = setInterval(() => setActive((a) => (a + 1) % lines.length), 3200);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [lines.length]);
 
-  const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
-  const hint = inputs.partner.place
-    ? `Because ${inputs.partner.name || "they"} love${inputs.partner.name ? "s" : ""} ${inputs.partner.place.toLowerCase()}, we are shaping the evening around it.`
-    : "We are weaving the little details you shared into every stop.";
+  const poss = possessiveName(
+    inputs.partner.name,
+    pronounForGender(inputs.partner.gender)
+  );
+  const heading =
+    inputs.partySize <= 1
+      ? "Putting your day together"
+      : inputs.partySize > 2
+        ? "Putting your day together"
+        : `Putting ${poss} evening together`;
 
   return (
     <Centred>
-      <ActivityIndicator size="large" color={c.accent} />
+      <SpeechBubble text={lines[active]} />
+      <Mascot occasion={inputs.occasion} size={140} style={{ marginTop: Spacing.two }} />
 
-      <Text variant="title2" center style={{ marginTop: space.xxl }}>
-        Putting {poss} evening together
+      <Text variant="title2" center style={{ marginTop: Spacing.five }}>
+        {heading}
       </Text>
 
-      <Animated.View style={{ opacity: fade, marginTop: space.lg, minHeight: 24 }}>
-        <Text variant="body" tone="secondary" center>
-          {messages[active]}
-        </Text>
-      </Animated.View>
-
-      <View
-        style={{
-          marginTop: space.xxxl,
-          paddingHorizontal: space.lg,
-          paddingVertical: space.md,
-          backgroundColor: c.backgroundSunken,
-          borderRadius: 12,
-        }}
-      >
-        <Text variant="footnote" tone="secondary" center>
-          {hint}
-        </Text>
-      </View>
+      <ActivityIndicator color={c.accent} style={{ marginTop: Spacing.four }} />
     </Centred>
   );
 }

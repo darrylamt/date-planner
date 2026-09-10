@@ -10,6 +10,7 @@ import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
+import { resetOnboarding } from "../../src/lib/onboarding";
 
 
 
@@ -78,6 +79,15 @@ export default function Profile() {
       )}
 
       <Group header="This device">
+        <Row
+          icon="sparkles"
+          title="Replay the intro"
+          subtitle="See what aduro does, again"
+          onPress={async () => {
+            await resetOnboarding();
+            router.replace("/onboarding");
+          }}
+        />
         <Row
           icon="trash"
           iconColor={c.danger}
