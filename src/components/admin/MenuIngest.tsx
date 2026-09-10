@@ -3,25 +3,24 @@
 import { useState } from "react";
 import { ghs } from "@/lib/format";
 import { buildVenueMigration, migrationFilename } from "@/lib/sqlgen";
-import { MENU_CATEGORIES, VENUE_TYPES, type IngestedItem } from "@/lib/catalog";
+import {
+  MENU_CATEGORIES,
+  VENUE_TYPES,
+  type IngestedItem,
+  type IngestedVenue,
+} from "@/lib/catalog";
 import type { Area } from "@/lib/types";
 
+/**
+ * The venue shape here comes from ../../lib/catalog rather than being
+ * hand-copied, because a hand-copied shape is exactly what went stale the
+ * last time this schema changed: pricing_mode and unit_price_ghs were added
+ * to IngestedVenue and this file kept compiling against an old copy of it
+ * that had neither, so the fields the server actually returned were silently
+ * unreachable here.
+ */
 interface Extracted {
-  venue: {
-    name: string;
-    type: string;
-    price_band: string;
-    description: string;
-    vibe_tags: string[];
-    best_for: string[];
-    dress_code: string | null;
-    reservation_required: boolean;
-    instagram_handle: string | null;
-    phone: string | null;
-    google_maps_url: string | null;
-    lat: number | null;
-    lng: number | null;
-  };
+  venue: IngestedVenue;
   items: IngestedItem[];
   warnings: string[];
   detected_currency: string | null;
@@ -65,8 +64,13 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
   const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
 
+  // Notes alone are enough: an entry fee or an hourly rate is often just a
+  // number the admin already knows, and there is no photo of a padel court's
+  // price board sitting in an inbox waiting to be uploaded for it.
   const canSubmit =
-    venueName.trim().length > 0 && areaName && (files.length > 0 || menuUrl.trim());
+    venueName.trim().length > 0 &&
+    areaName &&
+    (files.length > 0 || menuUrl.trim() || notes.trim().length > 0);
 
   async function extract() {
     setBusy(true);
@@ -149,6 +153,8 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
           areaName,
           price_band: data.venue.price_band,
           avg_cost_per_person_ghs: avgCost,
+          pricing_mode: data.venue.pricing_mode,
+          unit_price_ghs: data.venue.pricing_mode === "per_person" ? null : data.venue.unit_price_ghs,
           description: data.venue.description,
           vibe_tags: data.venue.vibe_tags,
           best_for: data.venue.best_for,
@@ -241,13 +247,17 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
         </div>
 
         <div className="mt-4">
-          <span className="flbl">Anything we should know? (optional)</span>
+          <span className="flbl">Anything we should know?</span>
           <textarea
             className="ta"
-            placeholder="e.g. ignore the breakfast page, prices went up in June"
+            placeholder="e.g. ignore the breakfast page, prices went up in June — or if there is no menu, just tell us: entry fee is GHS 30, or the court is GHS 200 an hour"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            No photo or link needed if you already know the price — a court, an entry
+            fee or an hourly rate typed here is enough on its own.
+          </span>
         </div>
 
         <button className="btn mt-4" onClick={extract} disabled={!canSubmit || busy}>
@@ -317,17 +327,64 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
                 />
               </div>
               <div>
-                <span className="flbl">Average cost per person (GHS)</span>
-                <input
-                  className="inp font-mono"
-                  type="number"
-                  value={avgCost}
-                  onChange={(e) => setAvgCost(Number(e.target.value) || 0)}
-                />
-                <div className="mt-1 text-[12.5px] text-mutedbrown">
-                  Suggested from a typical main plus a drink. This drives which
-                  budgets the venue appears for — a wrong value silently hides it.
-                </div>
+                <span className="flbl">How does it charge?</span>
+                <select
+                  className="inp"
+                  value={data.venue.pricing_mode}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      venue: { ...data.venue, pricing_mode: e.target.value as never },
+                    })
+                  }
+                >
+                  <option value="per_person">Per person (menu or cover)</option>
+                  <option value="per_hour">Per hour, shared by the group</option>
+                  <option value="per_group">Flat, shared by the group</option>
+                  <option value="per_hour_per_person">Per hour, each person</option>
+                </select>
+                {data.venue.pricing_mode === "per_person" ? (
+                  <>
+                    <input
+                      className="inp mt-2 font-mono"
+                      type="number"
+                      value={avgCost}
+                      onChange={(e) => setAvgCost(Number(e.target.value) || 0)}
+                    />
+                    <div className="mt-1 text-[12.5px] text-mutedbrown">
+                      Suggested from a typical main plus a drink. This drives which
+                      budgets the venue appears for — a wrong value silently hides it.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-[13px] text-mutedbrown">GHS</span>
+                      <input
+                        className="inp max-w-[140px] font-mono"
+                        type="number"
+                        value={data.venue.unit_price_ghs ?? ""}
+                        onChange={(e) =>
+                          setData({
+                            ...data,
+                            venue: {
+                              ...data.venue,
+                              unit_price_ghs: e.target.value === "" ? null : Number(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                      <span className="text-[13px] text-mutedbrown">
+                        {data.venue.pricing_mode === "per_group" ? "in total" : "per hour"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[12.5px] text-mutedbrown">
+                      One bill split between however many go, read from what was
+                      extracted. There is no per-person average for this kind of
+                      venue — a court or a lane does not have one.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="mt-4">

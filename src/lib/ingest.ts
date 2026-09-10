@@ -68,7 +68,9 @@ Return ONLY a JSON object, no prose:
     "phone": string|null,
     "google_maps_url": string|null,
     "lat": number|null,
-    "lng": number|null
+    "lng": number|null,
+    "pricing_mode": "per_person"|"per_group"|"per_hour"|"per_hour_per_person",
+    "unit_price_ghs": number|null
   },
   "items": [{ "name": string, "category": "starter"|"main"|"dessert"|"drink"|"other", "price_ghs": number, "notes": string|null }],
   "warnings": string[],
@@ -87,17 +89,34 @@ Rules, in order of importance:
 3. Skip section headings, allergen keys and marketing copy. Items only.
 4. If the same dish appears at several sizes, use the smallest priced portion
    and note the variants in that item's notes.
-5. vibe_tags must come from exactly this set: romantic, calm, lively, fun,
+5. Not every venue sells food. A padel court's hourly rates, a bowling alley's
+   per-game board, a laser tag session list, an entry fee at a door — these are
+   price lists too, and every line on one is an item, category "other". Name
+   the item exactly what is being charged for and put the unit in notes ("per
+   hour", "per game", "per person, entry only") rather than trying to make it
+   look like a dish. A venue with a single admission charge and nothing else
+   to itemise still gets one item — "Entry" or "Admission" at that price — so
+   its typical cost is never left for someone to type in from scratch.
+5a. pricing_mode matters most for a venue that charges once for the whole
+   group rather than once per person — a court, a lane, a table, a package.
+   "GHS 240 an hour, up to 4 people" is per_hour with unit_price_ghs 240, not
+   an item at 240 that four people would each be charged. Set pricing_mode and
+   unit_price_ghs for that rate, and do NOT also create an item for the same
+   charge — an item is for things billed per person (a drink, equipment hire,
+   a shoe rental), the shared rate is not one of those. Leave pricing_mode
+   "per_person" and unit_price_ghs null for every ordinary menu.
+6. vibe_tags must come from exactly this set: romantic, calm, lively, fun,
    adventurous, chill, casual. best_for from: first_date, anniversary,
    date_night, friend_outing. Pick only what the evidence supports.
-6. description is one or two plain sentences for a customer. No superlatives
+7. description is one or two plain sentences for a customer. No superlatives
    you cannot support.
-7. phone in full international format (+233...). Only if you actually saw it.
+8. phone in full international format (+233...). Only if you actually saw it.
    Leave contact fields null rather than guessing — a wrong number sends a
    customer to a stranger.
-8. lat/lng only if you genuinely know them for this venue. Null otherwise.
-9. price_band: budget if a typical main is under GHS 80, mid up to GHS 200,
-   premium above. Base it on the items you read.`;
+9. lat/lng only if you genuinely know them for this venue. Null otherwise.
+10. price_band: budget under GHS 80 a head, mid up to GHS 200, premium above
+    — judged against the typical single item or experience you read, whatever
+    it is (a main course, a court hour, an entry fee), not specifically food.`;
 }
 
 export interface IngestSuccess {
@@ -112,8 +131,13 @@ export interface IngestFailure {
 export async function ingestMenu(
   input: IngestInput
 ): Promise<IngestSuccess | IngestFailure> {
-  if (!input.images.length && !input.menuUrl) {
-    return { ok: false, error: "Provide a menu URL or at least one menu image." };
+  // Notes alone can carry the whole answer — "entry fee is GHS 30" needs no
+  // photo — so only reject when there is truly nothing to extract from.
+  if (!input.images.length && !input.menuUrl && !input.notes?.trim()) {
+    return {
+      ok: false,
+      error: "Provide a menu URL, at least one menu image, or a note describing the price.",
+    };
   }
 
   const content: Anthropic.ContentBlockParam[] = [];

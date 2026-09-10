@@ -48,6 +48,13 @@ export const ingestedItemSchema = z.object({
   notes: z.string().max(200).nullable().default(null),
 });
 
+export const PRICING_MODES = [
+  "per_person",
+  "per_group",
+  "per_hour",
+  "per_hour_per_person",
+] as const;
+
 export const ingestedVenueSchema = z.object({
   name: z.string().min(1).max(200),
   type: z.enum(VENUE_TYPES).default("restaurant"),
@@ -62,6 +69,14 @@ export const ingestedVenueSchema = z.object({
   google_maps_url: z.string().max(600).nullable().default(null),
   lat: z.number().nullable().default(null),
   lng: z.number().nullable().default(null),
+  /**
+   * How the venue charges. A court or a lane is priced per hour however many
+   * people turn up, so folding that rate into a per-person average charges a
+   * group of four roughly four times the real bill.
+   */
+  pricing_mode: z.enum(PRICING_MODES).default("per_person"),
+  /** The charge pricing_mode refers to. Null unless the mode needs one. */
+  unit_price_ghs: z.number().min(0).max(100000).nullable().default(null),
 });
 
 export const ingestResultSchema = z.object({
@@ -82,7 +97,16 @@ export type IngestResult = z.infer<typeof ingestResultSchema>;
  * guessed: a typical main plus a typical drink. Deterministic, so an admin can
  * see where the number came from and correct it.
  */
-export function suggestAvgCost(items: IngestedItem[]): number {
+export function suggestAvgCost(items: IngestedItem[], venue?: IngestedVenue): number {
+  /*
+   * A venue priced per hour or per group has no "average spend per person" to
+   * derive from its items at all — its items (a court rate, an equipment
+   * rental) are not per-person figures, and running the same median logic
+   * over them the way a food menu is read would suggest a court's whole
+   * hourly rate as what one person pays.
+   */
+  if (venue && venue.pricing_mode !== "per_person") return 0;
+
   const median = (xs: number[]): number => {
     if (!xs.length) return 0;
     const sorted = [...xs].sort((a, b) => a - b);

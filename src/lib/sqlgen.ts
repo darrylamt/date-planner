@@ -51,6 +51,8 @@ export interface VenueSql {
   image_url: string | null;
   lat: number | null;
   lng: number | null;
+  pricing_mode: string;
+  unit_price_ghs: number | null;
 }
 
 /**
@@ -76,7 +78,8 @@ export function buildVenueMigration(venue: VenueSql, items: IngestedItem[]): str
   const venueColumns = `    name, type, area_id, vibe_tags, dress_code, price_band,
     avg_cost_per_person_ghs, description, best_for, reservation_required,
     instagram_handle, phone_pending, phone_status, phone_source,
-    google_maps_url, image_url, lat, lng, is_active`;
+    google_maps_url, image_url, lat, lng, is_active,
+    pricing_mode, unit_price_ghs`;
 
   const venueValues = `    ${lit(venue.name)},
     ${lit(venue.type)}::venue_type,
@@ -96,7 +99,9 @@ export function buildVenueMigration(venue: VenueSql, items: IngestedItem[]): str
     ${lit(venue.image_url)},
     ${num(venue.lat)},
     ${num(venue.lng)},
-    true`;
+    true,
+    ${lit(venue.pricing_mode)},
+    ${num(venue.unit_price_ghs)}`;
 
   // A data-modifying CTE must be attached to a main statement, so the
   // CTE form is only valid when there are menu rows to insert. With no items
