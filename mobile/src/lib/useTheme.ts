@@ -1,5 +1,10 @@
 import { useColorScheme } from "react-native";
-import { Colors, type ThemeColors } from "../theme";
+import {
+  Colors,
+  OCCASION_HUES,
+  OCCASION_HUES_DARK,
+  type ThemeColors,
+} from "../theme";
 
 export type ColorSchemeName = "light" | "dark";
 
@@ -15,6 +20,17 @@ export function useTheme(): ThemeColors {
 
 export function useIsDark(): boolean {
   return useColorSchemeName() === "dark";
+}
+
+/**
+ * The hue for one occasion, matched to the current scheme. Falls back to the
+ * accent so a newly added occasion is never invisible for want of a swatch.
+ */
+export function useOccasionHue(id: string): { fg: string; bg: string } {
+  const dark = useIsDark();
+  const table = dark ? OCCASION_HUES_DARK : OCCASION_HUES;
+  const colors = Colors[dark ? "dark" : "light"];
+  return table[id] ?? { fg: colors.accent, bg: colors.accentSoft };
 }
 
 /** For the handful of places that need to branch on the scheme itself. */

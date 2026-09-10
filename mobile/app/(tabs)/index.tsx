@@ -12,7 +12,7 @@ import {
   Spacing,
   TAB_BAR,
 } from "../../src/theme";
-import { useTheme } from "../../src/lib/useTheme";
+import { useOccasionHue, useTheme } from "../../src/lib/useTheme";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
@@ -179,48 +179,7 @@ export default function Home() {
         }}
       >
         {OCCASIONS.map((o) => (
-          <Pressable
-            key={o.id}
-            onPress={() => void startNewPlan(o.id)}
-            style={({ pressed }) => ({
-              // Two per row, accounting for the gap between them.
-              width: "47.5%",
-              flexGrow: 1,
-              padding: Spacing.three,
-              borderRadius: Radius.xl,
-              borderWidth: HAIRLINE,
-              borderColor: c.border,
-              backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
-            })}
-          >
-            <View
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: c.backgroundSunken,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Symbol
-                name={OCCASION_ICON[o.id] ?? "sparkles"}
-                size={17}
-                color={c.accent}
-              />
-            </View>
-            <Text variant="headline" style={{ marginTop: Spacing.three }}>
-              {o.title}
-            </Text>
-            <Text
-              variant="footnote"
-              tone="secondary"
-              numberOfLines={2}
-              style={{ marginTop: 1 }}
-            >
-              {o.sub}
-            </Text>
-          </Pressable>
+          <OccasionCard key={o.id} occasion={o} />
         ))}
       </View>
 
@@ -253,6 +212,58 @@ export default function Home() {
         estimate.
       </Text>
     </ScrollView>
+  );
+}
+
+/**
+ * One occasion. Its own component so the per-occasion hue can be looked up
+ * with a hook, which a callback inside a map cannot do.
+ */
+function OccasionCard({
+  occasion,
+}: {
+  occasion: { id: string; title: string; sub: string };
+}) {
+  const c = useTheme();
+  const hue = useOccasionHue(occasion.id);
+
+  return (
+    <Pressable
+      onPress={() => void startNewPlan(occasion.id as PlanInputs["occasion"])}
+      style={({ pressed }) => ({
+        // Two per row, accounting for the gap between them.
+        width: "47.5%",
+        flexGrow: 1,
+        padding: Spacing.three,
+        borderRadius: Radius.xl,
+        borderWidth: HAIRLINE,
+        borderColor: c.border,
+        backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
+      })}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          backgroundColor: hue.bg,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Symbol
+          name={OCCASION_ICON[occasion.id] ?? "sparkles"}
+          size={17}
+          color={hue.fg}
+        />
+      </View>
+      <Text variant="headline" style={{ marginTop: Spacing.three }}>
+        {occasion.title}
+      </Text>
+      <Text variant="footnote" tone="secondary" numberOfLines={2} style={{ marginTop: 1 }}>
+        {occasion.sub}
+      </Text>
+    </Pressable>
   );
 }
 

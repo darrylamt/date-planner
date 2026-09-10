@@ -1,10 +1,10 @@
 /**
- * aduro design tokens — monochrome.
+ * aduro design tokens — near-monochrome, one accent, eight occasion hues.
  *
  * Ported from the Gavel system. The visual language is a printed itinerary:
- * white paper, black type, hierarchy built from size and space rather than
- * boxes and colour. Venue photography is the only thing that brings colour,
- * which is the point — the plan should look like the places, not like the app.
+ * cool off-white paper, near-black type, hierarchy built from size and space
+ * rather than boxes and colour. Venue photography still carries most of the
+ * colour, which is the point — the plan should look like the places.
  *
  * One brand colour sits on top of that, and `ACCENT` below is the only place
  * it is written down; every tint, border and dark-mode variant is derived from
@@ -16,6 +16,8 @@
  *  - Status keeps its own palette. Red means over budget, green means money
  *    left. The brand colour must never be used for either, or the one thing
  *    colour reliably told you stops being reliable.
+ *  - Occasion hues live at icon scale and nowhere else. The moment they grow
+ *    past a 38px circle the page stops being calm.
  */
 
 import { Platform } from "react-native";
@@ -23,11 +25,11 @@ import { Platform } from "react-native";
 /**
  * The one colour to change.
  *
- * A deep rose rather than the brighter #E23D6D: white text on this clears
- * 4.5:1, which the brighter tone does not, and it is used behind white type on
- * every primary button.
+ * A deep lagoon teal: calm and coastal rather than the warm rose it replaced,
+ * which pulled hard against venue photography. White text on this clears
+ * 4.6:1, and it sits behind white type on every primary button.
  */
-export const ACCENT = "#C9184A";
+export const ACCENT = "#0F766E";
 
 function channels(hex: string): [number, number, number] {
   const value = hex.replace("#", "");
@@ -65,26 +67,28 @@ function mix(hex: string, target: string, amount: number): string {
 const WHITE = "#FFFFFF";
 const BLACK = "#000000";
 
-/** Lifted for dark surfaces, where the deep rose is too low-contrast for text. */
+/** Lifted for dark surfaces, where the deep teal is too low-contrast for text. */
 const ACCENT_DARK = mix(ACCENT, WHITE, 0.38);
 
 export const Colors = {
   light: {
-    background: "#FFFFFF",
-    /** Cards sit on the same white; space separates them, not fill. */
+    /** Faintly cool off-white — a page, not a lightbox. */
+    background: "#F6F9F8",
+    /** Cards are true white, so they lift off the page without a heavy border. */
     backgroundElement: "#FFFFFF",
     /** Pressed / selected chip and row states. */
-    backgroundSelected: "#F0F0F0",
-    /** The one tinted surface, for genuinely inset wells. */
-    backgroundSunken: "#F7F7F7",
+    backgroundSelected: "#E8EFEE",
+    /** The one deeper tint, for genuinely inset wells. */
+    backgroundSunken: "#EDF3F2",
 
-    text: "#0A0A0A",
-    textSecondary: "#717171",
-    textTertiary: "#949494",
+    /** Near-black carrying a trace of the accent's hue, so nothing reads grey. */
+    text: "#0C1413",
+    textSecondary: "#5F6E6C",
+    textTertiary: "#627170",
     textOnBrand: "#FFFFFF",
 
-    border: "#DDDDDD",
-    borderStrong: "#B0B0B0",
+    border: "#DCE6E4",
+    borderStrong: "#A9BAB7",
 
     brand: ACCENT,
     accent: ACCENT,
@@ -108,18 +112,18 @@ export const Colors = {
     glassBorder: "rgba(0, 0, 0, 0.08)",
   },
   dark: {
-    background: "#000000",
-    backgroundElement: "#000000",
-    backgroundSelected: "#1C1C1E",
-    backgroundSunken: "#0C0C0D",
+    background: "#07100F",
+    backgroundElement: "#0E1817",
+    backgroundSelected: "#182523",
+    backgroundSunken: "#0A1413",
 
-    text: "#FAFAFA",
-    textSecondary: "#A1A1AA",
-    textTertiary: "#71717A",
-    textOnBrand: "#0A0A0A",
+    text: "#F2F7F6",
+    textSecondary: "#9BABA8",
+    textTertiary: "#7B8B89",
+    textOnBrand: "#04100E",
 
-    border: "#1F1F22",
-    borderStrong: "#2E2E32",
+    border: "#1E2C2A",
+    borderStrong: "#2E403D",
 
     brand: ACCENT_DARK,
     accent: ACCENT_DARK,
@@ -139,6 +143,38 @@ export const Colors = {
     glassBorder: "rgba(255, 255, 255, 0.12)",
   },
 } as const;
+
+/**
+ * One muted hue per occasion, used only inside the 38px icon circle on the
+ * home grid. Eight identical accent icons carried no information; eight
+ * distinct ones let a card be recognised before it is read.
+ *
+ * Deliberately desaturated and confined to icon scale — this is the whole of
+ * the app's colour beyond the accent, and it stays calm because it never
+ * grows past a circle. Each hue ships with the wash it sits on.
+ */
+export const OCCASION_HUES: Record<string, { fg: string; bg: string }> = {
+  first_date: { fg: "#B4536B", bg: "#F7EAEE" },
+  anniversary: { fg: "#B4694A", bg: "#F8EDE7" },
+  date_night: { fg: "#4A5B9E", bg: "#EAEDF7" },
+  birthday: { fg: "#B07C24", bg: "#F8F0DF" },
+  graduation: { fg: "#0F766E", bg: "#E4F0EE" },
+  celebration: { fg: "#7E4E92", bg: "#F1E9F5" },
+  friend_outing: { fg: "#4C7A56", bg: "#E9F1EA" },
+  solo_day: { fg: "#556570", bg: "#EBEEF0" },
+};
+
+/** Dark-mode washes: the same hues, dropped onto the dark page. */
+export const OCCASION_HUES_DARK: Record<string, { fg: string; bg: string }> = {
+  first_date: { fg: "#E8899F", bg: "#25161A" },
+  anniversary: { fg: "#E39B78", bg: "#251A14" },
+  date_night: { fg: "#8D9BE0", bg: "#171A2A" },
+  birthday: { fg: "#E0B45C", bg: "#241D10" },
+  graduation: { fg: "#4FBFB2", bg: "#0E2321" },
+  celebration: { fg: "#BE93D0", bg: "#201726" },
+  friend_outing: { fg: "#8DBE97", bg: "#141F17" },
+  solo_day: { fg: "#9AAAB5", bg: "#161B1F" },
+};
 
 /** Widened so both schemes satisfy the same shape. */
 export type ThemeColors = { [K in keyof (typeof Colors)["light"]]: string };
