@@ -120,10 +120,16 @@ Rules that matter more than filling every field:
   coordinates send them to the wrong side of the city.
 - "found": false if you cannot corroborate a venue by this name in Accra. Do
   not substitute a similarly-named place in another city — say so in warnings.
-- "avg_cost_per_person_ghs": leave it 0 unless a source states actual prices in
-  cedis. Do not estimate from the price band, from comparable venues, or from
-  what such a place "usually" costs. Prose like "mains around 120-180" goes in
-  price_signal instead, as a quote, and the number stays 0.
+- "avg_cost_per_person_ghs": what one person typically spends on a visit, and
+  only when a source states it in cedis. Do not estimate from the price band,
+  from comparable venues, or from what such a place "usually" costs.
+- A floor is not a typical spend. "From GHS 200", "starting at", "entry from",
+  or a price for one specific class or package is a lower bound, and a lower
+  bound used as a typical figure makes every plan cost more than it promised.
+  Those go in price_signal as a quote, and the number stays 0. The same applies
+  to a price quoted per class, per hour or per group rather than per visit.
+- Prose like "mains around 120-180" likewise goes in price_signal, not the
+  number.
 - "is_free": true only for places that genuinely charge nothing to enter, like
   a public beach or park. Never true merely because you could not find prices.
 - "area_name": the Accra neighbourhood as locals say it (Osu, East Legon,
@@ -213,6 +219,26 @@ export async function researchVenue(
      */
     if (draft.avg_cost_per_person_ghs > 0 && !draft.sources.length) {
       draft.warnings.push("A price came back with no sources, so it was discarded.");
+      draft.avg_cost_per_person_ghs = 0;
+    }
+
+    /*
+     * A floor quoted as a typical spend.
+     *
+     * The prompt forbids this, but it is a soft constraint and the model has
+     * already broken it once: "From GHS 200" for one ceramics class arrived as
+     * the per-person figure. The planner treats that number as what a visit
+     * costs whenever a venue has no menu, so a lower bound there makes plans
+     * quietly exceed the budget they promised — the failure that matters most,
+     * in the direction that matters most.
+     */
+    const FLOOR_LANGUAGE =
+      /from|starting at|starts? (?:at|from)|entry from|per (?:class|session|hour|group|table|package)|upwards|onwards/i;
+
+    if (draft.avg_cost_per_person_ghs > 0 && draft.price_signal && FLOOR_LANGUAGE.test(draft.price_signal)) {
+      draft.warnings.push(
+        `The price quote reads as a starting price rather than a typical spend, so GHS ${draft.avg_cost_per_person_ghs} was not filled in. Set it yourself or add the menu.`
+      );
       draft.avg_cost_per_person_ghs = 0;
     }
     if (draft.is_free && draft.avg_cost_per_person_ghs > 0) {

@@ -206,8 +206,9 @@ function DraftPreview({
           <span className="font-semibold">On price: </span>
           {draft.price_signal}
           <span className="mt-1 block text-[12px] text-mutedbrown">
-            Not filled in automatically — read it, then set the figure yourself or add the
-            menu.
+            {draft.avg_cost_per_person_ghs > 0
+              ? "A figure was filled in above — check this quote agrees with it before saving."
+              : "Not filled in automatically — read it, then set the figure yourself or add the menu."}
           </span>
         </p>
       ) : null}
