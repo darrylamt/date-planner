@@ -11,7 +11,7 @@ export interface Draft {
 }
 
 /**
- * In-progress plans survive backgrounding and app restarts — losing a
+ * In-progress plans survive backgrounding and app restarts, losing a
  * half-answered questionnaire is the worst thing this app could do.
  */
 export async function loadDraft(): Promise<Draft | null> {
@@ -30,7 +30,7 @@ export async function saveDraft(patch: Draft): Promise<void> {
     if (patch.itinerary === null) delete merged.itinerary;
     await AsyncStorage.setItem(KEY, JSON.stringify(merged));
   } catch {
-    /* storage unavailable — the flow still works, it just won't resume */
+    /* storage unavailable, the flow still works, it just won't resume */
   }
 }
 

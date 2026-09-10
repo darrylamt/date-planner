@@ -1,4 +1,4 @@
--- aduro — reservation requests
+-- aduro, reservation requests
 -- System of record for reservations made on a user's behalf. Delivery today
 -- is a WhatsApp handoff to the venue's phone; this table is the spine of a
 -- future venue-facing portal (venues confirm/decline from their own view).

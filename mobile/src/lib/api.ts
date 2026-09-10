@@ -8,7 +8,7 @@ import type { GenerateResponse, Itinerary, PlanInputs } from "./types";
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 if (!BASE) {
-  console.warn("EXPO_PUBLIC_API_URL is unset — plan generation will fail.");
+  console.warn("EXPO_PUBLIC_API_URL is unset, plan generation will fail.");
 }
 
 /** Generation can take a while; fail loudly rather than hanging forever. */
@@ -39,7 +39,7 @@ export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse
     return {
       status: "error",
       message: aborted
-        ? "That took too long. Your answers are safe — try again."
+        ? "That took too long. Your answers are safe, try again."
         : "We couldn't reach the planner. Check your connection and try again.",
     };
   }

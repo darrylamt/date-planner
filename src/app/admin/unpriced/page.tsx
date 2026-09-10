@@ -22,14 +22,14 @@ export default async function AdminUnpricedPage() {
       id: v.id,
       name: v.name,
       type: v.type,
-      area: v.areas?.name ?? "—",
+      area: v.areas?.name ?? ", ",
     }));
 
   return (
     <div>
       <h1 className="font-display text-[24px] font-bold">Unpriced venues</h1>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
-        Bowling, padel, sip and paint — places with no menu to itemise. They are
+        Bowling, padel, sip and paint, places with no menu to itemise. They are
         withheld from planning until they have a price, because a venue with no
         price is unpriced, not free.
       </p>

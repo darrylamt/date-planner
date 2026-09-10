@@ -11,7 +11,7 @@ interface Row {
   area: string;
 }
 
-/** A sensible default label per venue type — what one person is actually buying. */
+/** A sensible default label per venue type, what one person is actually buying. */
 const DEFAULT_LABEL: Record<string, string> = {
   activity: "Entry, per person",
   outdoor: "Entry, per person",
@@ -28,7 +28,7 @@ interface Draft {
 }
 
 /**
- * Pricing for venues with no menu — bowling, padel, sip and paint.
+ * Pricing for venues with no menu, bowling, padel, sip and paint.
  *
  * These have no dishes to itemise, but the planner still needs a number: a
  * venue with no price is treated as unpriced and withheld from planning
@@ -117,7 +117,7 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
         <div className="text-[15px] font-bold">{rows.length} venues with no price</div>
         <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
           These never appear in a plan. A venue with no menu and no average cost is
-          unpriced, not free — left in, it would be the cheapest option in every
+          unpriced, not free, left in, it would be the cheapest option in every
           search and land in itineraries at GHS 0. Give each one what a single
           person pays and it re-enters planning immediately.
         </p>

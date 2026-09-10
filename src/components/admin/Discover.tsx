@@ -8,11 +8,11 @@ import type { Area } from "@/lib/types";
 /**
  * Find venues in an area and add them in bulk.
  *
- * The bottleneck in the catalogue was never typing — it was knowing what to
+ * The bottleneck in the catalogue was never typing, it was knowing what to
  * type. This asks Google what is actually in a neighbourhood so the work
  * becomes triage: tick the places that belong, skip the ones that don't.
  *
- * What gets added is deliberately a stub — no price, no menu, no vibe tags —
+ * What gets added is deliberately a stub, no price, no menu, no vibe tags,
  * because Google knows a place exists but not what an evening there costs.
  * Everything added lands in the unpriced queue, which is the list of venues to
  * go and find menus for.
@@ -104,7 +104,7 @@ export function Discover({ areas }: { areas: Area[] }) {
       });
 
       setToast(
-        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}. They have no prices yet — find their menus next.`
+        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}. They have no prices yet, find their menus next.`
       );
       // Reflect what is now held, without a second round trip.
       setResults((cur) =>
@@ -125,7 +125,7 @@ export function Discover({ areas }: { areas: Area[] }) {
     <div>
       <h1 className="font-display text-[24px] font-bold">Discover venues</h1>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
-        Tick what belongs. Added venues have no prices yet — find those next.
+        Tick what belongs. Added venues have no prices yet, find those next.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3">

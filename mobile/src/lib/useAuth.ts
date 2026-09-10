@@ -43,7 +43,7 @@ export interface AuthOutcome {
   error: string | null;
   /**
    * True when the account was created but needs an emailed confirmation
-   * before it can be used — Supabase's "Confirm email" setting decides this.
+   * before it can be used, Supabase's "Confirm email" setting decides this.
    */
   needsConfirmation?: boolean;
 }
@@ -73,7 +73,7 @@ export async function signUp(email: string, password: string): Promise<AuthOutco
 
 /**
  * Password reset. The emailed link opens the web app rather than the app
- * itself — recovery needs a one-time code exchanged in a browser, and routing
+ * itself, recovery needs a one-time code exchanged in a browser, and routing
  * that through a deep link buys complexity without buying anything else.
  */
 export async function sendPasswordReset(email: string): Promise<AuthOutcome> {
@@ -91,7 +91,7 @@ function friendlyAuthError(message: string): string {
     return "That email and password don't match. If you used a sign-in link before, reset your password to set one.";
   }
   if (/email not confirmed/i.test(message)) {
-    return "Confirm your email address first — check your inbox.";
+    return "Confirm your email address first, check your inbox.";
   }
   if (/already registered|already been registered/i.test(message)) {
     return "There's already an account with that address. Try signing in.";

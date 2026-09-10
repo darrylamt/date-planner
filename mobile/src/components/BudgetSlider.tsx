@@ -10,7 +10,7 @@ import { BUDGET_MAX as MAX, BUDGET_MIN as MIN, BUDGET_STEP as STEP } from "../li
 /**
  * Budget picker.
  *
- * The slider is the quick answer and the field is the exact one — a slider
+ * The slider is the quick answer and the field is the exact one, a slider
  * stepping in fifties cannot express GHS 275, and someone who has a number in
  * mind should not have to approximate it. The big figure doubles as the
  * control's feedback while dragging, so the committed value only fires on
@@ -42,7 +42,7 @@ export function BudgetSlider({
   function commitDraft() {
     setTyping(false);
     const digits = draft.replace(/[^0-9]/g, "");
-    // An empty field means "I changed my mind", not "zero" — zero has to be
+    // An empty field means "I changed my mind", not "zero", zero has to be
     // typed to count.
     if (digits === "") {
       setDraft(String(value));

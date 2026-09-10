@@ -8,7 +8,7 @@ import type { PlanInputs } from "./types";
  *
  * Shared by the + button and the occasion cards so the confirmation cannot
  * drift between them. Resuming is the In progress card's job and nothing
- * else's — when every entry point resumed, a finished plan made it impossible
+ * else's, when every entry point resumed, a finished plan made it impossible
  * to start another.
  */
 export async function startNewPlan(occasion?: PlanInputs["occasion"]): Promise<void> {

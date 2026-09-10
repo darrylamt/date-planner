@@ -1,5 +1,5 @@
 /**
- * GENERATED — do not edit. Mirrored from src/lib/planConstants.ts.
+ * GENERATED, do not edit. Mirrored from src/lib/planConstants.ts.
  *
  * Run `npm run mirror` after changing the web copy.
  */
@@ -63,10 +63,10 @@ export const FORMALITY_OPTIONS: { id: Formality; title: string; sub: string }[] 
 
 export const OCCASIONS: { id: Occasion; title: string; sub: string }[] = [
   { id: "first_date", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
-  { id: "anniversary", title: "Anniversary", sub: "Pull out the stops — this one matters" },
+  { id: "anniversary", title: "Anniversary", sub: "Pull out the stops, this one matters" },
   { id: "date_night", title: "Date night", sub: "Keep it fresh without the fuss" },
   { id: "birthday", title: "Birthday", sub: "Make a fuss of someone" },
-  { id: "graduation", title: "Graduation", sub: "Earned it — celebrate properly" },
+  { id: "graduation", title: "Graduation", sub: "Earned it, celebrate properly" },
   { id: "celebration", title: "Celebration", sub: "A promotion, a win, good news" },
   { id: "friend_outing", title: "Friends", sub: "Good food, good company, no candles" },
   { id: "solo_day", title: "Solo day", sub: "A day out on your own terms" },
@@ -82,7 +82,7 @@ export const TOTAL_STEPS = 8;
 export const START_TIME_MIN_HOUR = 6;
 export const START_TIME_MAX_HOUR = 23;
 
-/** Every half hour from 06:00 to 23:30 — the wheel picker's source list. */
+/** Every half hour from 06:00 to 23:30, the wheel picker's source list. */
 export function startTimeOptions(): string[] {
   const out: string[] = [];
   for (let h = START_TIME_MIN_HOUR; h <= START_TIME_MAX_HOUR; h++) {
@@ -143,7 +143,7 @@ export function vibeBlurb(vibes: string[]): string {
   };
   const bits = vibes.map((v) => flavour[v]).filter(Boolean).slice(0, 2);
   if (!bits.length) return "";
-  return `${cap(vibes.join(" + "))} — think ${bits.join(", ")}.`;
+  return `${cap(vibes.join(" + "))}, think ${bits.join(", ")}.`;
 }
 
 /** "2 people", "just you", "6 of you". */
@@ -274,8 +274,8 @@ export interface PartyRule {
 /**
  * How many people an occasion can be for.
  *
- * Some occasions simply are a number — a solo day is one person and a date
- * night is two — and offering a wheel there invites an answer that makes the
+ * Some occasions simply are a number, a solo day is one person and a date
+ * night is two, and offering a wheel there invites an answer that makes the
  * rest of the plan incoherent. Where the size is genuinely open, only the
  * floor is set.
  */
@@ -317,14 +317,14 @@ export interface OccasionTheme {
   accent: string;
   /** Lifted for dark surfaces, where the light-mode tone is too low-contrast. */
   accentDark: string;
-  /** Page tint. Barely there — the itinerary is still mostly white. */
+  /** Page tint. Barely there, the itinerary is still mostly white. */
   page: string;
   pageDark: string;
 }
 
 /**
  * A palette per occasion, applied while planning and kept on the finished
- * plan — including the shared card, so a link someone opens looks like the
+ * plan, including the shared card, so a link someone opens looks like the
  * occasion it was made for.
  *
  * Every accent here clears 4.5:1 against white, because white type sits on it

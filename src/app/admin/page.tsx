@@ -34,7 +34,7 @@ export default async function AdminVenuesPage() {
     return {
       id: v.id,
       name: v.name,
-      area: v.areas?.name ?? "—",
+      area: v.areas?.name ?? ", ",
       type: v.type,
       is_active: v.is_active,
       items: meta?.count ?? 0,
@@ -78,7 +78,7 @@ export default async function AdminVenuesPage() {
  * What needs doing, above the table.
  *
  * Each card is a queue with work in it, and a queue with nothing waiting is
- * not shown at all — an admin page covered in zeroes trains you to ignore it.
+ * not shown at all, an admin page covered in zeroes trains you to ignore it.
  */
 function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> }) {
   const cards = [
@@ -129,7 +129,7 @@ function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> })
   if (!cards.length) {
     return (
       <p className="mt-5 rounded-bar border border-line bg-cream/60 p-4 text-[14px] text-mutedbrown">
-        Nothing needs attention — every venue is priced, verified and its number approved.
+        Nothing needs attention, every venue is priced, verified and its number approved.
       </p>
     );
   }

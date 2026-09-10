@@ -8,7 +8,7 @@ import type { VenueDraft } from "@/lib/research";
  *
  * Adding a venue by hand means filling seventeen fields, most of which you
  * have to go and look up anyway. This does the looking up and hands the answer
- * to the form as a draft — nothing is saved, and every field stays editable,
+ * to the form as a draft, nothing is saved, and every field stays editable,
  * because the point is to remove the typing rather than the judgement.
  *
  * Anything the research was unsure about is shown before you apply it rather
@@ -120,7 +120,7 @@ export function VenueResearch({
           checked={thorough}
           onChange={(e) => setThorough(e.target.checked)}
         />
-        Search harder — for chains, renamed places, or several branches
+        Search harder, for chains, renamed places, or several branches
       </label>
 
       {busy ? (
@@ -160,21 +160,21 @@ function DraftPreview({
   }
 
   const rows: [string, string][] = [
-    ["Name", draft.canonical_name ?? "—"],
-    ["Type", draft.type ?? "—"],
-    ["Area", draft.area_name ?? "—"],
-    ["Address", draft.address ?? "—"],
-    ["Price band", draft.price_band ?? "—"],
+    ["Name", draft.canonical_name ?? ", "],
+    ["Type", draft.type ?? ", "],
+    ["Area", draft.area_name ?? ", "],
+    ["Address", draft.address ?? ", "],
+    ["Price band", draft.price_band ?? ", "],
     [
       "Per person",
       draft.is_free
         ? "Free to enter"
         : draft.avg_cost_per_person_ghs > 0
           ? `GHS ${draft.avg_cost_per_person_ghs}`
-          : "not known — goes to the unpriced queue",
+          : "not known, goes to the unpriced queue",
     ],
-    ["Phone", draft.phone ?? "—"],
-    ["Coordinates", draft.lat != null && draft.lng != null ? `${draft.lat}, ${draft.lng}` : "—"],
+    ["Phone", draft.phone ?? ", "],
+    ["Coordinates", draft.lat != null && draft.lng != null ? `${draft.lat}, ${draft.lng}` : ", "],
   ];
 
   return (
@@ -205,8 +205,8 @@ function DraftPreview({
           {draft.price_signal}
           <span className="mt-1 block text-[12px] text-mutedbrown">
             {draft.avg_cost_per_person_ghs > 0
-              ? "A figure was filled in above — check this quote agrees with it before saving."
-              : "Not filled in automatically — read it, then set the figure yourself or add the menu."}
+              ? "A figure was filled in above, check this quote agrees with it before saving."
+              : "Not filled in automatically, read it, then set the figure yourself or add the menu."}
           </span>
         </p>
       ) : null}

@@ -27,7 +27,7 @@ The itinerary is already fixed: venues, orders, prices and times are decided and
 
 Rules:
 - Never mention a venue, dish or price that is not in the data given to you.
-- Each stop carries a generic fallback label. Beat it: name what this particular place is or what they actually do there ("GAMES & MUSIC", "GRILLS", "ROOFTOP DRINKS") rather than repeating the generic one. The only hard rule is that the label must not contradict the venue's type — a grill house is never "DRINKS", a bar is never "DINNER".
+- Each stop carries a generic fallback label. Beat it: name what this particular place is or what they actually do there ("GAMES & MUSIC", "GRILLS", "ROOFTOP DRINKS") rather than repeating the generic one. The only hard rule is that the label must not contradict the venue's type, a grill house is never "DRINKS", a bar is never "DINNER".
 - Never state or imply a total, a saving, or that something is cheap or expensive. The budget is shown to the user separately and your guess would contradict it.
 - Warm and specific, never salesy. No exclamation marks, no "nestled", no "hidden gem".
 - Use the personal details you are given. A line that would fit any couple in any city has failed.
@@ -66,7 +66,7 @@ function peopleLine(inputs: PlanInputs): string {
   if (inputs.partySize <= 1) return "One person, on their own. Never imply company.";
   if (inputs.partySize > 2) {
     const named = inputs.companions.filter(Boolean);
-    return `A group of ${inputs.partySize}${named.length ? ` — ${named.join(", ")}` : ""}. No couple-ish language.`;
+    return `A group of ${inputs.partySize}${named.length ? `, ${named.join(", ")}` : ""}. No couple-ish language.`;
   }
   const pronoun = pronounForGender(inputs.partner.gender);
   const ps = pronounSet(pronoun);
@@ -84,8 +84,7 @@ function detailLines(inputs: PlanInputs): string {
     p.food ? `- Food they love: ${p.food}` : "",
     p.place ? `- Their kind of place: ${p.place}` : "",
     p.interests ? `- Into: ${p.interests}` : "",
-    p.avoid ? `- Avoids: ${p.avoid}` : "",
-    ...extras,
+    p.avoid ? `- Avoids: ${p.avoid}` : "", ...extras,
   ]
     .filter(Boolean)
     .join("\n");
@@ -98,7 +97,7 @@ function buildUserMessage(inputs: PlanInputs, plan: PlannedItinerary): string {
         ? s.orders.map((o) => `${o.item} ×${o.qty}`).join(", ")
         : "no order";
       return [
-        `${i + 1}. ${s.venue.name} — ${s.venue.type} in ${s.venue.areas?.name ?? ""}`,
+        `${i + 1}. ${s.venue.name}, ${s.venue.type} in ${s.venue.areas?.name ?? ""}`,
         `   arriving ${clockFromMinutes(s.arrivalMinutes)}, ${s.durationMins} min`,
         `   generic fallback label (improve on it): ${s.label}`,
         `   ordering: ${orders}`,
@@ -110,7 +109,7 @@ function buildUserMessage(inputs: PlanInputs, plan: PlannedItinerary): string {
     .join("\n");
 
   const trimmedNote = plan.trimmed
-    ? `\nThis plan was trimmed to fit the budget. Write budget_note as one honest sentence saying what was kept simple — do not apologise and do not mention amounts.`
+    ? `\nThis plan was trimmed to fit the budget. Write budget_note as one honest sentence saying what was kept simple, do not apologise and do not mention amounts.`
     : `\nWrite budget_note as null.`;
 
   return `OCCASION: ${inputs.occasion.replace(/_/g, " ")} on ${longDate(inputs.date)}
@@ -120,7 +119,7 @@ VIBE: ${inputs.vibes.join(", ") || "not specified"}
 WHO IT IS FOR:
 ${detailLines(inputs) || "- nothing given"}
 
-THE ITINERARY (fixed — write copy for exactly these ${plan.stops.length} stops, in order):
+THE ITINERARY (fixed, write copy for exactly these ${plan.stops.length} stops, in order):
 ${stops}
 ${trimmedNote}`;
 }
@@ -155,7 +154,7 @@ export async function writePlanCopy(
           type: "text",
           text: SYSTEM,
           /*
-           * Identical on every request, but measured at 583 tokens — below
+           * Identical on every request, but measured at 583 tokens, below
            * Sonnet's 1024-token cache minimum, so the API ignores this today
            * and nothing is actually cached. Kept because it costs nothing and
            * starts paying the moment these rules grow past the floor; do not
@@ -184,7 +183,7 @@ export async function writePlanCopy(
   } catch (e) {
     console.error("copy generation failed", e);
     if (e instanceof Anthropic.RateLimitError) {
-      return { ok: false, error: "Rate limited — try again shortly." };
+      return { ok: false, error: "Rate limited, try again shortly." };
     }
     return { ok: false, error: "Could not reach the writing service." };
   }
@@ -193,7 +192,7 @@ export async function writePlanCopy(
 /**
  * Copy for a plan whose words could not be written.
  *
- * The itinerary is already valid — real venues, real prices, correct totals —
+ * The itinerary is already valid, real venues, real prices, correct totals,
  * so failing the whole request over prose would throw away a working plan.
  */
 export function fallbackCopy(inputs: PlanInputs, plan: PlannedItinerary): PlanCopy {

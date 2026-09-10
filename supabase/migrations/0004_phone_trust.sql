@@ -1,8 +1,8 @@
--- aduro — phone numbers become an approval-gated field.
+-- aduro, phone numbers become an approval-gated field.
 --
 -- The reservation flow hands a user to `venues.phone` over WhatsApp with a
 -- message that says "sent via aduro". A wrong number there is not bad data,
--- it is fraud carried out under our name — and the two live attacks are
+-- it is fraud carried out under our name, and the two live attacks are
 -- exactly that: fake map listings carrying a scammer's number, and real
 -- listings whose number was swapped by a "suggest an edit".
 --
@@ -12,7 +12,7 @@
 
 create type phone_status as enum (
   'none',      -- no number on file
-  'pending',   -- proposed, NOT usable — never shown, never dialled
+  'pending',   -- proposed, NOT usable, never shown, never dialled
   'approved',  -- a human checked it against a first-party source
   'rejected'   -- checked and wrong; kept so it cannot be re-proposed silently
 );
@@ -37,7 +37,7 @@ alter table public.venues
   add column phone_report_count int not null default 0;
 
 -- Existing numbers are unreviewed by definition. Move them to pending rather
--- than grandfathering them in — they were imported from research with no
+-- than grandfathering them in, they were imported from research with no
 -- human check, which is the exact gap this closes.
 update public.venues
 set phone_pending = phone,
@@ -51,7 +51,7 @@ create index venues_phone_status_idx on public.venues (phone_status);
 /**
  * Numbers appearing on more than one venue.
  *
- * Two venues sharing a number is almost never a coincidence — it is the
+ * Two venues sharing a number is almost never a coincidence, it is the
  * signature of one scammer attached to several listings. Cheap to check, and
  * it catches a whole cluster at once rather than one venue at a time.
  * Digits-only comparison, so formatting differences cannot hide a match.
@@ -77,7 +77,7 @@ group by digits
 having count(*) > 1;
 
 comment on view public.venue_phone_collisions is
-  'Phone numbers shared by more than one venue — a scam-network signal.';
+  'Phone numbers shared by more than one venue, a scam-network signal.';
 
 comment on column public.venues.phone is
   'Human-approved number. The only one the app may dial. Never written automatically.';

@@ -30,7 +30,7 @@ interface Extracted {
 /** Longer than the server's own budget, so the server's error wins when it can. */
 const CLIENT_TIMEOUT_MS = 150_000;
 
-/** Strip the data: prefix — the API takes raw base64. */
+/** Strip the data: prefix, the API takes raw base64. */
 function toBase64(file: File): Promise<{ mediaType: string; data: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -46,7 +46,7 @@ function toBase64(file: File): Promise<{ mediaType: string; data: string }> {
 /**
  * Menu → migration. An admin gives a name, an area and either a menu link or
  * photos; the model reads the menu, and everything it extracted is editable
- * before the SQL is generated. Nothing is written to the database from here —
+ * before the SQL is generated. Nothing is written to the database from here,
  * the output is a migration the admin runs themselves.
  */
 export function MenuIngest({ areas }: { areas: Area[] }) {
@@ -201,7 +201,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
               ))}
             </datalist>
             <div className="mt-1 text-[12.5px] text-mutedbrown">
-              Pick one or type a new neighbourhood — it gets created with the venue.
+              Pick one or type a new neighbourhood, it gets created with the venue.
             </div>
           </div>
           <div>
@@ -255,7 +255,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
             onChange={(e) => setNotes(e.target.value)}
           />
           <span className="mt-1 block text-[12px] text-mutedbrown">
-            Enough on its own — no photo needed.
+            Enough on its own, no photo needed.
           </span>
         </div>
 
@@ -278,8 +278,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
             !/ghs|cedi|₵/i.test(data.detected_currency) && (
               <div className="card border border-staletext px-5 py-4 text-staletext">
                 The menu appears to be priced in <b>{data.detected_currency}</b>, not
-                cedis. The numbers below are as printed and have NOT been converted —
-                fix them before running the migration.
+                cedis. The numbers below are as printed and have NOT been converted, fix them before running the migration.
               </div>
             )}
 
@@ -290,12 +289,12 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
               </div>
               <p className="mt-1 text-[14px] leading-relaxed text-cocoa">
                 {menuUrl.trim()
-                  ? "That link could not be fetched — many venue sites block automated readers, and links straight to a PDF or image often fail. Screenshot or photograph the menu and upload it as images instead; that path is far more reliable."
+                  ? "That link could not be fetched, many venue sites block automated readers, and links straight to a PDF or image often fail. Screenshot or photograph the menu and upload it as images instead; that path is far more reliable."
                   : "Nothing readable was found in those images. Sharper, straight-on photos of one page at a time work best."}
               </p>
               <p className="mt-2 text-[14px] leading-relaxed text-cocoa">
                 You can still generate the migration below to create the venue
-                without a menu — but the planner cannot build a food order from
+                without a menu, but the planner cannot build a food order from
                 it until items exist.
               </p>
             </div>

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 /**
  * Surfaces auth errors that Supabase returns by redirect.
  *
- * Supabase reports these twice — once in the query string and once in the hash
- * fragment — and a hash is invisible to the server, so this has to run on the
+ * Supabase reports these twice, once in the query string and once in the hash
+ * fragment, and a hash is invisible to the server, so this has to run on the
  * client. Without it a failed reset link lands on a page with no explanation
  * at all, which is exactly when someone needs one.
  */
@@ -44,7 +44,7 @@ export function AuthErrorNotice() {
 
 function explain(code: string | null, description: string | null): string {
   if (code === "otp_expired") {
-    return "The link had already been used or had expired — they only work once, and for a short while. Request a fresh one below. If it keeps happening, your email provider may be opening links automatically before you do.";
+    return "The link had already been used or had expired, they only work once, and for a short while. Request a fresh one below. If it keeps happening, your email provider may be opening links automatically before you do.";
   }
   if (code === "access_denied") {
     return "The link was rejected. Request a new one below.";

@@ -90,7 +90,7 @@ export default function Plans() {
       <Empty
         bubble="This shelf is looking empty."
         title="No saved plans yet"
-        body="Build a plan and save it — it will show up here with its share link."
+        body="Build a plan and save it, it will show up here with its share link."
         action={<Button title="Plan a date" icon="sparkles" onPress={() => router.push("/plan/new")} />}
       />
     );
@@ -135,7 +135,7 @@ export default function Plans() {
             title="Share link"
             onPress={() =>
               void Share.share({
-                message: `Our plan for ${longDate(plan.inputs.date)} — ${WEB_URL}/p/${plan.share_slug}`,
+                message: `Our plan for ${longDate(plan.inputs.date)}, ${WEB_URL}/p/${plan.share_slug}`,
                 url: `${WEB_URL}/p/${plan.share_slug}`,
               })
             }

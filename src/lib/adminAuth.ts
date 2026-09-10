@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * The admin gate, in one place.
  *
- * Every admin route repeated the same three steps — fetch the user, read
- * profiles.is_admin, return 401 or 403 — and a route that forgets one of them
+ * Every admin route repeated the same three steps, fetch the user, read
+ * profiles.is_admin, return 401 or 403, and a route that forgets one of them
  * is an endpoint that spends money for anyone who can guess its path. Having
  * one implementation means a new admin route cannot be quietly less protected
  * than the others.

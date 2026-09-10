@@ -1,4 +1,4 @@
--- ⚠️  PLACEHOLDER DATA — DO NOT RUN AGAINST PRODUCTION ⚠️
+-- ⚠️  PLACEHOLDER DATA, DO NOT RUN AGAINST PRODUCTION ⚠️
 --
 -- The 25 venues below are INVENTED. They are not real Accra businesses, and
 -- every price is made up. This file exists only so a fresh clone has
@@ -7,7 +7,7 @@
 -- Production was cleared of this data on 2026-09-05. To load a real catalog,
 -- see supabase/templates/README.md and import at /admin/import.
 --
--- aduro — seed data
+-- aduro, seed data
 -- ⚠️ ALL PRICES BELOW ARE PLACEHOLDERS, to be replaced with researched, venue-confirmed data.
 -- Venue names are plausible Accra-style venues for development and demos.
 -- Events are seeded relative to the current date so the demo always has active events.
@@ -36,7 +36,7 @@ insert into public.venues
 
 ('b2000000-0000-0000-0000-000000000002', 'Chalé Bites', 'restaurant', 'a1000000-0000-0000-0000-000000000003',
  '{lively,fun,casual}', null, 'mid', 130,
- 'A modern chop bar doing Ghanaian classics with a twist — jollof flights, kelewele tacos and a loud, happy crowd.',
+ 'A modern chop bar doing Ghanaian classics with a twist, jollof flights, kelewele tacos and a loud, happy crowd.',
  '{casual_hangout,friend_outing,date_night}', false, '@chalebites', '+233 20 000 0002', 'https://maps.google.com/?q=Chale+Bites+East+Legon',
  'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=70', 5.6350, -0.1640),
 
@@ -54,13 +54,13 @@ insert into public.venues
 
 ('b2000000-0000-0000-0000-000000000005', 'Zen Garden Pan-Asian', 'restaurant', 'a1000000-0000-0000-0000-000000000004',
  '{romantic,upscale,calm,scenic}', 'Smart casual', 'premium', 300,
- 'Lantern-lit garden dining with sushi, dim sum and wok classics — one of the prettiest courtyards in Cantonments.',
+ 'Lantern-lit garden dining with sushi, dim sum and wok classics, one of the prettiest courtyards in Cantonments.',
  '{anniversary,date_night}', true, '@zengardenaccra', '+233 20 000 0005', 'https://maps.google.com/?q=Zen+Garden+Cantonments',
  'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=70', 5.5790, -0.1750),
 
 ('b2000000-0000-0000-0000-000000000006', 'The Buka House', 'restaurant', 'a1000000-0000-0000-0000-000000000001',
  '{lively,casual,fun}', null, 'mid', 140,
- 'West African favourites — banku, okro soup, asaro and party jollof — in a buzzing courtyard off Oxford Street.',
+ 'West African favourites, banku, okro soup, asaro and party jollof, in a buzzing courtyard off Oxford Street.',
  '{casual_hangout,friend_outing,first_date}', false, '@thebukahouse', '+233 20 000 0006', 'https://maps.google.com/?q=Buka+House+Osu',
  'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1200&q=70', 5.5575, -0.1815),
 
@@ -78,7 +78,7 @@ insert into public.venues
 
 ('b2000000-0000-0000-0000-000000000009', 'Auntie Efua''s Waakye Spot', 'restaurant', 'a1000000-0000-0000-0000-000000000008',
  '{casual,fun,lively}', null, 'budget', 60,
- 'Legendary morning-to-afternoon waakye with all the fixings — gari, wele, spaghetti and shito that bites back.',
+ 'Legendary morning-to-afternoon waakye with all the fixings, gari, wele, spaghetti and shito that bites back.',
  '{casual_hangout,friend_outing}', false, null, '+233 20 000 0009', 'https://maps.google.com/?q=Waakye+Achimota',
  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=70', 5.6180, -0.2290),
 
@@ -103,7 +103,7 @@ insert into public.venues
 
 ('b2000000-0000-0000-0000-000000000013', 'Asa Rooftop', 'lounge', 'a1000000-0000-0000-0000-000000000004',
  '{calm,romantic,scenic}', 'Smart casual', 'mid', 150,
- 'A quiet skyline terrace for nightcaps — mocktails, small plates and no loud music, ever.',
+ 'A quiet skyline terrace for nightcaps, mocktails, small plates and no loud music, ever.',
  '{anniversary,date_night}', false, '@asarooftop', '+233 20 000 0013', 'https://maps.google.com/?q=Asa+Rooftop+Cantonments',
  'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1200&q=70', 5.5800, -0.1760),
 
@@ -128,7 +128,7 @@ insert into public.venues
 
 ('b2000000-0000-0000-0000-000000000017', 'Sip & Stroke Studio', 'activity', 'a1000000-0000-0000-0000-000000000001',
  '{fun,calm,romantic}', null, 'mid', 150,
- 'Guided sip-and-paint sessions — two easels side by side, one playlist, zero artistic pressure.',
+ 'Guided sip-and-paint sessions, two easels side by side, one playlist, zero artistic pressure.',
  '{first_date,date_night,friend_outing}', true, '@sipandstrokegh', '+233 20 000 0017', 'https://maps.google.com/?q=Sip+and+Stroke+Osu',
  'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=70', 5.5550, -0.1800),
 
@@ -153,13 +153,13 @@ insert into public.venues
 -- Cafés & dessert
 ('b2000000-0000-0000-0000-000000000021', 'Lantern Garden Café', 'cafe', 'a1000000-0000-0000-0000-000000000002',
  '{calm,romantic,scenic}', null, 'mid', 90,
- 'String-lit courtyard café — coconut cake, spiced cocoa and quiet enough to actually hear each other.',
+ 'String-lit courtyard café, coconut cake, spiced cocoa and quiet enough to actually hear each other.',
  '{first_date,date_night,anniversary}', false, '@lanterngarden', '+233 20 000 0021', 'https://maps.google.com/?q=Lantern+Garden+Labone',
  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1200&q=70', 5.5680, -0.1700),
 
 ('b2000000-0000-0000-0000-000000000022', 'Scoop Culture Gelato', 'dessert', 'a1000000-0000-0000-0000-000000000001',
  '{fun,casual,lively}', null, 'budget', 70,
- 'Small-batch gelato with Ghana-first flavours — sobolo sorbet, roasted-plantain caramel, bissap swirl.',
+ 'Small-batch gelato with Ghana-first flavours, sobolo sorbet, roasted-plantain caramel, bissap swirl.',
  '{first_date,casual_hangout,date_night}', false, '@scoopculture', '+233 20 000 0022', 'https://maps.google.com/?q=Scoop+Culture+Osu',
  'https://images.unsplash.com/photo-1567206563064-6f60f40a2b57?auto=format&fit=crop&w=1200&q=70', 5.5568, -0.1790),
 

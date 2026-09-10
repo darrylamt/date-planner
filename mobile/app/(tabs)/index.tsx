@@ -205,7 +205,7 @@ export default function Home() {
         <Step
           n="01"
           title="Pick an area and a budget"
-          body="Osu, Labone, Cantonments — or let us surprise you."
+          body="Osu, Labone, Cantonments, or let us surprise you."
         />
         <Step
           n="02"
@@ -257,7 +257,7 @@ function OccasionCard({
         backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
       })}
     >
-      {/* The costume, not a glyph — the card is recognisable at a glance and
+      {/* The costume, not a glyph, the card is recognisable at a glance and
           the character appears where people actually choose a pathway. */}
       <View
         style={{

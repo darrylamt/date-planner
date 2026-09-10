@@ -19,7 +19,7 @@ interface Slide {
 }
 
 /**
- * Four slides, each fronted by a different costume — so the mascot's range is
+ * Four slides, each fronted by a different costume, so the mascot's range is
  * shown by using it rather than explained.
  *
  * The last slide is the honest one. People are about to hand over a budget and
@@ -96,7 +96,7 @@ export default function Onboarding() {
         paddingBottom: (insets.bottom || Spacing.three) + Spacing.three,
       }}
     >
-      {/* Skip. Always available — an intro nobody can leave is a trap. */}
+      {/* Skip. Always available, an intro nobody can leave is a trap. */}
       <View style={{ alignItems: "flex-end", paddingHorizontal: GUTTER }}>
         <Pressable onPress={finish} hitSlop={12}>
           <Text variant="footnote" tone="secondary" weight="600">

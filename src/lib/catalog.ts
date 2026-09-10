@@ -84,7 +84,7 @@ export const ingestResultSchema = z.object({
   items: z.array(ingestedItemSchema).default([]),
   /** Anything unreadable, ambiguous, or deliberately left blank. */
   warnings: z.array(z.string()).default([]),
-  /** Currency actually seen on the menu — a guard against non-GHS prices. */
+  /** Currency actually seen on the menu, a guard against non-GHS prices. */
   detected_currency: z.string().nullable().default(null),
 });
 
@@ -100,7 +100,7 @@ export type IngestResult = z.infer<typeof ingestResultSchema>;
 export function suggestAvgCost(items: IngestedItem[], venue?: IngestedVenue): number {
   /*
    * A venue priced per hour or per group has no "average spend per person" to
-   * derive from its items at all — its items (a court rate, an equipment
+   * derive from its items at all, its items (a court rate, an equipment
    * rental) are not per-person figures, and running the same median logic
    * over them the way a food menu is read would suggest a court's whole
    * hourly rate as what one person pays.
@@ -116,7 +116,7 @@ export function suggestAvgCost(items: IngestedItem[], venue?: IngestedVenue): nu
   const mains = items.filter((i) => i.category === "main").map((i) => i.price_ghs);
   const drinks = items.filter((i) => i.category === "drink").map((i) => i.price_ghs);
 
-  // No mains (an activity, a dessert bar) — fall back to the median of
+  // No mains (an activity, a dessert bar), fall back to the median of
   // everything so the figure still reflects real prices.
   const base = mains.length ? median(mains) : median(items.map((i) => i.price_ghs));
   return Math.round(base + median(drinks));

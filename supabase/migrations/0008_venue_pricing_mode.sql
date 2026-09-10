@@ -3,7 +3,7 @@
 -- Everything so far assumed per-person pricing, because menus work that way:
 -- four people means four mains. A padel court does not. The court is GHS X an
 -- hour whoever turns up, so four players split one bill and two players split
--- the same bill — the cost per head halves as the group grows, which is the
+-- the same bill, the cost per head halves as the group grows, which is the
 -- opposite of how the planner has been computing every total.
 --
 -- Bowling lanes, escape rooms and karaoke booths all charge like this. Without

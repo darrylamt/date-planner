@@ -1,4 +1,4 @@
-# aduro — iOS app
+# aduro, iOS app
 
 The native companion to the aduro web planner. Same Supabase project, same
 itinerary engine, an interface built to Apple's HIG.
@@ -14,11 +14,11 @@ npx expo start
 | Variable | What it is |
 | --- | --- |
 | `EXPO_PUBLIC_SUPABASE_URL` | Same project as the web app |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Publishable key — safe to ship, RLS protects the data |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Publishable key, safe to ship, RLS protects the data |
 | `EXPO_PUBLIC_API_URL` | Deployed web app that serves `/api/generate` and `/api/swap` |
 
 `EXPO_PUBLIC_*` values are inlined **at build time**. Change one and you must
-rebuild — editing it on the server has no effect on an installed app.
+rebuild, editing it on the server has no effect on an installed app.
 
 ### Supabase: one required change
 
@@ -43,7 +43,7 @@ eas submit --profile production --platform ios
 `eas.json` carries only `appleTeamId`. On the first submit, EAS prompts for
 your Apple ID and offers to create the App Store Connect app record; after
 that it remembers the `ascAppId`. Do not put placeholder strings in
-`submit.production.ios` — EAS validates those fields and fails rather than
+`submit.production.ios`, EAS validates those fields and fails rather than
 falling back to prompting.
 
 ## Layout

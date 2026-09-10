@@ -14,7 +14,7 @@ if (!url || !anonKey) {
 
 /**
  * Shared Supabase client. Sessions live in AsyncStorage so sign-in survives
- * app restarts. `detectSessionInUrl` is off — there is no URL to parse in a
+ * app restarts. `detectSessionInUrl` is off, there is no URL to parse in a
  * native app; we verify the emailed OTP code in-app instead.
  */
 export const supabase = createClient(url, anonKey, {
@@ -27,7 +27,7 @@ export const supabase = createClient(url, anonKey, {
 });
 
 /**
- * Only refresh tokens while the app is foregrounded — a background timer
+ * Only refresh tokens while the app is foregrounded, a background timer
  * would fire on a suspended app and burn requests.
  */
 AppState.addEventListener("change", (state) => {

@@ -8,7 +8,7 @@ import { useTheme } from "../lib/useTheme";
 import type { SymbolViewProps } from "expo-symbols";
 
 /**
- * Grouped inset list — the iOS Settings pattern. A Group draws the rounded
+ * Grouped inset list, the iOS Settings pattern. A Group draws the rounded
  * surface and the hairlines; Rows stay unaware of their position in it.
  */
 export function Group({
@@ -95,7 +95,7 @@ export interface RowProps {
   onPress?: () => void;
   /** Shows a tinted checkmark and tints the title. */
   selected?: boolean;
-  /** Disclosure chevron — for rows that push a screen. */
+  /** Disclosure chevron, for rows that push a screen. */
   chevron?: boolean;
   destructive?: boolean;
   disabled?: boolean;

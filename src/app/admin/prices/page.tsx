@@ -4,7 +4,7 @@ import type { MenuItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-/** Bulk quick-edit for menu prices — prices change often; updating must be fast. */
+/** Bulk quick-edit for menu prices, prices change often; updating must be fast. */
 export default async function BulkPricesPage({
   searchParams,
 }: {

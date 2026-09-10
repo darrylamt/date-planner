@@ -13,7 +13,7 @@ const MIN_PASSWORD = 6;
  * signed in purely to set a new password.
  *
  * This is also the route an account created via magic link uses to get a
- * password for the first time — those accounts have none.
+ * password for the first time, those accounts have none.
  */
 export default function ResetPasswordPage() {
   const router = useRouter();

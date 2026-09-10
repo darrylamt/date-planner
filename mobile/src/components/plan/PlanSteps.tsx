@@ -80,7 +80,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   const ps = pronounSet(pronoun);
   const who = solo ? "you" : aboutName(inputs.partner.name, pronoun);
   const poss = solo ? "your" : possessiveName(inputs.partner.name, pronoun);
-  /* "they love" but "she loves" — and a group is always plural. */
+  /* "they love" but "she loves", and a group is always plural. */
   const verbS = pronoun === "they" || !pair ? "" : "s";
   const contraction = pronoun === "they" || !pair ? "re" : "s";
 
@@ -325,7 +325,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
 
         {solo ? (
           <Note>
-            A day to yourself. We keep to places that are good on your own — counter
+            A day to yourself. We keep to places that are good on your own, counter
             seats, somewhere comfortable to just be.
           </Note>
         ) : null}
@@ -360,7 +360,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   return (
     <>
       <StepHeading
-        title={solo ? "Now — tell us about you." : `Now — tell us about ${who}.`}
+        title={solo ? "Now, tell us about you." : `Now, tell us about ${who}.`}
         subtitle="All optional."
       />
       <View style={{ paddingHorizontal: GUTTER }}>

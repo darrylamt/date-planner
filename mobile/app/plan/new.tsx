@@ -38,7 +38,7 @@ import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/li
  *
  * Its own component so it reads the theme from inside OccasionThemeProvider.
  * The screen's own useTheme() runs above that provider in the tree, so a
- * colour taken from there is resolved before the occasion theme exists — which
+ * colour taken from there is resolved before the occasion theme exists, which
  * is why this bar stayed teal on every pathway.
  */
 function ProgressRail({ total, current }: { total: number; current: number }) {
@@ -99,7 +99,7 @@ export default function PlanNew() {
    * `fresh` starts a new plan; without it this screen resumes the saved draft.
    *
    * Resuming used to be unconditional, which meant that once a plan had been
-   * generated every entry point landed back on that finished itinerary — the
+   * generated every entry point landed back on that finished itinerary, the
    * only available action was "Edit my answers", so a new plan could not be
    * started at all.
    */
@@ -238,7 +238,7 @@ export default function PlanNew() {
   const steps = stepsFor(inputs.occasion, occasionPreset);
   const totalSteps = steps.length;
 
-  /* Saving was blocked on sign-in — finish it once a session appears. */
+  /* Saving was blocked on sign-in, finish it once a session appears. */
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" && phase.name === "result" && !shareSlug) {
@@ -250,7 +250,7 @@ export default function PlanNew() {
 
   /*
    * Header per phase. The result screen previously had no back button and sits
-   * outside the tab group, so finishing a plan was a dead end — the only way
+   * outside the tab group, so finishing a plan was a dead end, the only way
    * out was to force-quit. Every phase except generation now offers an exit.
    */
   useEffect(() => {
@@ -353,7 +353,7 @@ export default function PlanNew() {
         itinerary={phase.itinerary}
         onItineraryChange={(it) => {
           setPhase({ name: "result", itinerary: it });
-          // Any edit invalidates the shared copy — it must be saved again.
+          // Any edit invalidates the shared copy, it must be saved again.
           setShareSlug(null);
           void saveDraft({ itinerary: it, shareSlug: null });
         }}

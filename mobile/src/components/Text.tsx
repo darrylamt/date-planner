@@ -9,7 +9,7 @@ export interface AppTextProps extends TextProps {
   variant?: Variant;
   tone?: Tone;
   weight?: TextStyle["fontWeight"];
-  /** Tabular figures — use for prices, times and any column of numbers. */
+  /** Tabular figures, use for prices, times and any column of numbers. */
   tabular?: boolean;
   center?: boolean;
   uppercase?: boolean;
@@ -27,8 +27,7 @@ export function Text({
   tabular,
   center,
   uppercase,
-  style,
-  ...rest
+  style, ...rest
 }: AppTextProps) {
   const c = useTheme();
   const base = typeScale[variant];

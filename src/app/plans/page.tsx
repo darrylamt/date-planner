@@ -15,7 +15,7 @@ const OCCASION_LABEL: Record<string, string> = {
   friend_outing: "Friend outing",
 };
 
-/** Saved plans list — Upcoming / Past sections as designed. */
+/** Saved plans list, Upcoming / Past sections as designed. */
 export default async function PlansPage() {
   const supabase = createClient();
   const {

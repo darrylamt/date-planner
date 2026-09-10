@@ -20,7 +20,7 @@ export default async function AdminPhonesPage() {
   const rows = (venues ?? []).map((v: any) => ({
     id: v.id,
     name: v.name,
-    area: v.areas?.name ?? "—",
+    area: v.areas?.name ?? ", ",
     phone: v.phone,
     phone_pending: v.phone_pending,
     phone_status: v.phone_status,
@@ -46,8 +46,7 @@ export default async function AdminPhonesPage() {
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
         A number here gets dialled by a real person over WhatsApp with a message
         signed &ldquo;sent via aduro&rdquo;. Scammers create fake listings and edit
-        real ones to swap their own number in, so nothing goes live automatically —
-        an import, the menu reader and the verifier can only ever propose.
+        real ones to swap their own number in, so nothing goes live automatically, an import, the menu reader and the verifier can only ever propose.
       </p>
       <PhoneReview
         pending={pending}

@@ -1,7 +1,7 @@
 import type { Itinerary, PlanInputs } from "./types";
 
 /**
- * Added feature: "Add to calendar" — builds an .ics file for the date so the
+ * Added feature: "Add to calendar", builds an .ics file for the date so the
  * plan lands in Google/Apple Calendar with the full stop-by-stop rundown.
  */
 export function buildIcs(inputs: PlanInputs, itinerary: Itinerary): string {
@@ -13,7 +13,7 @@ export function buildIcs(inputs: PlanInputs, itinerary: Itinerary): string {
   const dtEnd = `${y}${pad(m)}${pad(d)}T${pad(Math.floor(endMins / 60) % 24)}${pad(endMins % 60)}00`;
 
   const agenda = itinerary.stops
-    .map((s) => `${s.arrival_time} — ${s.name} (${s.area})`)
+    .map((s) => `${s.arrival_time}, ${s.name} (${s.area})`)
     .join("\\n");
 
   return [

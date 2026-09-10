@@ -7,7 +7,7 @@ import { adminCounts } from "@/lib/adminCounts";
 
 export const dynamic = "force-dynamic";
 
-/** /admin — gated by profiles.is_admin; dark sidenav layout as designed. */
+/** /admin, gated by profiles.is_admin; dark sidenav layout as designed. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const {

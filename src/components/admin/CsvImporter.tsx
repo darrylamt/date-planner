@@ -57,7 +57,7 @@ export function CsvImporter({
       for (const [i, r] of rows.entries()) {
         const areaId = await areaIdFor(r.area ?? "");
         if (!r.name || !areaId) {
-          log.push(`Row ${i + 2}: skipped — missing name or unknown area "${r.area}"`);
+          log.push(`Row ${i + 2}: skipped, missing name or unknown area "${r.area}"`);
           continue;
         }
         const { error } = await supabase.from("venues").insert({
@@ -76,7 +76,7 @@ export function CsvImporter({
           // dials `phone` under our own name, so it needs a human first.
           phone_pending: r.phone || null,
           phone_status: r.phone ? "pending" : "none",
-          phone_source: "CSV import — unreviewed",
+          phone_source: "CSV import, unreviewed",
           google_maps_url: r.google_maps_url || null,
           image_url: r.image_url || null,
           lat: r.lat ? Number(r.lat) : null,
@@ -90,7 +90,7 @@ export function CsvImporter({
       for (const [i, r] of rows.entries()) {
         const venueId = venueByName.get((r.venue ?? "").toLowerCase());
         if (!r.name || !venueId) {
-          log.push(`Row ${i + 2}: skipped — missing item name or unknown venue "${r.venue}"`);
+          log.push(`Row ${i + 2}: skipped, missing item name or unknown venue "${r.venue}"`);
           continue;
         }
         const { error } = await supabase.from("menu_items").insert({

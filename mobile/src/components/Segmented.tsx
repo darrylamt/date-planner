@@ -41,7 +41,7 @@ export function Segmented<T extends string>({
 }
 
 /**
- * Wrapping chip row — for multi-select where a segmented control would
+ * Wrapping chip row, for multi-select where a segmented control would
  * overflow (vibes, durations with many options).
  */
 export function ChipRow({ children }: { children: React.ReactNode }) {

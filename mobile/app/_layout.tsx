@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
 // Imported per weight rather than from the package root: the root re-exports
-// every weight and italic, and Metro bundles the assets it can see — 14 files
+// every weight and italic, and Metro bundles the assets it can see, 14 files
 // where 5 are used.
 import { Figtree_400Regular } from "@expo-google-fonts/figtree/400Regular";
 import { Figtree_500Medium } from "@expo-google-fonts/figtree/500Medium";
@@ -32,7 +32,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Hide on error too — a missing font should degrade to the system face,
+    // Hide on error too, a missing font should degrade to the system face,
     // never leave someone staring at a splash screen forever.
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
@@ -52,7 +52,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: c.background },
           }}
         >
-          {/* The title is never shown — it is what the next screen's back
+          {/* The title is never shown, it is what the next screen's back
               button borrows, which otherwise reads "(tabs)". */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
           <Stack.Screen name="plan/new" options={{ title: "" }} />

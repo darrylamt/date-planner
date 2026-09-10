@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * Public on purpose. Plans can be built signed-out, and the person who has
  * just found the price is different, or the door locked, is the one with the
- * information — asking them to make an account first would lose exactly the
+ * information, asking them to make an account first would lose exactly the
  * report worth having.
  *
  * Nothing here edits the catalog. A report is a flag for a human to act on,

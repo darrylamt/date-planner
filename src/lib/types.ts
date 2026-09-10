@@ -28,7 +28,7 @@ export interface Venue {
   image_url: string | null;
   is_active: boolean;
   /**
-   * Entry genuinely costs nothing — a park, a beach, a free gallery.
+   * Entry genuinely costs nothing, a park, a beach, a free gallery.
    *
    * Distinct from "we do not know what it costs": an unpriced venue is
    * withheld from plans rather than shown as free, so only this flag lets a
@@ -47,7 +47,7 @@ export interface Venue {
    */
   pricing_mode: "per_person" | "per_group" | "per_hour" | "per_hour_per_person";
   unit_price_ghs: number | null;
-  /** Google Places link — the join key, and how closures get noticed. */
+  /** Google Places link, the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;
   price_level: string | null;
@@ -81,7 +81,7 @@ export interface EventRow {
 
 /**
  * Who the plan is for. Asked only when the outing is a pair, and only to make
- * the copy read naturally — never to filter venues. "unspecified" is the
+ * the copy read naturally, never to filter venues. "unspecified" is the
  * default and always a valid answer.
  */
 export type Gender = "unspecified" | "female" | "male";
@@ -93,7 +93,7 @@ export type Pronoun = "they" | "she" | "he";
  * Which kinds of stop the outing is made of.
  *
  * "Everything" lets the time of day shape the evening. The rest are asked for
- * deliberately — a bar crawl and a dinner-then-drinks evening are different
+ * deliberately, a bar crawl and a dinner-then-drinks evening are different
  * requests, and inferring one from a vibe tag got it wrong often enough that
  * it is worth one tap to be told.
  */
@@ -120,7 +120,7 @@ export interface PlanInputs {
   occasion: Occasion;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
-   * is, what someone graduated in, what a solo day is for — the things that
+   * is, what someone graduated in, what a solo day is for, the things that
    * make a plan specific rather than generically correct.
    */
   occasionDetail: Record<string, string>;

@@ -18,15 +18,22 @@
           "whatsapp",
           "maps",
           "comgooglemaps",
-          "tel",
-          "whatsapp",
-          "maps",
-          "comgooglemaps",
           "tel"
+        ],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          }
         ]
       },
       "runtimeVersion": {
         "policy": "appVersion"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -39,8 +46,6 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR",
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ]

@@ -70,7 +70,7 @@ export async function fetchCandidates(
   }
 
   /*
-   * A venue with no menu rows AND no average cost is unpriced, not free — the
+   * A venue with no menu rows AND no average cost is unpriced, not free, the
    * catalog simply has no price for it yet. Left in, it is the cheapest option
    * in every search, so it wins constantly and lands in plans at GHS 0, which
    * quietly makes the whole budget meaningless. Withhold it until someone

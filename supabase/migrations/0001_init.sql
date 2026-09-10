@@ -1,4 +1,4 @@
--- aduro — initial schema
+-- aduro, initial schema
 -- Run against a fresh Supabase project (supabase db push, or paste into the SQL editor).
 
 create extension if not exists "pgcrypto";

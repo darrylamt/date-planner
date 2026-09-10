@@ -4,7 +4,7 @@ import { ItineraryView } from "@/components/plan/ItineraryView";
 import type { Itinerary, PlanInputs } from "@/lib/types";
 
 /**
- * "See an example plan" — a canned itinerary built from seeded venues so the
+ * "See an example plan", a canned itinerary built from seeded venues so the
  * landing page demo works instantly without an API key or database writes.
  * Mirrors the sample evening shown in the design source.
  */
@@ -35,7 +35,7 @@ const EXAMPLE_INPUTS: PlanInputs = {
   partner: {
     name: "",
     gender: "unspecified",
-    food: "Seafood — especially grilled tilapia",
+    food: "Seafood, especially grilled tilapia",
     place: "Quiet, outdoors, near water",
     interests: "Old highlife records",
     avoid: "Shellfish allergy. Nothing too loud.",
@@ -63,7 +63,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
       ],
       est_cost_ghs: 326,
       why_this_fits:
-        "Because they love grilled tilapia and quiet spots by the water — ask for the deck table.",
+        "Because they love grilled tilapia and quiet spots by the water, ask for the deck table.",
       image_url:
         "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=70",
       google_maps_url: "https://maps.google.com/?q=Maame's+Table+Osu",
@@ -83,7 +83,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
         { item: "Sobolo spritz", qty: 2, price_ghs: 86 },
       ],
       est_cost_ghs: 154,
-      why_this_fits: "They spin old highlife records on Saturdays — they'll know every song.",
+      why_this_fits: "They spin old highlife records on Saturdays, they'll know every song.",
       image_url:
         "https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?auto=format&fit=crop&w=1200&q=70",
       google_maps_url: "https://maps.google.com/?q=Highlife+House+Labone",
@@ -100,7 +100,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
       what_to_do: "skyline terrace",
       orders: [{ item: "Hibiscus mocktail", qty: 2, price_ghs: 110 }],
       est_cost_ghs: 110,
-      why_this_fits: "Calm, low-lit, and never loud — the right place to end the night talking.",
+      why_this_fits: "Calm, low-lit, and never loud, the right place to end the night talking.",
       image_url:
         "https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1200&q=70",
       google_maps_url: "https://maps.google.com/?q=Asa+Rooftop+Cantonments",

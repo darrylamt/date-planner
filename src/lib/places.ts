@@ -1,14 +1,14 @@
 import type { PriceBand, VenueType } from "./types";
 
 /**
- * Google Places (New) — the factual half of a venue row.
+ * Google Places (New), the factual half of a venue row.
  *
  * Google is authoritative for the things that are public, volatile and
  * dangerous to get wrong: whether a place is still open, where exactly it is,
  * and what number it answers on. A wrong phone number sends a customer to a
  * stranger, and a model reading the web can invent one; Places cannot.
  *
- * It is not authoritative for anything that makes aduro worth using — menus,
+ * It is not authoritative for anything that makes aduro worth using, menus,
  * prices, who a place suits. Those stay in our own tables, joined on place_id.
  *
  * ── On cost ────────────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export interface PlaceDetails extends PlaceSummary {
   website: string | null;
   phone: string | null;
   priceLevel: string | null;
-  /** Actual currency range when Google has one — better than any bucket. */
+  /** Actual currency range when Google has one, better than any bucket. */
   priceRange: { currency: string; min: number | null; max: number | null } | null;
   rating: number | null;
   ratingCount: number | null;
@@ -168,8 +168,8 @@ export interface DiscoveredPlace extends PlaceSummary {
  *
  * The catalogue was built by typing names someone already knew, which caps it
  * at one person's memory of the city. This asks Google what is actually in a
- * neighbourhood, so the work becomes triage — deciding which of twenty real
- * bars in Osu belong in the catalogue — rather than recall.
+ * neighbourhood, so the work becomes triage, deciding which of twenty real
+ * bars in Osu belong in the catalogue, rather than recall.
  *
  * It returns candidates and nothing else. Menus, prices and judgement about
  * who a place suits still come from us, so a discovered venue lands unpriced

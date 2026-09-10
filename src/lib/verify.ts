@@ -4,7 +4,7 @@ import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
 import type { Venue } from "./types";
 
 /**
- * Venue verification — checks a catalog row against the live web.
+ * Venue verification, checks a catalog row against the live web.
  *
  * The planner only ever recommends venues from our own table, so a fabricated
  * or long-closed row becomes a real person standing outside a building that
@@ -89,7 +89,7 @@ Rules that matter more than completeness:
 - "real" requires corroboration you can cite. If all you find is an aggregator
   page that looks auto-generated, that is "uncertain", not "real".
 - If the name matches nothing in Accra, say "not_found". Do not substitute a
-  similarly-named venue in another city or country — call that out in summary.
+  similarly-named venue in another city or country, call that out in summary.
 - Put every mismatch between our stored record and what you found in
   "discrepancies" (wrong area, dead phone, different name, price far off).
 - "price_signal" quotes what sources say about cost. Do not convert currencies
@@ -114,8 +114,8 @@ export interface BatchVerdict {
 /**
  * Verify many venues through the Batch API.
  *
- * Catalogue verification is the opposite of latency-sensitive — nobody is
- * waiting on it — and batching halves the cost. Results come back keyed by
+ * Catalogue verification is the opposite of latency-sensitive, nobody is
+ * waiting on it, and batching halves the cost. Results come back keyed by
  * custom_id in any order, so they are matched by id rather than by position.
  *
  * Returns the batch id; poll it with `pollVerificationBatch`.
@@ -243,7 +243,7 @@ export async function verifyVenue(
   } catch (e) {
     console.error("verification call failed", e);
     if (e instanceof Anthropic.RateLimitError) {
-      return { ok: false, error: "Rate limited by the API — try again shortly." };
+      return { ok: false, error: "Rate limited by the API, try again shortly." };
     }
     if (e instanceof Anthropic.AuthenticationError) {
       return { ok: false, error: "ANTHROPIC_API_KEY is missing or invalid." };

@@ -73,7 +73,7 @@ export function ItineraryView({
     setToast(result.message);
   }
 
-  /** Menu edits recompute food and overall totals locally — no round trip. */
+  /** Menu edits recompute food and overall totals locally, no round trip. */
   function handleOrdersChange(index: number, orders: ItineraryOrder[]) {
     const stopCost = Math.round(orders.reduce((sum, o) => sum + Number(o.price_ghs), 0));
     const stops = itinerary.stops.map((s, i) =>
@@ -85,7 +85,7 @@ export function ItineraryView({
     onItineraryChange({ ...itinerary, stops, food_total_ghs: food, est_total_ghs: est });
 
     if (est > inputs.budget) {
-      setToast(`Heads up — now ${ghs(est - inputs.budget)} over budget`);
+      setToast(`Heads up, now ${ghs(est - inputs.budget)} over budget`);
     }
   }
 
@@ -122,11 +122,11 @@ export function ItineraryView({
         const msg =
           `Hello ${stop.name}! I would like to reserve a table for two on ` +
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
-          `Please confirm availability. — sent via aduro`;
+          `Please confirm availability., sent via aduro`;
         await Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
-        setToast("Sent — they will confirm on WhatsApp.");
+        setToast("Sent, they will confirm on WhatsApp.");
       } else {
-        setToast("Logged — no number on file, we will follow up.");
+        setToast("Logged, no number on file, we will follow up.");
       }
     } catch {
       setToast("Could not send that. Try again.");
@@ -140,7 +140,7 @@ export function ItineraryView({
    *
    * Saving first so the mail carries a working link, but a failed save is not
    * fatal here: the body holds the whole itinerary, so an unsaved plan still
-   * sends usefully — it just goes without the online version.
+   * sends usefully, it just goes without the online version.
    */
   async function handleEmail() {
     let slug = shareSlug;
@@ -167,7 +167,7 @@ export function ItineraryView({
     const url = `${WEB_URL}/p/${slug}`;
     try {
       await Share.share({
-        message: `Our plan for ${longDate(inputs.date)} — ${url}`,
+        message: `Our plan for ${longDate(inputs.date)}, ${url}`,
         url,
       });
     } catch {
@@ -312,7 +312,7 @@ export function ItineraryView({
               this screen is where people stop, so the exit should be visible
               at the point they finish reading rather than only at the top. */}
           <Button
-            title="Done — back to home"
+            title="Done, back to home"
             kind="plain"
             onPress={() => router.dismissTo("/")}
           />

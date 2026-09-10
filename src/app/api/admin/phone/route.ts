@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/adminAuth";
 /**
  * Approve or reject a proposed phone number.
  *
- * The only path by which a number becomes dialable. Everything else — CSV
- * import, the ingest tool, an admin edit, the verifier — can only ever write
+ * The only path by which a number becomes dialable. Everything else, CSV
+ * import, the ingest tool, an admin edit, the verifier, can only ever write
  * `phone_pending`, because the reservation flow hands a user to this number
  * over WhatsApp with a message signed "sent via aduro". A hijacked listing
  * that propagates automatically would be fraud committed under our name.
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // "clear" pulls a live number immediately — used when a report comes in and
+  // "clear" pulls a live number immediately, used when a report comes in and
   // nobody has checked it yet. Costs us a booking; the alternative costs
   // someone their money.
   const { error } = await supabase
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       phone: null,
       phone_pending: venue.phone,
       phone_status: "pending",
-      phone_source: "withdrawn after report — needs re-checking",
+      phone_source: "withdrawn after report, needs re-checking",
       phone_approved_at: null,
       phone_approved_by: null,
     })

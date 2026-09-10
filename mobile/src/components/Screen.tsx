@@ -18,7 +18,7 @@ export function Screen({
   children: ReactNode;
   grouped?: boolean;
   scroll?: boolean;
-  /** Pinned below the scroll area — action bars, primary buttons. */
+  /** Pinned below the scroll area, action bars, primary buttons. */
   footer?: ReactNode;
   contentStyle?: ViewStyle;
 }) {

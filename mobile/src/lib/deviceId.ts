@@ -5,7 +5,7 @@ const KEY = "aduro.device-id";
 /**
  * A stable per-install identifier.
  *
- * Not an identity and not a login — it exists so that one person tapping
+ * Not an identity and not a login, it exists so that one person tapping
  * "report" twice does not read as two people agreeing. That count is what an
  * admin uses to decide whether a report is worth acting on, so it has to mean
  * what it looks like it means.
@@ -25,7 +25,7 @@ export async function deviceId(): Promise<string> {
       return existing;
     }
   } catch {
-    // Storage unavailable — fall through and mint a per-session id rather
+    // Storage unavailable, fall through and mint a per-session id rather
     // than failing the report the user is trying to send.
   }
 

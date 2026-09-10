@@ -1,9 +1,9 @@
--- aduro — venue verification
+-- aduro, venue verification
 --
 -- The planner only recommends venues from our own table, so a fabricated or
 -- closed row becomes a real person standing outside a building that is not
 -- there. These columns record whether a row has been checked against the live
--- web, what was found, and when — so unverified rows are visible rather than
+-- web, what was found, and when, so unverified rows are visible rather than
 -- silently trusted.
 
 create type verification_status as enum (
@@ -21,7 +21,7 @@ alter table public.venues
   -- into the status.
   add column verification_confidence numeric,
   add column verification_summary text,
-  -- [{title, url}] — the pages actually consulted. Without these a verdict is
+  -- [{title, url}], the pages actually consulted. Without these a verdict is
   -- an assertion, not evidence.
   add column verification_sources jsonb not null default '[]'::jsonb,
   -- Where the stored row disagrees with what was found (dead phone, wrong

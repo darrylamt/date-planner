@@ -14,7 +14,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Extras & activities",
 };
 
-/** Venue/stop card from the style tile (.stop) — mobile stacked, desktop side-by-side. */
+/** Venue/stop card from the style tile (.stop), mobile stacked, desktop side-by-side. */
 export function StopCard({
   stop,
   onSwap,
@@ -175,7 +175,7 @@ export function StopCard({
           className="mt-2.5 text-[13px] font-bold text-flame hover:text-flame-dark"
           onClick={toggleMenu}
         >
-          {menuOpen ? "Hide menu ↑" : "View menu — pick something else ↓"}
+          {menuOpen ? "Hide menu ↑" : "View menu, pick something else ↓"}
         </button>
       )}
 
@@ -184,7 +184,7 @@ export function StopCard({
           {menuLoading && <div className="text-[14px] text-mutedbrown">Fetching the menu…</div>}
           {menuError && (
             <div className="text-[14px] text-mutedbrown">
-              Couldn&apos;t load the menu right now — try again in a moment.
+              Couldn&apos;t load the menu right now, try again in a moment.
             </div>
           )}
           {menu && menu.length === 0 && (

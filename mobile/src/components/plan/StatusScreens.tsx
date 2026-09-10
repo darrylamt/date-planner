@@ -69,7 +69,7 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
   );
 }
 
-/** Not enough real venues matched — offer the two fixes that actually work. */
+/** Not enough real venues matched, offer the two fixes that actually work. */
 export function NoMatch({
   data,
   onSuggestion,

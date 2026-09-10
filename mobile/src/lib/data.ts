@@ -3,7 +3,7 @@ import { randomSlug } from "./format";
 import type { Area, Itinerary, MenuItem, PlanInputs, SavedPlan } from "./types";
 
 /**
- * Catalog reads and user writes go straight to Supabase — RLS already scopes
+ * Catalog reads and user writes go straight to Supabase, RLS already scopes
  * them exactly as the web API routes did (catalog is public-read; plans are
  * owner-only; reservations are public-insert). Only the two Anthropic-backed
  * routes need the web server, and those live in api.ts.

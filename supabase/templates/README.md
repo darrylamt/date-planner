@@ -1,22 +1,22 @@
 # Loading a real catalog
 
 Import at `/admin/import` (sign in as an admin first). **Venues before menu
-items** — the menu importer matches venues by exact name, so a menu row whose
+items**, the menu importer matches venues by exact name, so a menu row whose
 `venue` does not match an already-imported venue is skipped.
 
 ## venues.csv
 
 | Column | Required | Notes |
 | --- | --- | --- |
-| `name` | yes | Must be unique and exact — menu_items.csv joins on it |
+| `name` | yes | Must be unique and exact, menu_items.csv joins on it |
 | `type` | yes | `restaurant`, `activity`, `lounge`, `outdoor`, `cafe`, `dessert` |
 | `area` | yes | Must match an existing area name exactly (Osu, Labone, Cantonments, East Legon, Achimota, Airport Residential, Dzorwulu, Spintex) |
-| `price_band` | no | `budget`, `mid`, `premium` — defaults to `mid` |
+| `price_band` | no | `budget`, `mid`, `premium`, defaults to `mid` |
 | `avg_cost_per_person_ghs` | yes | Drives the budget pre-filter. A wrong value here silently excludes the venue from plans |
 | `description` | yes | One or two sentences, shown to users. Quote it if it contains a comma |
 | `vibe_tags` | yes | `;`-separated. Match the app's vibes: `romantic`, `calm`, `lively`, `fun`, `adventurous`, `chill` |
 | `best_for` | no | `;`-separated: `first_date`, `anniversary`, `date_night`, `friend_outing` |
-| `reservation_required` | no | `true`/`yes`/`1` — drives the Reserve button |
+| `reservation_required` | no | `true`/`yes`/`1`, drives the Reserve button |
 | `dress_code` | no | Free text |
 | `instagram_handle` | no | With or without `@` |
 | `phone` | no | **Full international format** (`+233…`). The reservation flow strips non-digits and opens `wa.me/<digits>`; a local `0…` number produces a dead WhatsApp link |
@@ -36,7 +36,7 @@ items** — the menu importer matches venues by exact name, so a menu row whose
 
 ## Why the prices matter more than they look
 
-The planner does not estimate costs — it sums real `menu_items` rows and
+The planner does not estimate costs, it sums real `menu_items` rows and
 checks the total against the user's budget. A venue with no menu items can
 still be chosen for an activity stop, but it can never carry a food order.
 `avg_cost_per_person_ghs` is only used for the pre-filter that decides which

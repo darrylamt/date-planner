@@ -8,7 +8,7 @@ import { researchVenue } from "@/lib/research";
  *
  * Nothing is written here. The draft goes back to the form for a human to
  * correct and save, because the whole point is to remove the typing, not the
- * judgement — and a research pass that wrote straight to the catalogue would
+ * judgement, and a research pass that wrote straight to the catalogue would
  * be a way to fill the table with plausible mistakes at speed.
  *
  * Costs money on every call (model tokens plus web searches), so it sits
@@ -19,7 +19,7 @@ export const maxDuration = 300;
 const bodySchema = z.object({
   name: z.string().min(2).max(120),
   areaHint: z.string().max(120).optional().default(""),
-  /** Raise for ambiguous venues — chains, renames, several branches. */
+  /** Raise for ambiguous venues, chains, renames, several branches. */
   thorough: z.boolean().optional().default(false),
 });
 

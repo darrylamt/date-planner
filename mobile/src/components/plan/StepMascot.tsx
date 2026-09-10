@@ -7,7 +7,7 @@ import type { Occasion } from "../../lib/types";
 /**
  * A tip from the mascot, sitting beside the question it is about.
  *
- * Deliberately advice a person could not get from the field itself — "pick two
+ * Deliberately advice a person could not get from the field itself, "pick two
  * areas" is already on the label. These say what the answer will *do* to the
  * plan, which is the thing that is not obvious while filling a form in.
  */
@@ -21,7 +21,7 @@ const TIPS: Partial<Record<StepId, string>> = {
   details: "The odder, the better.",
 };
 
-/** Occasion-specific tips take precedence — a pathway should feel like one. */
+/** Occasion-specific tips take precedence, a pathway should feel like one. */
 const OCCASION_TIPS: Partial<Record<Occasion, Partial<Record<StepId, string>>>> = {
   first_date: {
     budget: "Easy beats expensive.",

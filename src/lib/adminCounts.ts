@@ -4,8 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * What currently needs attention, in one query.
  *
  * The admin side had nine equal-looking links and no way to tell which of them
- * had work waiting behind it, so the queues that matter — a phone number
- * someone reported, venues the planner is silently withholding — were only
+ * had work waiting behind it, so the queues that matter, a phone number
+ * someone reported, venues the planner is silently withholding, were only
  * found by clicking through. These counts drive the nav badges and the
  * dashboard, so the work announces itself.
  *

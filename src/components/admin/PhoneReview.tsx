@@ -23,7 +23,7 @@ interface Collision {
 }
 
 /**
- * Phone review — the only place a number becomes dialable.
+ * Phone review, the only place a number becomes dialable.
  *
  * The reservation flow hands a user to this number over WhatsApp with a
  * message signed "sent via aduro", so an unchecked number is not bad data, it
@@ -80,7 +80,7 @@ export function PhoneReview({
             than one venue
           </div>
           <p className="mt-1 text-[14px] leading-relaxed text-cocoa">
-            Two venues sharing a number is almost never a coincidence — it is what one
+            Two venues sharing a number is almost never a coincidence, it is what one
             scammer attached to several listings looks like. Treat every venue below as
             suspect until you have checked each against its own website or Instagram.
           </p>
@@ -88,7 +88,7 @@ export function PhoneReview({
             {collisions.map((c) => (
               <li key={c.digits}>
                 <span className="font-mono text-ink">+{c.digits}</span>{" "}
-                <span className="text-mutedbrown">— {c.venue_names.join(", ")}</span>
+                <span className="text-mutedbrown">, {c.venue_names.join(", ")}</span>
               </li>
             ))}
           </ul>
@@ -100,7 +100,7 @@ export function PhoneReview({
           Awaiting review ({pending.length})
         </div>
         <p className="mt-1 text-[14px] text-mutedbrown">
-          Check each against the venue&apos;s own website or Instagram — not a
+          Check each against the venue&apos;s own website or Instagram, not a
           directory. Directories copy from each other, so one bad number can look
           like three independent sources.
         </p>
@@ -136,7 +136,7 @@ export function PhoneReview({
                         </div>
                       )}
                     </td>
-                    <td className="text-[13px] text-mutedbrown">{v.phone_source ?? "—"}</td>
+                    <td className="text-[13px] text-mutedbrown">{v.phone_source ?? ", "}</td>
                     <td className="text-[13px]">
                       <div className="flex flex-col gap-1">
                         {v.instagram_handle ? (
@@ -213,7 +213,7 @@ export function PhoneReview({
       <div className="card px-5 py-5">
         <div className="text-[15px] font-bold">Live numbers ({approved.length})</div>
         <p className="mt-1 text-[14px] text-mutedbrown">
-          These get dialled. Withdraw one the moment it is questioned — a false alarm
+          These get dialled. Withdraw one the moment it is questioned, a false alarm
           costs a booking, an unreported bad number costs someone their money.
         </p>
 
@@ -243,7 +243,7 @@ export function PhoneReview({
                     {v.phone_report_count > 0 ? (
                       <span className="badge b-stale">{v.phone_report_count}</span>
                     ) : (
-                      <span className="text-mutedbrown">—</span>
+                      <span className="text-mutedbrown">, </span>
                     )}
                   </td>
                   <td>

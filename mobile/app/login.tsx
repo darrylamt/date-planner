@@ -62,7 +62,7 @@ export default function Login() {
     if (outcome.needsConfirmation) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNotice(
-        `Almost there — confirm your address using the link we sent to ${email.trim()}, then sign in.`
+        `Almost there, confirm your address using the link we sent to ${email.trim()}, then sign in.`
       );
       setMode("signin");
       return;

@@ -9,7 +9,7 @@
  * venue, so a full catalog would blow any serverless timeout. Uses the
  * service-role key, so it never runs in the browser.
  *
- * Costs real money — model tokens plus web searches per venue. It prints an
+ * Costs real money, model tokens plus web searches per venue. It prints an
  * estimate and waits for confirmation before starting.
  */
 import fs from "fs";
@@ -76,7 +76,7 @@ async function main() {
     console.log(
       reverifyAll
         ? "No active venues in the catalog."
-        : "Nothing to verify — every active venue has been checked. Use --all to re-check."
+        : "Nothing to verify, every active venue has been checked. Use --all to re-check."
     );
     return;
   }
@@ -91,7 +91,7 @@ async function main() {
   const areaOf = (v: unknown) =>
     (v as { areas?: { name: string } | null }).areas?.name ?? "Accra";
 
-  console.log("\nSubmitting as one batch — half price, and nobody is waiting on it.");
+  console.log("\nSubmitting as one batch, half price, and nobody is waiting on it.");
   const batchId = await submitVerificationBatch(
     venues.map((v) => ({ venue: v as never, areaName: areaOf(v) })),
     { maxSearches: 6, effort: "high" }
@@ -103,7 +103,8 @@ async function main() {
   let status = await verificationBatchStatus(batchId);
   while (status.status !== "ended") {
     const done = (status.counts.succeeded ?? 0) + (status.counts.errored ?? 0);
-    process.stdout.write(`  ${status.status} — ${done}/${venues.length} done…      `);
+    process.stdout.write(`
+  ${status.status}, ${done}/${venues.length} done…      `);
     await new Promise((r) => setTimeout(r, 15000));
     status = await verificationBatchStatus(batchId);
   }
@@ -119,7 +120,7 @@ async function main() {
     const name = byId.get(result.venueId)?.name ?? result.venueId;
 
     if (!result.verification) {
-      console.log(`${name}: FAILED — ${result.error}`);
+      console.log(`${name}: FAILED, ${result.error}`);
       failures++;
       continue;
     }

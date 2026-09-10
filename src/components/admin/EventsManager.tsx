@@ -94,7 +94,7 @@ export function EventsManager({
     <div className="max-w-[860px]">
       <h1 className="font-display text-[24px] font-bold">Events</h1>
       <div className="text-[14px] text-mutedbrown">
-        Live music, sip &amp; paint, festivals — what makes a date memorable.
+        Live music, sip &amp; paint, festivals, what makes a date memorable.
       </div>
 
       {/* Add / edit form */}
@@ -126,7 +126,7 @@ export function EventsManager({
         <div>
           <span className="flbl">Venue (optional)</span>
           <select className="inp h-[42px]" value={form.venue_id} onChange={(e) => setForm({ ...form, venue_id: e.target.value })}>
-            <option value="">—</option>
+            <option value="">, </option>
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
@@ -191,7 +191,7 @@ export function EventsManager({
               <tr key={e.id} className={e.is_active ? "" : "opacity-50"}>
                 <td className="font-bold">{e.title}</td>
                 <td className="font-mono">{e.event_date}</td>
-                <td>{areas.find((a) => a.id === e.area_id)?.name ?? "—"}</td>
+                <td>{areas.find((a) => a.id === e.area_id)?.name ?? ", "}</td>
                 <td className="font-mono">{e.cost_ghs === null ? "free" : `GHS ${e.cost_ghs}`}</td>
                 <td>
                   <span className={`badge ${e.is_active ? "b-ok" : "b-stale"}`}>

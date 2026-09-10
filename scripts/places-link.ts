@@ -106,7 +106,7 @@ async function main() {
   }
 
   console.log(
-    `${venues.length} unlinked venue(s).${apply ? "" : " Dry run — nothing will be written."}\n`
+    `${venues.length} unlinked venue(s).${apply ? "" : " Dry run, nothing will be written."}\n`
   );
 
   let linked = 0;
@@ -120,7 +120,7 @@ async function main() {
     try {
       results = await searchPlaces(`${v.name} ${area} Accra`.trim());
     } catch (e) {
-      console.log(`  ${v.name}: search failed — ${(e as Error).message}`);
+      console.log(`  ${v.name}: search failed, ${(e as Error).message}`);
       continue;
     }
 
@@ -161,7 +161,7 @@ async function main() {
       }
     } else {
       console.log(
-        `  ${v.name}: unsure — best was "${best.r.name}" (${Math.round(best.score * 100)}%)${flag}`
+        `  ${v.name}: unsure, best was "${best.r.name}" (${Math.round(best.score * 100)}%)${flag}`
       );
       doubtful++;
     }

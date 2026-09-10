@@ -77,8 +77,7 @@ export async function POST(req: Request) {
     ...result.result,
     // Derived here, not by the model, so the number is reproducible from the
     // items an admin can see on screen.
-    // A per-hour or per-group venue has no per-person average to suggest —
-    // suggestAvgCost returns 0 for it rather than treating a shared rate as
+    // A per-hour or per-group venue has no per-person average to suggest, // suggestAvgCost returns 0 for it rather than treating a shared rate as
     // what one person pays.
     suggested_avg_cost: suggestAvgCost(result.result.items, result.result.venue),
   });

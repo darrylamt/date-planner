@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *
  * Adding a venue used to fail outright when its neighbourhood was not already
  * in the table, which made adding somewhere new a two-step job with a
- * confusing error in the middle. A venue's location IS an area — if we are
+ * confusing error in the middle. A venue's location IS an area, if we are
  * willing to list the venue, we are willing to list where it is.
  *
  * Matching is case-insensitive on a trimmed name, so "east legon" does not

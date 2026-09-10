@@ -10,7 +10,7 @@ import { useIsDark, useTheme } from "../../lib/useTheme";
 const DAYS_AHEAD = 21;
 const ITEM_WIDTH = 52;
 
-/** Local date to "YYYY-MM-DD" — toISOString would shift across the UTC boundary. */
+/** Local date to "YYYY-MM-DD", toISOString would shift across the UTC boundary. */
 function toIso(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -19,7 +19,7 @@ function toIso(d: Date): string {
 
 /**
  * Date picker for the step flow. Most dates people plan are within a couple of
- * weeks, so the common case is a horizontal strip of upcoming days — one tap,
+ * weeks, so the common case is a horizontal strip of upcoming days, one tap,
  * no modal. The full calendar stays one tap away for anything further out.
  */
 export function DayStrip({
@@ -182,8 +182,7 @@ export function DayStrip({
             weekday: "long",
             day: "numeric",
             month: "long",
-          })}{" "}
-          — outside the next three weeks
+          })}{" "}, outside the next three weeks
         </Text>
       ) : null}
     </View>

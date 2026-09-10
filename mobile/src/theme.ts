@@ -1,10 +1,10 @@
 /**
- * aduro design tokens — near-monochrome, one accent, eight occasion hues.
+ * aduro design tokens, near-monochrome, one accent, eight occasion hues.
  *
  * Ported from the Gavel system. The visual language is a printed itinerary:
  * cool off-white paper, near-black type, hierarchy built from size and space
  * rather than boxes and colour. Venue photography still carries most of the
- * colour, which is the point — the plan should look like the places.
+ * colour, which is the point, the plan should look like the places.
  *
  * One brand colour sits on top of that, and `ACCENT` below is the only place
  * it is written down; every tint, border and dark-mode variant is derived from
@@ -51,7 +51,7 @@ function channels(hex: string): [number, number, number] {
  * Blends `hex` toward `target` by `amount` (0–1).
  *
  * Tints are derived rather than hand-picked so a new accent cannot leave a
- * stale soft-fill or border behind — the failure mode of a palette written out
+ * stale soft-fill or border behind, the failure mode of a palette written out
  * by hand, where one swatch gets missed and only shows up on one screen.
  */
 function mix(hex: string, target: string, amount: number): string {
@@ -72,7 +72,7 @@ const ACCENT_DARK = mix(ACCENT, WHITE, 0.38);
 
 export const Colors = {
   light: {
-    /** Faintly cool off-white — a page, not a lightbox. */
+    /** Faintly cool off-white, a page, not a lightbox. */
     background: "#F6F9F8",
     /** Cards are true white, so they lift off the page without a heavy border. */
     backgroundElement: "#FFFFFF",
@@ -107,7 +107,7 @@ export const Colors = {
 
     overlay: "rgba(0, 0, 0, 0.38)",
     skeleton: "#F4F4F5",
-    /** Tint laid over a blur. Translucent by definition — never opaque. */
+    /** Tint laid over a blur. Translucent by definition, never opaque. */
     glass: "rgba(255, 255, 255, 0.55)",
     glassBorder: "rgba(0, 0, 0, 0.08)",
   },
@@ -149,7 +149,7 @@ export const Colors = {
  * home grid. Eight identical accent icons carried no information; eight
  * distinct ones let a card be recognised before it is read.
  *
- * Deliberately desaturated and confined to icon scale — this is the whole of
+ * Deliberately desaturated and confined to icon scale, this is the whole of
  * the app's colour beyond the accent, and it stays calm because it never
  * grows past a circle. Each hue ships with the wash it sits on.
  */
@@ -222,7 +222,7 @@ export const Spacing = {
   card: 20,
   /** Screen side margins. */
   gutter: 24,
-  /** Air between major sections — the workhorse of the layout. */
+  /** Air between major sections, the workhorse of the layout. */
   section: 40,
 } as const;
 
@@ -236,7 +236,7 @@ export const Radius = {
 } as const;
 
 /**
- * Soft, wide, low-opacity shadows — a surface should look lifted, never
+ * Soft, wide, low-opacity shadows, a surface should look lifted, never
  * outlined in grey. Paired with a hairline border so cards still hold their
  * edge on a white page where a shadow alone would disappear.
  */
@@ -265,7 +265,7 @@ export const Motion = {
 } as const;
 
 /**
- * Type scale. Sizes carry the hierarchy, because nothing else does — there are
+ * Type scale. Sizes carry the hierarchy, because nothing else does, there are
  * no boxes or rules to lean on.
  */
 export const type = {
@@ -302,7 +302,7 @@ export const HAIRLINE = 0.5;
 export const TAB_BAR = { height: 66, clearance: 128 } as const;
 
 /**
- * Named spacing kept from the previous scale, remapped onto the new rhythm —
+ * Named spacing kept from the previous scale, remapped onto the new rhythm,
  * the large steps are deliberately bigger, because space is what groups things
  * now that fills do not.
  */

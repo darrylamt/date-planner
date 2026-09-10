@@ -1,4 +1,4 @@
-# aduro mobile — working notes
+# aduro mobile, working notes
 
 Expo SDK 57 / React Native 0.86 / expo-router. Read the versioned Expo docs at
 https://docs.expo.dev/versions/v57.0.0/ before writing native code.
@@ -12,13 +12,13 @@ https://docs.expo.dev/versions/v57.0.0/ before writing native code.
   because they hold the server-side Anthropic key. Native fetch is not
   CORS-bound, so they are called unchanged. `EXPO_PUBLIC_API_URL` points at the
   deployed Next.js app.
-- **Auth is a 6-digit email OTP**, not a magic link — no deep-link round trip.
+- **Auth is a 6-digit email OTP**, not a magic link, no deep-link round trip.
   This requires the Supabase "Magic Link" email template to contain
   `{{ .Token }}`.
 
 ## Design system
 
-`src/theme.ts` is the single source of truth and is **Apple HIG aligned** — iOS
+`src/theme.ts` is the single source of truth and is **Apple HIG aligned**, iOS
 semantic colours, the Apple type scale, and the system font (no custom faces).
 Screens ask for `c.label` / `c.separator` / `c.tint` via `useTheme()`; they never
 hard-code a colour. Light and dark both ship and follow the phone's setting.

@@ -1,5 +1,5 @@
 /**
- * GENERATED — do not edit. Mirrored from src/lib/swapStop.ts.
+ * GENERATED, do not edit. Mirrored from src/lib/swapStop.ts.
  *
  * Run `npm run mirror` after changing the web copy.
  */
@@ -10,7 +10,7 @@ import type { Itinerary, StopAlternate } from "./types";
  * Swap one stop for its next runner-up, locally.
  *
  * The planner already chose the alternates and priced each one against what
- * was left of the budget, so a swap needs no model call and no round trip —
+ * was left of the budget, so a swap needs no model call and no round trip,
  * it used to cost a full generation on every tap. The old venue rotates to the
  * back of the queue rather than being dropped, so tapping repeatedly cycles
  * the options and can always get back to where it started.
@@ -71,7 +71,7 @@ export function swapStopLocally(
   /*
    * Transport is carried over rather than recalculated: the hop model lives on
    * the server and the client has no distances. That is fine while the swap
-   * stays in the same area, and misleading once it does not — so a move across
+   * stays in the same area, and misleading once it does not, so a move across
    * town says the total may shift instead of quoting a figure it cannot stand
    * behind.
    */
@@ -79,10 +79,10 @@ export function swapStopLocally(
   const buffer = budget - est;
 
   const message = areaChanged
-    ? `Swapped to ${next.area} — transport will change, so the total is approximate.`
+    ? `Swapped to ${next.area}, transport will change, so the total is approximate.`
     : buffer >= 0
-      ? `Swapped — still ${ghs(buffer)} under budget`
-      : `Swapped — now ${ghs(Math.abs(buffer))} over budget`;
+      ? `Swapped, still ${ghs(buffer)} under budget`
+      : `Swapped, now ${ghs(Math.abs(buffer))} over budget`;
 
   return {
     itinerary: {

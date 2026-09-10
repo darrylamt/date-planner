@@ -20,7 +20,7 @@ import type {
  * budget" is a weak promise for the one number a user actually gave us.
  *
  * Selection and money now live here. The model is left with the part it is
- * genuinely better at — writing why a place suits someone — and receives only
+ * genuinely better at, writing why a place suits someone, and receives only
  * the handful of venues that were chosen rather than the whole catalogue.
  * Smaller prompt, no retries, and a budget that is exact by construction.
  */
@@ -190,7 +190,7 @@ function planOrders(
    * Venues that charge for a thing rather than for a person.
    *
    * A padel court is priced by the hour whoever turns up, so four players
-   * split one bill and the cost per head halves as the group grows — the
+   * split one bill and the cost per head halves as the group grows, the
    * opposite of a menu, where four people means four mains. Handled before the
    * menu because a court with a drinks list is still charged for the court.
    */
@@ -265,7 +265,7 @@ function planOrders(
 
   if (!chosen.length) {
     /*
-     * The category we wanted is not on this menu — a restaurant listing only
+     * The category we wanted is not on this menu, a restaurant listing only
      * drinks, say. Fall back to the cheapest thing it does sell before
      * falling back to the average, because reaching the average when the menu
      * is empty AND the average is zero produced a free stop, which is the
@@ -318,7 +318,7 @@ export interface PlannedStop {
   cost: number;
   /**
    * Runners-up for this slot, so a swap needs no round trip. Each carries the
-   * orders and cost the planner computed for it — re-deriving a price at the
+   * orders and cost the planner computed for it, re-deriving a price at the
    * point of swap is how a venue with no menu ends up shown as free.
    */
   alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number }[];
@@ -401,7 +401,7 @@ export function planItinerary(
    * A narrowed focus was asked for explicitly, so its slots are filled only by
    * venues of the right type. The thin-catalogue fallback below is right when
    * we chose the shape ourselves, but applied here it answered "just drinks"
-   * with three restaurants — which is not a thin answer to the question, it is
+   * with three restaurants, which is not a thin answer to the question, it is
    * an answer to a different one.
    */
   const focusTypes = focusVenueTypes(inputs.focus);
@@ -412,7 +412,7 @@ export function planItinerary(
     /*
      * With a narrowed focus every slot may be filled by anything within that
      * focus, not only by its own role's type. The roles are there to vary the
-     * evening — a meal, then something sweet — but "mostly food" must not fail
+     * evening, a meal, then something sweet, but "mostly food" must not fail
      * because the catalogue has no dedicated dessert parlour, and it must not
      * quietly reach outside the focus either. Preference for the exact role
      * type is applied in the sort below instead.

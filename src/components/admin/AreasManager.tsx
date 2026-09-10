@@ -40,7 +40,7 @@ export function AreasManager({ areas }: { areas: Area[] }) {
   async function remove(a: Area) {
     if (!confirm(`Delete area "${a.name}"? Venues in it will block deletion.`)) return;
     const { error } = await supabase.from("areas").delete().eq("id", a.id);
-    if (error) setError(`Can't delete "${a.name}" — it still has venues or events.`);
+    if (error) setError(`Can't delete "${a.name}", it still has venues or events.`);
     router.refresh();
   }
 

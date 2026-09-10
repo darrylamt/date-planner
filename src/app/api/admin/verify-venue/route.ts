@@ -11,14 +11,14 @@ import type { Venue } from "@/lib/types";
  * searches), so it is gated on the same is_admin flag RLS uses rather than
  * being left open to anyone who can guess the path.
  *
- * Bulk verification does NOT belong here — a thorough check takes 40-60s, so
+ * Bulk verification does NOT belong here, a thorough check takes 40-60s, so
  * a whole catalog would blow any serverless budget. Use `npm run verify:catalog`.
  */
 export const maxDuration = 300;
 
 const bodySchema = z.object({
   venueId: z.string().uuid(),
-  /** Raise for ambiguous venues — chains, renames, several branches. */
+  /** Raise for ambiguous venues, chains, renames, several branches. */
   thorough: z.boolean().optional().default(false),
 });
 

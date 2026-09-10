@@ -68,7 +68,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
   });
 
   async function verify(id: string) {
-    if (busyId) return; // one at a time — each call costs money and ~45s
+    if (busyId) return; // one at a time, each call costs money and ~45s
     setBusyId(id);
     setErrors((e) => ({ ...e, [id]: "" }));
     try {
@@ -139,7 +139,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                     {isOpen && (
                       <div className="mt-2 max-w-[520px] whitespace-normal rounded-xl bg-whybg p-3 text-[13px] font-normal leading-relaxed">
                         <div className="mb-1 font-semibold">
-                          {live.canonical_name ?? r.name} — confidence {live.confidence}
+                          {live.canonical_name ?? r.name}, confidence {live.confidence}
                         </div>
                         <p className="text-cocoa">{live.summary}</p>
 
@@ -257,8 +257,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
 
       <p className="mt-4 text-[13px] text-mutedbrown">
         Verifying searches the web and takes 40–60 seconds per venue. For a whole
-        catalog run <code className="font-mono">npm run verify:catalog</code> instead —
-        a browser request will time out long before it finishes.
+        catalog run <code className="font-mono">npm run verify:catalog</code> instead, a browser request will time out long before it finishes.
       </p>
     </>
   );

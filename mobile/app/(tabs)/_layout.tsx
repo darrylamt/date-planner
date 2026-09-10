@@ -6,13 +6,13 @@ import { hasOnboarded } from "../../src/lib/onboarding";
 
 /**
  * Three destinations, plus the create action as a peer of the bar rather than
- * a tab — it starts a task, it does not switch destination.
+ * a tab, it starts a task, it does not switch destination.
  *
  * The planner flow itself stays outside this group: it is a focused linear
  * task, and a persistent nav mid-questionnaire invites abandonment.
  */
 export default function TabsLayout() {
-  // undefined while the flag is being read — rendering the tabs first and
+  // undefined while the flag is being read, rendering the tabs first and
   // redirecting after would flash the home screen behind the intro.
   const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
 

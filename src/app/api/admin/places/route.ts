@@ -13,7 +13,7 @@ import {
  *
  * Two actions rather than two routes, because they are one flow: search by
  * name, pick the right result, then pull its details. The key stays server-side
- * — a Places key in the browser is a key anyone can spend.
+ *, a Places key in the browser is a key anyone can spend.
  */
 export const maxDuration = 30;
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.message }, { status: 501 });
     }
     console.error("places lookup failed", e);
-    // Google's own message is genuinely useful here — a disabled API, a
+    // Google's own message is genuinely useful here, a disabled API, a
     // referrer-restricted key and an exhausted quota all need different fixes,
     // and hiding which one it was makes setup guesswork.
     return NextResponse.json(

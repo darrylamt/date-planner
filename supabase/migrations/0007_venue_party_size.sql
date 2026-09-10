@@ -3,7 +3,7 @@
 -- Padel is the case that surfaced it: a court needs two for singles or four
 -- for doubles, and one person cannot play at all. Escape rooms have minimums,
 -- small dining rooms have maximums, and until now the planner knew none of
--- this — it would happily send a solo day to a padel court, or a group of
+-- this, it would happily send a solo day to a padel court, or a group of
 -- eight somewhere that seats four.
 --
 -- Deliberately a range rather than a list of exact playable counts. Padel is

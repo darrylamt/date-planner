@@ -4,7 +4,7 @@ import type { Occasion, PlanInputs } from "./types";
  * What the mascot says while a plan is being built.
  *
  * Per occasion, because the same three lines under every costume made the
- * costume feel like a skin rather than a character. Kept short — these are
+ * costume feel like a skin rather than a character. Kept short, these are
  * read at a glance during a 25 second wait, not studied.
  *
  * Nothing here may claim anything about the plan that is not certain: the
@@ -27,7 +27,7 @@ const LINES: Record<Occasion, string[]> = {
     "Keeping it easy. It is a Tuesday, not a summit.",
   ],
   birthday: [
-    "Right — whose day is it?",
+    "Right, whose day is it?",
     "Finding somewhere that will make a fuss…",
     "Cake is non-negotiable.",
   ],

@@ -6,8 +6,8 @@ import type { PlaceDetails, PlaceSummary } from "@/lib/places";
 /**
  * Find a venue on Google and pull its facts in.
  *
- * This covers the tedious, error-prone half of a venue row — coordinates,
- * phone, address, whether it is still trading — from a source that cannot
+ * This covers the tedious, error-prone half of a venue row, coordinates,
+ * phone, address, whether it is still trading, from a source that cannot
  * invent them. The half Google has no opinion on (vibe tags, who it suits,
  * the menu) stays a human's job, which is a few clicks rather than research.
  *
@@ -79,11 +79,11 @@ export function PlacesLookup({
         <h2 className="font-display text-[16px] font-bold">Find on Google</h2>
         {linkedPlaceId ? (
           <span className="text-[12px] text-mutedbrown">
-            Linked — closures will be caught automatically
+            Linked, closures will be caught automatically
           </span>
         ) : (
           <span className="text-[12px] text-staletext">
-            Not linked — nothing will notice if this place closes
+            Not linked, nothing will notice if this place closes
           </span>
         )}
       </div>

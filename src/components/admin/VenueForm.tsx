@@ -20,7 +20,7 @@ const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "othe
 
 type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean };
 
-/** Venue add/edit with inline menu items — built for “add a venue in under 2 minutes”. */
+/** Venue add/edit with inline menu items, built for “add a venue in under 2 minutes”. */
 export function VenueForm({
   areas,
   venue,
@@ -104,7 +104,7 @@ export function VenueForm({
         // exactly one place and is always recorded with who and when.
         phone_pending: v.phone || null,
         phone_status: v.phone ? "pending" : "none",
-        phone_source: "admin edit — unreviewed",
+        phone_source: "admin edit, unreviewed",
         google_maps_url: v.google_maps_url || null,
         image_url: v.image_url || null,
         lat: v.lat === "" ? null : Number(v.lat),
@@ -152,7 +152,7 @@ export function VenueForm({
       setTimeout(() => router.push("/admin"), 700);
       router.refresh();
     } catch (e: any) {
-      setError(e.message ?? "Save failed — are you an admin?");
+      setError(e.message ?? "Save failed, are you an admin?");
     } finally {
       setBusy(false);
     }
@@ -202,21 +202,21 @@ export function VenueForm({
     if (d.businessStatus && d.businessStatus !== "OPERATIONAL") {
       notes.push(`Google says this place is ${d.businessStatus.replace(/_/g, " ").toLowerCase()}`);
     }
-    if (!mappedType) notes.push("pick the type yourself — no confident mapping");
+    if (!mappedType) notes.push("pick the type yourself, no confident mapping");
     if (d.priceRange) {
       notes.push(
         `Google lists ${d.priceRange.currency} ${d.priceRange.min ?? "?"}-${d.priceRange.max ?? "?"}`
       );
     }
     setToast(
-      notes.length ? `Linked — ${notes.join("; ")}.` : "Linked to Google. Check it before saving."
+      notes.length ? `Linked, ${notes.join("; ")}.` : "Linked to Google. Check it before saving."
     );
   }
 
   /**
    * Fill the form from a research draft.
    *
-   * Only fields the research actually found are overwritten — a null comes
+   * Only fields the research actually found are overwritten, a null comes
    * back as "not found", not as "clear what you already typed". The area is
    * resolved to an id and created when it is new, so adding a venue in a
    * neighbourhood we have never listed is not a separate errand.
@@ -255,8 +255,8 @@ export function VenueForm({
 
     setToast(
       createdArea
-        ? `Filled in — and added ${d.area_name} to your areas. Check it before saving.`
-        : "Filled in — check it before saving."
+        ? `Filled in, and added ${d.area_name} to your areas. Check it before saving.`
+        : "Filled in, check it before saving."
     );
   }
 
@@ -265,7 +265,7 @@ export function VenueForm({
   return (
     <div className="max-w-[760px]">
       <h1 className="font-display text-[24px] font-bold">
-        {venue ? `Edit — ${venue.name}` : "Add venue"}
+        {venue ? `Edit, ${venue.name}` : "Add venue"}
       </h1>
 
       <div className="mt-5 grid gap-3">
@@ -344,7 +344,7 @@ export function VenueForm({
           <span className="mt-1 text-[12px] text-mutedbrown">
             {v.is_free
               ? "Only for places that genuinely charge nothing."
-              : "Leave at 0 if unknown — unpriced venues are withheld, not shown as free."}
+              : "Leave at 0 if unknown, unpriced venues are withheld, not shown as free."}
           </span>
         </div>
         <div className="md:col-span-2">
@@ -466,7 +466,7 @@ export function VenueForm({
           <input className="inp" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} />
           <div className="mt-1 text-[12.5px] text-mutedbrown">
             Saved as a proposal. It stays unusable until approved at{" "}
-            <b className="text-ink">Phone review</b> — this number gets dialled
+            <b className="text-ink">Phone review</b>, this number gets dialled
             under our name, so it never goes live on an edit alone.
           </div>
         </div>

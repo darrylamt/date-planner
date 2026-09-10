@@ -10,7 +10,7 @@ import type { Occasion } from "../lib/types";
  * The aduro mascot: one character, one costume per occasion, three frames each.
  *
  * Paths are written out rather than built from a template because Metro
- * resolves require() at build time — a computed path bundles nothing and fails
+ * resolves require() at build time, a computed path bundles nothing and fails
  * at runtime with a missing asset.
  */
 const SPRITES: Record<Occasion, { idle: number; bounce: number; blink: number }> = {
@@ -58,7 +58,7 @@ const SPRITES: Record<Occasion, { idle: number; bounce: number; blink: number }>
 
 /**
  * Frame order. Mostly a two-frame breath, with a blink dropped in once per
- * cycle — a blink on every other frame reads as a twitch.
+ * cycle, a blink on every other frame reads as a twitch.
  */
 const CYCLE: ("idle" | "bounce" | "blink")[] = [
   "idle",

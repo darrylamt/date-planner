@@ -2,7 +2,7 @@
 --
 -- The division of labour: Google holds the volatile public facts (is it open,
 -- where exactly, what is the phone number today), and we hold the things only
--- we have — menus, prices, vibe tags, and the judgement about who a place
+-- we have, menus, prices, vibe tags, and the judgement about who a place
 -- suits. place_id is the join between them.
 --
 -- The immediate reason is Brasa Accra, which was closed and sat in the catalog
@@ -22,7 +22,7 @@ comment on column venues.google_place_id is
 comment on column venues.business_status is
   'OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY | FUTURE_OPENING, from the last Places sync.';
 comment on column venues.price_level is
-  'Google price bucket (PRICE_LEVEL_*). Maps to price_band. Never a substitute for a per-person figure — a bucket cannot produce the exact totals plans are built on.';
+  'Google price bucket (PRICE_LEVEL_*). Maps to price_band. Never a substitute for a per-person figure, a bucket cannot produce the exact totals plans are built on.';
 
 -- One venue per place. A duplicate link means two rows for one restaurant,
 -- which the planner would happily put in the same evening twice.

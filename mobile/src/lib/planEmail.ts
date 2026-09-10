@@ -5,7 +5,7 @@ import type { Itinerary } from "./types";
  * The plan as an email.
  *
  * A share link is the right thing to send someone in a chat, but an email is
- * often going to a person who wants the whole thing in front of them — a
+ * often going to a person who wants the whole thing in front of them, a
  * friend deciding whether to come, or the organiser keeping a record. So the
  * body carries the actual itinerary rather than only a URL, and still links
  * back for the live version.
@@ -26,12 +26,12 @@ export function planEmail(
   lines.push("");
 
   itinerary.stops.forEach((stop, i) => {
-    lines.push(`${i + 1}. ${stop.arrival_time} — ${stop.name}${stop.area ? `, ${stop.area}` : ""}`);
+    lines.push(`${i + 1}. ${stop.arrival_time}, ${stop.name}${stop.area ? `, ${stop.area}` : ""}`);
     if (stop.label) lines.push(`   ${stop.label}`);
     if (stop.what_to_do) lines.push(`   ${stop.what_to_do}`);
 
     stop.orders.forEach((o) => {
-      lines.push(`   · ${o.item}${o.qty > 1 ? ` ×${o.qty}` : ""} — ${ghs(Number(o.price_ghs))}`);
+      lines.push(`   · ${o.item}${o.qty > 1 ? ` ×${o.qty}` : ""}, ${ghs(Number(o.price_ghs))}`);
     });
 
     // A genuinely free stop should say so rather than show nothing at all.
@@ -62,7 +62,7 @@ export function planEmail(
   lines.push("Planned with aduro. Menu prices are from our catalog and can change.");
 
   return {
-    subject: `${itinerary.title} — ${longDate(date)}`,
+    subject: `${itinerary.title}, ${longDate(date)}`,
     body: lines.join("\n"),
   };
 }

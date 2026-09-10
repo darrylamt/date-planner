@@ -52,7 +52,7 @@ export function ErrorScreen({ onRetry, message }: { onRetry: () => void; message
       <h1 className="mt-6 font-display text-[28px] font-bold leading-[1.3]">That&apos;s on us.</h1>
       <p className="mt-3 text-[16px] leading-relaxed text-mutedbrown">
         {message ??
-          "Something went wrong while building the plan. Your answers are safe — nothing was lost."}
+          "Something went wrong while building the plan. Your answers are safe, nothing was lost."}
       </p>
       <button className="btn mt-6 w-full" onClick={onRetry}>
         Try again

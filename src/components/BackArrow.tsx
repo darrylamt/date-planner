@@ -1,4 +1,4 @@
-/** Thin, long-tailed arrow — shared by every back control. */
+/** Thin, long-tailed arrow, shared by every back control. */
 export function BackArrow() {
   return (
     <svg width="24" height="12" viewBox="0 0 24 12" fill="none" aria-hidden="true">

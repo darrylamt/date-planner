@@ -97,7 +97,7 @@ async function main() {
     try {
       status = await placeStatus(v.google_place_id!);
     } catch (e) {
-      console.log(`  ${v.name}: check failed — ${(e as Error).message}`);
+      console.log(`  ${v.name}: check failed, ${(e as Error).message}`);
       failed++;
       continue;
     }
@@ -105,7 +105,7 @@ async function main() {
     // Google no longer lists it at all. Worth a human look rather than an
     // automatic deactivation: it can mean a merged or replaced listing.
     if (status === null) {
-      console.log(`  ${v.name}: NOT LISTED on Google any more — check by hand`);
+      console.log(`  ${v.name}: NOT LISTED on Google any more, check by hand`);
       gone++;
       if (!dry) await touch(v.id, { business_status: "NOT_LISTED" });
       continue;
@@ -114,7 +114,7 @@ async function main() {
     const shut = isClosed(status);
 
     if (shut && v.is_active) {
-      console.log(`  ${v.name}: ${status} — deactivating`);
+      console.log(`  ${v.name}: ${status}, deactivating`);
       closed++;
       if (!dry) {
         await touch(v.id, {
@@ -129,12 +129,12 @@ async function main() {
     }
 
     /*
-     * Reopened. Left inactive on purpose — it may have been switched off for a
+     * Reopened. Left inactive on purpose, it may have been switched off for a
      * reason of our own, and Google saying it trades again is not permission
      * to start recommending it.
      */
     if (!shut && !v.is_active && v.business_status && isClosed(v.business_status)) {
-      console.log(`  ${v.name}: ${status} again — still inactive, reactivate by hand if you want it`);
+      console.log(`  ${v.name}: ${status} again, still inactive, reactivate by hand if you want it`);
       reopened++;
     }
 
@@ -148,7 +148,7 @@ async function main() {
   console.log(`  not listed   ${gone}`);
   if (failed) console.log(`  failed       ${failed}`);
   console.log("=".repeat(52));
-  if (dry) console.log("\nDry run — nothing was written.");
+  if (dry) console.log("\nDry run, nothing was written.");
 }
 
 interface VenueRow {

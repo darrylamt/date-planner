@@ -56,7 +56,7 @@ export function BulkPriceEditor({
       await supabase.from("menu_items").update({ price_ghs: prices[item.id] }).eq("id", item.id);
     }
     setBusy(false);
-    setToast("All prices saved — marked fresh");
+    setToast("All prices saved, marked fresh");
     setTimeout(() => setToast(null), 2000);
     router.refresh();
   }
@@ -66,7 +66,7 @@ export function BulkPriceEditor({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-[24px] font-bold">
-            Bulk price edit{venueName ? ` — ${venueName}` : ""}
+            Bulk price edit{venueName ? `, ${venueName}` : ""}
           </h1>
           <div className="text-[14px] text-mutedbrown">
             Tab moves down the price column · Enter saves the row · Esc reverts
@@ -145,7 +145,7 @@ export function BulkPriceEditor({
                     />
                   </td>
                   <td className={`font-bold ${dirty ? "text-flame" : "text-mutedbrown"}`}>
-                    {dirty ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%` : "—"}
+                    {dirty ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%` : ", "}
                   </td>
                 </tr>
               );

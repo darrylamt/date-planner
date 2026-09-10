@@ -24,7 +24,7 @@ import { BUDGET_MAX, BUDGET_MIN, BUDGET_STEP } from "@/lib/budget";
 
 /**
  * The multi-step input flow: one question per screen with a slim progress
- * indicator, exactly as designed — plus a pronoun/name field on the
+ * indicator, exactly as designed, plus a pronoun/name field on the
  * personalisation step so anyone can plan for anyone.
  */
 
@@ -238,7 +238,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
           <>
             <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">Where in Accra?</h2>
             <p className="mb-[26px] text-body text-mutedbrown">
-              Pick one or two areas — we&apos;ll keep the stops close together.
+              Pick one or two areas, we&apos;ll keep the stops close together.
             </p>
             <div className="flex flex-col">
               {areas.map((a, i) => {
@@ -334,7 +334,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
                 }
               />
             </div>
-            <div className="why mt-6">We keep the whole plan inside this — transport included.</div>
+            <div className="why mt-6">We keep the whole plan inside this, transport included.</div>
           </>
         )}
 
@@ -349,7 +349,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             <MonthCalendar value={inputs.date} onChange={(date) => update({ date })} />
             <div className="mt-6">
               <span className="flbl">Start time</span>
-              {/* Every half hour rather than five fixed options — 17:30 is not
+              {/* Every half hour rather than five fixed options, 17:30 is not
                   the only time anyone leaves the house. */}
               <select
                 className="inp w-[160px] font-mono"
@@ -388,7 +388,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
               What&apos;s the vibe?
             </h2>
             <p className="mb-[26px] text-body text-mutedbrown">
-              Choose up to three — we&apos;ll blend them.
+              Choose up to three, we&apos;ll blend them.
             </p>
             <div className="tsel-row">
               {VIBES.map((v, i) => {
@@ -557,8 +557,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
 
             {inputs.partySize === 1 && (
               <div className="why mt-6">
-                A solo day. We will keep it to places that are good on your own —
-                counter seats, somewhere comfortable to just be.
+                A solo day. We will keep it to places that are good on your own, counter seats, somewhere comfortable to just be.
               </div>
             )}
           </>
@@ -568,7 +567,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
           <>
             <div className="kente mt-[26px] w-16" />
             <h2 className="mb-2 mt-3.5 font-display text-stepq font-bold">
-              Now — tell us about {who}.
+              Now, tell us about {who}.
             </h2>
             <p className="mb-[22px] text-body text-mutedbrown">
               Make it personal. The details you add here are what turn a plan into a thoughtful
@@ -619,7 +618,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
               </div>
             </div>
             <p className="mt-[18px] text-[14px] italic leading-relaxed text-mutedbrown">
-              This stays between us — it&apos;s only used to shape {poss} evening.
+              This stays between us, it&apos;s only used to shape {poss} evening.
             </p>
           </>
         )}

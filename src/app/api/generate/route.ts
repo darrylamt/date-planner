@@ -23,8 +23,8 @@ import type {
  * Build a plan.
  *
  * Selection and arithmetic happen in planItinerary; the model is asked only
- * for the words. That removed the corrective retry loop entirely — a budget
- * cannot be exceeded by a step that never computes it — and cut the prompt
+ * for the words. That removed the corrective retry loop entirely, a budget
+ * cannot be exceeded by a step that never computes it, and cut the prompt
  * from the whole candidate catalogue down to the two or three chosen stops.
  */
 export const maxDuration = 60;
@@ -115,7 +115,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
     );
   }
 
-  // Nothing in the catalog at all — blaming the user's budget here is simply
+  // Nothing in the catalog at all, blaming the user's budget here is simply
   // wrong, and used to send people round a loop raising it against an empty
   // table.
   if (candidates.totalActiveVenues < 2) {
@@ -183,10 +183,9 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
           status: "no_match",
           headline: FOCUS_SHORTFALL[inputs.focus],
           message:
-            "That is a gap in our catalog, not in your budget — we would rather say so than send you somewhere that does not fit.",
+            "That is a gap in our catalog, not in your budget, we would rather say so than send you somewhere that does not fit.",
           suggestions: [
-            { label: "Plan a bit of everything instead", action: "clear_focus" },
-            ...suggestions.filter((sug) => sug.action === "widen_area"),
+            { label: "Plan a bit of everything instead", action: "clear_focus" }, ...suggestions.filter((sug) => sug.action === "widen_area"),
           ],
         });
       }

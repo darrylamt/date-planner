@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
 
 /**
- * Venue research — turn a name into a draft catalogue row.
+ * Venue research, turn a name into a draft catalogue row.
  *
  * Adding a venue by hand means filling seventeen fields, several of which
  * (coordinates, price band, vibe tags) require looking the place up anyway.
@@ -11,7 +11,7 @@ import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
  * back with the row filled in and the sources it used.
  *
  * It deliberately does NOT invent menu prices. Menus come from the photo
- * ingest, where the prices are read off an actual menu — a model guessing what
+ * ingest, where the prices are read off an actual menu, a model guessing what
  * a main course costs in Accra is exactly the failure mode that put unpriced
  * venues into plans as free evenings. Where sources describe cost in prose it
  * is reported as `price_signal` for a human to act on, and the per-person
@@ -119,7 +119,7 @@ Rules that matter more than filling every field:
   this: a wrong phone number sends a customer to a stranger, and wrong
   coordinates send them to the wrong side of the city.
 - "found": false if you cannot corroborate a venue by this name in Accra. Do
-  not substitute a similarly-named place in another city — say so in warnings.
+  not substitute a similarly-named place in another city, say so in warnings.
 - "avg_cost_per_person_ghs": what one person typically spends on a visit, and
   only when a source states it in cedis. Do not estimate from the price band,
   from comparable venues, or from what such a place "usually" costs.
@@ -139,7 +139,7 @@ Rules that matter more than filling every field:
 - "description": one or two plain sentences on what the place actually is. No
   marketing language.
 - Phone numbers in full international format (+233...).
-- "warnings": anything an admin should check — conflicting sources, a venue
+- "warnings": anything an admin should check, conflicting sources, a venue
   that may have closed, several branches, a name that matches more than one
   business.
 - Every entry in "sources" must be a page you actually consulted.`;
@@ -195,7 +195,7 @@ export async function researchVenue(
   } catch (e) {
     console.error("venue research failed", e);
     if (e instanceof Anthropic.RateLimitError) {
-      return { ok: false, error: "Rate limited — try again shortly." };
+      return { ok: false, error: "Rate limited, try again shortly." };
     }
     if (e instanceof Anthropic.AuthenticationError) {
       return { ok: false, error: "ANTHROPIC_API_KEY is missing or invalid." };
@@ -229,7 +229,7 @@ export async function researchVenue(
      * already broken it once: "From GHS 200" for one ceramics class arrived as
      * the per-person figure. The planner treats that number as what a visit
      * costs whenever a venue has no menu, so a lower bound there makes plans
-     * quietly exceed the budget they promised — the failure that matters most,
+     * quietly exceed the budget they promised, the failure that matters most,
      * in the direction that matters most.
      */
     const FLOOR_LANGUAGE =

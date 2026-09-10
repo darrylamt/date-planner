@@ -6,7 +6,7 @@
  *
  * These five modules are the vocabulary both clients speak: the domain types,
  * the questionnaire's options, the budget bounds and the formatting helpers.
- * They were kept in step by hand, and drift here is not a cosmetic problem —
+ * They were kept in step by hand, and drift here is not a cosmetic problem,
  * when the mobile copy of the occasion list fell behind the web one, four
  * occasion cards silently started the wrong pathway, because the stale copy
  * rejected occasions the rest of the app had already started sending.
@@ -39,7 +39,7 @@ const OLD_HEADER = /^\/\*\*\r?\n \* MIRRORED from the web app:[\s\S]*?\*\/\r?\n/
 function header(file: string): string {
   return [
     "/**",
-    ` * GENERATED — do not edit. Mirrored from src/lib/${file}.`,
+    ` * GENERATED, do not edit. Mirrored from src/lib/${file}.`,
     " *",
     " * Run `npm run mirror` after changing the web copy.",
     " */",

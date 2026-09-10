@@ -15,7 +15,7 @@ export type ColorSchemeName = "light" | "dark";
  * The occasion currently being planned, or null outside a pathway.
  *
  * Held in context rather than passed down so that every existing useTheme()
- * call picks the theme up untouched — threading an occasion through forty
+ * call picks the theme up untouched, threading an occasion through forty
  * components would have been the same change made forty times.
  */
 const OccasionContext = createContext<Occasion | null>(null);
@@ -31,7 +31,7 @@ export function OccasionThemeProvider({
 }
 
 export function useColorSchemeName(): ColorSchemeName {
-  // Null before the value is known — default to light rather than flashing a
+  // Null before the value is known, default to light rather than flashing a
   // dark frame on a light device.
   return useColorScheme() === "dark" ? "dark" : "light";
 }

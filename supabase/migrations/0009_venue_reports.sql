@@ -1,4 +1,4 @@
--- aduro — user reports on venues
+-- aduro, user reports on venues
 --
 -- The catalog goes stale in ways nothing automated catches. Google knows when
 -- a place shuts, but not that its prices went up in June, that the padel court
@@ -6,12 +6,12 @@
 -- hold. The people who find that out are the ones standing there.
 --
 -- So: let them say so, the way a driver flags a closed road. One tap, no
--- account required — plans can be built signed-out, and a reporting flow that
+-- account required, plans can be built signed-out, and a reporting flow that
 -- demands a login would lose exactly the person with the fresh information.
 --
 -- Nothing here changes the catalog on its own. A report is a flag for a human,
 -- not an edit: the same rule the phone gate already works by, for the same
--- reason — a venue anyone could silently repoint is a venue anyone could
+-- reason, a venue anyone could silently repoint is a venue anyone could
 -- silently repoint at themselves.
 
 create table if not exists public.venue_reports (

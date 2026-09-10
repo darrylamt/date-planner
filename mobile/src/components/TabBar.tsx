@@ -43,7 +43,7 @@ const INSET = 5;
  * on the right.
  *
  * Creating a plan is what this app exists for, so it is a peer of the nav
- * rather than buried in a screen — but deliberately NOT a tab, because it
+ * rather than buried in a screen, but deliberately NOT a tab, because it
  * starts a task instead of switching destination.
  *
  * The selection is a single pill that slides between slots rather than a

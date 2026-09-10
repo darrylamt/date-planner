@@ -17,7 +17,7 @@ function heading(size: number): string {
 }
 
 /**
- * Shared plan — public read-only view served by slug via the service role
+ * Shared plan, public read-only view served by slug via the service role
  * (no public SELECT policy on plans).
  *
  * Wears the occasion's own accent, so a link opened by someone who was not
@@ -72,7 +72,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
                   <div className="stime">{stop.arrival_time}</div>
                   <div className="text-vname font-semibold">{stop.name}</div>
                   <div className="text-[14px] text-mutedbrown">
-                    {stop.area} — {stop.what_to_do || stop.label.toLowerCase()}
+                    {stop.area}, {stop.what_to_do || stop.label.toLowerCase()}
                   </div>
                 </div>
               </div>

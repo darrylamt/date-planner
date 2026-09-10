@@ -4,7 +4,7 @@ import { SmartImage } from "@/components/SmartImage";
 import { AuthErrorNotice } from "@/components/AuthErrorNotice";
 
 /**
- * Landing page — mobile-first at 390px per the design's "home / hero" frame,
+ * Landing page, mobile-first at 390px per the design's "home / hero" frame,
  * with a photo collage added per the "more pictures, lively" brief.
  */
 const HERO_IMG =
@@ -32,7 +32,7 @@ const VALUE_PROPS = [
   {
     n: "01",
     title: "Prices before you go",
-    body: "Menus and costs up front — no surprises when the bill comes.",
+    body: "Menus and costs up front, no surprises when the bill comes.",
   },
   {
     n: "02",
@@ -72,7 +72,7 @@ export default function LandingPage() {
               Plan a date they&apos;ll <em className="not-italic text-flame">actually</em> remember.
             </h1>
             <p className="mt-4 text-sub text-cocoa">
-              Tell us your budget, the vibe, and a little about them — we&apos;ll build a
+              Tell us your budget, the vibe, and a little about them, we&apos;ll build a
               back-to-back evening in Accra with real menus and real prices.
             </p>
           </div>
@@ -96,14 +96,14 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Photo collage — added for liveliness, same visual language */}
+      {/* Photo collage, added for liveliness, same visual language */}
       <div className="mt-5 grid grid-cols-4 gap-2 px-6">
         {COLLAGE.map((c) => (
           <SmartImage key={c.src} src={c.src} alt={c.alt} className="h-[72px] rounded-icon md:h-[110px]" sizes="25vw" />
         ))}
       </div>
 
-      {/* Value props — editorial numerals, no icon tiles */}
+      {/* Value props, editorial numerals, no icon tiles */}
       <div className="mt-8 flex flex-col gap-5 px-6 md:grid md:grid-cols-3 md:gap-6">
         {VALUE_PROPS.map((v) => (
           <div key={v.title} className="flex items-start gap-4">
@@ -119,7 +119,7 @@ export default function LandingPage() {
         ))}
       </div>
 
-      {/* Testimonials — one from each side, since anyone can be the planner */}
+      {/* Testimonials, one from each side, since anyone can be the planner */}
       <div className="mt-7 grid gap-3 px-6 md:grid-cols-2">
         <figure className="rounded-btn bg-sand p-5">
           <div className="text-caption font-bold uppercase tracking-[0.08em] text-mutedbrown">

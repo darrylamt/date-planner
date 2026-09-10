@@ -3,7 +3,7 @@ import type { Gender, Pronoun } from "./types";
 /**
  * Copy engine.
  *
- * Nobody is asked to pick a pronoun any more — that question read as a form to
+ * Nobody is asked to pick a pronoun any more, that question read as a form to
  * fill in rather than a question about someone you like. For a pair we ask a
  * plain "is it a him or a her?", with skipping it a first-class answer, and
  * everything else is derived. Groups and solo outings never see it at all.

@@ -12,7 +12,7 @@ import { swapStopLocally } from "@/lib/swapStop";
 import type { Itinerary, ItineraryOrder, PlanInputs } from "@/lib/types";
 
 /**
- * Itinerary result — mobile timeline at 390px and the two-column desktop
+ * Itinerary result, mobile timeline at 390px and the two-column desktop
  * layout from the design (stops left, sticky budget rail right).
  */
 export function ItineraryView({
@@ -54,7 +54,7 @@ export function ItineraryView({
   function handleSwap(index: number) {
     const result = swapStopLocally(itinerary, index, inputs.budget);
     if (!result) {
-      showToast("No other spot fits this slot — try widening the area or budget.");
+      showToast("No other spot fits this slot, try widening the area or budget.");
       return;
     }
     onItineraryChange(result.itinerary);
@@ -72,7 +72,7 @@ export function ItineraryView({
     const est = Math.round(food + Number(itinerary.transport_total_ghs));
     onItineraryChange({ ...itinerary, stops, food_total_ghs: food, est_total_ghs: est });
     if (est > inputs.budget) {
-      showToast(`Heads up — now ${ghs(est - inputs.budget)} over budget`);
+      showToast(`Heads up, now ${ghs(est - inputs.budget)} over budget`);
     }
   }
 
@@ -112,12 +112,12 @@ export function ItineraryView({
         const msg =
           `Hello ${stop.name}! I'd like to reserve a table for two on ` +
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
-          `Please confirm availability. — sent via aduro`;
+          `Please confirm availability., sent via aduro`;
         waWindow.location.href = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
-        showToast("Request sent — the venue will confirm on WhatsApp");
+        showToast("Request sent, the venue will confirm on WhatsApp");
       } else {
         waWindow?.close();
-        showToast("Request logged — this venue has no WhatsApp number yet, we'll follow up");
+        showToast("Request logged, this venue has no WhatsApp number yet, we'll follow up");
       }
 
       const stops = itinerary.stops.map((s, i) =>
@@ -126,7 +126,7 @@ export function ItineraryView({
       onItineraryChange({ ...itinerary, stops });
     } catch {
       waWindow?.close();
-      showToast("Couldn't send the reservation — try again in a moment.");
+      showToast("Couldn't send the reservation, try again in a moment.");
     } finally {
       setReservingIndex(null);
     }
@@ -139,13 +139,13 @@ export function ItineraryView({
     const url = `${window.location.origin}/p/${slug}`;
     try {
       await navigator.clipboard.writeText(url);
-      showToast("Link copied — send it to anyone");
+      showToast("Link copied, send it to anyone");
     } catch {
       showToast(url);
     }
   }
 
-  /** Added feature: WhatsApp share — the way plans actually get sent in Ghana. */
+  /** Added feature: WhatsApp share, the way plans actually get sent in Ghana. */
   async function handleWhatsApp() {
     let slug = shareSlug;
     if (!slug) slug = await onSave();

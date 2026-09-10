@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 /**
- * Server-side only — never import from a client component.
+ * Server-side only, never import from a client component.
  *
  * The client is constructed at module load, so importing this (or anything
  * that imports it) into a "use client" file throws in the browser for want of

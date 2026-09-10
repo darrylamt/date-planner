@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Design tokens — single source of truth.
+ * Design tokens, single source of truth.
  *
  * Extracted from the Claude Design source ("Accra Date Planner.dc.html").
  * Per the client's follow-up notes the original earth-tone palette
@@ -16,7 +16,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Surfaces — dark romantic: deep plum-black velvet
+        // Surfaces, dark romantic: deep plum-black velvet
         cream: "#1A0D14", // app background
         sand: "#331A26", // secondary surface
         shell: "#26131D", // card background
@@ -24,7 +24,7 @@ const config: Config = {
         blush: "#FFF1F6", // light text on accents / photos
         // Brand
         flame: {
-          DEFAULT: "#E23D6D", // primary accent — deep rose
+          DEFAULT: "#E23D6D", // primary accent, deep rose
           deep: "#C92C58", // hover
           dark: "#AF2148", // pressed / link hover
         },
@@ -33,7 +33,7 @@ const config: Config = {
           deep: "#D19A32",
         },
         lagoon: {
-          DEFAULT: "#3A1526", // raised dark surface — velvet wine
+          DEFAULT: "#3A1526", // raised dark surface, velvet wine
           mid: "#55203A", // budget bar track
           soft: "#BC8CA3", // muted text on dark
           faint: "#F8E0EA", // light text on dark
@@ -53,7 +53,7 @@ const config: Config = {
         staletext: "#F2A2C0", // stale badge text
       },
       fontFamily: {
-        // One sans face throughout — matches the iOS app, which uses the
+        // One sans face throughout, matches the iOS app, which uses the
         // system sans. Weight and size carry hierarchy, not a change of face.
         display: ["var(--font-sans)", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

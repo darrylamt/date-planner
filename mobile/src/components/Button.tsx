@@ -24,7 +24,7 @@ export interface ButtonProps {
 
 const HEIGHT: Record<Size, number> = { large: 50, medium: 40, small: 32 };
 
-/** iOS button styles: filled, tinted, gray, plain — matching HIG naming. */
+/** iOS button styles: filled, tinted, gray, plain, matching HIG naming. */
 export function Button({
   title,
   onPress,

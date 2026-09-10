@@ -1,5 +1,5 @@
 /**
- * GENERATED — do not edit. Mirrored from src/lib/format.ts.
+ * GENERATED, do not edit. Mirrored from src/lib/format.ts.
  *
  * Run `npm run mirror` after changing the web copy.
  */

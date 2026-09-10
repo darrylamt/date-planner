@@ -62,10 +62,10 @@ function LoginInner() {
         if (err) throw err;
 
         // With "Confirm email" on in Supabase, signUp returns a user but no
-        // session — the account is not usable until the link is clicked.
+        // session, the account is not usable until the link is clicked.
         if (!data.session) {
           setNotice(
-            `Almost there — confirm your address using the link we sent to ${email.trim()}, then sign in.`
+            `Almost there, confirm your address using the link we sent to ${email.trim()}, then sign in.`
           );
           return;
         }
@@ -160,7 +160,7 @@ function LoginInner() {
           {notice && <div className="why not-italic">{notice}</div>}
           {(error || linkError) && (
             <div className="why not-italic text-staletext">
-              {error ?? "That link didn't work — try signing in instead."}
+              {error ?? "That link didn't work, try signing in instead."}
             </div>
           )}
         </form>
@@ -206,7 +206,7 @@ function friendlyAuthError(err: unknown): string {
     return "That email and password don't match. If you signed up with a magic link before, use “Forgot your password?” to set one.";
   }
   if (/email not confirmed/i.test(message)) {
-    return "Confirm your email address first — check your inbox for the link.";
+    return "Confirm your email address first, check your inbox for the link.";
   }
   if (/already registered|already been registered/i.test(message)) {
     return "There's already an account with that address. Try signing in.";
