@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   // Budget available for the replacement: whole budget minus the other stops,
   // minus a conservative transport allowance (recomputed properly afterwards).
   const otherStopsCost = itinerary.stops.reduce(
-    (sum, s, i) => (i === stopIndex ? sum : sum + Number(s.est_cost_for_two_ghs)),
+    (sum, s, i) => (i === stopIndex ? sum : sum + Number(s.est_cost_ghs)),
     0
   );
   const transportAllowance = Math.max(itinerary.transport_total_ghs, (itinerary.stops.length - 1) * 40);

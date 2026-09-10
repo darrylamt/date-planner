@@ -1,6 +1,6 @@
 import type { Candidates } from "./matching";
 import type { Itinerary, PlanInputs } from "./types";
-import { pronounSet, aboutName } from "./pronouns";
+import { pronounSet, aboutName, pronounForGender } from "./pronouns";
 import { longDate, time12 } from "./format";
 
 /**
@@ -26,8 +26,8 @@ type Itinerary = {
                                  // items MUST come from that venue's menu_items with real prices;
                                  // price_ghs is the line total (unit price × qty).
                                  // For activities use entry/rental items the same way. [] if nothing fits.
-    est_cost_for_two_ghs: number; // sum of orders (plus event ticket ×2 when kind = "event")
-    why_this_fits: string;       // one warm sentence tying the stop to the partner details
+    est_cost_ghs: number; // sum of orders for the WHOLE party (event tickets × party size)
+    why_this_fits: string;       // one warm sentence tying the stop to who this is for
     image_url: string | null;    // copy from the venue data
     google_maps_url: string | null;
     reservation_required: boolean;
@@ -38,7 +38,7 @@ type Itinerary = {
   transport_total_ghs: number;   // sum of hop costs
   est_total_ghs: number;         // food_total_ghs + transport_total_ghs — MUST be ≤ the budget
   budget_note: string | null;    // honest one-liner if the budget is tight (what to trim), else null
-  personal_summary: string;      // ≤ 15 words: the partner details you designed around, e.g. "Seafood · quiet places near water · highlife records"
+  personal_summary: string;      // ≤ 15 words: the details you designed around, e.g. "Seafood · quiet places near water · highlife records"
 };`;
 
 export function buildSystemPrompt(): string {
@@ -51,20 +51,53 @@ ${ITINERARY_TYPE}
 3. Build 2 to 4 stops, back-to-back: each arrival_time = previous arrival + previous duration + hop minutes. Vary the stop types — this is a date planner, not a restaurant list: mix food with an activity, event, dessert or lounge when the timing and budget allow.
 4. est_total_ghs (food + transport) MUST NOT exceed the stated budget. If things are tight, choose cheaper items, drop to 2 stops, and say so honestly in budget_note with what was trimmed. Leave a little buffer when you can.
 5. Respect the vibe: calm/chill → quiet venues; lively → energetic ones; romantic → intimate; adventurous → activities. Respect the occasion pacing (first dates get easy exits; anniversaries get the standout venue).
-6. Weave the partner personalisation into WHICH stops you pick and into every why_this_fits line. Mention the specific detail (their favourite food, place style, artist/hobby). Honour "avoid" strictly — allergies and dislikes are non-negotiable (e.g. shellfish allergy means no shellfish dishes at all).
+6. Weave the personalisation into WHICH stops you pick and into every why_this_fits line. Mention the specific detail (their favourite food, place style, artist/hobby). Honour "avoid" strictly — allergies and dislikes are non-negotiable (e.g. shellfish allergy means no shellfish dishes at all).
 7. Use the per-hop transport estimates supplied in the data for hops between your chosen stops. Do not invent transport prices.
-8. If an event in the data genuinely fits the date and vibe, prefer weaving it in — events make dates memorable. For events, venue_id is the event id and est_cost_for_two_ghs includes 2 tickets.
+8. If an event in the data genuinely fits the date and vibe, prefer weaving it in — events make an outing memorable. For events, venue_id is the event id and est_cost_ghs covers one ticket per person in the party.
 9. Times are for the requested date and window only. Do not schedule outdoor daylight activities after sunset (~6 PM in Accra).`;
 }
 
-function partnerBlock(inputs: PlanInputs): string {
+/**
+ * Who the outing is for. The shape changes with the party: a solo day has no
+ * "them" to design around, and a group has several — writing the block one way
+ * and hoping the model adapts produced plans addressed to a partner who did
+ * not exist.
+ */
+function peopleBlock(inputs: PlanInputs): string {
   const p = inputs.partner;
-  const ps = pronounSet(p.pronoun);
-  const who = aboutName(p.name, p.pronoun);
-  return `PARTNER (refer to ${ps.them} as "${who}"${p.name ? ` — use the name "${p.name}"` : ""}, pronoun: ${ps.they}/${ps.them}):
+  const size = inputs.partySize;
+
+  if (size <= 1) {
+    return `WHO THIS IS FOR: one person, on their own. This is a solo outing.
+- Never imply company, a date or a companion. No tables for two, no shared plates framed as sharing.
+- Solo-friendly matters: counter seating, somewhere comfortable to be alone, staff used to single covers.
+- Favourite food or cuisine: ${p.food || "not given"}
+- Their kind of place: ${p.place || "not given"}
+- Something they are into: ${p.interests || "not given"}
+- MUST AVOID: ${p.avoid || "nothing flagged"}`;
+  }
+
+  if (size > 2) {
+    const named = inputs.companions.filter(Boolean);
+    return `WHO THIS IS FOR: a group of ${size}${named.length ? ` — ${named.join(", ")}` : ""}.
+- Order for ${size} people. Every quantity and every price must cover the whole group.
+- Prefer places that can actually seat ${size}: shared tables, bookable spaces, activities that take a group.
+- Do not write couple-ish copy. No "the two of you", no candlelit framing.
+- Food or cuisine they enjoy: ${p.food || "not given"}
+- Their kind of place: ${p.place || "not given"}
+- Something they are into: ${p.interests || "not given"}
+- MUST AVOID: ${p.avoid || "nothing flagged"}`;
+  }
+
+  const pronoun = pronounForGender(p.gender);
+  const ps = pronounSet(pronoun);
+  const who = aboutName(p.name, pronoun);
+  return `WHO THIS IS FOR: two people. Refer to the other person as "${who}"${
+    p.name ? ` — use the name "${p.name}"` : ""
+  }, pronoun ${ps.they}/${ps.them}.
 - Favourite food or cuisine: ${p.food || "not given"}
 - ${ps.their} kind of place: ${p.place || "not given"}
-- Something ${ps.they} love${p.pronoun === "they" ? "" : "s"}: ${p.interests || "not given"}
+- Something ${ps.they} love${pronoun === "they" ? "" : "s"}: ${p.interests || "not given"}
 - MUST AVOID: ${p.avoid || "nothing flagged"}`;
 }
 
@@ -81,11 +114,12 @@ export function buildGenerateUserMessage(
 - Date: ${longDate(inputs.date)} (${inputs.date})
 - Start: ${time12(inputs.startTime)}, out for about ${inputs.hours} hours
 - Areas: ${areaLabel}
-- Total budget for two, all-in (food + transport): GHS ${inputs.budget}
+- Party size: ${inputs.partySize} ${inputs.partySize === 1 ? "person" : "people"} — every order and price must cover all of them
+- Total budget for the whole party, all-in (food + transport): GHS ${inputs.budget}
 - Vibe: ${inputs.vibes.join(", ")}
 - Occasion: ${inputs.occasion.replace(/_/g, " ")}
 
-${partnerBlock(inputs)}
+${peopleBlock(inputs)}
 
 AVAILABLE VENUES (the ONLY venues you may use):
 ${JSON.stringify(
@@ -154,7 +188,7 @@ export function buildSwapUserMessage(
     .map((s, i) =>
       i === stopIndex
         ? null
-        : `- [KEEP] ${s.arrival_time} ${s.name} (${s.area}) — GHS ${s.est_cost_for_two_ghs}`
+        : `- [KEEP] ${s.arrival_time} ${s.name} (${s.area}) — GHS ${s.est_cost_ghs}`
     )
     .filter(Boolean)
     .join("\n");
@@ -170,11 +204,11 @@ REPLACE this stop: ${old.arrival_time} — ${old.name} (${old.area}), label "${o
 The replacement must:
 - arrive at the same time (${old.arrival_time}) and take roughly the same duration
 - serve the same slot in the evening (same label spirit: ${old.label})
-- cost at most GHS ${budgetForStop} for two, INCLUDING what is ordered
+- cost at most GHS ${budgetForStop} for the whole party, INCLUDING what is ordered
 - NOT be any venue already in the plan (including the one being replaced)
 - still honour the partner details and the vibe
 
-${partnerBlock(inputs)}
+${peopleBlock(inputs)}
 Vibe: ${inputs.vibes.join(", ")} · Occasion: ${inputs.occasion.replace(/_/g, " ")}
 
 CANDIDATE VENUES (the ONLY options):
@@ -209,5 +243,5 @@ ${JSON.stringify(
 TRANSPORT ESTIMATES (context only; totals are recomputed server-side):
 ${hopTable}
 
-Return ONLY a JSON object for the single replacement stop, matching the "stops" array element type from the Itinerary contract (venue_id, kind, name, area, arrival_time, duration_mins, label, what_to_do, orders, est_cost_for_two_ghs, why_this_fits, image_url, google_maps_url, reservation_required). No markdown, no commentary.`;
+Return ONLY a JSON object for the single replacement stop, matching the "stops" array element type from the Itinerary contract (venue_id, kind, name, area, arrival_time, duration_mins, label, what_to_do, orders, est_cost_ghs, why_this_fits, image_url, google_maps_url, reservation_required). No markdown, no commentary.`;
 }

@@ -25,7 +25,11 @@ const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
   first_date: "sparkles",
   anniversary: "heart.fill",
   date_night: "moon.stars.fill",
+  birthday: "gift.fill",
+  graduation: "graduationcap.fill",
+  celebration: "party.popper.fill",
   friend_outing: "person.2.fill",
+  solo_day: "figure.walk",
 };
 
 export default function Home() {

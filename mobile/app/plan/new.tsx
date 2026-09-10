@@ -14,7 +14,7 @@ import { generatePlan } from "../../src/lib/api";
 import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import { TOTAL_STEPS, defaultInputs } from "../../src/lib/planConstants";
-import { possessiveName } from "../../src/lib/pronouns";
+import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
@@ -258,7 +258,7 @@ export default function PlanNew() {
     (step !== 0 || inputs.surpriseMe || inputs.areaIds.length > 0) &&
     (step !== 3 || inputs.vibes.length > 0);
 
-  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
+  const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
   return (
     <KeyboardAvoidingView

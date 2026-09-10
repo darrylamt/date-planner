@@ -77,9 +77,9 @@ export function recomputeItinerary(
   const foodTotal = stops.reduce((sum, s) => {
     const orderSum = s.orders.reduce((o, x) => o + Number(x.price_ghs), 0);
     // Trust order math when present; otherwise the model's stop estimate.
-    const stopCost = orderSum > 0 ? Math.max(orderSum, 0) : Number(s.est_cost_for_two_ghs);
-    s.est_cost_for_two_ghs = Math.round(s.kind === "event" ? Number(s.est_cost_for_two_ghs) : stopCost);
-    return sum + s.est_cost_for_two_ghs;
+    const stopCost = orderSum > 0 ? Math.max(orderSum, 0) : Number(s.est_cost_ghs);
+    s.est_cost_ghs = Math.round(s.kind === "event" ? Number(s.est_cost_ghs) : stopCost);
+    return sum + s.est_cost_ghs;
   }, 0);
 
   const transportTotal = hops.reduce((s, h) => s + h.cost_ghs, 0);

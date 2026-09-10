@@ -1,10 +1,12 @@
-import type { Pronoun } from "./types";
+import type { Gender, Pronoun } from "./types";
 
 /**
- * Gender-neutral copy engine.
- * The design's sample screens said "tell us about her" — but a girl can be
- * planning for a boy (or anyone). All partner-facing copy is generated from
- * the pronoun the planner picks, defaulting to "them".
+ * Copy engine.
+ *
+ * Nobody is asked to pick a pronoun any more — that question read as a form to
+ * fill in rather than a question about someone you like. For a pair we ask a
+ * plain "is it a him or a her?", with skipping it a first-class answer, and
+ * everything else is derived. Groups and solo outings never see it at all.
  */
 export interface PronounSet {
   them: string; // tell us about ___
@@ -21,6 +23,13 @@ const SETS: Record<Pronoun, PronounSet> = {
 
 export function pronounSet(p: Pronoun): PronounSet {
   return SETS[p] ?? SETS.they;
+}
+
+/** Unspecified stays "they", which is a real answer and not a fallback. */
+export function pronounForGender(gender: Gender | undefined): Pronoun {
+  if (gender === "female") return "she";
+  if (gender === "male") return "he";
+  return "they";
 }
 
 /** "Kofi's evening" / "their evening" */

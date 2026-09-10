@@ -6,7 +6,7 @@ import { Group, Row } from "../List";
 import { Symbol } from "../Symbol";
 import { GUTTER, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { possessiveName } from "../../lib/pronouns";
+import { possessiveName, pronounForGender } from "../../lib/pronouns";
 import type { GenerateResponse, PlanInputs } from "../../lib/types";
 
 /** Shared centred layout for the full-screen states. */
@@ -55,7 +55,7 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
+  const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
   const hint = inputs.partner.place
     ? `Because ${inputs.partner.name || "they"} love${inputs.partner.name ? "s" : ""} ${inputs.partner.place.toLowerCase()}, we are shaping the evening around it.`
     : "We are weaving the little details you shared into every stop.";

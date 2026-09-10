@@ -61,22 +61,33 @@ export interface EventRow {
   is_active: boolean;
 }
 
-/** Pronoun choice powers the gender-neutral copy — planner may be anyone, partner may be anyone. */
+/**
+ * Who the plan is for. Asked only when the outing is a pair, and only to make
+ * the copy read naturally — never to filter venues. "unspecified" is the
+ * default and always a valid answer.
+ */
+export type Gender = "unspecified" | "female" | "male";
+
+/** Derived from Gender for copy; no longer asked directly. */
 export type Pronoun = "they" | "she" | "he";
 
 export interface PlanInputs {
   areaIds: string[];
   areaNames: string[];
   surpriseMe: boolean;
+  /** 1 = a solo outing. Drives portions, table size and the whole budget. */
+  partySize: number;
+  /** Names of the others, for groups. Optional and purely for warmth in copy. */
+  companions: string[];
   budget: number;
   date: string; // ISO yyyy-mm-dd
   startTime: string; // e.g. "17:30"
   hours: number; // duration of the outing
   vibes: string[];
-  occasion: "first_date" | "anniversary" | "date_night" | "friend_outing";
+  occasion: Occasion;
   partner: {
     name: string; // optional display name ("" allowed)
-    pronoun: Pronoun;
+    gender: Gender;
     food: string;
     place: string;
     interests: string;
@@ -92,6 +103,16 @@ export interface ItineraryOrder {
   price_ghs: number; // total for qty, from real menu_items
 }
 
+export type Occasion =
+  | "first_date"
+  | "anniversary"
+  | "date_night"
+  | "friend_outing"
+  | "birthday"
+  | "graduation"
+  | "celebration"
+  | "solo_day";
+
 export interface ItineraryStop {
   venue_id: string;
   kind: "venue" | "event";
@@ -102,7 +123,8 @@ export interface ItineraryStop {
   label: string; // e.g. "DINNER", "MUSIC & DESSERT"
   what_to_do: string; // one sentence, for activities/events
   orders: ItineraryOrder[]; // [] for pure activities
-  est_cost_for_two_ghs: number;
+  /** Total for the whole party at this stop. */
+  est_cost_ghs: number;
   why_this_fits: string;
   image_url: string | null;
   google_maps_url?: string | null;

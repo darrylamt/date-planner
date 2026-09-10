@@ -176,7 +176,7 @@ export function StopCard({
             Stop total
           </Text>
           <Text variant="subheadline" weight="600" tabular>
-            {ghs(stop.est_cost_for_two_ghs)}
+            {ghs(stop.est_cost_ghs)}
           </Text>
         </View>
 

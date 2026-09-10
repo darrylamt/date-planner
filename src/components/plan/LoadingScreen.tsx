@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PlanInputs } from "@/lib/types";
-import { possessiveName } from "@/lib/pronouns";
+import { possessiveName, pronounForGender } from "@/lib/pronouns";
 
 /** The designed generating screen: kente strip, pulsing dots, rotating messages. */
 export function LoadingScreen({ inputs }: { inputs: PlanInputs }) {
@@ -20,7 +20,7 @@ export function LoadingScreen({ inputs }: { inputs: PlanInputs }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
+  const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
   const hint = inputs.partner.place
     ? `Because ${inputs.partner.name || "they"} love${inputs.partner.name ? "s" : ""} ${inputs.partner.place.toLowerCase()}, we're shaping the evening around it.`
     : `We're weaving the little details you shared into every stop.`;

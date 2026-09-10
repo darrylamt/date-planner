@@ -230,7 +230,7 @@ export function StopCard({
 
       <div className="mt-3 flex items-center justify-between text-[15px]">
         <span className="text-mutedbrown">Est. for two</span>
-        <b className="whitespace-nowrap text-[17px] text-amber">{ghs(stop.est_cost_for_two_ghs)}</b>
+        <b className="whitespace-nowrap text-[17px] text-amber">{ghs(stop.est_cost_ghs)}</b>
       </div>
 
       <div className="why mt-3">{stop.why_this_fits}</div>

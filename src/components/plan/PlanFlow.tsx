@@ -2,12 +2,24 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BackArrow } from "@/components/BackArrow";
+import { time12 } from "@/lib/format";
 import { MonthCalendar } from "./MonthCalendar";
 import { LoadingScreen } from "./LoadingScreen";
 import { ErrorScreen, NoMatchScreen } from "./StatusScreens";
 import { ItineraryView } from "./ItineraryView";
-import { aboutName, possessiveName, pronounSet } from "@/lib/pronouns";
-import type { Area, GenerateResponse, Itinerary, PlanInputs, Pronoun } from "@/lib/types";
+import { aboutName, possessiveName, pronounSet, pronounForGender } from "@/lib/pronouns";
+import {
+  DURATIONS,
+  OCCASIONS,
+  PARTY_SIZES,
+  TOTAL_STEPS,
+  VIBES,
+  defaultInputs,
+  partyLabel,
+  startTimeOptions,
+  vibeBlurb,
+} from "@/lib/planConstants";
+import type { Area, GenerateResponse, Gender, Itinerary, PlanInputs } from "@/lib/types";
 import { BUDGET_MAX, BUDGET_MIN, BUDGET_STEP } from "@/lib/budget";
 
 /**
@@ -22,43 +34,6 @@ type Phase =
   | { name: "result"; itinerary: Itinerary }
   | { name: "no_match"; data: Extract<GenerateResponse, { status: "no_match" }> }
   | { name: "error"; message?: string };
-
-const TOTAL_STEPS = 7;
-const VIBES = ["Romantic", "Calm", "Lively", "Fun", "Adventurous", "Chill"];
-const START_TIMES = ["10:00", "13:00", "16:00", "17:30", "19:00"];
-const DURATIONS: { label: string; hours: number }[] = [
-  { label: "2h", hours: 2 },
-  { label: "4h", hours: 4 },
-  { label: "6h", hours: 6 },
-  { label: "All evening", hours: 7 },
-];
-const OCCASIONS = [
-  { id: "first_date", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
-  { id: "anniversary", title: "Anniversary", sub: "Pull out the stops — this one matters" },
-  { id: "date_night", title: "Regular date night", sub: "Keep it fresh without the fuss" },
-  { id: "friend_outing", title: "Friend outing", sub: "Good food, good company, no candles" },
-] as const;
-
-function defaultDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); // next Saturday
-  return d.toISOString().slice(0, 10);
-}
-
-function defaultInputs(): PlanInputs {
-  return {
-    areaIds: [],
-    areaNames: [],
-    surpriseMe: false,
-    budget: 800,
-    date: defaultDate(),
-    startTime: "17:30",
-    hours: 4,
-    vibes: [],
-    occasion: "date_night",
-    partner: { name: "", pronoun: "they", food: "", place: "", interests: "", avoid: "" },
-  };
-}
 
 const STORE_KEY = "aduro.plan.v1";
 
@@ -231,9 +206,9 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
   const goNext = () =>
     step === TOTAL_STEPS - 1 ? void generate() : setPhase({ name: "steps", step: step + 1 });
 
-  const ps = pronounSet(inputs.partner.pronoun);
-  const who = aboutName(inputs.partner.name, inputs.partner.pronoun);
-  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
+  const ps = pronounSet(pronounForGender(inputs.partner.gender));
+  const who = aboutName(inputs.partner.name, pronounForGender(inputs.partner.gender));
+  const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
   const canContinue =
     (step !== 0 || inputs.surpriseMe || inputs.areaIds.length > 0) &&
@@ -372,23 +347,19 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             <MonthCalendar value={inputs.date} onChange={(date) => update({ date })} />
             <div className="mt-6">
               <span className="flbl">Start time</span>
-              <div className="tsel-row">
-                {START_TIMES.map((t, i) => (
-                  <span key={t} className="flex items-baseline">
-                    {i > 0 && <span className="tsel-div" />}
-                    <button
-                      className={`tsel ${inputs.startTime === t ? "tsel-on" : ""}`}
-                      onClick={() => update({ startTime: t })}
-                    >
-                      {new Date(`2000-01-01T${t}:00`).toLocaleTimeString("en-GB", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      }).toUpperCase()}
-                    </button>
-                  </span>
+              {/* Every half hour rather than five fixed options — 17:30 is not
+                  the only time anyone leaves the house. */}
+              <select
+                className="inp w-[160px] font-mono"
+                value={inputs.startTime}
+                onChange={(e) => update({ startTime: e.target.value })}
+              >
+                {startTimeOptions().map((t: string) => (
+                  <option key={t} value={t}>
+                    {time12(t)}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
             <div className="mt-6">
               <span className="flbl">How long?</span>
@@ -490,50 +461,104 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
 
         {step === 5 && (
           <>
-            {/* Extension in the design's language: who is this date for? The
-                design assumed "her"; the pronoun picker keeps copy personal
-                for anyone planning for anyone. */}
             <h2 className="mb-2 mt-[26px] font-display text-stepq font-bold">
-              Who are you planning for?
+              Who is coming?
             </h2>
             <p className="mb-[26px] text-body text-mutedbrown">
-              A name is optional — it just makes the plan feel like theirs.
+              This sets the portions, the table and the budget split.
             </p>
-            <div>
-              <span className="flbl">Their name (optional)</span>
-              <input
-                className="inp"
-                placeholder="e.g. Ama, Kofi…"
-                value={inputs.partner.name}
-                maxLength={60}
-                onChange={(e) => update({ partner: { ...inputs.partner, name: e.target.value } })}
-              />
+
+            <div className="tsel-row">
+              {PARTY_SIZES.map((n, i) => (
+                <span key={n} className="flex items-baseline">
+                  {i > 0 && <span className="tsel-div" />}
+                  <button
+                    className={`tsel ${inputs.partySize === n ? "tsel-on" : ""}`}
+                    onClick={() =>
+                      update({
+                        partySize: n,
+                        // Trim names that no longer have a seat.
+                        companions: inputs.companions.slice(0, Math.max(0, n - 1)),
+                      })
+                    }
+                  >
+                    {n === 1 ? "Just me" : n}
+                  </button>
+                </span>
+              ))}
             </div>
-            <div className="mt-5">
-              <span className="flbl">How should we refer to them?</span>
-              <div className="tsel-row">
-                {(
-                  [
-                    { id: "they", label: "They / them" },
-                    { id: "she", label: "She / her" },
-                    { id: "he", label: "He / him" },
-                  ] as { id: Pronoun; label: string }[]
-                ).map((p, i) => (
-                  <span key={p.id} className="flex items-baseline">
-                    {i > 0 && <span className="tsel-div" />}
-                    <button
-                      className={`tsel ${inputs.partner.pronoun === p.id ? "tsel-on" : ""}`}
-                      onClick={() => update({ partner: { ...inputs.partner, pronoun: p.id } })}
-                    >
-                      {p.label}
-                    </button>
-                  </span>
-                ))}
+
+            {inputs.partySize === 2 && (
+              <>
+                <div className="mt-6">
+                  <span className="flbl">Their name (optional)</span>
+                  <input
+                    className="inp"
+                    placeholder="e.g. Ama, Kofi…"
+                    value={inputs.partner.name}
+                    maxLength={60}
+                    onChange={(e) =>
+                      update({ partner: { ...inputs.partner, name: e.target.value } })
+                    }
+                  />
+                </div>
+                <div className="mt-5">
+                  <span className="flbl">Is it a him or a her? (optional)</span>
+                  <div className="tsel-row">
+                    {(
+                      [
+                        { id: "unspecified", label: "Rather not say" },
+                        { id: "female", label: "Her" },
+                        { id: "male", label: "Him" },
+                      ] as { id: Gender; label: string }[]
+                    ).map((g, i) => (
+                      <span key={g.id} className="flex items-baseline">
+                        {i > 0 && <span className="tsel-div" />}
+                        <button
+                          className={`tsel ${inputs.partner.gender === g.id ? "tsel-on" : ""}`}
+                          onClick={() =>
+                            update({ partner: { ...inputs.partner, gender: g.id } })
+                          }
+                        >
+                          {g.label}
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {inputs.partySize > 2 && (
+              <div className="mt-6">
+                <span className="flbl">Who else is coming? (optional)</span>
+                <input
+                  className="inp"
+                  placeholder="Ama, Kofi, Yaw…"
+                  value={inputs.companions.join(", ")}
+                  onChange={(e) =>
+                    update({
+                      companions: e.target.value
+                        .split(",")
+                        .map((n) => n.trim())
+                        .filter(Boolean)
+                        .slice(0, inputs.partySize - 1),
+                    })
+                  }
+                />
+                <div className="why mt-3">
+                  Names are only used to make the plan read like it was written for
+                  your group.
+                </div>
               </div>
-            </div>
-            <div className="why mt-6">
-              Planning for a friend group? Pick &ldquo;they&rdquo; and skip the name.
-            </div>
+            )}
+
+            {inputs.partySize === 1 && (
+              <div className="why mt-6">
+                A solo day. We will keep it to places that are good on your own —
+                counter seats, somewhere comfortable to just be.
+              </div>
+            )}
           </>
         )}
 
@@ -549,7 +574,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
             </p>
             <div className="flex flex-col gap-[18px]">
               <div>
-                <span className="flbl">A food or cuisine {ps.they} love{inputs.partner.pronoun === "they" ? "" : "s"}</span>
+                <span className="flbl">A food or cuisine {ps.they} love{pronounForGender(inputs.partner.gender) === "they" ? "" : "s"}</span>
                 <input
                   className="inp"
                   placeholder="e.g. jollof, sushi, waakye…"
@@ -558,7 +583,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
                 />
               </div>
               <div>
-                <span className="flbl">{cap(ps.their)} kind of place</span>
+                <span className="flbl">{ps.their.charAt(0).toUpperCase() + ps.their.slice(1)} kind of place</span>
                 <input
                   className="inp"
                   placeholder="rooftops? gardens? cosy corners?"
@@ -569,7 +594,7 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
                 />
               </div>
               <div>
-                <span className="flbl">Something {ps.they}&apos;{inputs.partner.pronoun === "they" ? "re" : "s"} into</span>
+                <span className="flbl">Something {ps.they}&apos;{pronounForGender(inputs.partner.gender) === "they" ? "re" : "s"} into</span>
                 <input
                   className="inp"
                   placeholder="a movie, artist, or hobby"
@@ -607,20 +632,4 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
   );
 }
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
-function vibeBlurb(vibes: string[]): string {
-  const label = vibes.join(" + ");
-  const flavour: Record<string, string> = {
-    romantic: "warm light and room to talk",
-    calm: "quiet corners",
-    lively: "energy and a bit of noise",
-    fun: "games and easy laughs",
-    adventurous: "something neither of you has tried",
-    chill: "zero pressure, easy pace",
-  };
-  const bits = vibes.map((v) => flavour[v]).filter(Boolean).slice(0, 2);
-  return `${cap(label)} — think ${bits.join(", ")}.`;
-}

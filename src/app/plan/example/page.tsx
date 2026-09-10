@@ -21,6 +21,8 @@ const EXAMPLE_INPUTS: PlanInputs = {
   areaIds: [],
   areaNames: ["Osu", "Labone"],
   surpriseMe: false,
+  partySize: 2,
+  companions: [],
   budget: 800,
   date: DATE,
   startTime: "17:30",
@@ -29,7 +31,7 @@ const EXAMPLE_INPUTS: PlanInputs = {
   occasion: "anniversary",
   partner: {
     name: "",
-    pronoun: "they",
+    gender: "unspecified",
     food: "Seafood — especially grilled tilapia",
     place: "Quiet, outdoors, near water",
     interests: "Old highlife records",
@@ -56,7 +58,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
         { item: "Passion-ginger cooler", qty: 2, price_ghs: 96 },
         { item: "Kelewele to share", qty: 1, price_ghs: 40 },
       ],
-      est_cost_for_two_ghs: 326,
+      est_cost_ghs: 326,
       why_this_fits:
         "Because they love grilled tilapia and quiet spots by the water — ask for the deck table.",
       image_url:
@@ -77,7 +79,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
         { item: "Toffee-plantain waffle", qty: 1, price_ghs: 68 },
         { item: "Sobolo spritz", qty: 2, price_ghs: 86 },
       ],
-      est_cost_for_two_ghs: 154,
+      est_cost_ghs: 154,
       why_this_fits: "They spin old highlife records on Saturdays — they'll know every song.",
       image_url:
         "https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?auto=format&fit=crop&w=1200&q=70",
@@ -94,7 +96,7 @@ const EXAMPLE_ITINERARY: Itinerary = {
       label: "NIGHTCAP",
       what_to_do: "skyline terrace",
       orders: [{ item: "Hibiscus mocktail", qty: 2, price_ghs: 110 }],
-      est_cost_for_two_ghs: 110,
+      est_cost_ghs: 110,
       why_this_fits: "Calm, low-lit, and never loud — the right place to end the night talking.",
       image_url:
         "https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1200&q=70",

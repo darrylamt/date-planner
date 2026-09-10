@@ -1,9 +1,10 @@
-import { Platform, Pressable, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Platform, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Symbol } from "./Symbol";
-import { Elevation, HAIRLINE, Radius, Spacing, TAB_BAR } from "../theme";
+import { Elevation, HAIRLINE, Motion, Radius, Spacing, TAB_BAR } from "../theme";
 import { useIsDark, useTheme } from "../lib/useTheme";
 import type { SymbolViewProps } from "expo-symbols";
 
@@ -34,17 +35,20 @@ const LABELS: Record<string, string> = {
   profile: "You",
 };
 
+/** Inset of the sliding pill inside the bar. */
+const INSET = 5;
+
 /**
- * Navigation grouped left, with the primary action as its own button on the
- * right.
+ * Navigation grouped in a glass bar, with the primary action as its own button
+ * on the right.
  *
- * Creating a plan is the thing this app exists for, and burying it inside a
- * screen meant it moved depending on where you were. As a peer of the nav it
- * is always in the same place — but deliberately NOT a tab, because it starts
- * a task rather than switching destination.
+ * Creating a plan is what this app exists for, so it is a peer of the nav
+ * rather than buried in a screen — but deliberately NOT a tab, because it
+ * starts a task instead of switching destination.
  *
- * The trade-off against the system tab bar is real: blur, scroll-edge
- * behaviour and Dynamic Type sizing all have to be approximated here.
+ * The selection is a single pill that slides between slots rather than a
+ * highlight that blinks on and off. It echoes the bar's own shape, so the
+ * selected tab reads as part of the bar rather than a circle sitting inside it.
  */
 export function TabBar({
   state,
@@ -54,6 +58,24 @@ export function TabBar({
   const c = useTheme();
   const isDark = useIsDark();
   const insets = useSafeAreaInsets();
+
+  const [barWidth, setBarWidth] = useState(0);
+  const count = state.routes.length;
+  const slot = barWidth > 0 ? (barWidth - INSET * 2) / count : 0;
+
+  const slide = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (slot === 0) return;
+    Animated.spring(slide, {
+      toValue: INSET + state.index * slot,
+      useNativeDriver: true,
+      // Firm enough to feel responsive, damped enough not to wobble.
+      stiffness: 220,
+      damping: 24,
+      mass: 0.9,
+    }).start();
+  }, [state.index, slot, slide]);
 
   return (
     <View
@@ -71,16 +93,13 @@ export function TabBar({
       <BlurView
         intensity={Platform.OS === "ios" ? 40 : 0}
         tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
+        onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
         style={[
           {
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
-            // Evenly spread rather than packed left, so the three targets
-            // divide the bar instead of clustering at one end.
-            justifyContent: "space-around",
             height: TAB_BAR.height,
-            paddingHorizontal: Spacing.two,
             borderRadius: Radius.pill,
             borderWidth: HAIRLINE,
             borderColor: c.glassBorder,
@@ -91,6 +110,24 @@ export function TabBar({
           Elevation.raised,
         ]}
       >
+        {/* The sliding selection. Behind the icons and untouchable, so it can
+            never intercept a tap meant for a tab. */}
+        {slot > 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              top: INSET,
+              width: slot,
+              height: TAB_BAR.height - INSET * 2,
+              borderRadius: Radius.pill,
+              backgroundColor: c.accentSoft,
+              transform: [{ translateX: slide }],
+            }}
+          />
+        ) : null}
+
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           return (
@@ -110,12 +147,10 @@ export function TabBar({
                 navigation.navigate(route.name);
               }}
               style={({ pressed }) => ({
-                width: 54,
-                height: 54,
-                borderRadius: 27,
+                flex: 1,
+                height: TAB_BAR.height,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: focused ? c.accentSoft : "transparent",
                 opacity: pressed ? 0.6 : 1,
               })}
             >
@@ -156,3 +191,6 @@ export function TabBar({
     </View>
   );
 }
+
+/** Kept so callers importing timing from here still resolve. */
+export const TAB_MOTION = Motion;

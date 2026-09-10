@@ -52,7 +52,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: c.background },
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* The title is never shown — it is what the next screen's back
+              button borrows, which otherwise reads "(tabs)". */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
           <Stack.Screen name="plan/new" options={{ title: "" }} />
           <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
         </Stack>

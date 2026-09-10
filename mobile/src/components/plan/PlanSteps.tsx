@@ -5,21 +5,22 @@ import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
+import { WheelPicker } from "../WheelPicker";
 import { DayStrip } from "./DayStrip";
-import { GUTTER, space } from "../../theme";
-import { useTheme } from "../../lib/useTheme";
-import { aboutName, possessiveName, pronounSet } from "../../lib/pronouns";
+import { GUTTER, Spacing } from "../../theme";
+import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
   DURATIONS,
   OCCASIONS,
-  PRONOUNS,
-  START_TIMES,
+  PARTY_SIZES,
   VIBES,
   cap,
+  partyLabel,
+  startTimeOptions,
   vibeBlurb,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
-import type { Area, PlanInputs } from "../../lib/types";
+import type { Area, Gender, PlanInputs } from "../../lib/types";
 
 export interface StepProps {
   step: number;
@@ -28,30 +29,28 @@ export interface StepProps {
   update: (patch: Partial<PlanInputs>) => void;
 }
 
-/** A short explanatory note, styled like a grouped-list footer. */
 function Note({ children }: { children: React.ReactNode }) {
   return (
     <Text
       variant="footnote"
       tone="secondary"
-      style={{ paddingHorizontal: GUTTER, marginTop: space.md }}
+      style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three }}
     >
       {children}
     </Text>
   );
 }
 
-/** Uppercase label above a chip row — mirrors a grouped-list section header. */
-function GroupLabel({ children, first }: { children: React.ReactNode; first?: boolean }) {
+function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
     <Text
-      variant="footnote"
+      variant="eyebrow"
       tone="secondary"
+      uppercase
       style={{
         paddingHorizontal: GUTTER,
-        marginTop: first ? 0 : space.xxl,
-        marginBottom: space.sm,
-        textTransform: "uppercase",
+        marginTop: Spacing.five,
+        marginBottom: Spacing.two,
       }}
     >
       {children}
@@ -60,13 +59,15 @@ function GroupLabel({ children, first }: { children: React.ReactNode; first?: bo
 }
 
 export function PlanSteps({ step, inputs, areas, update }: StepProps) {
-  const c = useTheme();
-  const ps = pronounSet(inputs.partner.pronoun);
-  const who = aboutName(inputs.partner.name, inputs.partner.pronoun);
-  const poss = possessiveName(inputs.partner.name, inputs.partner.pronoun);
-  /* "they love" but "she loves" */
-  const verbS = inputs.partner.pronoun === "they" ? "" : "s";
-  const contraction = inputs.partner.pronoun === "they" ? "re" : "s";
+  const solo = inputs.partySize <= 1;
+  const pair = inputs.partySize === 2;
+  const pronoun = pronounForGender(inputs.partner.gender);
+  const ps = pronounSet(pronoun);
+  const who = solo ? "you" : aboutName(inputs.partner.name, pronoun);
+  const poss = solo ? "your" : possessiveName(inputs.partner.name, pronoun);
+  /* "they love" but "she loves" — and a group is always plural. */
+  const verbS = pronoun === "they" || !pair ? "" : "s";
+  const contraction = pronoun === "they" || !pair ? "re" : "s";
 
   if (step === 0) {
     return (
@@ -84,7 +85,6 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
                 title={a.name}
                 selected={on}
                 onPress={() => {
-                  // Keep the two most recent picks, exactly like the web flow.
                   const ids = on
                     ? inputs.areaIds.filter((x) => x !== a.id)
                     : [...inputs.areaIds, a.id].slice(-2);
@@ -116,7 +116,10 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === 1) {
     return (
       <>
-        <StepHeading title="What is the budget?" subtitle="For both of you, all in." />
+        <StepHeading
+          title="What is the budget?"
+          subtitle={`For ${partyLabel(inputs.partySize)}, all in.`}
+        />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
         <Note>We keep the whole plan inside this — transport included.</Note>
       </>
@@ -126,36 +129,23 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === 2) {
     return (
       <>
-        <StepHeading
-          title="When is the date?"
-          subtitle="We check what is open and what is on that day."
-        />
+        <StepHeading title="When is it?" subtitle="We check what is open and what is on." />
 
         <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
 
-        <GroupLabel first>Start time</GroupLabel>
-        <ChipRow>
-          {START_TIMES.map((t) => (
-            <Chip
-              key={t}
-              label={time12(t)}
-              selected={inputs.startTime === t}
-              onPress={() => update({ startTime: t })}
-            />
-          ))}
-        </ChipRow>
+        <GroupLabel>Start time</GroupLabel>
+        <WheelPicker
+          options={startTimeOptions().map((t) => ({ value: t, label: time12(t) }))}
+          value={inputs.startTime}
+          onChange={(startTime) => update({ startTime })}
+        />
 
         <GroupLabel>How long?</GroupLabel>
-        <ChipRow>
-          {DURATIONS.map((d) => (
-            <Chip
-              key={d.label}
-              label={d.label}
-              selected={inputs.hours === d.hours}
-              onPress={() => update({ hours: d.hours })}
-            />
-          ))}
-        </ChipRow>
+        <WheelPicker
+          options={DURATIONS.map((d) => ({ value: d.hours, label: d.label }))}
+          value={inputs.hours}
+          onChange={(hours) => update({ hours })}
+        />
       </>
     );
   }
@@ -212,25 +202,78 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     return (
       <>
         <StepHeading
-          title="Who are you planning for?"
-          subtitle="A name is optional. It just makes the plan feel like theirs."
+          title="Who is coming?"
+          subtitle="This sets the portions, the table and how far the budget goes."
         />
-        <View style={{ paddingHorizontal: GUTTER }}>
-          <Field
-            label="Their name (optional)"
-            placeholder="e.g. Ama, Kofi"
-            value={inputs.partner.name}
-            maxLength={60}
-            onChangeText={(name) => update({ partner: { ...inputs.partner, name } })}
-          />
-          <Segmented
-            label="How should we refer to them?"
-            options={PRONOUNS}
-            value={inputs.partner.pronoun}
-            onChange={(pronoun) => update({ partner: { ...inputs.partner, pronoun } })}
-          />
-        </View>
-        <Note>Planning for a friend group? Pick They and skip the name.</Note>
+
+        <WheelPicker
+          options={PARTY_SIZES.map((n) => ({
+            value: n,
+            label: n === 1 ? "Just me" : String(n),
+          }))}
+          value={inputs.partySize}
+          onChange={(partySize) =>
+            update({
+              partySize,
+              // Drop names that no longer have a seat.
+              companions: inputs.companions.slice(0, Math.max(0, partySize - 1)),
+            })
+          }
+          suffix={inputs.partySize > 1 ? "people" : undefined}
+        />
+
+        {pair ? (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.five }}>
+            <Field
+              label="Their name (optional)"
+              placeholder="e.g. Ama, Kofi"
+              value={inputs.partner.name}
+              maxLength={60}
+              onChangeText={(name) => update({ partner: { ...inputs.partner, name } })}
+            />
+            <Segmented
+              label="Is it a him or a her? (optional)"
+              options={
+                [
+                  { value: "unspecified", label: "Rather not say" },
+                  { value: "female", label: "Her" },
+                  { value: "male", label: "Him" },
+                ] as { value: Gender; label: string }[]
+              }
+              value={inputs.partner.gender}
+              onChange={(gender) => update({ partner: { ...inputs.partner, gender } })}
+            />
+          </View>
+        ) : null}
+
+        {inputs.partySize > 2 ? (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.five }}>
+            <Field
+              label="Who else is coming? (optional)"
+              placeholder="Ama, Kofi, Yaw"
+              value={inputs.companions.join(", ")}
+              onChangeText={(text) =>
+                update({
+                  companions: text
+                    .split(",")
+                    .map((n) => n.trim())
+                    .filter(Boolean)
+                    .slice(0, inputs.partySize - 1),
+                })
+              }
+            />
+            <Text variant="footnote" tone="secondary">
+              Only used so the plan reads like it was written for your group.
+            </Text>
+          </View>
+        ) : null}
+
+        {solo ? (
+          <Note>
+            A day to yourself. We keep to places that are good on your own — counter
+            seats, somewhere comfortable to just be.
+          </Note>
+        ) : null}
       </>
     );
   }
@@ -238,24 +281,26 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   return (
     <>
       <StepHeading
-        title={`Now — tell us about ${who}.`}
-        subtitle="The details you add here are what turn a plan into a thoughtful date."
+        title={solo ? "Now — tell us about you." : `Now — tell us about ${who}.`}
+        subtitle="The details here are what turn a plan into a thoughtful one."
       />
       <View style={{ paddingHorizontal: GUTTER }}>
         <Field
-          label={`A food or cuisine ${ps.they} love${verbS}`}
+          label={solo ? "A food or cuisine you love" : `A food or cuisine ${ps.they} love${verbS}`}
           placeholder="jollof, sushi, waakye"
           value={inputs.partner.food}
           onChangeText={(food) => update({ partner: { ...inputs.partner, food } })}
         />
         <Field
-          label={`${cap(ps.their)} kind of place`}
+          label={solo ? "Your kind of place" : `${cap(ps.their)} kind of place`}
           placeholder="rooftops? gardens? cosy corners?"
           value={inputs.partner.place}
           onChangeText={(place) => update({ partner: { ...inputs.partner, place } })}
         />
         <Field
-          label={`Something ${ps.they}${"’"}${contraction} into`}
+          label={
+            solo ? "Something you are into" : `Something ${ps.they}${"’"}${contraction} into`
+          }
           placeholder="a movie, artist, or hobby"
           value={inputs.partner.interests}
           onChangeText={(interests) => update({ partner: { ...inputs.partner, interests } })}
@@ -268,7 +313,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           multiline
         />
       </View>
-      <Note>This stays between us. It only shapes {poss} evening.</Note>
+      <Note>This stays between us. It only shapes {poss} day.</Note>
     </>
   );
 }

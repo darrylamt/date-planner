@@ -73,9 +73,9 @@ export function ItineraryView({
   function handleOrdersChange(index: number, orders: ItineraryOrder[]) {
     const stopCost = Math.round(orders.reduce((sum, o) => sum + Number(o.price_ghs), 0));
     const stops = itinerary.stops.map((s, i) =>
-      i === index ? { ...s, orders, est_cost_for_two_ghs: stopCost } : s
+      i === index ? { ...s, orders, est_cost_ghs: stopCost } : s
     );
-    const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_for_two_ghs), 0));
+    const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_ghs), 0));
     const est = Math.round(food + Number(itinerary.transport_total_ghs));
     onItineraryChange({ ...itinerary, stops, food_total_ghs: food, est_total_ghs: est });
     if (est > inputs.budget) {
