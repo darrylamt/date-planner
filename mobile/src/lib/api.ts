@@ -45,3 +45,32 @@ export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse
   }
 }
 
+
+/** What can be reported about a venue, in the order the sheet offers them. */
+export type ReportType = "price" | "closed" | "phone" | "wrong_info" | "other";
+
+/**
+ * Tell us something is wrong with a venue.
+ *
+ * Deliberately forgiving: a report is a courtesy, not a transaction, so a
+ * failure here is swallowed into a soft result rather than thrown. Losing one
+ * report matters far less than interrupting someone mid-evening with an error
+ * about a tap they made in passing.
+ */
+export async function reportVenue(input: {
+  venueId: string;
+  reportType: ReportType;
+  suggestedPriceGhs?: number | null;
+  note?: string;
+}): Promise<{ ok: boolean; duplicate: boolean }> {
+  try {
+    const { deviceId } = await import("./deviceId");
+    const res = await postJson<{ ok: boolean; duplicate?: boolean }>("/api/reports", {
+      ...input,
+      deviceId: await deviceId(),
+    });
+    return { ok: Boolean(res.ok), duplicate: Boolean(res.duplicate) };
+  } catch {
+    return { ok: false, duplicate: false };
+  }
+}

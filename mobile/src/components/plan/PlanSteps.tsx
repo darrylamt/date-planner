@@ -87,10 +87,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "area") {
     return (
       <>
-        <StepHeading
-          title="Where in Accra?"
-          subtitle="Pick one or two areas so we can keep the stops close together."
-        />
+        <StepHeading title="Where in Accra?" subtitle="Up to two." />
         <Group>
           {areas.map((a) => {
             const on = inputs.areaIds.includes(a.id);
@@ -114,7 +111,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           })}
         </Group>
 
-        <Group footer="We pick the area that fits your budget and the vibe best.">
+        <Group>
           <Row
             icon="dice.fill"
             title="Surprise me"
@@ -136,11 +133,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           subtitle={`For ${partyLabel(inputs.partySize)}, all in.`}
         />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
-        <Note>
-          {inputs.budget === 0
-            ? "We will only suggest places that are genuinely free to enter."
-            : "We keep the whole plan inside this — transport included."}
-        </Note>
+        <Note>{inputs.budget === 0 ? "Free places only." : "Includes transport."}</Note>
       </>
     );
   }
@@ -148,7 +141,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "when") {
     return (
       <>
-        <StepHeading title="When is it?" subtitle="We check what is open and what is on." />
+        <StepHeading title="When is it?" />
 
         <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
 
@@ -174,7 +167,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
       <>
         <StepHeading
           title="What are you after?"
-          subtitle="This decides what the stops are, not just where they are."
+          subtitle="Pick one."
         />
         <Group>
           {FOCUS_OPTIONS.map((f) => (
@@ -195,7 +188,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           value={inputs.formality}
           onChange={(formality) => update({ formality })}
         />
-        <Note>{FORMALITY_OPTIONS.find((f) => f.id === inputs.formality)?.sub}</Note>
+
       </>
     );
   }
@@ -203,7 +196,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "vibe") {
     return (
       <>
-        <StepHeading title="What is the vibe?" subtitle="Choose up to three and we blend them." />
+        <StepHeading title="What is the vibe?" subtitle="Up to three." />
         <ChipRow>
           {VIBES.map((v) => {
             const val = v.toLowerCase();
@@ -232,7 +225,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "occasion") {
     return (
       <>
-        <StepHeading title="What is the occasion?" subtitle="It changes the pace we plan for." />
+        <StepHeading title="What is the occasion?" />
         <Group>
           {OCCASIONS.map((o) => (
             <Row
@@ -254,13 +247,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
       <>
         <StepHeading
           title={rule.fixed ? "Who is coming?" : "How many of you?"}
-          subtitle={
-            rule.fixed
-              ? "Just the details that make the plan theirs."
-              : rule.min > 1
-                ? `This sets the table and how far the budget goes. ${rule.note ?? ""}`.trim()
-                : "This sets the portions, the table and how far the budget goes."
-          }
+          subtitle={rule.fixed ? undefined : (rule.note ?? undefined)}
         />
 
         {rule.fixed ? (
@@ -374,7 +361,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     <>
       <StepHeading
         title={solo ? "Now — tell us about you." : `Now — tell us about ${who}.`}
-        subtitle="The details here are what turn a plan into a thoughtful one."
+        subtitle="All optional."
       />
       <View style={{ paddingHorizontal: GUTTER }}>
         <Field
@@ -405,7 +392,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           multiline
         />
       </View>
-      <Note>This stays between us. It only shapes {poss} day.</Note>
+
     </>
   );
 }

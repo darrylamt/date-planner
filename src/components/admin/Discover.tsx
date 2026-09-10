@@ -125,9 +125,7 @@ export function Discover({ areas }: { areas: Area[] }) {
     <div>
       <h1 className="font-display text-[24px] font-bold">Discover venues</h1>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
-        Ask Google what is in a neighbourhood, then tick what belongs. Added venues start
-        with no price and no menu — they go straight to the unpriced queue, which is your
-        list of menus to go and find.
+        Tick what belongs. Added venues have no prices yet — find those next.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3">

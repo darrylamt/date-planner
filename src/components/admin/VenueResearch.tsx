@@ -81,9 +81,7 @@ export function VenueResearch({
     <div className="rounded-bar border border-line bg-cream/60 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-[16px] font-bold">Look it up</h2>
-        <span className="text-[12px] text-mutedbrown">
-          Searches the web and fills the form. Nothing is saved until you save.
-        </span>
+        <span className="text-[12px] text-mutedbrown">Nothing is saved until you save.</span>
       </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-[2fr_1fr_auto]">
@@ -248,9 +246,7 @@ function DraftPreview({
       <button type="button" className="btn btnsm mt-4" onClick={() => onApply(draft)}>
         Fill the form
       </button>
-      <span className="ml-3 text-[12px] text-mutedbrown">
-        The phone still goes through review before it reaches anyone.
-      </span>
+      <span className="ml-3 text-[12px] text-mutedbrown">Phone still needs review.</span>
     </div>
   );
 }

@@ -65,7 +65,7 @@ export function ItineraryView({
   function handleSwap(index: number) {
     const result = swapStopLocally(itinerary, index, inputs.budget);
     if (!result) {
-      setToast("No other spot fits this slot — try widening the area or budget.");
+      setToast("Nothing else fits here.");
       return;
     }
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -124,12 +124,12 @@ export function ItineraryView({
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
           `Please confirm availability. — sent via aduro`;
         await Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
-        setToast("Request sent — the venue will confirm on WhatsApp");
+        setToast("Sent — they will confirm on WhatsApp.");
       } else {
-        setToast("Request logged — no WhatsApp number on file, we will follow up");
+        setToast("Logged — no number on file, we will follow up.");
       }
     } catch {
-      setToast("Could not send the reservation — try again in a moment.");
+      setToast("Could not send that. Try again.");
     } finally {
       setReservingIndex(null);
     }
@@ -324,7 +324,7 @@ export function ItineraryView({
           center
           style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}
         >
-          Menu prices are from our catalog and can change. Transport is always an estimate.
+          Prices can change. Transport is an estimate.
         </Text>
       </ScrollView>
 

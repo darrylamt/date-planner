@@ -343,8 +343,8 @@ export function VenueForm({
           </label>
           <span className="mt-1 text-[12px] text-mutedbrown">
             {v.is_free
-              ? "Can fill a stop at no cost — only for places that genuinely charge nothing."
-              : "Leave at 0 if you do not know it. Unpriced venues are withheld from plans, not shown as free."}
+              ? "Only for places that genuinely charge nothing."
+              : "Leave at 0 if unknown — unpriced venues are withheld, not shown as free."}
           </span>
         </div>
         <div className="md:col-span-2">
@@ -378,8 +378,8 @@ export function VenueForm({
           </div>
           <span className="mt-1 block text-[12px] text-mutedbrown">
             {v.pricing_mode === "per_person"
-              ? "Priced from the menu, or from the average cost above."
-              : "One bill split between however many go, so the cost per head falls as the group grows. A padel court at GHS 200 an hour is this, not per person."}
+              ? "From the menu, or the average above."
+              : "One bill, split by however many go."}
           </span>
         </div>
         <div className={field}>
@@ -403,8 +403,7 @@ export function VenueForm({
             />
           </div>
           <span className="mt-1 text-[12px] text-mutedbrown">
-            Leave the second blank for no limit. A padel court is 2 to 4 — it is never
-            offered to a solo day or to a group of eight.
+            Blank for no limit. A padel court is 2 to 4.
           </span>
         </div>
         <div className={field}>

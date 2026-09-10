@@ -219,7 +219,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
             </select>
           </div>
           <div>
-            <span className="flbl">Menu link (optional)</span>
+            <span className="flbl">Link to prices (optional)</span>
             <input
               className="inp"
               placeholder="https://…"
@@ -230,7 +230,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
         </div>
 
         <div className="mt-4">
-          <span className="flbl">Menu images (optional, up to 8)</span>
+          <span className="flbl">Photos of prices (optional, up to 8)</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -247,21 +247,20 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
         </div>
 
         <div className="mt-4">
-          <span className="flbl">Anything we should know?</span>
+          <span className="flbl">Or just type the prices</span>
           <textarea
             className="ta"
-            placeholder="e.g. ignore the breakfast page, prices went up in June — or if there is no menu, just tell us: entry fee is GHS 30, or the court is GHS 200 an hour"
+            placeholder="Entry is GHS 30. Or: court is GHS 200/hour. Or: ignore the breakfast page."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
           <span className="mt-1 block text-[12px] text-mutedbrown">
-            No photo or link needed if you already know the price — a court, an entry
-            fee or an hourly rate typed here is enough on its own.
+            Enough on its own — no photo needed.
           </span>
         </div>
 
         <button className="btn mt-4" onClick={extract} disabled={!canSubmit || busy}>
-          {busy ? "Reading the menu…" : "Read menu"}
+          {busy ? "Reading…" : "Read prices"}
         </button>
         {busy && (
           <div className="mt-2 text-[13px] text-mutedbrown">
@@ -352,8 +351,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
                       onChange={(e) => setAvgCost(Number(e.target.value) || 0)}
                     />
                     <div className="mt-1 text-[12.5px] text-mutedbrown">
-                      Suggested from a typical main plus a drink. This drives which
-                      budgets the venue appears for — a wrong value silently hides it.
+                      Drives which budgets this appears for.
                     </div>
                   </>
                 ) : (
@@ -379,9 +377,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
                       </span>
                     </div>
                     <div className="mt-1 text-[12.5px] text-mutedbrown">
-                      One bill split between however many go, read from what was
-                      extracted. There is no per-person average for this kind of
-                      venue — a court or a lane does not have one.
+                      One bill, split by however many go.
                     </div>
                   </>
                 )}

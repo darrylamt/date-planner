@@ -12,32 +12,32 @@ import type { Occasion } from "../../lib/types";
  * plan, which is the thing that is not obvious while filling a form in.
  */
 const TIPS: Partial<Record<StepId, string>> = {
-  area: "Two areas keeps the taxi hops short. One keeps them shorter.",
-  budget: "This covers everything — food and getting between places.",
-  when: "Weeknights are quieter. Weekends have more on.",
-  shape: "Just drinks means just drinks — I will not slip dinner in.",
-  vibe: "Two or three works better than one. I blend them.",
-  party: "Numbers change the table, not just the bill.",
-  details: "The odder the detail, the better I can do.",
+  area: "Close together beats far apart.",
+  budget: "Food and taxis, all in.",
+  when: "Weeknights are quieter.",
+  shape: "Just drinks means just drinks.",
+  vibe: "I blend them.",
+  party: "Changes the table, not just the bill.",
+  details: "The odder, the better.",
 };
 
 /** Occasion-specific tips take precedence — a pathway should feel like one. */
 const OCCASION_TIPS: Partial<Record<Occasion, Partial<Record<StepId, string>>>> = {
   first_date: {
-    budget: "First dates do not need to be expensive. They need to be easy.",
-    vibe: "Somewhere you can hear each other beats somewhere impressive.",
+    budget: "Easy beats expensive.",
+    vibe: "Somewhere you can hear each other.",
   },
   anniversary: {
     budget: "Worth stretching a little. This one gets remembered.",
   },
   birthday: {
-    party: "Tell me everyone coming and I will find a table that fits.",
+    party: "I will find a table that fits.",
   },
   graduation: {
-    party: "Graduations run big. I will look for places that seat a crowd.",
+    party: "I will find room for everyone.",
   },
   solo_day: {
-    party: "Just you. I will keep to places that are good on your own.",
+    party: "Places that are good alone.",
     details: "What you actually enjoy, not what sounds good.",
   },
   friend_outing: {

@@ -31,25 +31,25 @@ const SLIDES: Slide[] = [
     occasion: "first_date",
     says: "Hello. I plan evenings.",
     title: "A whole evening, not a list of places.",
-    body: "Dinner, then something to do, then somewhere to end up — timed back to back so you are never standing about wondering what next.",
+    body: "Dinner, something to do, somewhere to end up. Timed back to back.",
   },
   {
     occasion: "date_night",
     says: "Real menus. Real prices.",
-    title: "You will know what it costs before you go.",
-    body: "Every stop is priced from an actual menu, with transport between them estimated on top. If it does not fit your budget, we say so instead of quietly going over.",
+    title: "Know what it costs before you go.",
+    body: "Priced from actual menus, transport included.",
   },
   {
     occasion: "friend_outing",
     says: "Two of you, six of you, or just you.",
-    title: "Built around who is actually coming.",
-    body: "A first date, a birthday, friends out, or a day on your own. Tell us the occasion and the questions change to match.",
+    title: "Built around who is coming.",
+    body: "Pick the occasion and the questions change to match.",
   },
   {
     occasion: "solo_day",
-    says: "One promise before we start.",
+    says: "One promise.",
     title: "We never invent a place.",
-    body: "Every venue is a real one we have checked. If we cannot fill your evening honestly, we tell you — we would rather show you nothing than send you somewhere that is not there.",
+    body: "If we cannot fill your evening honestly, we say so.",
   },
 ];
 

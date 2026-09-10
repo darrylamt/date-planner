@@ -127,7 +127,7 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry: ()
       </Text>
       <Text variant="body" tone="secondary" center style={{ marginTop: space.sm }}>
         {message ??
-          "Something went wrong while building the plan. Your answers are safe — nothing was lost."}
+          "Something went wrong. Your answers are safe."}
       </Text>
       <View style={{ alignSelf: "stretch", marginTop: space.xl }}>
         <Button title="Try again" onPress={onRetry} />
