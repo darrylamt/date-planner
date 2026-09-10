@@ -164,6 +164,8 @@ export function PlanFlow({ areas }: { areas: Area[] }) {
         onSuggestion={(s) => {
           if (s.action === "raise_budget" && s.value) {
             void generate({ budget: s.value });
+          } else if (s.action === "clear_focus") {
+            void generate({ focus: "everything" });
           } else {
             void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
           }

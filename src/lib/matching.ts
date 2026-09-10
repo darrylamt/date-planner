@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
 
 /**
@@ -85,7 +86,12 @@ export async function fetchCandidates(
   );
 
   venues = venues.filter(
-    (v) => Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(v.id)
+    (v) =>
+      // A venue flagged free has a known price of nothing, which is the
+      // opposite of a venue whose price we simply do not have.
+      v.is_free === true ||
+      Number(v.avg_cost_per_person_ghs) > 0 ||
+      pricedVenueIds.has(v.id)
   );
 
   // Score: vibe overlap (heavily weighted) + occasion fit; keep a fallback
@@ -100,7 +106,25 @@ export async function fetchCandidates(
 
   const withOverlap = scored.filter((s) => s.score > 0).map((s) => s.v);
   const pool = withOverlap.length >= 4 ? withOverlap : scored.map((s) => s.v);
-  const picked = pool.slice(0, 14);
+  let picked = pool.slice(0, 14);
+
+  /*
+   * Reserve room for the kinds of venue the request is actually about.
+   *
+   * Vibe scoring is type-blind, so a catalogue with nineteen restaurants and
+   * four bars fills every slot with restaurants and a "just drinks" plan
+   * arrives at the planner with no bar to use. The focus types are added back
+   * from the full scored list, best first.
+   */
+  const focusTypes = focusVenueTypes(inputs.focus);
+  if (focusTypes.length) {
+    const have = new Set(picked.map((v) => v.id));
+    const missing = scored
+      .map((s) => s.v)
+      .filter((v) => focusTypes.includes(v.type) && !have.has(v.id))
+      .slice(0, 8);
+    picked = [...picked, ...missing];
+  }
 
   const venueIds = picked.map((v) => v.id);
   const [{ data: menuItems }, eventsRes] = await Promise.all([

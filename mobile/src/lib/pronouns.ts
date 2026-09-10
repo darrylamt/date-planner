@@ -1,8 +1,7 @@
 /**
- * MIRRORED from the web app: ../../src/lib/pronouns.ts
- * Pure domain logic with no web dependencies — kept byte-identical so the
- * two clients agree on shapes and formatting. Edit the web copy first,
- * then copy it here.
+ * GENERATED — do not edit. Mirrored from src/lib/pronouns.ts.
+ *
+ * Run `npm run mirror` after changing the web copy.
  */
 import type { Gender, Pronoun } from "./types";
 

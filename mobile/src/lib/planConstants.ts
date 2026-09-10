@@ -1,8 +1,10 @@
 /**
- * MIRRORED from the web app: ../../src/lib/planConstants.ts
- * Edit the web copy first, then copy it here.
+ * GENERATED — do not edit. Mirrored from src/lib/planConstants.ts.
+ *
+ * Run `npm run mirror` after changing the web copy.
  */
-import type { Occasion, PlanInputs } from "./types";
+import { BUDGET_DEFAULT } from "./budget";
+import type { Formality, Occasion, PlanFocus, PlanInputs } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -37,6 +39,28 @@ export const DURATIONS: { label: string; hours: number }[] = [
   { label: "All day", hours: 10 },
 ];
 
+/**
+ * What the outing is made of.
+ *
+ * Asked rather than inferred. A "lively" evening might mean a bar crawl or a
+ * bowling alley, and guessing produced plans that were reasonable but not what
+ * anyone had in mind. Ordered with the open answer first so the default costs
+ * no thought.
+ */
+export const FOCUS_OPTIONS: { id: PlanFocus; title: string; sub: string }[] = [
+  { id: "everything", title: "A bit of everything", sub: "We shape it around the time of day" },
+  { id: "food", title: "Mostly food", sub: "A meal, something sweet, coffee" },
+  { id: "drinks", title: "Just drinks", sub: "Bars and lounges, nothing else" },
+  { id: "activities", title: "Things to do", sub: "Something to play, see or make" },
+];
+
+/** How dressed-up it should be. */
+export const FORMALITY_OPTIONS: { id: Formality; title: string; sub: string }[] = [
+  { id: "either", title: "Either", sub: "Whatever suits the evening" },
+  { id: "casual", title: "Casual", sub: "Relaxed, no dress code" },
+  { id: "fancy", title: "Fancy", sub: "Dress up, make an occasion of it" },
+];
+
 export const OCCASIONS: { id: Occasion; title: string; sub: string }[] = [
   { id: "first_date", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
   { id: "anniversary", title: "Anniversary", sub: "Pull out the stops — this one matters" },
@@ -53,7 +77,7 @@ export const OCCASION_IDS = OCCASIONS.map((o) => o.id);
 /** Party presets. Anything larger is typed in. */
 export const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12] as const;
 
-export const TOTAL_STEPS = 7;
+export const TOTAL_STEPS = 8;
 
 export const START_TIME_MIN_HOUR = 6;
 export const START_TIME_MAX_HOUR = 23;
@@ -82,11 +106,13 @@ export function defaultInputs(): PlanInputs {
     surpriseMe: false,
     partySize: 2,
     companions: [],
-    budget: 800,
+    budget: BUDGET_DEFAULT,
     date: defaultDate(),
     startTime: "17:30",
     hours: 4,
     vibes: [],
+    focus: "everything",
+    formality: "either",
     occasion: "date_night",
     occasionDetail: {},
     partner: { name: "", gender: "unspecified", food: "", place: "", interests: "", avoid: "" },
@@ -136,6 +162,7 @@ export type StepId =
   | "area"
   | "budget"
   | "when"
+  | "shape"
   | "vibe"
   | "details";
 
@@ -230,7 +257,7 @@ export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] 
   if (!occasionPreset) steps.push("occasion");
   if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
   if (OCCASION_EXTRA[occasion]) steps.push("extra");
-  steps.push("area", "budget", "when", "vibe", "details");
+  steps.push("area", "budget", "when", "shape", "vibe", "details");
   return steps;
 }
 

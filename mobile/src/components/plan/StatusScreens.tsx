@@ -76,7 +76,10 @@ export function NoMatch({
   onStartOver,
 }: {
   data: Extract<GenerateResponse, { status: "no_match" }>;
-  onSuggestion: (s: { action: "widen_area" | "raise_budget"; value?: number }) => void;
+  onSuggestion: (s: {
+    action: "widen_area" | "raise_budget" | "clear_focus";
+    value?: number;
+  }) => void;
   onStartOver: () => void;
 }) {
   const c = useTheme();

@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
+import { VenueResearch } from "@/components/admin/VenueResearch";
+import { ensureAreaId } from "@/lib/areas";
+import type { VenueDraft } from "@/lib/research";
 import type { Area, MenuCategory, MenuItem, Venue } from "@/lib/types";
 
 const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] as const;
@@ -43,6 +46,7 @@ export function VenueForm({
     google_maps_url: venue?.google_maps_url ?? "",
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
+    is_free: venue?.is_free ?? false,
     lat: venue?.lat != null ? String(venue.lat) : "",
     lng: venue?.lng != null ? String(venue.lng) : "",
   });
@@ -70,6 +74,10 @@ export function VenueForm({
     try {
       const payload = {
         ...v,
+        // The check constraint refuses a free venue that also carries a
+        // price, so the flag wins and the figure is zeroed rather than
+        // failing the save with a database error nobody can act on.
+        avg_cost_per_person_ghs: v.is_free ? 0 : v.avg_cost_per_person_ghs,
         dress_code: v.dress_code || null,
         instagram_handle: v.instagram_handle || null,
         // Even an admin edit routes through review, so approval happens in
@@ -144,6 +152,53 @@ export function VenueForm({
     router.refresh();
   }
 
+  /**
+   * Fill the form from a research draft.
+   *
+   * Only fields the research actually found are overwritten — a null comes
+   * back as "not found", not as "clear what you already typed". The area is
+   * resolved to an id and created when it is new, so adding a venue in a
+   * neighbourhood we have never listed is not a separate errand.
+   */
+  async function applyDraft(d: VenueDraft) {
+    let areaId = v.area_id;
+    let createdArea = false;
+
+    if (d.area_name) {
+      const area = await ensureAreaId(supabase, d.area_name);
+      if (area) {
+        areaId = area.id;
+        createdArea = area.created;
+      }
+    }
+
+    setV((cur) => ({
+      ...cur,
+      name: d.canonical_name || cur.name,
+      type: d.type ?? cur.type,
+      area_id: areaId,
+      description: d.description || cur.description,
+      price_band: d.price_band ?? cur.price_band,
+      avg_cost_per_person_ghs: d.avg_cost_per_person_ghs || cur.avg_cost_per_person_ghs,
+      is_free: d.is_free || cur.is_free,
+      vibe_tags: d.vibe_tags.length ? d.vibe_tags : cur.vibe_tags,
+      best_for: d.best_for.length ? d.best_for : cur.best_for,
+      reservation_required: d.reservation_required || cur.reservation_required,
+      dress_code: d.dress_code ?? cur.dress_code,
+      phone: d.phone ?? cur.phone,
+      instagram_handle: d.instagram_handle ?? cur.instagram_handle,
+      google_maps_url: d.google_maps_url ?? cur.google_maps_url,
+      lat: d.lat != null ? String(d.lat) : cur.lat,
+      lng: d.lng != null ? String(d.lng) : cur.lng,
+    }));
+
+    setToast(
+      createdArea
+        ? `Filled in — and added ${d.area_name} to your areas. Check it before saving.`
+        : "Filled in — check it before saving."
+    );
+  }
+
   const field = "flex flex-col";
 
   return (
@@ -151,6 +206,10 @@ export function VenueForm({
       <h1 className="font-display text-[24px] font-bold">
         {venue ? `Edit — ${venue.name}` : "Add venue"}
       </h1>
+
+      <div className="mt-5">
+        <VenueResearch initialName={v.name} onApply={applyDraft} />
+      </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div className={field}>
@@ -204,9 +263,23 @@ export function VenueForm({
           <input
             className="inp font-mono"
             type="number"
-            value={v.avg_cost_per_person_ghs}
+            disabled={v.is_free}
+            value={v.is_free ? 0 : v.avg_cost_per_person_ghs}
             onChange={(e) => setV({ ...v, avg_cost_per_person_ghs: Number(e.target.value) })}
           />
+          <label className="mt-2 flex items-center gap-2 text-[13px] text-mutedbrown">
+            <input
+              type="checkbox"
+              checked={v.is_free}
+              onChange={(e) => setV({ ...v, is_free: e.target.checked })}
+            />
+            Free to enter
+          </label>
+          <span className="mt-1 text-[12px] text-mutedbrown">
+            {v.is_free
+              ? "Can fill a stop at no cost — only for places that genuinely charge nothing."
+              : "Leave at 0 if you do not know it. Unpriced venues are withheld from plans, not shown as free."}
+          </span>
         </div>
         <div className={field}>
           <span className="flbl">Dress code (optional)</span>

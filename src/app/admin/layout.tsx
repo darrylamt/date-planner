@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/Logo";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { adminCounts } from "@/lib/adminCounts";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
+  // Read once here and handed down, so the badges cost one query per page
+  // load rather than one per link.
+  const counts = await adminCounts(supabase);
+
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="flex shrink-0 flex-col gap-0.5 bg-lagoon py-6 md:min-h-screen md:w-[220px]">
@@ -44,7 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Logo size={22} dark href="/" />
           <span className="text-[12px] text-lagoon-soft">admin</span>
         </div>
-        <AdminNav />
+        <AdminNav counts={counts} />
       </aside>
       <div className="flex-1 px-5 py-7 md:px-8">{children}</div>
     </div>

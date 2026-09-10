@@ -1,6 +1,7 @@
 /**
- * MIRRORED from the web app: ../../src/lib/types.ts
- * Edit the web copy first, then copy it here.
+ * GENERATED — do not edit. Mirrored from src/lib/types.ts.
+ *
+ * Run `npm run mirror` after changing the web copy.
  */
 /* Shared domain types for aduro. */
 
@@ -31,6 +32,14 @@ export interface Venue {
   google_maps_url: string | null;
   image_url: string | null;
   is_active: boolean;
+  /**
+   * Entry genuinely costs nothing — a park, a beach, a free gallery.
+   *
+   * Distinct from "we do not know what it costs": an unpriced venue is
+   * withheld from plans rather than shown as free, so only this flag lets a
+   * stop legitimately total zero.
+   */
+  is_free: boolean;
   lat: number | null;
   lng: number | null;
   areas?: { name: string } | null;
@@ -69,6 +78,19 @@ export type Gender = "unspecified" | "female" | "male";
 /** Derived from Gender for copy; no longer asked directly. */
 export type Pronoun = "they" | "she" | "he";
 
+/**
+ * Which kinds of stop the outing is made of.
+ *
+ * "Everything" lets the time of day shape the evening. The rest are asked for
+ * deliberately — a bar crawl and a dinner-then-drinks evening are different
+ * requests, and inferring one from a vibe tag got it wrong often enough that
+ * it is worth one tap to be told.
+ */
+export type PlanFocus = "everything" | "food" | "drinks" | "activities";
+
+/** How dressed-up the evening should be. */
+export type Formality = "either" | "casual" | "fancy";
+
 export interface PlanInputs {
   areaIds: string[];
   areaNames: string[];
@@ -82,6 +104,8 @@ export interface PlanInputs {
   startTime: string; // e.g. "17:30"
   hours: number; // duration of the outing
   vibes: string[];
+  focus: PlanFocus;
+  formality: Formality;
   occasion: Occasion;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
@@ -179,7 +203,11 @@ export type GenerateResponse =
       status: "no_match";
       headline: string;
       message: string;
-      suggestions: { label: string; action: "widen_area" | "raise_budget"; value?: number }[];
+      suggestions: {
+        label: string;
+        action: "widen_area" | "raise_budget" | "clear_focus";
+        value?: number;
+      }[];
     }
   | { status: "error"; message: string };
 

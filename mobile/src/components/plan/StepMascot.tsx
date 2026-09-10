@@ -15,6 +15,7 @@ const TIPS: Partial<Record<StepId, string>> = {
   area: "Two areas keeps the taxi hops short. One keeps them shorter.",
   budget: "This covers everything — food and getting between places.",
   when: "Weeknights are quieter. Weekends have more on.",
+  shape: "Just drinks means just drinks — I will not slip dinner in.",
   vibe: "Two or three works better than one. I blend them.",
   party: "Numbers change the table, not just the bill.",
   details: "The odder the detail, the better I can do.",

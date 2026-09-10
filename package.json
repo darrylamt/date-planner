@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "verify:catalog": "tsx scripts/verify-catalog.ts"
+    "verify:catalog": "tsx scripts/verify-catalog.ts",
+    "mirror": "tsx scripts/mirror-shared.ts",
+    "mirror:check": "tsx scripts/mirror-shared.ts --check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

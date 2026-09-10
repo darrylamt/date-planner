@@ -11,6 +11,8 @@ import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
   DURATIONS,
+  FOCUS_OPTIONS,
+  FORMALITY_OPTIONS,
   OCCASION_EXTRA,
   OCCASIONS,
   PARTY_RULES,
@@ -23,7 +25,16 @@ import {
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
 import type { StepId } from "../../lib/planConstants";
-import type { Area, Gender, PlanInputs } from "../../lib/types";
+import type { SymbolViewProps } from "expo-symbols";
+import type { Area, Gender, PlanFocus, PlanInputs } from "../../lib/types";
+
+/** SF Symbols stay in the mobile layer; the shared constants are platform-free. */
+const FOCUS_ICON: Record<PlanFocus, SymbolViewProps["name"]> = {
+  everything: "sparkles",
+  food: "fork.knife",
+  drinks: "wineglass",
+  activities: "figure.walk",
+};
 
 export interface StepProps {
   /** Named, not numbered: the order changes per occasion pathway. */
@@ -103,7 +114,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           })}
         </Group>
 
-        <Group footer="We pick a corner of the city you have not tried.">
+        <Group footer="We pick the area that fits your budget and the vibe best.">
           <Row
             icon="dice.fill"
             title="Surprise me"
@@ -125,7 +136,11 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           subtitle={`For ${partyLabel(inputs.partySize)}, all in.`}
         />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
-        <Note>We keep the whole plan inside this — transport included.</Note>
+        <Note>
+          {inputs.budget === 0
+            ? "We will only suggest places that are genuinely free to enter."
+            : "We keep the whole plan inside this — transport included."}
+        </Note>
       </>
     );
   }
@@ -150,6 +165,37 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           value={inputs.hours}
           onChange={(hours) => update({ hours })}
         />
+      </>
+    );
+  }
+
+  if (step === "shape") {
+    return (
+      <>
+        <StepHeading
+          title="What are you after?"
+          subtitle="This decides what the stops are, not just where they are."
+        />
+        <Group>
+          {FOCUS_OPTIONS.map((f) => (
+            <Row
+              key={f.id}
+              icon={FOCUS_ICON[f.id]}
+              title={f.title}
+              subtitle={f.sub}
+              selected={inputs.focus === f.id}
+              onPress={() => update({ focus: f.id })}
+            />
+          ))}
+        </Group>
+
+        <GroupLabel>How dressed up?</GroupLabel>
+        <Segmented
+          options={FORMALITY_OPTIONS.map((f) => ({ value: f.id, label: f.title }))}
+          value={inputs.formality}
+          onChange={(formality) => update({ formality })}
+        />
+        <Note>{FORMALITY_OPTIONS.find((f) => f.id === inputs.formality)?.sub}</Note>
       </>
     );
   }

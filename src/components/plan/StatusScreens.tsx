@@ -11,8 +11,11 @@ export function NoMatchScreen({
 }: {
   headline: string;
   message: string;
-  suggestions: { label: string; action: "widen_area" | "raise_budget"; value?: number }[];
-  onSuggestion: (s: { action: "widen_area" | "raise_budget"; value?: number }) => void;
+  suggestions: { label: string; action: "widen_area" | "raise_budget" | "clear_focus"; value?: number }[];
+  onSuggestion: (s: {
+    action: "widen_area" | "raise_budget" | "clear_focus";
+    value?: number;
+  }) => void;
   onStartOver: () => void;
 }) {
   return (

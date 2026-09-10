@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { planInputsSchema } from "@/lib/schemas";
 import { fetchCandidates } from "@/lib/matching";
-import { planItinerary, clockFromMinutes, type PlannedItinerary } from "@/lib/planner";
+import {
+  planItinerary,
+  clockFromMinutes,
+  focusVenueTypes,
+  stopCountFor,
+  type PlannedItinerary,
+} from "@/lib/planner";
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
@@ -22,6 +28,14 @@ import type {
  * from the whole candidate catalogue down to the two or three chosen stops.
  */
 export const maxDuration = 60;
+
+/** Said plainly, because the shortage is ours rather than the user's. */
+const FOCUS_SHORTFALL: Record<string, string> = {
+  drinks: "We do not have enough priced bars in the catalog yet for a drinks-only night.",
+  food: "We do not have enough priced places to eat for a food-only day just yet.",
+  activities: "We do not have enough priced activities in the catalog yet for a full day of them.",
+  everything: "We could not fill the whole evening.",
+};
 
 /** Turn the planned itinerary plus its copy into the client's shape. */
 function assemble(
@@ -148,6 +162,36 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
     if (nudge > inputs.budget) {
       suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
     }
+
+    /*
+     * A narrowed focus usually fails for a different reason than money: we
+     * hold too few priced venues of that kind. Blaming the budget there sends
+     * someone to raise a number that was never the problem, so the shortage is
+     * named and dropping the focus is offered as the fix that would work.
+     */
+    const focusTypes = focusVenueTypes(inputs.focus);
+    if (focusTypes.length) {
+      const available = candidates.venues.filter((v) => focusTypes.includes(v.type)).length;
+      /*
+       * Measured against the stops this outing actually needs, not a flat
+       * floor: two bowling alleys are plenty for a short afternoon and not
+       * enough for a full day, and the earlier fixed threshold of two let the
+       * second case fall through to a message about money.
+       */
+      if (available < stopCountFor(inputs.hours)) {
+        return NextResponse.json({
+          status: "no_match",
+          headline: FOCUS_SHORTFALL[inputs.focus],
+          message:
+            "That is a gap in our catalog, not in your budget — we would rather say so than send you somewhere that does not fit.",
+          suggestions: [
+            { label: "Plan a bit of everything instead", action: "clear_focus" },
+            ...suggestions.filter((sug) => sug.action === "widen_area"),
+          ],
+        });
+      }
+    }
+
     return NextResponse.json({
       status: "no_match",
       headline: `We couldn't fill the whole evening in ${areaLabel} at GHS ${inputs.budget}.`,

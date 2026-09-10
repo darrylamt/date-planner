@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/adminAuth";
 import { verifyVenue } from "@/lib/verify";
 import type { Venue } from "@/lib/types";
 
@@ -23,24 +23,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_admin) {
-    return NextResponse.json({ error: "Admins only." }, { status: 403 });
-  }
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.response;
+  const { supabase } = gate;
 
   let body: z.infer<typeof bodySchema>;
   try {

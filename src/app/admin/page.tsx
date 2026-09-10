@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VenueTable } from "@/components/admin/VenueTable";
+import { adminCounts } from "@/lib/adminCounts";
 
 export const dynamic = "force-dynamic";
 
@@ -8,9 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminVenuesPage() {
   const supabase = createClient();
 
-  const [{ data: venues }, { data: menuMeta }] = await Promise.all([
+  const [{ data: venues }, { data: menuMeta }, counts] = await Promise.all([
     supabase.from("venues").select("*, areas(name)").order("name"),
     supabase.from("menu_items").select("venue_id, price_ghs, updated_at"),
+    adminCounts(supabase),
   ]);
 
   const items = menuMeta ?? [];
@@ -66,7 +68,86 @@ export default async function AdminVenuesPage() {
           Add venue
         </Link>
       </div>
+      <Triage counts={counts} />
       <VenueTable rows={rows} />
+    </div>
+  );
+}
+
+/**
+ * What needs doing, above the table.
+ *
+ * Each card is a queue with work in it, and a queue with nothing waiting is
+ * not shown at all — an admin page covered in zeroes trains you to ignore it.
+ */
+function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> }) {
+  const cards = [
+    {
+      href: "/admin/phones",
+      n: counts.phonesReported,
+      label: counts.phonesReported === 1 ? "reported number" : "reported numbers",
+      hint: "Someone said this number was wrong",
+      urgent: true,
+    },
+    {
+      href: "/admin/phones",
+      n: counts.phonesPending,
+      label: "awaiting phone approval",
+      hint: "Not dialled until you approve it",
+      urgent: true,
+    },
+    {
+      href: "/admin/unpriced",
+      n: counts.unpriced,
+      label: "unpriced",
+      hint: "Withheld from plans until priced",
+      urgent: true,
+    },
+    {
+      href: "/admin/prices",
+      n: counts.staleMenus,
+      label: "stale menus",
+      hint: "Not touched in 90 days",
+      urgent: false,
+    },
+    {
+      href: "/admin",
+      n: counts.unverified,
+      label: "unverified",
+      hint: "Not corroborated against the web",
+      urgent: false,
+    },
+  ].filter((c) => c.n > 0);
+
+  if (!cards.length) {
+    return (
+      <p className="mt-5 rounded-bar border border-line bg-cream/60 p-4 text-[14px] text-mutedbrown">
+        Nothing needs attention — every venue is priced, verified and its number approved.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {cards.map((c, i) => (
+        <Link
+          key={i}
+          href={c.href}
+          className="rounded-bar border border-line bg-cream/60 p-4 transition hover:border-mutedbrown"
+        >
+          <div className="flex items-baseline gap-2">
+            <span
+              className={`font-display text-[24px] font-bold tabular-nums ${
+                c.urgent ? "text-staletext" : ""
+              }`}
+            >
+              {c.n}
+            </span>
+            <span className="text-[14px]">{c.label}</span>
+          </div>
+          <div className="mt-1 text-[12px] text-mutedbrown">{c.hint}</div>
+        </Link>
+      ))}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { GUTTER, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
 import { createReservation, fetchVenueContact } from "../../lib/data";
+import { planMailto } from "../../lib/planEmail";
 import type {
   Itinerary,
   ItineraryOrder,
@@ -180,6 +181,31 @@ export function ItineraryView({
       setToast("Could not send the reservation — try again in a moment.");
     } finally {
       setReservingIndex(null);
+    }
+  }
+
+  /**
+   * Email the plan.
+   *
+   * Saving first so the mail carries a working link, but a failed save is not
+   * fatal here: the body holds the whole itinerary, so an unsaved plan still
+   * sends usefully — it just goes without the online version.
+   */
+  async function handleEmail() {
+    let slug = shareSlug;
+    if (!slug) {
+      try {
+        slug = await onSave();
+      } catch {
+        slug = null;
+      }
+    }
+
+    const url = slug ? `${WEB_URL}/p/${slug}` : null;
+    try {
+      await Linking.openURL(planMailto(itinerary, inputs.date, url));
+    } catch {
+      setToast("No mail app is set up on this device.");
     }
   }
 
@@ -352,12 +378,17 @@ export function ItineraryView({
       </ScrollView>
 
       <ActionBar>
-        <Button
-          title={shareSlug ? "Share plan" : "Save & share"}
-          icon="square.and.arrow.up"
-          onPress={handleShare}
-          loading={saving}
-        />
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              title={shareSlug ? "Share plan" : "Save & share"}
+              icon="square.and.arrow.up"
+              onPress={handleShare}
+              loading={saving}
+            />
+          </View>
+          <Button title="Email" kind="gray" icon="envelope" onPress={handleEmail} />
+        </View>
       </ActionBar>
 
       <Toast message={toast} onDone={() => setToast(null)} />

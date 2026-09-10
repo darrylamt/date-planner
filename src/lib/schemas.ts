@@ -12,6 +12,10 @@ export const planInputsSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.number().min(1).max(12),
   vibes: z.array(z.string()).min(1).max(3),
+  // Defaulted rather than required: a plan posted by an older build of the
+  // app still has to be plannable.
+  focus: z.enum(["everything", "food", "drinks", "activities"]).default("everything"),
+  formality: z.enum(["either", "casual", "fancy"]).default("either"),
   occasion: z.enum([
     "first_date",
     "anniversary",

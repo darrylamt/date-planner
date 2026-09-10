@@ -1,8 +1,7 @@
 /**
- * MIRRORED from the web app: ../../src/lib/format.ts
- * Pure domain logic with no web dependencies — kept byte-identical so the
- * two clients agree on shapes and formatting. Edit the web copy first,
- * then copy it here.
+ * GENERATED — do not edit. Mirrored from src/lib/format.ts.
+ *
+ * Run `npm run mirror` after changing the web copy.
  */
 /** Formatting helpers shared across screens. */
 

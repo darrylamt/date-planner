@@ -1,6 +1,15 @@
 import type { Candidates } from "./matching";
 import { estimateHop } from "./transport";
-import type { ItineraryOrder, MenuItem, PlanInputs, Venue, VenueType } from "./types";
+import type {
+  Formality,
+  ItineraryOrder,
+  MenuItem,
+  PlanFocus,
+  PlanInputs,
+  PriceBand,
+  Venue,
+  VenueType,
+} from "./types";
 
 /**
  * Deterministic itinerary planning.
@@ -60,7 +69,17 @@ const ROLE_LABEL: Record<Role, string> = {
  * A plan beginning at 10am is not a shorter version of one beginning at 7pm,
  * so the sequence is chosen from the clock rather than scaled.
  */
-function roleSequence(startHour: number, stopCount: number): Role[] {
+function roleSequence(startHour: number, stopCount: number, focus: PlanFocus): Role[] {
+  /*
+   * A narrowed focus overrides the time of day entirely. Someone asking for
+   * drinks wants a second bar, not dinner at the sensible hour for it, and
+   * cycling the focus roles is what turns one request into a crawl.
+   */
+  if (focus !== "everything") {
+    const base = FOCUS_ROLES[focus];
+    return Array.from({ length: stopCount }, (_, i) => base[i % base.length]);
+  }
+
   let base: Role[];
   if (startHour < 11) base = ["cafe", "activity", "meal", "dessert"];
   else if (startHour < 15) base = ["meal", "activity", "dessert", "lounge"];
@@ -69,8 +88,29 @@ function roleSequence(startHour: number, stopCount: number): Role[] {
   return base.slice(0, stopCount);
 }
 
+/** What each narrowed focus is made of, cycled to fill the stops asked for. */
+const FOCUS_ROLES: Record<Exclude<PlanFocus, "everything">, Role[]> = {
+  food: ["meal", "dessert", "cafe"],
+  drinks: ["lounge"],
+  activities: ["activity"],
+};
+
+/**
+ * The venue types a narrowed focus can actually be built from.
+ *
+ * Candidate selection needs this too: scoring by vibe alone can fill all
+ * fourteen slots with restaurants, and a "just drinks" request then reaches
+ * the planner with no bar in it at all.
+ */
+export function focusVenueTypes(focus: PlanFocus): VenueType[] {
+  if (focus === "everything") return [];
+  const types = new Set<VenueType>();
+  FOCUS_ROLES[focus].forEach((role) => ROLE_TYPES[role].forEach((t) => types.add(t)));
+  return [...types];
+}
+
 /** Two stops in a short window, four only when there is genuinely time. */
-function stopCountFor(hours: number): number {
+export function stopCountFor(hours: number): number {
   if (hours <= 2) return 2;
   if (hours <= 4) return 3;
   if (hours <= 6) return 3;
@@ -94,11 +134,33 @@ function expandVibes(vibes: string[]): string[] {
   return Array.from(out);
 }
 
+const BAND_RANK: Record<PriceBand, number> = { budget: 0, mid: 1, premium: 2 };
+
+/**
+ * How well a venue matches the register asked for.
+ *
+ * Deliberately a preference and not a filter: someone asking for somewhere
+ * fancy on a modest budget should still get the smartest places that fit,
+ * rather than no plan at all.
+ */
+function formalityScore(v: Venue, formality: Formality): number {
+  if (formality === "either") return 0;
+
+  const rank = BAND_RANK[v.price_band] ?? 1;
+  const dressy = v.dress_code ? 1 : 0;
+  const upscale = v.vibe_tags.includes("upscale") ? 1 : 0;
+  const casual = v.vibe_tags.includes("casual") ? 1 : 0;
+
+  return formality === "fancy"
+    ? rank * 2 + dressy * 2 + upscale * 3 - casual * 2
+    : (2 - rank) * 2 + casual * 3 - dressy * 2 - upscale * 2;
+}
+
 function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number {
   const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
   const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
   const inArea = inputs.areaIds.includes(v.area_id) ? 1 : 0;
-  return overlap * 3 + occasion * 2 + inArea;
+  return overlap * 3 + occasion * 2 + inArea + formalityScore(v, inputs.formality);
 }
 
 /* ── orders ───────────────────────────────────────────────────────────── */
@@ -169,8 +231,15 @@ function planOrders(
     }
 
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));
-    // Nothing priced at all. Withhold it rather than plan a free visit.
-    if (each <= 0) return null;
+    /*
+     * Nothing priced at all. A venue flagged free is genuinely free and can
+     * carry a stop at zero; one that simply has no prices on file is withheld,
+     * because planning a free visit to somewhere that charges is how a plan
+     * lies about what an evening costs.
+     */
+    if (each <= 0) {
+      return venue.is_free ? { orders: [], cost: 0 } : null;
+    }
     return {
       orders: [
         { item: "Typical spend, per person", qty: partySize, price_ghs: each * partySize },
@@ -278,12 +347,35 @@ export function planItinerary(
     score: number;
   }
 
+  /*
+   * A narrowed focus was asked for explicitly, so its slots are filled only by
+   * venues of the right type. The thin-catalogue fallback below is right when
+   * we chose the shape ourselves, but applied here it answered "just drinks"
+   * with three restaurants — which is not a thin answer to the question, it is
+   * an answer to a different one.
+   */
+  const focusTypes = focusVenueTypes(inputs.focus);
+
   const optionsFor = (role: Role): Option[] => {
-    const types = ROLE_TYPES[role];
-    const exact = candidates.venues.filter((v) => types.includes(v.type));
-    // A thin catalogue should still produce a plan, so a slot with no venue of
-    // its own type falls back to anything rather than collapsing the evening.
-    const pool = exact.length ? exact : candidates.venues;
+    const roleTypes = ROLE_TYPES[role];
+
+    /*
+     * With a narrowed focus every slot may be filled by anything within that
+     * focus, not only by its own role's type. The roles are there to vary the
+     * evening — a meal, then something sweet — but "mostly food" must not fail
+     * because the catalogue has no dedicated dessert parlour, and it must not
+     * quietly reach outside the focus either. Preference for the exact role
+     * type is applied in the sort below instead.
+     */
+    const pool = focusTypes.length
+      ? candidates.venues.filter((v) => focusTypes.includes(v.type))
+      : (() => {
+          const exact = candidates.venues.filter((v) => roleTypes.includes(v.type));
+          // A thin catalogue should still produce a plan, so a slot with no
+          // venue of its own type falls back to anything rather than
+          // collapsing the evening.
+          return exact.length ? exact : candidates.venues;
+        })();
 
     const out: Option[] = [];
     for (const venue of pool) {
@@ -291,8 +383,18 @@ export function planItinerary(
       const score = scoreVenue(venue, inputs, wantedTags);
       for (const tier of [1, 0] as const) {
         const planned = planOrders(venue, menu, inputs.partySize, tier);
-        if (!planned || planned.cost <= 0) continue;
-        out.push({ venue, tier, orders: planned.orders, cost: planned.cost, score });
+        if (!planned) continue;
+        if (planned.cost <= 0 && !venue.is_free) continue;
+        out.push({
+          venue,
+          tier,
+          orders: planned.orders,
+          cost: planned.cost,
+          // Within a focus every venue is allowed, so nudge the slot towards
+          // its own role to keep the evening varied rather than three of the
+          // same thing.
+          score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+        });
       }
     }
     /*
@@ -307,7 +409,7 @@ export function planItinerary(
   };
 
   const attempt = (stopCount: number): PlannedItinerary | null => {
-    const roles = roleSequence(startHour, stopCount);
+    const roles = roleSequence(startHour, stopCount, inputs.focus);
     const slots = roles.map(optionsFor);
 
     // Start with each slot's most preferred option, skipping venues already
