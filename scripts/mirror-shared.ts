@@ -18,7 +18,14 @@
 import fs from "fs";
 import path from "path";
 
-const FILES = ["budget.ts", "format.ts", "planConstants.ts", "pronouns.ts", "types.ts"];
+const FILES = [
+  "budget.ts",
+  "format.ts",
+  "planConstants.ts",
+  "pronouns.ts",
+  "swapStop.ts",
+  "types.ts",
+];
 
 const root = process.cwd();
 const from = path.join(root, "src", "lib");

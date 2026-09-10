@@ -8,6 +8,7 @@ import { StopCard } from "@/components/StopCard";
 import { Toast } from "@/components/Toast";
 import { ghs, longDate } from "@/lib/format";
 import { downloadIcs } from "@/lib/ics";
+import { swapStopLocally } from "@/lib/swapStop";
 import type { Itinerary, ItineraryOrder, PlanInputs } from "@/lib/types";
 
 /**
@@ -43,30 +44,22 @@ export function ItineraryView({
     setTimeout(() => setToast(null), 3200);
   };
 
-  async function handleSwap(index: number) {
-    if (swappingIndex !== null) return;
-    setSwappingIndex(index);
-    setHighlightIndex(null);
-    try {
-      const res = await fetch("/api/swap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs, itinerary, stopIndex: index }),
-      });
-      const data = await res.json();
-      if (data.status === "ok") {
-        onItineraryChange(data.itinerary);
-        setHighlightIndex(index);
-        const buffer = inputs.budget - data.itinerary.est_total_ghs;
-        showToast(`Swapped — still ${ghs(buffer)} under budget`);
-      } else {
-        showToast(data.message ?? "Couldn't find a good swap.");
-      }
-    } catch {
-      showToast("Couldn't find a good swap.");
-    } finally {
-      setSwappingIndex(null);
+  /**
+   * Swap a stop for its next runner-up.
+   *
+   * The alternates arrive with the plan already priced to fit, so this is
+   * instant and costs nothing. It used to POST to /api/swap and pay for a
+   * whole generation on every tap.
+   */
+  function handleSwap(index: number) {
+    const result = swapStopLocally(itinerary, index, inputs.budget);
+    if (!result) {
+      showToast("No other spot fits this slot — try widening the area or budget.");
+      return;
     }
+    onItineraryChange(result.itinerary);
+    setHighlightIndex(index);
+    showToast(result.message);
   }
 
   /** Menu edits: replace a stop's orders and recompute food + overall totals. */

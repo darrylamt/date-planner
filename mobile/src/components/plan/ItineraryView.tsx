@@ -14,6 +14,7 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
 import { createReservation, fetchVenueContact } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
+import { swapStopLocally } from "../../lib/swapStop";
 import type {
   Itinerary,
   ItineraryOrder,
@@ -62,64 +63,14 @@ export function ItineraryView({
    * number does not have.
    */
   function handleSwap(index: number) {
-    const stop = itinerary.stops[index];
-    const alternates = stop.alternates ?? [];
-
-    if (!alternates.length) {
+    const result = swapStopLocally(itinerary, index, inputs.budget);
+    if (!result) {
       setToast("No other spot fits this slot — try widening the area or budget.");
       return;
     }
-
-    const next = alternates[0];
-    const rotated: StopAlternate[] = [
-      ...alternates.slice(1),
-      {
-        venue_id: stop.venue_id,
-        name: stop.name,
-        area: stop.area,
-        image_url: stop.image_url,
-        google_maps_url: stop.google_maps_url ?? null,
-        reservation_required: stop.reservation_required ?? false,
-        orders: stop.orders,
-        est_cost_ghs: stop.est_cost_ghs,
-        why_this_fits: stop.why_this_fits,
-      },
-    ];
-
-    const swapped: typeof stop = {
-      ...stop,
-      venue_id: next.venue_id,
-      name: next.name,
-      area: next.area,
-      image_url: next.image_url,
-      google_maps_url: next.google_maps_url,
-      reservation_required: next.reservation_required,
-      reservation_requested: false,
-      orders: next.orders,
-      est_cost_ghs: next.est_cost_ghs,
-      why_this_fits: next.why_this_fits,
-      alternates: rotated,
-    };
-
-    const stops = itinerary.stops.map((s, i) => (i === index ? swapped : s));
-    const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_ghs), 0));
-    const est = Math.round(food + Number(itinerary.transport_total_ghs));
-
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onItineraryChange({
-      ...itinerary,
-      stops,
-      summary_route: Array.from(new Set(stops.map((s) => s.area).filter(Boolean))).join(" → "),
-      food_total_ghs: food,
-      est_total_ghs: est,
-    });
-
-    const buffer = inputs.budget - est;
-    setToast(
-      buffer >= 0
-        ? `Swapped — still ${ghs(buffer)} under budget`
-        : `Swapped — now ${ghs(Math.abs(buffer))} over budget`
-    );
+    onItineraryChange(result.itinerary);
+    setToast(result.message);
   }
 
   /** Menu edits recompute food and overall totals locally — no round trip. */

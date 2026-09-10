@@ -45,19 +45,3 @@ export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse
   }
 }
 
-export type SwapResponse =
-  | { status: "ok"; itinerary: Itinerary }
-  | { status: "no_match"; message: string }
-  | { status: "error"; message: string };
-
-export async function swapStop(
-  inputs: PlanInputs,
-  itinerary: Itinerary,
-  stopIndex: number
-): Promise<SwapResponse> {
-  try {
-    return await postJson<SwapResponse>("/api/swap", { inputs, itinerary, stopIndex });
-  } catch {
-    return { status: "error", message: "Couldn't find a good swap — your plan is untouched." };
-  }
-}
