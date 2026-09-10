@@ -10,11 +10,11 @@ import { StepMascot } from "../../src/components/plan/StepMascot";
 import { ErrorState, LoadingPlan, NoMatch } from "../../src/components/plan/StatusScreens";
 import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
-import { useTheme } from "../../src/lib/useTheme";
+import { OccasionThemeProvider, useTheme } from "../../src/lib/useTheme";
 import { generatePlan } from "../../src/lib/api";
 import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
-import { defaultInputs, stepsFor } from "../../src/lib/planConstants";
+import { clampParty, defaultInputs, stepsFor } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
@@ -74,7 +74,14 @@ export default function PlanNew() {
         await clearDraft();
         const base = defaultInputs();
         const withOccasion =
-          seeded && isOccasion(seeded) ? { ...base, occasion: seeded } : base;
+          seeded && isOccasion(seeded)
+            ? {
+                ...base,
+                occasion: seeded,
+                // Enter at a legal size: friends starts at three, solo at one.
+                partySize: clampParty(seeded, base.partySize),
+              }
+            : base;
         if (active) {
           setInputs(withOccasion);
           setPhase({ name: "steps", step: 0 });
@@ -106,6 +113,12 @@ export default function PlanNew() {
   const update = useCallback((patch: Partial<PlanInputs>) => {
     setInputs((cur) => {
       const next = { ...cur, ...patch };
+      if (patch.occasion && patch.occasion !== cur.occasion) {
+        next.partySize = clampParty(patch.occasion, cur.partySize);
+        next.companions = next.companions.slice(0, Math.max(0, next.partySize - 1));
+        // Answers to the previous pathway's question do not belong to this one.
+        next.occasionDetail = {};
+      }
       void saveDraft({ inputs: next });
       return next;
     });
@@ -212,10 +225,15 @@ export default function PlanNew() {
     );
   }
 
-  if (phase.name === "loading") return <LoadingPlan inputs={inputs} />;
+  /** Everything below is inside the pathway, so it wears the occasion's theme. */
+  const themed = (node: React.ReactNode) => (
+    <OccasionThemeProvider occasion={inputs.occasion}>{node}</OccasionThemeProvider>
+  );
+
+  if (phase.name === "loading") return themed(<LoadingPlan inputs={inputs} />);
 
   if (phase.name === "no_match") {
-    return (
+    return themed(
       <NoMatch
         data={phase.data}
         onSuggestion={(s) => {
@@ -235,11 +253,11 @@ export default function PlanNew() {
   }
 
   if (phase.name === "error") {
-    return <ErrorState message={phase.message} onRetry={() => void generate()} />;
+    return themed(<ErrorState message={phase.message} onRetry={() => void generate()} />);
   }
 
   if (phase.name === "result") {
-    return (
+    return themed(
       <ItineraryView
         inputs={inputs}
         itinerary={phase.itinerary}
@@ -280,7 +298,7 @@ export default function PlanNew() {
 
   const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
-  return (
+  return themed(
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}

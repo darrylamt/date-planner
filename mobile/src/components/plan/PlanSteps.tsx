@@ -13,7 +13,8 @@ import {
   DURATIONS,
   OCCASION_EXTRA,
   OCCASIONS,
-  PARTY_SIZES,
+  PARTY_RULES,
+  partySizeOptions,
   VIBES,
   cap,
   partyLabel,
@@ -202,28 +203,46 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   }
 
   if (step === "party") {
+    const rule = PARTY_RULES[inputs.occasion];
     return (
       <>
         <StepHeading
-          title="Who is coming?"
-          subtitle="This sets the portions, the table and how far the budget goes."
+          title={rule.fixed ? "Who is coming?" : "How many of you?"}
+          subtitle={
+            rule.fixed
+              ? "Just the details that make the plan theirs."
+              : rule.min > 1
+                ? `This sets the table and how far the budget goes. ${rule.note ?? ""}`.trim()
+                : "This sets the portions, the table and how far the budget goes."
+          }
         />
 
-        <WheelPicker
-          options={PARTY_SIZES.map((n) => ({
-            value: n,
-            label: n === 1 ? "Just me" : String(n),
-          }))}
-          value={inputs.partySize}
-          onChange={(partySize) =>
-            update({
-              partySize,
-              // Drop names that no longer have a seat.
-              companions: inputs.companions.slice(0, Math.max(0, partySize - 1)),
-            })
-          }
-          suffix={inputs.partySize > 1 ? "people" : undefined}
-        />
+        {rule.fixed ? (
+          /* Not a choice. Offering a wheel here would invite an answer that
+             makes the rest of the plan incoherent. */
+          <View style={{ alignItems: "center", paddingHorizontal: GUTTER }}>
+            <Text variant="display">{rule.fixed}</Text>
+            <Text variant="body" tone="secondary" center style={{ marginTop: Spacing.two }}>
+              {rule.note}
+            </Text>
+          </View>
+        ) : (
+          <WheelPicker
+            options={partySizeOptions(inputs.occasion).map((n) => ({
+              value: n,
+              label: n === 1 ? "Just me" : String(n),
+            }))}
+            value={inputs.partySize}
+            onChange={(partySize) =>
+              update({
+                partySize,
+                // Drop names that no longer have a seat.
+                companions: inputs.companions.slice(0, Math.max(0, partySize - 1)),
+              })
+            }
+            suffix={inputs.partySize > 1 ? "people" : undefined}
+          />
+        )}
 
         {pair ? (
           <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.five }}>

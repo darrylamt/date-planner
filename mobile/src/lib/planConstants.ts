@@ -228,8 +228,96 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
 export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] {
   const steps: StepId[] = [];
   if (!occasionPreset) steps.push("occasion");
-  steps.push("party");
+  if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
   if (OCCASION_EXTRA[occasion]) steps.push("extra");
   steps.push("area", "budget", "when", "vibe", "details");
   return steps;
 }
+
+/* ── party rules ──────────────────────────────────────────────────────── */
+
+export interface PartyRule {
+  min: number;
+  max: number;
+  /** Set when the size is not a choice at all. */
+  fixed?: number;
+  note?: string;
+}
+
+/**
+ * How many people an occasion can be for.
+ *
+ * Some occasions simply are a number — a solo day is one person and a date
+ * night is two — and offering a wheel there invites an answer that makes the
+ * rest of the plan incoherent. Where the size is genuinely open, only the
+ * floor is set.
+ */
+export const PARTY_RULES: Record<Occasion, PartyRule> = {
+  solo_day: { min: 1, max: 1, fixed: 1, note: "A solo day is just you." },
+  first_date: { min: 2, max: 2, fixed: 2, note: "A first date is the two of you." },
+  date_night: { min: 2, max: 2, fixed: 2, note: "A date night is the two of you." },
+  anniversary: { min: 2, max: 2, fixed: 2, note: "An anniversary is the two of you." },
+  friend_outing: { min: 3, max: 20, note: "Friends out starts at three." },
+  birthday: { min: 1, max: 20 },
+  graduation: { min: 1, max: 20 },
+  celebration: { min: 1, max: 20 },
+};
+
+/** Party sizes offered for an occasion. Empty when the size is fixed. */
+export function partySizeOptions(occasion: Occasion): number[] {
+  const rule = PARTY_RULES[occasion];
+  if (rule.fixed) return [];
+  return PARTY_SIZES.filter((n) => n >= rule.min && n <= rule.max);
+}
+
+/**
+ * Force a party size to be legal for its occasion.
+ *
+ * Called whenever the occasion changes, because someone who picked six for a
+ * birthday and then switched to a date night must not be left carrying six
+ * into a plan for two.
+ */
+export function clampParty(occasion: Occasion, size: number): number {
+  const rule = PARTY_RULES[occasion];
+  if (rule.fixed) return rule.fixed;
+  return Math.min(rule.max, Math.max(rule.min, size));
+}
+
+/* ── occasion themes ──────────────────────────────────────────────────── */
+
+export interface OccasionTheme {
+  /** Carries buttons, selected states and the mascot's circle. */
+  accent: string;
+  /** Lifted for dark surfaces, where the light-mode tone is too low-contrast. */
+  accentDark: string;
+  /** Page tint. Barely there — the itinerary is still mostly white. */
+  page: string;
+  pageDark: string;
+}
+
+/**
+ * A palette per occasion, applied while planning and kept on the finished
+ * plan — including the shared card, so a link someone opens looks like the
+ * occasion it was made for.
+ *
+ * Every accent here clears 4.5:1 against white, because white type sits on it
+ * on every primary button. The page tints are deliberately close to neutral:
+ * the theme should be felt rather than noticed, and a saturated page would
+ * fight the venue photography that is the actual content.
+ */
+export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
+  // Lovey-dovey: deep rose on the faintest blush.
+  date_night: { accent: "#B31D50", accentDark: "#F58AAC", page: "#FDF5F7", pageDark: "#140A0D" },
+  first_date: { accent: "#A63A5C", accentDark: "#F193AC", page: "#FDF6F8", pageDark: "#130B0E" },
+  anniversary: { accent: "#9C3B44", accentDark: "#F0949A", page: "#FDF6F5", pageDark: "#140B0B" },
+  // Cakey: warm caramel on cream, with the icing pink kept for the mascot.
+  birthday: { accent: "#9A5B12", accentDark: "#EFB35F", page: "#FFF9EE", pageDark: "#140F06" },
+  // Ceremonial: the house teal, dressed up.
+  graduation: { accent: "#0F766E", accentDark: "#4FBFB2", page: "#F4F9F8", pageDark: "#07100F" },
+  // Plum, for a toast.
+  celebration: { accent: "#6D3F85", accentDark: "#C79BDA", page: "#FAF6FC", pageDark: "#0F0A12" },
+  // Sage, easy and unfussy.
+  friend_outing: { accent: "#376B4A", accentDark: "#8CC79D", page: "#F4FAF6", pageDark: "#08120B" },
+  // Slate, quiet and self-contained.
+  solo_day: { accent: "#3D5A73", accentDark: "#9CBBD6", page: "#F5F8FA", pageDark: "#080D12" },
+};

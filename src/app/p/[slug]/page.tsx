@@ -4,14 +4,26 @@ import { Logo } from "@/components/Logo";
 import { SmartImage } from "@/components/SmartImage";
 import { createServiceClient } from "@/lib/supabase/server";
 import { longDate, time12 } from "@/lib/format";
+import { OCCASION_THEME, partyLabel } from "@/lib/planConstants";
 import type { SavedPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** Headline for the card, which is no longer always a pair. */
+function heading(size: number): string {
+  if (size <= 1) return "A DAY OUT";
+  if (size === 2) return "AN EVENING FOR TWO";
+  return `AN EVENING FOR ${size}`;
+}
+
 /**
  * Shared plan — public read-only view served by slug via the service role
- * (no public SELECT policy on plans). Dark "AN EVENING FOR TWO" layout,
- * mobile stacked / desktop three-across as designed.
+ * (no public SELECT policy on plans).
+ *
+ * Wears the occasion's own accent, so a link opened by someone who was not
+ * there still looks like the occasion it was made for rather than like a
+ * generic export. The accent is inlined as a CSS variable because these
+ * colours are per-plan and cannot be Tailwind classes known at build time.
  */
 export default async function SharedPlanPage({ params }: { params: { slug: string } }) {
   const supabase = createServiceClient();
@@ -25,14 +37,22 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
   const plan = data as SavedPlan;
   const { itinerary, inputs } = plan;
 
+  const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
+
   return (
-    <main className="min-h-screen bg-lagoon text-lagoon-faint">
+    <main
+      className="min-h-screen bg-lagoon text-lagoon-faint"
+      style={{ ["--occasion" as string]: theme.accentDark }}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col md:max-w-[1080px]">
         {/* Header */}
         <div className="px-7 pb-2 pt-10 text-center md:pt-16">
           <div className="kente mx-auto w-[72px] md:w-[88px]" />
-          <div className="mt-5 text-caption font-bold tracking-[0.14em] text-lagoon-soft md:mt-6 md:tracking-[0.16em]">
-            AN EVENING FOR TWO
+          <div
+            className="mt-5 text-caption font-bold tracking-[0.14em] md:mt-6 md:tracking-[0.16em]"
+            style={{ color: "var(--occasion)" }}
+          >
+            {heading(inputs.partySize ?? 2)}
           </div>
           <h1 className="mt-2.5 font-display text-[34px] font-bold leading-[1.2] md:mt-3 md:text-[52px] md:leading-[1.15]">
             {longDate(inputs.date)}
