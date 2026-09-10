@@ -50,6 +50,8 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    min_party_size: venue?.min_party_size ?? 1,
+    max_party_size: venue?.max_party_size != null ? String(venue.max_party_size) : "",
     google_place_id: venue?.google_place_id ?? "",
     business_status: venue?.business_status ?? "",
     price_level: venue?.price_level ?? "",
@@ -84,6 +86,9 @@ export function VenueForm({
         // price, so the flag wins and the figure is zeroed rather than
         // failing the save with a database error nobody can act on.
         avg_cost_per_person_ghs: v.is_free ? 0 : v.avg_cost_per_person_ghs,
+        min_party_size: Number(v.min_party_size) || 1,
+        // Blank means no practical limit, which is different from zero.
+        max_party_size: v.max_party_size === "" ? null : Number(v.max_party_size),
         dress_code: v.dress_code || null,
         instagram_handle: v.instagram_handle || null,
         // Even an admin edit routes through review, so approval happens in
@@ -331,6 +336,31 @@ export function VenueForm({
             {v.is_free
               ? "Can fill a stop at no cost — only for places that genuinely charge nothing."
               : "Leave at 0 if you do not know it. Unpriced venues are withheld from plans, not shown as free."}
+          </span>
+        </div>
+        <div className={field}>
+          <span className="flbl">Works for how many?</span>
+          <div className="flex items-center gap-2">
+            <input
+              className="inp font-mono"
+              type="number"
+              min={1}
+              value={v.min_party_size}
+              onChange={(e) => setV({ ...v, min_party_size: Number(e.target.value) })}
+            />
+            <span className="text-[13px] text-mutedbrown">to</span>
+            <input
+              className="inp font-mono"
+              type="number"
+              min={1}
+              placeholder="any"
+              value={v.max_party_size}
+              onChange={(e) => setV({ ...v, max_party_size: e.target.value })}
+            />
+          </div>
+          <span className="mt-1 text-[12px] text-mutedbrown">
+            Leave the second blank for no limit. A padel court is 2 to 4 — it is never
+            offered to a solo day or to a group of eight.
           </span>
         </div>
         <div className={field}>

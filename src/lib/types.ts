@@ -35,6 +35,12 @@ export interface Venue {
    * stop legitimately total zero.
    */
   is_free: boolean;
+  /**
+   * How many people the venue works for. A padel court is 2-4; one person
+   * cannot use it at all, and the planner has to know that before offering it.
+   */
+  min_party_size: number;
+  max_party_size: number | null;
   /** Google Places link — the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;

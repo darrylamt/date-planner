@@ -9,6 +9,7 @@
     "lint": "next lint",
     "verify:catalog": "tsx scripts/verify-catalog.ts",
     "places:sync": "tsx scripts/places-sync.ts",
+    "places:link": "tsx scripts/places-link.ts",
     "mirror": "tsx scripts/mirror-shared.ts",
     "mirror:check": "tsx scripts/mirror-shared.ts --check"
   },

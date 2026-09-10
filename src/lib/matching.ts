@@ -94,6 +94,19 @@ export async function fetchCandidates(
       pricedVenueIds.has(v.id)
   );
 
+  /*
+   * Drop anything this group is the wrong size for.
+   *
+   * A padel court needs two people and seats four; offering it for a solo day
+   * wastes the journey, and offering it to eight splits the group at the door.
+   * Defaulted so a venue nobody has thought about behaves exactly as before.
+   */
+  venues = venues.filter((v) => {
+    const min = Number(v.min_party_size ?? 1);
+    const max = v.max_party_size == null ? Infinity : Number(v.max_party_size);
+    return inputs.partySize >= min && inputs.partySize <= max;
+  });
+
   // Score: vibe overlap (heavily weighted) + occasion fit; keep a fallback
   // pool so a low-overlap request still gets real options rather than none.
   const scored = venues

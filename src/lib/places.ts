@@ -43,6 +43,23 @@ const DETAIL_MASK = [
   "regularOpeningHours",
 ].join(",");
 
+/**
+ * Discovery asks for more than a name match, because the whole point is to
+ * judge a place you have never heard of from the row alone.
+ */
+const DISCOVER_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.businessStatus",
+  "places.primaryType",
+  "places.types",
+  "places.priceLevel",
+  "places.rating",
+  "places.userRatingCount",
+].join(",");
+
 /** Search results only need enough to pick the right one from a list. */
 const SEARCH_MASK = [
   "places.id",
@@ -137,6 +154,55 @@ export async function searchPlaces(query: string): Promise<PlaceSummary[]> {
   return (data.places ?? []).map(toSummary);
 }
 
+export interface DiscoveredPlace extends PlaceSummary {
+  lat: number | null;
+  lng: number | null;
+  priceLevel: string | null;
+  rating: number | null;
+  ratingCount: number | null;
+  types: string[];
+}
+
+/**
+ * Find venues we have never heard of.
+ *
+ * The catalogue was built by typing names someone already knew, which caps it
+ * at one person's memory of the city. This asks Google what is actually in a
+ * neighbourhood, so the work becomes triage — deciding which of twenty real
+ * bars in Osu belong in the catalogue — rather than recall.
+ *
+ * It returns candidates and nothing else. Menus, prices and judgement about
+ * who a place suits still come from us, so a discovered venue lands unpriced
+ * and cannot appear in a plan until someone gives it a price.
+ */
+export async function discoverPlaces(
+  what: string,
+  area: string,
+  opts: { openNow?: boolean } = {}
+): Promise<DiscoveredPlace[]> {
+  const data = await call<{ places?: RawPlace[] }>(
+    `${BASE}/places:searchText`,
+    DISCOVER_MASK,
+    {
+      textQuery: `${what} in ${area}, Accra, Ghana`,
+      locationBias: { circle: { center: ACCRA, radius: 40000 } },
+      regionCode: "GH",
+      languageCode: "en",
+      ...(opts.openNow ? { openNow: true } : {}),
+    }
+  );
+
+  return (data.places ?? []).map((p) => ({
+    ...toSummary(p),
+    lat: p.location?.latitude ?? null,
+    lng: p.location?.longitude ?? null,
+    priceLevel: p.priceLevel ?? null,
+    rating: p.rating ?? null,
+    ratingCount: p.userRatingCount ?? null,
+    types: p.types ?? [],
+  }));
+}
+
 /** Full detail for one place. */
 export async function placeDetails(placeId: string): Promise<PlaceDetails> {
   const p = await call<RawPlace>(
@@ -219,24 +285,50 @@ export function bandFromPriceLevel(level: string | null): PriceBand | null {
  */
 const TYPE_MAP: Record<string, VenueType> = {
   restaurant: "restaurant",
+  fine_dining_restaurant: "restaurant",
+  buffet_restaurant: "restaurant",
   cafe: "cafe",
+  cafeteria: "cafe",
   coffee_shop: "cafe",
   bakery: "cafe",
+  tea_house: "cafe",
   bar: "lounge",
+  // Named for the bar first, and used as a drinks stop even though it serves
+  // food. Observed on The Republic and Venus Lounge in the Osu results.
+  bar_and_grill: "lounge",
+  lounge_bar: "lounge",
   night_club: "lounge",
   pub: "lounge",
   wine_bar: "lounge",
   ice_cream_shop: "dessert",
   dessert_shop: "dessert",
+  dessert_restaurant: "dessert",
+  chocolate_shop: "dessert",
   park: "outdoor",
+  national_park: "outdoor",
   beach: "outdoor",
+  garden: "outdoor",
   hiking_area: "outdoor",
+  botanical_garden: "outdoor",
   tourist_attraction: "activity",
   bowling_alley: "activity",
   amusement_park: "activity",
+  amusement_center: "activity",
   art_gallery: "activity",
+  art_studio: "activity",
   museum: "activity",
   movie_theater: "activity",
+  // Padel, tennis and the rest. Google returns both of these for Accra's
+  // padel clubs, and without them a court was filed as a restaurant.
+  sports_club: "activity",
+  sports_activity_location: "activity",
+  sports_complex: "activity",
+  golf_course: "activity",
+  karaoke: "activity",
+  video_arcade: "activity",
+  performing_arts_theater: "activity",
+  cultural_center: "activity",
+  event_venue: "activity",
 };
 
 export function venueTypeFromPlace(

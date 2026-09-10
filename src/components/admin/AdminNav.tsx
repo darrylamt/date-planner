@@ -43,6 +43,7 @@ const GROUPS: {
   {
     label: "Add data",
     links: [
+      { href: "/admin/discover", label: "Discover venues" },
       { href: "/admin/venues/new", label: "Add a venue" },
       { href: "/admin/ingest", label: "Add from menu" },
       { href: "/admin/import", label: "Import CSV" },
