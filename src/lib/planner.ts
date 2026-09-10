@@ -183,8 +183,58 @@ function planOrders(
   venue: Venue,
   menu: MenuItem[],
   partySize: number,
-  tier: 0 | 1
+  tier: 0 | 1,
+  durationMins: number
 ): OrderPlan | null {
+  /*
+   * Venues that charge for a thing rather than for a person.
+   *
+   * A padel court is priced by the hour whoever turns up, so four players
+   * split one bill and the cost per head halves as the group grows — the
+   * opposite of a menu, where four people means four mains. Handled before the
+   * menu because a court with a drinks list is still charged for the court.
+   */
+  const mode = venue.pricing_mode ?? "per_person";
+  const unit = Number(venue.unit_price_ghs ?? 0);
+
+  if (mode !== "per_person" && unit > 0) {
+    // Charged in whole hours in practice; a 90-minute slot is billed as two.
+    const hours = Math.max(1, Math.ceil(durationMins / 60));
+
+    if (mode === "per_group") {
+      return {
+        orders: [{ item: `Booking for ${partySize}`, qty: 1, price_ghs: Math.round(unit) }],
+        cost: Math.round(unit),
+      };
+    }
+    if (mode === "per_hour") {
+      const total = Math.round(unit * hours);
+      return {
+        orders: [
+          {
+            item: `${hours} hour${hours === 1 ? "" : "s"}, shared between ${partySize}`,
+            qty: 1,
+            price_ghs: total,
+          },
+        ],
+        cost: total,
+      };
+    }
+    if (mode === "per_hour_per_person") {
+      const total = Math.round(unit * hours * partySize);
+      return {
+        orders: [
+          {
+            item: `${hours} hour${hours === 1 ? "" : "s"} each`,
+            qty: partySize,
+            price_ghs: total,
+          },
+        ],
+        cost: total,
+      };
+    }
+  }
+
   const pick = (category: string): MenuItem | null => {
     const items = menu.filter((m) => m.category === category).sort(byPrice);
     if (!items.length) return null;
@@ -382,7 +432,13 @@ export function planItinerary(
       const menu = menuByVenue.get(venue.id) ?? [];
       const score = scoreVenue(venue, inputs, wantedTags);
       for (const tier of [1, 0] as const) {
-        const planned = planOrders(venue, menu, inputs.partySize, tier);
+        const planned = planOrders(
+          venue,
+          menu,
+          inputs.partySize,
+          tier,
+          ROLE_MINUTES[role]
+        );
         if (!planned) continue;
         if (planned.cost <= 0 && !venue.is_free) continue;
         out.push({

@@ -200,12 +200,12 @@ export function Discover({ areas }: { areas: Area[] }) {
               return (
                 <li key={r.id}>
                   <label
-                    className={`flex cursor-pointer items-start gap-3 rounded-bar border p-3 transition ${
+                    className={`flex cursor-pointer items-start gap-3 rounded-bar border p-3 text-ink transition ${
                       r.already
-                        ? "border-line bg-cream/40 opacity-60"
+                        ? "border-line bg-sand/50 opacity-70"
                         : on
-                          ? "border-flame bg-white"
-                          : "border-line bg-white hover:border-mutedbrown"
+                          ? "border-flame bg-shell ring-1 ring-flame/30"
+                          : "border-line bg-shell hover:border-mutedbrown"
                     }`}
                   >
                     <input
@@ -224,9 +224,9 @@ export function Discover({ areas }: { areas: Area[] }) {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="text-[14px] font-semibold">{r.name}</span>
+                        <span className="text-[14px] font-semibold text-ink">{r.name}</span>
                         {r.primaryType ? (
-                          <span className="text-[12px] text-mutedbrown">
+                          <span className="rounded-md bg-sand px-1.5 text-[11px] text-mutedbrown">
                             {r.primaryType.replace(/_/g, " ")}
                           </span>
                         ) : null}
@@ -241,7 +241,7 @@ export function Discover({ areas }: { areas: Area[] }) {
                           </span>
                         ) : null}
                         {r.already ? (
-                          <span className="rounded-full bg-line px-1.5 text-[11px]">
+                          <span className="rounded-full bg-sand px-1.5 text-[11px] text-ink">
                             already have it
                           </span>
                         ) : null}

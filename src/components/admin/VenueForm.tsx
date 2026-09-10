@@ -50,6 +50,8 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    pricing_mode: venue?.pricing_mode ?? "per_person",
+    unit_price_ghs: venue?.unit_price_ghs != null ? String(venue.unit_price_ghs) : "",
     min_party_size: venue?.min_party_size ?? 1,
     max_party_size: venue?.max_party_size != null ? String(venue.max_party_size) : "",
     google_place_id: venue?.google_place_id ?? "",
@@ -86,6 +88,13 @@ export function VenueForm({
         // price, so the flag wins and the figure is zeroed rather than
         // failing the save with a database error nobody can act on.
         avg_cost_per_person_ghs: v.is_free ? 0 : v.avg_cost_per_person_ghs,
+        pricing_mode: v.pricing_mode,
+        // Null rather than 0: "no unit price" and "costs nothing" are
+        // different claims, and the constraint checks for the first.
+        unit_price_ghs:
+          v.pricing_mode === "per_person" || v.unit_price_ghs === ""
+            ? null
+            : Number(v.unit_price_ghs),
         min_party_size: Number(v.min_party_size) || 1,
         // Blank means no practical limit, which is different from zero.
         max_party_size: v.max_party_size === "" ? null : Number(v.max_party_size),
@@ -336,6 +345,41 @@ export function VenueForm({
             {v.is_free
               ? "Can fill a stop at no cost — only for places that genuinely charge nothing."
               : "Leave at 0 if you do not know it. Unpriced venues are withheld from plans, not shown as free."}
+          </span>
+        </div>
+        <div className="md:col-span-2">
+          <span className="flbl">How does it charge?</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className="inp max-w-[280px]"
+              value={v.pricing_mode}
+              onChange={(e) => setV({ ...v, pricing_mode: e.target.value as typeof v.pricing_mode })}
+            >
+              <option value="per_person">Per person (menu or cover)</option>
+              <option value="per_hour">Per hour, shared by the group</option>
+              <option value="per_group">Flat, shared by the group</option>
+              <option value="per_hour_per_person">Per hour, each person</option>
+            </select>
+            {v.pricing_mode !== "per_person" ? (
+              <>
+                <span className="text-[13px] text-mutedbrown">GHS</span>
+                <input
+                  className="inp max-w-[140px] font-mono"
+                  type="number"
+                  min={0}
+                  value={v.unit_price_ghs}
+                  onChange={(e) => setV({ ...v, unit_price_ghs: e.target.value })}
+                />
+                <span className="text-[13px] text-mutedbrown">
+                  {v.pricing_mode === "per_group" ? "in total" : "per hour"}
+                </span>
+              </>
+            ) : null}
+          </div>
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            {v.pricing_mode === "per_person"
+              ? "Priced from the menu, or from the average cost above."
+              : "One bill split between however many go, so the cost per head falls as the group grows. A padel court at GHS 200 an hour is this, not per person."}
           </span>
         </div>
         <div className={field}>

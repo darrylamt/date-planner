@@ -46,6 +46,12 @@ export interface Venue {
    */
   min_party_size: number;
   max_party_size: number | null;
+  /**
+   * How the venue charges. A court or a lane is priced per hour however many
+   * people turn up, so the bill is split rather than multiplied.
+   */
+  pricing_mode: "per_person" | "per_group" | "per_hour" | "per_hour_per_person";
+  unit_price_ghs: number | null;
   /** Google Places link — the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;
