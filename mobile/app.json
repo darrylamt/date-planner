@@ -37,14 +37,16 @@
               "CA92.1"
             ]
           }
-        ]
+        ],
+        "NSPhotoLibraryUsageDescription": "aduro uses this to set your profile picture. Photos stay on your device unless you pick one."
       },
       "runtimeVersion": {
         "policy": "appVersion"
       },
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.darrylamt.aduro",
@@ -88,7 +90,14 @@
           "calendarPermission": "aduro adds your date plan to your calendar so you don't lose track of the evening."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "aduro uses this to set your profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

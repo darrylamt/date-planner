@@ -75,10 +75,29 @@ export async function savePlan(inputs: PlanInputs, itinerary: Itinerary): Promis
 export async function listPlans(): Promise<SavedPlan[]> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, user_id, share_slug, inputs, itinerary, total_budget_ghs, estimated_total_ghs, created_at")
+    .select(
+      "id, user_id, share_slug, inputs, itinerary, total_budget_ghs, estimated_total_ghs, planner_note, created_at"
+    )
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as SavedPlan[];
+}
+
+/**
+ * Attach or change the note shown on a shared plan.
+ *
+ * Separate from savePlan because the note is usually written after the fact,
+ * at the moment of sending it to someone, rather than while planning.
+ */
+export async function setPlannerNote(slug: string, note: string): Promise<boolean> {
+  const trimmed = note.trim().slice(0, 400);
+  const { error } = await supabase
+    .from("plans")
+    // Blank clears it, so the card goes back to having no note block at all
+    // rather than an empty one.
+    .update({ planner_note: trimmed || null })
+    .eq("share_slug", slug);
+  return !error;
 }
 
 export async function deletePlan(id: string): Promise<void> {

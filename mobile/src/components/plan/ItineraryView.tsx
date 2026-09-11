@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { Alert, Linking, ScrollView, Share, View } from "react-native";
+import { Alert, Linking, Platform, ScrollView, Share, View } from "react-native";
 import { router } from "expo-router";
 import * as Calendar from "expo-calendar";
 import * as Haptics from "expo-haptics";
@@ -12,7 +12,7 @@ import { StopCard } from "./StopCard";
 import { GUTTER, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
-import { createReservation, fetchVenueContact } from "../../lib/data";
+import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
 import { swapStopLocally } from "../../lib/swapStop";
 import type {
@@ -160,9 +160,36 @@ export function ItineraryView({
     }
   }
 
+  /**
+   * Ask for a line to go on the card before sending it.
+   *
+   * Prompted at the moment of sharing rather than during planning, which is
+   * when someone actually knows what they want to say, and skippable because
+   * a card with no note is the normal case rather than an unfinished one.
+   */
   async function handleShare() {
     const slug = shareSlug ?? (await onSave());
     if (!slug) return; // onSave surfaced the sign-in prompt
+
+    if (Platform.OS === "ios") {
+      const note = await new Promise<string | null>((resolve) => {
+        Alert.prompt(
+          "Add a note?",
+          "One line on the card, from you. Skip if you would rather not.",
+          [
+            { text: "Skip", style: "cancel", onPress: () => resolve(null) },
+            { text: "Add", onPress: (value?: string) => resolve(value ?? null) },
+          ],
+          "plain-text",
+          "",
+          "default"
+        );
+      });
+      if (note && note.trim()) {
+        const saved = await setPlannerNote(slug, note);
+        if (!saved) setToast("The note did not save, sharing anyway.");
+      }
+    }
 
     const url = `${WEB_URL}/p/${slug}`;
     try {

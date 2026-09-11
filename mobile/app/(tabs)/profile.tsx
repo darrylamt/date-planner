@@ -1,5 +1,14 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Switch, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Switch,
+  TextInput,
+  View,
+} from "react-native";
 import Constants from "expo-constants";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,13 +17,22 @@ import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
 import { Toast } from "../../src/components/Toast";
-import { GUTTER, TAB_BAR, radius, space } from "../../src/theme";
+import { GUTTER, TAB_BAR, radius, space, type as typeScale } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { useAppearance } from "../../src/lib/appearance";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 import { resetOnboarding } from "../../src/lib/onboarding";
-import { countSavedPlans, deleteAccount } from "../../src/lib/account";
+import {
+  countSavedPlans,
+  deleteAccount,
+  fetchProfile,
+  updateDisplayName,
+  uploadAvatar,
+  type Profile as AccountProfile,
+} from "../../src/lib/account";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const SUPPORT_EMAIL = "planbyaduro@gmail.com";
@@ -36,6 +54,10 @@ export default function Profile() {
 
   const [hasDraft, setHasDraft] = useState(false);
   const [planCount, setPlanCount] = useState<number | null>(null);
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -45,8 +67,10 @@ export default function Profile() {
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
+        void fetchProfile().then((p) => active && setProfile(p));
       } else {
         setPlanCount(null);
+        setProfile(null);
       }
       return () => {
         active = false;
@@ -101,6 +125,53 @@ export default function Profile() {
     }
   }
 
+  async function pickAvatar() {
+    /*
+     * Permission is requested at the moment of tapping rather than on load.
+     * Asking before there is a reason is how an app gets denied once and then
+     * has no way back without a trip to Settings.
+     */
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setToast("Photo access is off. Turn it on in Settings to set a picture.");
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      // Compressed on the way out: an avatar renders at 96 points and a
+      // 4MB upload from a modern camera is bandwidth nobody benefits from.
+      quality: 0.7,
+    });
+    if (picked.canceled || !picked.assets?.[0]?.uri) return;
+
+    setUploading(true);
+    const url = await uploadAvatar(picked.assets[0].uri);
+    setUploading(false);
+
+    if (!url) {
+      setToast("That picture did not upload.");
+      return;
+    }
+    setProfile((cur) => (cur ? { ...cur, avatarUrl: url } : cur));
+    setToast("Picture updated.");
+  }
+
+  async function saveName() {
+    const next = nameDraft.trim();
+    setEditingName(false);
+    if (!next || next === profile?.displayName) return;
+
+    const ok = await updateDisplayName(next);
+    if (ok) {
+      setProfile((cur) => (cur ? { ...cur, displayName: next } : cur));
+    } else {
+      setToast("Could not save that name.");
+    }
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.background }}
@@ -126,8 +197,7 @@ export default function Profile() {
             "unfinished" where a monogram says "you".
           */}
           <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
-            <Pressable
-              onPress={() => router.push("/(tabs)/saved")}
+            <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -137,32 +207,95 @@ export default function Profile() {
                 padding: space.md,
               }}
             >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: c.accent,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text variant="title3" style={{ color: "#FFFFFF" }}>
-                  {(session.user.email ?? "?").slice(0, 1).toUpperCase()}
-                </Text>
-              </View>
+              <Pressable onPress={pickAvatar} disabled={uploading}>
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: c.accent,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {uploading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : profile?.avatarUrl ? (
+                    <Image
+                      source={{ uri: profile.avatarUrl }}
+                      style={{ width: 56, height: 56 }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Text variant="title3" style={{ color: "#FFFFFF" }}>
+                      {(profile?.displayName ?? "?").slice(0, 1).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+                {/* A camera badge, because a tappable avatar with no
+                    affordance is one nobody discovers. */}
+                <View
+                  style={{
+                    position: "absolute",
+                    right: -2,
+                    bottom: -2,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: c.backgroundElement,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Symbol name="camera.fill" size={11} color={c.textSecondary} />
+                </View>
+              </Pressable>
+
               <View style={{ flex: 1 }}>
-                <Text variant="headline" numberOfLines={1}>
-                  {(session.user.email ?? "Signed in").split("@")[0]}
-                </Text>
+                {editingName ? (
+                  <TextInput
+                    value={nameDraft}
+                    onChangeText={setNameDraft}
+                    onBlur={saveName}
+                    onSubmitEditing={saveName}
+                    autoFocus
+                    maxLength={60}
+                    returnKeyType="done"
+                    placeholder="Your name"
+                    placeholderTextColor={c.textTertiary}
+                    style={{
+                      color: c.text,
+                      fontSize: typeScale.headline.fontSize,
+                      fontWeight: typeScale.headline.fontWeight,
+                      paddingVertical: 0,
+                    }}
+                  />
+                ) : (
+                  <Pressable
+                    onPress={() => {
+                      setNameDraft(profile?.displayName ?? "");
+                      setEditingName(true);
+                    }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+                  >
+                    <Text variant="headline" numberOfLines={1}>
+                      {profile?.displayName ?? "You"}
+                    </Text>
+                    <Symbol name="pencil" size={13} color={c.textTertiary} />
+                  </Pressable>
+                )}
                 <Text variant="footnote" tone="secondary" numberOfLines={1}>
-                  {planCount === null
-                    ? (session.user.email ?? "")
-                    : `${planCount} saved plan${planCount === 1 ? "" : "s"}`}
+                  {profile?.email ?? session.user.email ?? ""}
                 </Text>
               </View>
-              <Symbol name="chevron.right" size={16} color={c.textTertiary} />
-            </Pressable>
+
+              <Pressable onPress={() => router.push("/(tabs)/saved")} hitSlop={10}>
+                <Text variant="footnote" tone="secondary">
+                  {planCount === null ? "" : `${planCount} saved`}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </>
       ) : (

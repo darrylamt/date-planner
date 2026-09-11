@@ -3,12 +3,13 @@ import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Screen } from "../src/components/Screen";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Segmented } from "../src/components/Segmented";
 import { GUTTER, radius, space } from "../src/theme";
-import { useTheme } from "../src/lib/useTheme";
+import { useIsDark, useTheme } from "../src/lib/useTheme";
 import {
   MIN_PASSWORD,
   sendPasswordReset,
@@ -16,6 +17,11 @@ import {
   signUp,
   useAuth,
 } from "../src/lib/useAuth";
+import {
+  appleSignInAvailable,
+  signInWithApple,
+  signInWithGoogle,
+} from "../src/lib/socialAuth";
 
 type Mode = "signin" | "signup";
 
@@ -23,12 +29,45 @@ export default function Login() {
   const c = useTheme();
   const { session } = useAuth();
 
+  const isDark = useIsDark();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [appleReady, setAppleReady] = useState(false);
+  const [social, setSocial] = useState<"apple" | "google" | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void appleSignInAvailable().then((ok) => active && setAppleReady(ok));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  /**
+   * Both providers land here.
+   *
+   * A cancel is silent: someone who backed out of Apple's sheet knows they
+   * backed out, and an error under the buttons would read as a fault.
+   */
+  async function social_(provider: "apple" | "google") {
+    setSocial(provider);
+    setError(null);
+    setNotice(null);
+
+    const result =
+      provider === "apple" ? await signInWithApple() : await signInWithGoogle();
+
+    setSocial(null);
+    if (result.ok) {
+      router.back();
+      return;
+    }
+    if (!result.cancelled) setError(result.error ?? "That did not work.");
+  }
 
   /* Signing in dismisses this modal; the account lives on the You tab. */
   useEffect(() => {
@@ -107,11 +146,58 @@ export default function Login() {
             onChange={switchMode}
           />
 
-          <Text variant="body" tone="secondary" style={{ marginBottom: space.xl }}>
+          <Text variant="body" tone="secondary" style={{ marginBottom: space.lg }}>
             {mode === "signin"
               ? "Welcome back."
               : "You only need an account to save and share plans."}
           </Text>
+
+          {/*
+            Apple first on iOS, which is both the platform convention and the
+            guideline: where a third-party sign-in is offered, Apple's has to
+            be there and no less prominent.
+          */}
+          {appleReady ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={
+                mode === "signin"
+                  ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                  : AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+              }
+              buttonStyle={
+                isDark
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={radius.control}
+              style={{ height: 50, marginBottom: space.sm }}
+              onPress={() => void social_("apple")}
+            />
+          ) : null}
+
+          <Button
+            title="Continue with Google"
+            kind="gray"
+            icon="globe"
+            loading={social === "google"}
+            disabled={social !== null}
+            onPress={() => void social_("google")}
+          />
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.md,
+              marginVertical: space.lg,
+            }}
+          >
+            <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+            <Text variant="footnote" tone="tertiary">
+              or with email
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+          </View>
 
           <Field
             label="Email"

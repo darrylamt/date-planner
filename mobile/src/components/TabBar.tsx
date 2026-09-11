@@ -25,12 +25,14 @@ interface TabBarProps {
 
 const ICONS: Record<string, SymbolViewProps["name"]> = {
   index: "house.fill",
+  calendar: "calendar",
   saved: "bookmark.fill",
   profile: "person.fill",
 };
 
 const LABELS: Record<string, string> = {
   index: "Home",
+  calendar: "Calendar",
   saved: "Saved",
   profile: "You",
 };

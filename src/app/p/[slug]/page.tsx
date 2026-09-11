@@ -5,16 +5,10 @@ import { SmartImage } from "@/components/SmartImage";
 import { createServiceClient } from "@/lib/supabase/server";
 import { longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME, partyLabel } from "@/lib/planConstants";
+import { occasionCard } from "@/lib/occasionCard";
 import type { SavedPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-/** Headline for the card, which is no longer always a pair. */
-function heading(size: number): string {
-  if (size <= 1) return "A DAY OUT";
-  if (size === 2) return "AN EVENING FOR TWO";
-  return `AN EVENING FOR ${size}`;
-}
 
 /**
  * Shared plan, public read-only view served by slug via the service role
@@ -38,6 +32,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
   const { itinerary, inputs } = plan;
 
   const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
+  const card = occasionCard(inputs);
 
   return (
     <main
@@ -52,7 +47,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
             className="mt-5 text-caption font-bold tracking-[0.14em] md:mt-6 md:tracking-[0.16em]"
             style={{ color: "var(--occasion)" }}
           >
-            {heading(inputs.partySize ?? 2)}
+            {card.motif} {card.eyebrow} {card.motif}
           </div>
           <h1 className="mt-2.5 font-display text-[34px] font-bold leading-[1.2] md:mt-3 md:text-[52px] md:leading-[1.15]">
             {longDate(inputs.date)}
@@ -60,6 +55,28 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
           <div className="mt-2.5 text-[15px] text-lagoon-soft md:text-[16px]">
             {itinerary.summary_route} · from {time12(inputs.startTime)}
           </div>
+          {/* Addressed to whoever opened the link, which is rarely the person
+              who made the plan. */}
+          <p className="mx-auto mt-4 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
+            {card.invitation}
+          </p>
+
+          {plan.planner_note ? (
+            <div
+              className="mx-auto mt-6 max-w-[440px] rounded-bar px-5 py-4 text-left"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+            >
+              <div
+                className="text-caption font-bold tracking-[0.12em]"
+                style={{ color: "var(--occasion)" }}
+              >
+                A NOTE
+              </div>
+              <p className="mt-1.5 whitespace-pre-line text-[15px] leading-relaxed text-lagoon-faint">
+                {plan.planner_note}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Stops */}
@@ -90,6 +107,11 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
 
         {/* Footer */}
         <div className="mt-auto px-7 pb-10 pt-2 text-center md:pb-14">
+          {/* The sign-off, which is the one line that changes most between a
+              graduation and a solo day. */}
+          <p className="mx-auto mb-6 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
+            {card.closing}
+          </p>
           <div className="text-[16px] italic text-lagoon-soft md:text-[17px]">
             planned with care on
           </div>

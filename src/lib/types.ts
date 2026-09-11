@@ -247,5 +247,7 @@ export interface SavedPlan {
   itinerary: Itinerary;
   total_budget_ghs: number;
   estimated_total_ghs: number;
+  /** A line from whoever made the plan, shown on the shared card. */
+  planner_note: string | null;
   created_at: string;
 }
