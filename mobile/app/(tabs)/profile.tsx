@@ -18,6 +18,15 @@ import { countSavedPlans, deleteAccount } from "../../src/lib/account";
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const SUPPORT_EMAIL = "amoateydarryl4@gmail.com";
 
+/*
+ * The numeric App Store ID, from App Store Connect under App Information.
+ * It does not exist until the app record is created there, so until it is
+ * filled in the Rate row is hidden rather than shipped pointing at
+ * id0000000000, which opens the App Store on nothing and reads as a bug to
+ * the first person who taps it.
+ */
+const APP_STORE_ID = "";
+
 export default function Profile() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -185,14 +194,18 @@ export default function Profile() {
             Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("aduro")}`)
           }
         />
-        <Row
-          icon="star"
-          title="Rate aduro"
-          chevron
-          onPress={() =>
-            Linking.openURL("itms-apps://itunes.apple.com/app/id0000000000?action=write-review")
-          }
-        />
+        {APP_STORE_ID ? (
+          <Row
+            icon="star"
+            title="Rate aduro"
+            chevron
+            onPress={() =>
+              Linking.openURL(
+                `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
+              )
+            }
+          />
+        ) : null}
       </Group>
 
       <Group header="Legal">
