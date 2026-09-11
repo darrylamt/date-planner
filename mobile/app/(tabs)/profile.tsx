@@ -183,6 +183,12 @@ export default function Profile() {
     const ok = await updateDisplayName(next);
     if (ok) {
       setProfile((cur) => (cur ? { ...cur, displayName: next } : cur));
+      /*
+       * Confirmed out loud. There is no Save button here, the name is written
+       * when the field loses focus, and a silent write leaves someone
+       * wondering whether tapping away threw their change out.
+       */
+      setToast("Name saved.");
     } else {
       setToast("Could not save that name.");
     }
