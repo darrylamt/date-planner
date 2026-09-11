@@ -1,9 +1,24 @@
 import { Platform } from "react-native";
-import * as AppleAuthentication from "expo-apple-authentication";
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
-import * as Crypto from "expo-crypto";
 import { supabase } from "./supabase";
+import { nativeOptional } from "./nativeOptional";
+
+/*
+ * Every one of these arrived after the build currently on TestFlight, so they
+ * are resolved defensively rather than imported at the top. An older binary
+ * receiving this bundle gets null and hides the buttons, instead of crashing
+ * the login screen on a module it has never heard of.
+ */
+type AppleModule = typeof import("expo-apple-authentication");
+type AuthSessionModule = typeof import("expo-auth-session");
+type WebBrowserModule = typeof import("expo-web-browser");
+type CryptoModule = typeof import("expo-crypto");
+
+export const AppleAuthentication = nativeOptional<AppleModule>(() =>
+  require("expo-apple-authentication")
+);
+const AuthSession = nativeOptional<AuthSessionModule>(() => require("expo-auth-session"));
+const WebBrowser = nativeOptional<WebBrowserModule>(() => require("expo-web-browser"));
+const Crypto = nativeOptional<CryptoModule>(() => require("expo-crypto"));
 
 /**
  * Sign in with Apple and with Google.
@@ -17,7 +32,12 @@ import { supabase } from "./supabase";
  * Sign in with Apple wherever a third-party login is offered, so shipping
  * Google alone would be a rejection rather than a smaller feature.
  */
-WebBrowser.maybeCompleteAuthSession();
+WebBrowser?.maybeCompleteAuthSession();
+
+/** False on a build that predates the auth modules, so the button can hide. */
+export function googleSignInAvailable(): boolean {
+  return Boolean(AuthSession && WebBrowser);
+}
 
 export interface SocialResult {
   ok: boolean;
@@ -26,9 +46,9 @@ export interface SocialResult {
   error?: string;
 }
 
-/** Apple only exists on Apple hardware, and only iOS 13 and later. */
+/** True only when the module is present and the hardware supports it. */
 export async function appleSignInAvailable(): Promise<boolean> {
-  if (Platform.OS !== "ios") return false;
+  if (Platform.OS !== "ios" || !AppleAuthentication) return false;
   try {
     return await AppleAuthentication.isAvailableAsync();
   } catch {
@@ -37,6 +57,9 @@ export async function appleSignInAvailable(): Promise<boolean> {
 }
 
 export async function signInWithApple(): Promise<SocialResult> {
+  if (!AppleAuthentication || !Crypto) {
+    return { ok: false, error: "Update the app to sign in with Apple." };
+  }
   try {
     /*
      * The nonce is sent hashed to Apple and raw to Supabase, which is what
@@ -98,6 +121,9 @@ export async function signInWithApple(): Promise<SocialResult> {
 }
 
 export async function signInWithGoogle(): Promise<SocialResult> {
+  if (!AuthSession || !WebBrowser) {
+    return { ok: false, error: "Update the app to sign in with Google." };
+  }
   const redirectTo = AuthSession.makeRedirectUri({ scheme: "aduro", path: "auth" });
 
   try {

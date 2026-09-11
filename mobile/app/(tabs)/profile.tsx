@@ -31,8 +31,17 @@ import {
   uploadAvatar,
   type Profile as AccountProfile,
 } from "../../src/lib/account";
-import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import { nativeOptional } from "../../src/lib/nativeOptional";
+
+/*
+ * Added after the build on TestFlight, so it is resolved defensively. An
+ * older binary receiving this bundle gets null and simply cannot change its
+ * picture, rather than crashing the whole Profile screen on open.
+ */
+const ImagePicker = nativeOptional<typeof import("expo-image-picker")>(() =>
+  require("expo-image-picker")
+);
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const SUPPORT_EMAIL = "planbyaduro@gmail.com";
@@ -126,6 +135,11 @@ export default function Profile() {
   }
 
   async function pickAvatar() {
+    if (!ImagePicker) {
+      setToast("Update the app to change your picture.");
+      return;
+    }
+
     /*
      * Permission is requested at the moment of tapping rather than on load.
      * Asking before there is a reason is how an app gets denied once and then

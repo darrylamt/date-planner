@@ -32,10 +32,16 @@ comment on column public.plans.planner_note is
 -- The date and the occasion already live inside inputs. Generated columns
 -- keep them queryable and indexable without a second copy that can drift:
 -- they are derived on write and cannot disagree with the plan they came from.
+--
+-- Kept as text rather than date on purpose. Casting text to date is not
+-- immutable, because it reads the DateStyle setting, and Postgres refuses a
+-- generated expression that could change meaning between sessions. Nothing is
+-- lost by storing it as text: these are ISO yyyy-mm-dd, which sort and range
+-- exactly the same lexicographically as they do chronologically.
 
 alter table public.plans
-  add column if not exists plan_date date
-    generated always as ((inputs->>'date')::date) stored;
+  add column if not exists plan_date text
+    generated always as (inputs->>'date') stored;
 
 alter table public.plans
   add column if not exists occasion text

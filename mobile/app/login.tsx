@@ -3,7 +3,6 @@ import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Screen } from "../src/components/Screen";
-import * as AppleAuthentication from "expo-apple-authentication";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
@@ -18,7 +17,9 @@ import {
   useAuth,
 } from "../src/lib/useAuth";
 import {
+  AppleAuthentication,
   appleSignInAvailable,
+  googleSignInAvailable,
   signInWithApple,
   signInWithGoogle,
 } from "../src/lib/socialAuth";
@@ -157,7 +158,7 @@ export default function Login() {
             guideline: where a third-party sign-in is offered, Apple's has to
             be there and no less prominent.
           */}
-          {appleReady ? (
+          {appleReady && AppleAuthentication ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={
                 mode === "signin"
@@ -175,29 +176,33 @@ export default function Login() {
             />
           ) : null}
 
-          <Button
-            title="Continue with Google"
-            kind="gray"
-            icon="globe"
-            loading={social === "google"}
-            disabled={social !== null}
-            onPress={() => void social_("google")}
-          />
+          {googleSignInAvailable() ? (
+            <Button
+              title="Continue with Google"
+              kind="gray"
+              icon="globe"
+              loading={social === "google"}
+              disabled={social !== null}
+              onPress={() => void social_("google")}
+            />
+          ) : null}
 
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.md,
-              marginVertical: space.lg,
-            }}
-          >
-            <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
-            <Text variant="footnote" tone="tertiary">
-              or with email
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
-          </View>
+          {appleReady || googleSignInAvailable() ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.md,
+                marginVertical: space.lg,
+              }}
+            >
+              <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+              <Text variant="footnote" tone="tertiary">
+                or with email
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+            </View>
+          ) : null}
 
           <Field
             label="Email"
