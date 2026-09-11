@@ -156,11 +156,47 @@ function formalityScore(v: Venue, formality: Formality): number {
     : (2 - rank) * 2 + casual * 3 - dressy * 2 - upscale * 2;
 }
 
+/**
+ * How much looks matter for this occasion.
+ *
+ * An anniversary at somewhere plain is a worse evening than the same money
+ * spent somewhere beautiful, while a group of friends bowling care about the
+ * bowling. Weighting rather than filtering, so a plain venue that fits
+ * everything else can still be chosen when nothing lovelier does.
+ */
+const LOOKS_WEIGHT: Record<string, number> = {
+  anniversary: 2.5,
+  first_date: 2,
+  date_night: 2,
+  celebration: 1.5,
+  graduation: 1.5,
+  birthday: 1,
+  solo_day: 1,
+  friend_outing: 0.5,
+};
+
+function looksScore(v: Venue, occasion: string): number {
+  /*
+   * Unrated scores zero rather than a middling two or three. Treating an
+   * unjudged venue as average would let it outrank one somebody actually
+   * looked at and called plain, on no evidence at all.
+   */
+  if (v.aesthetics == null) return 0;
+  // Centred on 3, so a 5 lifts and a 1 genuinely pushes a venue down.
+  return (Number(v.aesthetics) - 3) * (LOOKS_WEIGHT[occasion] ?? 1);
+}
+
 function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number {
   const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
   const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
   const inArea = inputs.areaIds.includes(v.area_id) ? 1 : 0;
-  return overlap * 3 + occasion * 2 + inArea + formalityScore(v, inputs.formality);
+  return (
+    overlap * 3 +
+    occasion * 2 +
+    inArea +
+    formalityScore(v, inputs.formality) +
+    looksScore(v, inputs.occasion)
+  );
 }
 
 /* ── orders ───────────────────────────────────────────────────────────── */

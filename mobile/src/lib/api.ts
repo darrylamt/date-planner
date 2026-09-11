@@ -47,7 +47,13 @@ export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse
 
 
 /** What can be reported about a venue, in the order the sheet offers them. */
-export type ReportType = "price" | "closed" | "phone" | "wrong_info" | "other";
+export type ReportType =
+  | "price"
+  | "closed"
+  | "phone"
+  | "wrong_info"
+  | "aesthetics"
+  | "other";
 
 /**
  * Tell us something is wrong with a venue.
@@ -61,6 +67,8 @@ export async function reportVenue(input: {
   venueId: string;
   reportType: ReportType;
   suggestedPriceGhs?: number | null;
+  /** Stars out of 5, for an aesthetics report. */
+  rating?: number | null;
   note?: string;
 }): Promise<{ ok: boolean; duplicate: boolean }> {
   try {

@@ -12,7 +12,7 @@ import { requireAdmin } from "@/lib/adminAuth";
  */
 const bodySchema = z.object({
   venueId: z.string().uuid(),
-  action: z.enum(["dismiss", "reviewed", "apply_price", "deactivate"]),
+  action: z.enum(["dismiss", "reviewed", "apply_price", "apply_rating", "deactivate"]),
   value: z.number().min(0).max(100000).optional(),
 });
 
@@ -43,6 +43,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Could not set the price." }, { status: 500 });
     }
     message = `Price set to GHS ${body.value}.`;
+  }
+
+  if (body.action === "apply_rating") {
+    if (body.value == null || body.value < 1 || body.value > 5) {
+      return NextResponse.json({ error: "A rating is 1 to 5." }, { status: 400 });
+    }
+    const { error } = await supabase
+      .from("venues")
+      .update({ aesthetics: body.value })
+      .eq("id", body.venueId);
+    if (error) {
+      console.error("apply reported rating failed", error);
+      return NextResponse.json({ error: "Could not set the rating." }, { status: 500 });
+    }
+    message = `Looks set to ${body.value} of 5.`;
   }
 
   if (body.action === "deactivate") {

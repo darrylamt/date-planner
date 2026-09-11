@@ -24,6 +24,12 @@ import { reportVenue, type ReportType } from "../../lib/api";
  */
 const REASONS: { id: ReportType; label: string; sub: string; icon: string }[] = [
   {
+    id: "aesthetics",
+    label: "Rate how it looked",
+    sub: "Beautiful, or somewhere the food carried it",
+    icon: "star",
+  },
+  {
     id: "price",
     label: "The price is different",
     sub: "It cost more or less than we said",
@@ -66,12 +72,14 @@ export function ReportSheet({
   const insets = useSafeAreaInsets();
 
   const [reason, setReason] = useState<ReportType | null>(null);
+  const [stars, setStars] = useState(0);
   const [price, setPrice] = useState("");
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
 
   function reset() {
     setReason(null);
+    setStars(0);
     setPrice("");
     setNote("");
     setSending(false);
@@ -87,6 +95,7 @@ export function ReportSheet({
       venueId,
       reportType: reason,
       suggestedPriceGhs: reason === "price" && digits ? Number(digits) : null,
+      rating: reason === "aesthetics" && stars ? stars : null,
       note: note.trim() || undefined,
     });
 
@@ -175,6 +184,42 @@ export function ReportSheet({
             );
           })}
 
+          {reason === "aesthetics" ? (
+            <View style={{ marginTop: space.md, alignItems: "center" }}>
+              <View style={{ flexDirection: "row", gap: space.sm }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable
+                    key={n}
+                    hitSlop={6}
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      setStars(n);
+                    }}
+                  >
+                    <Symbol
+                      name={n <= stars ? "star.fill" : "star"}
+                      size={32}
+                      color={n <= stars ? c.accent : c.textTertiary}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+              <Text variant="footnote" tone="secondary" style={{ marginTop: space.sm }}>
+                {stars === 0
+                  ? "Tap to rate"
+                  : stars === 5
+                    ? "Beautiful, worth photographing"
+                    : stars === 4
+                      ? "Lovely"
+                      : stars === 3
+                        ? "Fine, nothing special"
+                        : stars === 2
+                          ? "Not much to look at"
+                          : "Grim"}
+              </Text>
+            </View>
+          ) : null}
+
           {reason === "price" ? (
             <View style={{ marginTop: space.md }}>
               <Text variant="footnote" tone="secondary" style={{ marginBottom: space.xs }}>
@@ -239,7 +284,7 @@ export function ReportSheet({
             <Button
               title={sending ? "Sending" : "Send report"}
               onPress={send}
-              disabled={!reason || sending}
+              disabled={!reason || sending || (reason === "aesthetics" && stars === 0)}
               loading={sending}
             />
           </View>
@@ -250,7 +295,9 @@ export function ReportSheet({
             center
             style={{ marginTop: space.md }}
           >
-            Reports are read by a person before anything changes.
+            {reason === "aesthetics"
+              ? "Ratings help us pick better-looking places for anniversaries and first dates."
+              : "Reports are read by a person before anything changes."}
           </Text>
         </ScrollView>
       </View>

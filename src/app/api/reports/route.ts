@@ -19,9 +19,11 @@ export const maxDuration = 15;
 
 const bodySchema = z.object({
   venueId: z.string().uuid(),
-  reportType: z.enum(["price", "closed", "phone", "wrong_info", "other"]),
+  reportType: z.enum(["price", "closed", "phone", "wrong_info", "aesthetics", "other"]),
   /** Only meaningful for a price report; ignored otherwise. */
   suggestedPriceGhs: z.number().min(0).max(100000).nullable().optional(),
+  /** Stars out of 5. Only meaningful for an aesthetics report. */
+  rating: z.number().int().min(1).max(5).nullable().optional(),
   note: z.string().max(600).optional(),
   /** Per-install id, so one person tapping twice is not two people agreeing. */
   deviceId: z.string().min(6).max(64).optional(),
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
     report_type: body.reportType,
     suggested_price_ghs:
       body.reportType === "price" ? (body.suggestedPriceGhs ?? null) : null,
+    rating: body.reportType === "aesthetics" ? (body.rating ?? null) : null,
     note: body.note?.trim() || null,
     reporter_id: user?.id ?? null,
     reporter_device: body.deviceId ?? null,

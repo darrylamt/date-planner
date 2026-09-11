@@ -50,6 +50,7 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    aesthetics: venue?.aesthetics ?? null,
     pricing_mode: venue?.pricing_mode ?? "per_person",
     unit_price_ghs: venue?.unit_price_ghs != null ? String(venue.unit_price_ghs) : "",
     min_party_size: venue?.min_party_size ?? 1,
@@ -95,6 +96,7 @@ export function VenueForm({
           v.pricing_mode === "per_person" || v.unit_price_ghs === ""
             ? null
             : Number(v.unit_price_ghs),
+        aesthetics: v.aesthetics,
         min_party_size: Number(v.min_party_size) || 1,
         // Blank means no practical limit, which is different from zero.
         max_party_size: v.max_party_size === "" ? null : Number(v.max_party_size),
@@ -380,6 +382,40 @@ export function VenueForm({
             {v.pricing_mode === "per_person"
               ? "From the menu, or the average above."
               : "One bill, split by however many go."}
+          </span>
+        </div>
+        <div className={field}>
+          <span className="flbl">How does it look?</span>
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                onClick={() => setV({ ...v, aesthetics: v.aesthetics === n ? null : n })}
+                className={`text-[22px] leading-none transition ${
+                  (v.aesthetics ?? 0) >= n ? "text-flame" : "text-line hover:text-mutedbrown"
+                }`}
+              >
+                ★
+              </button>
+            ))}
+            {v.aesthetics ? (
+              <button
+                type="button"
+                className="ml-2 text-[12px] text-mutedbrown underline"
+                onClick={() => setV({ ...v, aesthetics: null })}
+              >
+                clear
+              </button>
+            ) : null}
+          </div>
+          <span className="mt-1 text-[12px] text-mutedbrown">
+            {v.aesthetics === 5
+              ? "Somewhere worth photographing."
+              : v.aesthetics === 1
+                ? "The food has to carry this one alone."
+                : "5 is beautiful, 1 is grim. Leave blank if you have not seen it, blank is not the same as average."}
           </span>
         </div>
         <div className={field}>

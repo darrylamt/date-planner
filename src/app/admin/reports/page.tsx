@@ -16,7 +16,7 @@ export default async function AdminReportsPage() {
   const { data } = await supabase
     .from("venue_reports")
     .select(
-      "id, venue_id, report_type, note, suggested_price_ghs, created_at, venues(name, is_active, avg_cost_per_person_ghs, pricing_mode, areas(name))"
+      "id, venue_id, report_type, note, suggested_price_ghs, rating, created_at, venues(name, is_active, avg_cost_per_person_ghs, pricing_mode, aesthetics, areas(name))"
     )
     .eq("status", "open")
     .order("created_at", { ascending: false });
@@ -29,6 +29,8 @@ export default async function AdminReportsPage() {
     report_type: r.report_type,
     note: r.note,
     suggested_price_ghs: r.suggested_price_ghs,
+    rating: r.rating,
+    current_aesthetics: r.venues?.aesthetics ?? null,
     created_at: r.created_at,
     current_price: r.venues?.avg_cost_per_person_ghs ?? null,
     pricing_mode: r.venues?.pricing_mode ?? "per_person",

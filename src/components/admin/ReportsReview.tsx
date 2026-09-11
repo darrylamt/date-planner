@@ -24,6 +24,8 @@ export interface ReportRow {
   report_type: string;
   note: string | null;
   suggested_price_ghs: number | null;
+  rating: number | null;
+  current_aesthetics: number | null;
   created_at: string;
   current_price: number | null;
   pricing_mode: string;
@@ -31,6 +33,7 @@ export interface ReportRow {
 }
 
 const TYPE_LABEL: Record<string, string> = {
+  aesthetics: "Rated how it looks",
   price: "Price is different",
   closed: "Closed or not there",
   phone: "Number is wrong",
@@ -52,6 +55,7 @@ interface Group {
   area: string;
   is_active: boolean;
   current_price: number | null;
+  current_aesthetics: number | null;
   pricing_mode: string;
   reports: ReportRow[];
 }
@@ -72,6 +76,7 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
         area: r.area,
         is_active: r.is_active,
         current_price: r.current_price,
+        current_aesthetics: r.current_aesthetics,
         pricing_mode: r.pricing_mode,
         reports: [],
       };
@@ -84,7 +89,7 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
 
   async function act(
     venueId: string,
-    action: "dismiss" | "reviewed" | "apply_price" | "deactivate",
+    action: "dismiss" | "reviewed" | "apply_price" | "apply_rating" | "deactivate",
     value?: number
   ) {
     setBusy(venueId + action);
@@ -126,6 +131,13 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
 
         const closedCount = g.reports.filter((r) => r.report_type === "closed").length;
 
+        const ratings = g.reports
+          .map((r) => r.rating)
+          .filter((r): r is number => r != null);
+        const averageRating = ratings.length
+          ? Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length)
+          : null;
+
         return (
           <div key={g.venue_id} className="card px-5 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -154,6 +166,9 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
                   {r.suggested_price_ghs != null ? (
                     <span className="ml-2">said GHS {r.suggested_price_ghs}</span>
                   ) : null}
+                  {r.rating != null ? (
+                    <span className="ml-2 text-flame">{"★".repeat(r.rating)}</span>
+                  ) : null}
                   {r.note ? (
                     <div className="mt-0.5 text-mutedbrown">{r.note}</div>
                   ) : null}
@@ -178,6 +193,19 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
                   Charged {g.pricing_mode.replace(/_/g, " ")}, so set the rate on the venue
                   rather than from here.
                 </span>
+              ) : null}
+
+              {averageRating != null && averageRating !== g.current_aesthetics ? (
+                <button
+                  className="btn btnsm"
+                  disabled={busy === g.venue_id + "apply_rating"}
+                  onClick={() => act(g.venue_id, "apply_rating", averageRating)}
+                >
+                  Set looks to {"★".repeat(averageRating)}
+                  {g.current_aesthetics != null
+                    ? ` (was ${"★".repeat(g.current_aesthetics)})`
+                    : ""}
+                </button>
               ) : null}
 
               {closedCount > 0 && g.is_active ? (

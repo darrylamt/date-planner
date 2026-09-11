@@ -47,6 +47,11 @@ export interface Venue {
    */
   pricing_mode: "per_person" | "per_group" | "per_hour" | "per_hour_per_person";
   unit_price_ghs: number | null;
+  /**
+   * 1 to 5 on how the place looks. Null means nobody has judged it, which is
+   * deliberately not the same as average.
+   */
+  aesthetics: number | null;
   /** Google Places link, the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;
