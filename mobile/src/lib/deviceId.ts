@@ -3,19 +3,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const KEY = "aduro.device-id";
 
 /**
- * A stable per-install identifier.
+ * A per-install identifier, used only to tell reports apart.
  *
- * Not an identity and not a login, it exists so that one person tapping
- * "report" twice does not read as two people agreeing. That count is what an
- * admin uses to decide whether a report is worth acting on, so it has to mean
- * what it looks like it means.
+ * Not an identity and deliberately not derived from anything about the phone
+ * or the person. It exists so that one person tapping "the price has changed"
+ * twice is not recorded as two people agreeing, which is the difference
+ * between a signal worth acting on and a number anyone can inflate.
  *
- * Deliberately not derived from anything about the device or the person. It is
- * a random string that lives in this app's storage and goes away with it.
+ * Random rather than cryptographic on purpose: it guards a count, not a
+ * secret, and pulling in a crypto dependency for it would be the wrong trade.
+ * Clearing app data yields a new one, which is fine, the cost of that is one
+ * duplicate report.
  */
 let cached: string | null = null;
 
-export async function deviceId(): Promise<string> {
+export async function getDeviceId(): Promise<string> {
   if (cached) return cached;
 
   try {
@@ -25,16 +27,18 @@ export async function deviceId(): Promise<string> {
       return existing;
     }
   } catch {
-    // Storage unavailable, fall through and mint a per-session id rather
-    // than failing the report the user is trying to send.
+    // Storage unavailable. Fall through and mint a throwaway for this session.
   }
 
-  const minted = `d_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
-  cached = minted;
+  const id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+  cached = id;
+
   try {
-    await AsyncStorage.setItem(KEY, minted);
+    await AsyncStorage.setItem(KEY, id);
   } catch {
-    // Same again: an unsaved id still de-duplicates within this session.
+    // Not persisted, so the next launch makes another. Still better than
+    // sending nothing, which would make every report look like a new device.
   }
-  return minted;
+
+  return id;
 }

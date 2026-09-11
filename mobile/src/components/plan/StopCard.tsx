@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { MenuSheet } from "./MenuSheet";
+import { ReportSheet } from "./ReportSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
@@ -20,6 +21,7 @@ export function StopCard({
   onSwap,
   onOrdersChange,
   onReserve,
+  onReported,
   swapping,
   reserving,
 }: {
@@ -28,11 +30,13 @@ export function StopCard({
   onSwap: () => void;
   onOrdersChange: (orders: ItineraryOrder[]) => void;
   onReserve: () => void;
+  onReported: (message: string) => void;
   swapping: boolean;
   reserving: boolean;
 }) {
   const c = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const editable = stop.kind !== "event";
   const canReserve = stop.reservation_required && !stop.reservation_requested;
@@ -225,8 +229,26 @@ export function StopCard({
           {canReserve ? (
             <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
           ) : null}
+          {/*
+            Last, and never the most prominent thing on the card. Someone
+            reaches for this once in a hundred stops, but when they do they are
+            usually standing in front of the problem.
+          */}
+          <StopAction
+            icon="exclamationmark.bubble"
+            label="Report"
+            onPress={() => setReportOpen(true)}
+          />
         </View>
       </View>
+
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        venueId={stop.venue_id}
+        venueName={stop.name}
+        onDone={onReported}
+      />
 
       <MenuSheet
         visible={menuOpen}

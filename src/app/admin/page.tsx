@@ -83,6 +83,15 @@ export default async function AdminVenuesPage() {
 function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> }) {
   const cards = [
     {
+      // First, because it is the only queue where a real person is waiting on
+      // an answer rather than a record waiting on attention.
+      href: "/admin/reports",
+      n: counts.openReports,
+      label: counts.openReports === 1 ? "report" : "reports",
+      hint: "People told us something was wrong",
+      urgent: true,
+    },
+    {
       href: "/admin/phones",
       n: counts.phonesReported,
       label: counts.phonesReported === 1 ? "reported number" : "reported numbers",

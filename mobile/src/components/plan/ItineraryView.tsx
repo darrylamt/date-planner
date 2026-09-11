@@ -296,6 +296,7 @@ export function ItineraryView({
                 reserving={reservingIndex === i}
                 onSwap={() => handleSwap(i)}
                 onReserve={() => void handleReserve(i)}
+                onReported={setToast}
                 onOrdersChange={(orders) => handleOrdersChange(i, orders)}
               />
               {itinerary.hops[i] && i < itinerary.stops.length - 1 ? (

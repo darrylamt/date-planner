@@ -26,6 +26,8 @@ export interface AdminCounts {
   staleMenus: number;
   /** Active venues with no Google link, so a closure would go unnoticed. */
   unlinked: number;
+  /** Open reports from people who were actually there. */
+  openReports: number;
 }
 
 const STALE_DAYS = 90;
@@ -41,6 +43,16 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     supabase.from("venues").select("*"),
     supabase.from("menu_items").select("venue_id, updated_at"),
   ]);
+
+  /*
+   * Its own query, and tolerant of failing. This table arrived in migration
+   * 0009, and the page whose job is to show what needs doing is the worst one
+   * to take down on a database that has not run it.
+   */
+  const { data: reports } = await supabase
+    .from("venue_reports")
+    .select("id")
+    .eq("status", "open");
 
   const rows = venues ?? [];
   const active = rows.filter((v: any) => v.is_active);
@@ -71,6 +83,7 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     phonesReported: rows.filter((v: any) => (v.phone_report_count ?? 0) > 0).length,
     unverified: active.filter((v: any) => v.verification_status !== "real").length,
     unlinked: active.filter((v: any) => !v.google_place_id).length,
+    openReports: (reports ?? []).length,
     staleMenus: active.filter((v: any) => {
       const latest = menuLatest.get(v.id);
       // A venue priced by its per-person figure has no menu to go stale.

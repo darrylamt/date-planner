@@ -25,7 +25,7 @@ const SUPPORT_EMAIL = "amoateydarryl4@gmail.com";
  * id0000000000, which opens the App Store on nothing and reads as a bug to
  * the first person who taps it.
  */
-const APP_STORE_ID = "";
+const APP_STORE_ID = "6809005685";
 
 export default function Profile() {
   const c = useTheme();

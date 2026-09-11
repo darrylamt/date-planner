@@ -64,10 +64,10 @@ export async function reportVenue(input: {
   note?: string;
 }): Promise<{ ok: boolean; duplicate: boolean }> {
   try {
-    const { deviceId } = await import("./deviceId");
+    const { getDeviceId } = await import("./deviceId");
     const res = await postJson<{ ok: boolean; duplicate?: boolean }>("/api/reports", {
       ...input,
-      deviceId: await deviceId(),
+      deviceId: await getDeviceId(),
     });
     return { ok: Boolean(res.ok), duplicate: Boolean(res.duplicate) };
   } catch {
