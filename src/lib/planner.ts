@@ -2,6 +2,7 @@ import type { Candidates } from "./matching";
 import { estimateHop } from "./transport";
 import type {
   Formality,
+  PriceConfidence,
   ItineraryOrder,
   MenuItem,
   PlanFocus,
@@ -366,6 +367,8 @@ export interface PlannedItinerary {
   foodTotal: number;
   transportTotal: number;
   total: number;
+  /** Whether the total can be stated exactly, or only as a range. */
+  confidence: PriceConfidence;
   /** Set when the plan had to be trimmed to fit. */
   trimmed: boolean;
 }
@@ -567,12 +570,32 @@ export function planItinerary(
     const foodTotal = stops.reduce((s, x) => s + x.cost, 0);
     const transportTotal = hops.reduce((s, h) => s + h.cost_ghs, 0);
 
+    /*
+     * A total is only exact when every stop was priced from something real.
+     * One estimated stop makes the whole figure approximate, so the range
+     * widens by that stop's own spread and the plan stops claiming precision
+     * it does not have. Transport was always an estimate and is not counted
+     * here, because it is described as an estimate on the card already.
+     */
+    const estimatedStops = stops.filter((x) => x.venue.price_source === "estimated");
+    const spread = estimatedStops.reduce(
+      (sum, x) => sum + x.cost * Number(x.venue.price_spread ?? 0.3),
+      0
+    );
+    const confidence: PriceConfidence = {
+      exact: estimatedStops.length === 0,
+      low: Math.round(foodTotal + transportTotal - spread),
+      high: Math.round(foodTotal + transportTotal + spread),
+      estimatedStops: estimatedStops.map((x) => x.venue.name),
+    };
+
     return {
       stops,
       hops,
       foodTotal,
       transportTotal,
       total: foodTotal + transportTotal,
+      confidence,
       trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours),
     };
 

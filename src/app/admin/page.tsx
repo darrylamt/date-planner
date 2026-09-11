@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { VenueTable } from "@/components/admin/VenueTable";
 import { adminCounts } from "@/lib/adminCounts";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 /** Venues CRUD table with the "stale menu" indicator (> 90 days). */
 export default async function AdminVenuesPage() {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
 
   const [{ data: venues }, { data: menuMeta }, counts] = await Promise.all([
     supabase.from("venues").select("*, areas(name)").order("name"),

@@ -4,6 +4,7 @@ import { Symbol } from "../Symbol";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
+import type { PriceConfidence } from "../../lib/types";
 
 /**
  * Budget meter. The bar is the honest bit: it fills proportionally and turns
@@ -14,14 +15,23 @@ export function BudgetBar({
   budget,
   food,
   transport,
+  confidence,
 }: {
   estimated: number;
   budget: number;
   food: number;
   transport: number;
+  /** Absent on plans made before estimates existed, which are all exact. */
+  confidence?: PriceConfidence;
 }) {
   const c = useTheme();
-  const over = estimated > budget;
+  const approximate = confidence ? !confidence.exact : false;
+  /*
+   * Judged on the top of the range, not the middle. If the high end clears the
+   * budget then going over is a real possibility, and a meter that only turns
+   * red once the midpoint does would reassure someone right up to the bill.
+   */
+  const over = (approximate ? (confidence?.high ?? estimated) : estimated) > budget;
   const pct = budget > 0 ? Math.min(1, estimated / budget) : 0;
   const remaining = budget - estimated;
 
@@ -36,7 +46,9 @@ export function BudgetBar({
     >
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
         <Text variant="title3" tabular>
-          {ghs(estimated)}
+          {approximate && confidence
+            ? `${ghs(confidence.low)} to ${ghs(confidence.high)}`
+            : ghs(estimated)}
         </Text>
         <Text variant="subheadline" tone="secondary" tabular>
           of {ghs(budget)}
@@ -69,6 +81,18 @@ export function BudgetBar({
           {over ? `${ghs(Math.abs(remaining))} over` : `${ghs(remaining)} left`}
         </Text>
       </View>
+
+      {/*
+        Named rather than hinted at. "About" on its own invites the reader to
+        assume the number is nearly right, when the honest thing is to say
+        which stop we are guessing about.
+      */}
+      {approximate && confidence?.estimatedStops.length ? (
+        <Text variant="caption1" tone="tertiary">
+          Estimated at {confidence.estimatedStops.join(", ")}, so the total is a
+          range rather than a figure.
+        </Text>
+      ) : null}
     </View>
   );
 }

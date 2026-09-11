@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { UnpricedVenues } from "@/components/admin/UnpricedVenues";
 
 export const dynamic = "force-dynamic";
 
 /** Venues the planner is currently withholding because they have no price. */
 export default async function AdminUnpricedPage() {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
 
   const { data: venues } = await supabase
     .from("venues")

@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { PhoneReview } from "@/components/admin/PhoneReview";
 
 export const dynamic = "force-dynamic";
 
 /** Approval gate for the one field that gets dialled under our name. */
 export default async function AdminPhonesPage() {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
 
   const [{ data: venues }, { data: collisions }] = await Promise.all([
     supabase

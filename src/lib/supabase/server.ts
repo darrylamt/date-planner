@@ -1,3 +1,4 @@
+import { createClient as createBareClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -31,8 +32,13 @@ export function createClient() {
  * Service-role client. Server-only; used for reading shared plans by slug
  * without exposing a public SELECT policy on the plans table.
  */
-export function createServiceClient() {
-  const { createClient: createBareClient } = require("@supabase/supabase-js");
+export function createServiceClient(): SupabaseClient {
+  /*
+   * Typed rather than left as the `any` a bare require returns. Admin pages
+   * read through this now, and an untyped client silently turns every row it
+   * hands back into `any`, which removes exactly the checking those pages
+   * relied on before they were switched over.
+   */
   return createBareClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,

@@ -89,6 +89,7 @@ function assemble(
     food_total_ghs: Math.round(plan.foodTotal),
     transport_total_ghs: Math.round(plan.transportTotal),
     est_total_ghs: Math.round(plan.total),
+    price_confidence: plan.confidence,
     budget_note: copy.budget_note,
     personal_summary: copy.personal_summary,
   };

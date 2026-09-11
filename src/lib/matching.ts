@@ -86,12 +86,17 @@ export async function fetchCandidates(
   );
 
   venues = venues.filter(
-    (v) =>
+    (v) => {
       // A venue flagged free has a known price of nothing, which is the
       // opposite of a venue whose price we simply do not have.
-      v.is_free === true ||
-      Number(v.avg_cost_per_person_ghs) > 0 ||
-      pricedVenueIds.has(v.id)
+      if (v.is_free === true) return true;
+      /*
+       * Nobody has put a number to this one at all. Still withheld, because
+       * an estimate is a claim and "unknown" is the absence of one.
+       */
+      if (v.price_source === "unknown") return false;
+      return Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(v.id);
+    }
   );
 
   /*

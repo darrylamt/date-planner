@@ -51,6 +51,8 @@ export function VenueForm({
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
     aesthetics: venue?.aesthetics ?? null,
+    price_source: venue?.price_source ?? "menu",
+    price_spread: venue?.price_spread != null ? String(venue.price_spread) : "0.3",
     pricing_mode: venue?.pricing_mode ?? "per_person",
     unit_price_ghs: venue?.unit_price_ghs != null ? String(venue.unit_price_ghs) : "",
     min_party_size: venue?.min_party_size ?? 1,
@@ -97,6 +99,8 @@ export function VenueForm({
             ? null
             : Number(v.unit_price_ghs),
         aesthetics: v.aesthetics,
+        price_source: v.price_source,
+        price_spread: Number(v.price_spread) || 0.3,
         min_party_size: Number(v.min_party_size) || 1,
         // Blank means no practical limit, which is different from zero.
         max_party_size: v.max_party_size === "" ? null : Number(v.max_party_size),
@@ -349,6 +353,40 @@ export function VenueForm({
               : "Leave at 0 if unknown, unpriced venues are withheld, not shown as free."}
           </span>
         </div>
+        <div className={field}>
+          <span className="flbl">How sure is the price?</span>
+          <select
+            className="inp"
+            value={v.price_source}
+            onChange={(e) => setV({ ...v, price_source: e.target.value as typeof v.price_source })}
+          >
+            <option value="menu">Read from a menu or a stated rate</option>
+            <option value="estimated">An estimate</option>
+            <option value="unknown">No idea yet</option>
+          </select>
+          {v.price_source === "estimated" ? (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[13px] text-mutedbrown">give or take</span>
+              <select
+                className="inp max-w-[110px]"
+                value={v.price_spread}
+                onChange={(e) => setV({ ...v, price_spread: e.target.value })}
+              >
+                <option value="0.15">15%</option>
+                <option value="0.3">30%</option>
+                <option value="0.5">50%</option>
+              </select>
+            </div>
+          ) : null}
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            {v.price_source === "menu"
+              ? "Plans using only these can promise an exact total."
+              : v.price_source === "estimated"
+                ? "Shown to users as a range, never as an exact figure."
+                : "Withheld from planning until somebody puts a number to it."}
+          </span>
+        </div>
+
         <div className="md:col-span-2">
           <span className="flbl">How does it charge?</span>
           <div className="flex flex-wrap items-center gap-2">

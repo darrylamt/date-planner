@@ -52,6 +52,14 @@ export interface Venue {
    * deliberately not the same as average.
    */
   aesthetics: number | null;
+  /**
+   * Where the price came from. An estimate is shown as a range rather than a
+   * figure, because presenting a guess to the cedi is the same lie as an
+   * invented price, only better dressed.
+   */
+  price_source: "menu" | "estimated" | "unknown";
+  /** Half-width of an estimate, as a fraction. Ignored for menu prices. */
+  price_spread: number;
   /** Google Places link, the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;
@@ -193,6 +201,22 @@ export interface StopAlternate {
   why_this_fits: string;
 }
 
+/**
+ * How much of a plan rests on estimates.
+ *
+ * Carried on the itinerary so the client can decide between an exact total and
+ * a range without re-deriving it from every stop.
+ */
+export interface PriceConfidence {
+  /** True when every stop was priced from a menu or a stated rate. */
+  exact: boolean;
+  /** Low and high ends of the total, equal to each other when exact. */
+  low: number;
+  high: number;
+  /** Stops whose price is an estimate, by name, for an honest footnote. */
+  estimatedStops: string[];
+}
+
 export interface TransportHop {
   from: string;
   to: string;
@@ -209,6 +233,11 @@ export interface Itinerary {
   food_total_ghs: number;
   transport_total_ghs: number;
   est_total_ghs: number;
+  /**
+   * Whether that total can be stated as a figure or only as a range.
+   * Optional so a plan generated before this existed still renders.
+   */
+  price_confidence?: PriceConfidence;
   budget_note: string | null; // honest note when budget is tight
   personal_summary: string; // "Built around them" card text
 }

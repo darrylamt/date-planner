@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { MenuIngest } from "@/components/admin/MenuIngest";
 import type { Area } from "@/lib/types";
 
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Menu photo or link in, reviewed migration out. */
 export default async function AdminIngestPage() {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
   const { data: areas } = await supabase.from("areas").select("id, name, city").order("name");
 
   return (

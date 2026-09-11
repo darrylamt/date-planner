@@ -54,6 +54,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
   const [areaName, setAreaName] = useState(areas[0]?.name ?? "");
   const [venueType, setVenueType] = useState<string>("restaurant");
   const [menuUrl, setMenuUrl] = useState("");
+  const [menuText, setMenuText] = useState("");
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
@@ -70,7 +71,10 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
   const canSubmit =
     venueName.trim().length > 0 &&
     areaName &&
-    (files.length > 0 || menuUrl.trim() || notes.trim().length > 0);
+    (files.length > 0 ||
+      menuUrl.trim() ||
+      menuText.trim().length > 0 ||
+      notes.trim().length > 0);
 
   async function extract() {
     setBusy(true);
@@ -95,6 +99,7 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
           areaName,
           venueType,
           menuUrl: menuUrl.trim(),
+          menuText: menuText.trim(),
           notes: notes.trim(),
           images,
         }),
@@ -247,16 +252,36 @@ export function MenuIngest({ areas }: { areas: Area[] }) {
         </div>
 
         <div className="mt-4">
-          <span className="flbl">Or just type the prices</span>
+          <span className="flbl">Or type the menu out</span>
           <textarea
-            className="ta"
-            placeholder="Entry is GHS 30. Or: court is GHS 200/hour. Or: ignore the breakfast page."
+            className="ta min-h-[200px] font-mono text-[13px]"
+            placeholder={`Jollof with chicken 85
+Grilled tilapia 140
+Fried rice 70
+Club beer 25
+
+Or for somewhere with no menu:
+Entry 30 per person
+Court hire 200 an hour, up to 4 people`}
+            value={menuText}
+            onChange={(e) => setMenuText(e.target.value)}
+          />
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            Usually the fastest way in, and enough on its own. Rough is fine: one
+            item a line, name then price. Copied out of WhatsApp, or typed while you
+            are standing there, both beat photographing a menu. Prices are read
+            exactly as written, never rounded or converted.
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <span className="flbl">Corrections (optional)</span>
+          <textarea
+            className="ta min-h-[64px]"
+            placeholder="Ignore the breakfast page. Prices went up in June."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-          <span className="mt-1 block text-[12px] text-mutedbrown">
-            Enough on its own, no photo needed.
-          </span>
         </div>
 
         <button className="btn mt-4" onClick={extract} disabled={!canSubmit || busy}>

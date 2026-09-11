@@ -109,6 +109,16 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
         <div className="mt-auto px-7 pb-10 pt-2 text-center md:pb-14">
           {/* The sign-off, which is the one line that changes most between a
               graduation and a solo day. */}
+          {/* Said on the card too, because the person opening the link is
+              often the one who ends up paying. */}
+          {itinerary.price_confidence && !itinerary.price_confidence.exact ? (
+            <p className="mx-auto mb-4 max-w-[420px] text-[14px] text-lagoon-soft">
+              Around GHS {itinerary.price_confidence.low.toLocaleString()} to{" "}
+              {itinerary.price_confidence.high.toLocaleString()}. Some prices here
+              are estimates rather than menu prices.
+            </p>
+          ) : null}
+
           <p className="mx-auto mb-6 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
             {card.closing}
           </p>

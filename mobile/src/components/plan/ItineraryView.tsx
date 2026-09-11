@@ -15,6 +15,7 @@ import { ghs, longDate } from "../../lib/format";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
 import { swapStopLocally } from "../../lib/swapStop";
+import { NoteSheet } from "./NoteSheet";
 import type {
   Itinerary,
   ItineraryOrder,
@@ -45,6 +46,8 @@ export function ItineraryView({
   const c = useTheme();
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [pendingSlug, setPendingSlug] = useState<string | null>(null);
 
   const over = itinerary.est_total_ghs > inputs.budget;
 
@@ -171,24 +174,21 @@ export function ItineraryView({
     const slug = shareSlug ?? (await onSave());
     if (!slug) return; // onSave surfaced the sign-in prompt
 
-    if (Platform.OS === "ios") {
-      const note = await new Promise<string | null>((resolve) => {
-        Alert.prompt(
-          "Add a note?",
-          "One line on the card, from you. Skip if you would rather not.",
-          [
-            { text: "Skip", style: "cancel", onPress: () => resolve(null) },
-            { text: "Add", onPress: (value?: string) => resolve(value ?? null) },
-          ],
-          "plain-text",
-          "",
-          "default"
-        );
-      });
-      if (note && note.trim()) {
-        const saved = await setPlannerNote(slug, note);
-        if (!saved) setToast("The note did not save, sharing anyway.");
-      }
+    // The sheet decides; sharing continues in shareWith once it closes.
+    setPendingSlug(slug);
+    setNoteOpen(true);
+  }
+
+  /** Save the note if one was written, then open the share sheet either way. */
+  async function shareWith(note: string | null) {
+    const slug = pendingSlug;
+    setNoteOpen(false);
+    setPendingSlug(null);
+    if (!slug) return;
+
+    if (note) {
+      const saved = await setPlannerNote(slug, note);
+      if (!saved) setToast("The note did not save, sharing anyway.");
     }
 
     const url = `${WEB_URL}/p/${slug}`;
@@ -270,6 +270,7 @@ export function ItineraryView({
             budget={inputs.budget}
             food={itinerary.food_total_ghs}
             transport={itinerary.transport_total_ghs}
+            confidence={itinerary.price_confidence}
           />
         </View>
 
@@ -369,6 +370,18 @@ export function ItineraryView({
           <Button title="Email" kind="gray" icon="envelope" onPress={handleEmail} />
         </View>
       </ActionBar>
+
+      <NoteSheet
+        visible={noteOpen}
+        // The itinerary in hand carries no note; it lives on the saved plan
+        // row, which this screen has not loaded.
+        initial=""
+        onClose={() => {
+          setNoteOpen(false);
+          setPendingSlug(null);
+        }}
+        onDone={(note) => void shareWith(note)}
+      />
 
       <Toast message={toast} onDone={() => setToast(null)} />
     </View>

@@ -113,15 +113,22 @@ export function VenueTable({ rows }: { rows: Row[] }) {
       <div className="mt-4 overflow-x-auto">
         <table className="tbl w-full border-collapse">
           <thead>
+            {/*
+              Most columns are hidden on a phone rather than squeezed. Nine
+              columns in a horizontal scroller is technically usable and
+              actually horrible: you lose the venue name the moment you scroll
+              to the thing you came to read. Name, status and the actions are
+              what the screen is for; the rest is desk work.
+            */}
             <tr>
               <th>Venue</th>
-              <th>Area</th>
-              <th>Type</th>
-              <th>Items</th>
-              <th>Avg price (2)</th>
-              <th>Menu updated</th>
+              <th className="hidden md:table-cell">Area</th>
+              <th className="hidden lg:table-cell">Type</th>
+              <th className="hidden lg:table-cell">Items</th>
+              <th className="hidden md:table-cell">Avg price (2)</th>
+              <th className="hidden lg:table-cell">Menu updated</th>
               <th>Status</th>
-              <th>Verified</th>
+              <th className="hidden md:table-cell">Verified</th>
               <th></th>
             </tr>
           </thead>
@@ -136,6 +143,11 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                 <tr key={r.id} className={r.is_active ? "" : "opacity-50"}>
                   <td className="font-bold">
                     {r.name}
+                    {/* The columns hidden on a phone, folded under the name so
+                        the row still says what it is. */}
+                    <div className="mt-0.5 text-[12px] font-normal text-mutedbrown md:hidden">
+                      {r.area} · {r.type} · {ghs(r.avgForTwo)}
+                    </div>
                     {isOpen && (
                       <div className="mt-2 max-w-[520px] whitespace-normal rounded-xl bg-whybg p-3 text-[13px] font-normal leading-relaxed">
                         <div className="mb-1 font-semibold">
@@ -189,11 +201,11 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                       </div>
                     )}
                   </td>
-                  <td>{r.area}</td>
-                  <td className="capitalize">{r.type}</td>
-                  <td>{r.items}</td>
-                  <td className="font-mono">{ghs(r.avgForTwo)}</td>
-                  <td>
+                  <td className="hidden md:table-cell">{r.area}</td>
+                  <td className="hidden capitalize lg:table-cell">{r.type}</td>
+                  <td className="hidden lg:table-cell">{r.items}</td>
+                  <td className="hidden font-mono md:table-cell">{ghs(r.avgForTwo)}</td>
+                  <td className="hidden lg:table-cell">
                     {r.staleDays === null
                       ? "never"
                       : r.staleDays === 0
@@ -209,7 +221,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                       <span className="badge b-ok">Fresh</span>
                     )}
                   </td>
-                  <td>
+                  <td className="hidden md:table-cell">
                     <span className={badgeClass(status)}>{badgeLabel(status)}</span>
                     {discrepancies > 0 && (
                       <div className="mt-1 text-[12px] text-staletext">

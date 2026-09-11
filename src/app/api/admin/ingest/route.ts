@@ -22,6 +22,7 @@ const bodySchema = z.object({
   areaName: z.string().min(1).max(120),
   venueType: z.enum(VENUE_TYPES).optional(),
   menuUrl: z.string().url().max(600).optional().or(z.literal("")),
+  menuText: z.string().max(12000).optional(),
   notes: z.string().max(1000).optional(),
   images: z
     .array(
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
     areaName: body.areaName,
     venueType: body.venueType,
     menuUrl: body.menuUrl || undefined,
+    menuText: body.menuText || undefined,
     images: body.images,
     notes: body.notes,
   });

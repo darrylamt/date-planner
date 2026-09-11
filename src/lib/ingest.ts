@@ -36,6 +36,14 @@ export interface IngestInput {
   areaName: string;
   venueType?: string;
   menuUrl?: string;
+  /**
+   * The menu typed or pasted in as plain text.
+   *
+   * Often the fastest route by a wide margin: a price list copied out of
+   * WhatsApp, or typed from memory standing in the place, arrives here with
+   * no photograph to take, upload or read.
+   */
+  menuText?: string;
   images: IngestImage[];
   /** Anything the admin wants to tell the model, corrections, context. */
   notes?: string;
@@ -49,6 +57,14 @@ What the admin has told us:
 - Area (Accra neighbourhood): ${input.areaName}
 ${input.venueType ? `- Venue type: ${input.venueType}` : ""}
 ${input.menuUrl ? `- Menu URL: ${input.menuUrl} (fetch it)` : ""}
+${input.menuText?.trim() ? `
+MENU, AS TYPED BY THE ADMIN. Treat this as the source, it is
+somebody reading the real menu. Keep their wording for item names, and take
+every price exactly as written:
+"""
+${input.menuText.trim()}
+"""
+` : ""}
 ${input.notes ? `- Admin notes: ${input.notes}` : ""}
 ${input.images.length ? `- ${input.images.length} menu image(s) are attached.` : ""}
 
@@ -132,10 +148,16 @@ export async function ingestMenu(
 ): Promise<IngestSuccess | IngestFailure> {
   // Notes alone can carry the whole answer, "entry fee is GHS 30" needs no
   // photo, so only reject when there is truly nothing to extract from.
-  if (!input.images.length && !input.menuUrl && !input.notes?.trim()) {
+  if (
+    !input.images.length &&
+    !input.menuUrl &&
+    !input.menuText?.trim() &&
+    !input.notes?.trim()
+  ) {
     return {
       ok: false,
-      error: "Provide a menu URL, at least one menu image, or a note describing the price.",
+      error:
+        "Provide the menu as text, a URL, at least one image, or a note describing the price.",
     };
   }
 
@@ -188,11 +210,30 @@ export async function ingestMenu(
     if (e instanceof Anthropic.RateLimitError) {
       return { ok: false, error: "Rate limited, try again shortly." };
     }
+    /*
+     * A 400 is not always about the images, and saying it is sends people to
+     * check file formats when the account is simply out of credit. Reported as
+     * an image problem only when images were actually sent.
+     */
     if (e instanceof Anthropic.BadRequestError) {
-      return {
-        ok: false,
-        error: "The images were rejected, check they are JPEG/PNG and not too large.",
-      };
+      const message = (e as { message?: string }).message ?? "";
+      if (/credit balance|billing|quota/i.test(message)) {
+        return {
+          ok: false,
+          error:
+            "The Anthropic account is out of credit. Top it up at console.anthropic.com, nothing here is broken.",
+        };
+      }
+      if (input.images.length) {
+        return {
+          ok: false,
+          error: "The images were rejected, check they are JPEG/PNG and not too large.",
+        };
+      }
+      return { ok: false, error: `The request was rejected: ${message.slice(0, 160)}` };
+    }
+    if (e instanceof Anthropic.AuthenticationError) {
+      return { ok: false, error: "ANTHROPIC_API_KEY is missing or invalid." };
     }
     return { ok: false, error: "Could not reach the extraction service." };
   }

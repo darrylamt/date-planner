@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 /**
  * The admin gate, in one place.
@@ -43,4 +43,32 @@ export async function requireAdmin(): Promise<
   }
 
   return { ok: true, supabase, userId: user.id };
+}
+
+/**
+ * A client for admin pages to read with.
+ *
+ * Admin is a flag on a profile row rather than a database role, so every admin
+ * is just `authenticated` as far as Postgres is concerned. That made column
+ * privileges useless for protecting the phone and verification internals: any
+ * grant wide enough for the admin screens was wide enough for every signed-in
+ * account.
+ *
+ * Reading as the service role breaks that tie. Admin pages get everything,
+ * `authenticated` can be narrowed to what an ordinary user needs, and the
+ * check that decides which is which stays in code where it can be read.
+ *
+ * The identity check still runs against the caller's own cookies. Only the
+ * reading is elevated, and only after the caller has been shown to be an
+ * admin, so this is not a way around the gate.
+ */
+export async function adminDataClient() {
+  const gate = await requireAdmin();
+  if (!gate.ok) {
+    // Pages sit behind the admin layout, which redirects first. Reaching here
+    // means that guarantee has broken, and refusing loudly beats handing back
+    // a service-role client on an unverified request.
+    throw new Error("adminDataClient called without an admin session");
+  }
+  return createServiceClient();
 }

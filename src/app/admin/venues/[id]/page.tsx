@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { VenueForm } from "@/components/admin/VenueForm";
 import type { Area, MenuItem, Venue } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditVenuePage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
   const [{ data: areas }, { data: venue }, { data: items }] = await Promise.all([
     supabase.from("areas").select("*").order("name"),
     supabase.from("venues").select("*").eq("id", params.id).maybeSingle(),

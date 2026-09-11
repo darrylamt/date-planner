@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { ReportsReview, type ReportRow } from "@/components/admin/ReportsReview";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * it and it failed. They answer different questions about the same fact.
  */
 export default async function AdminReportsPage() {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
 
   const { data } = await supabase
     .from("venue_reports")

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { adminDataClient } from "@/lib/adminAuth";
 import { BulkPriceEditor } from "@/components/admin/BulkPriceEditor";
 import type { MenuItem } from "@/lib/types";
 
@@ -10,7 +10,7 @@ export default async function BulkPricesPage({
 }: {
   searchParams: { venue?: string };
 }) {
-  const supabase = createClient();
+  const supabase = await adminDataClient();
 
   const { data: venues } = await supabase
     .from("venues")
