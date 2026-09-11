@@ -27,10 +27,15 @@ import {
   countSavedPlans,
   deleteAccount,
   fetchProfile,
+  mascotFromAvatar,
+  setMascotAvatar,
   updateDisplayName,
   uploadAvatar,
   type Profile as AccountProfile,
 } from "../../src/lib/account";
+import { AvatarPicker } from "../../src/components/AvatarPicker";
+import { Mascot } from "../../src/components/Mascot";
+import type { Occasion } from "../../src/lib/types";
 import { Image } from "expo-image";
 import { nativeOptional } from "../../src/lib/nativeOptional";
 
@@ -67,6 +72,7 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -173,6 +179,16 @@ export default function Profile() {
     setToast("Picture updated.");
   }
 
+  async function chooseMascot(occasion: Occasion) {
+    setPickerOpen(false);
+    const value = await setMascotAvatar(occasion);
+    if (!value) {
+      setToast("Could not save that.");
+      return;
+    }
+    setProfile((cur) => (cur ? { ...cur, avatarUrl: value } : cur));
+  }
+
   async function saveName() {
     const next = nameDraft.trim();
     setEditingName(false);
@@ -221,7 +237,7 @@ export default function Profile() {
                 padding: space.md,
               }}
             >
-              <Pressable onPress={pickAvatar} disabled={uploading}>
+              <Pressable onPress={() => setPickerOpen(true)} disabled={uploading}>
                 <View
                   style={{
                     width: 56,
@@ -235,6 +251,12 @@ export default function Profile() {
                 >
                   {uploading ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : mascotFromAvatar(profile?.avatarUrl) ? (
+                    <Mascot
+                      occasion={mascotFromAvatar(profile?.avatarUrl) as Occasion}
+                      size={52}
+                      animate={false}
+                    />
                   ) : profile?.avatarUrl ? (
                     <Image
                       source={{ uri: profile.avatarUrl }}
@@ -471,6 +493,18 @@ export default function Profile() {
       >
         aduro {Constants.expoConfig?.version ?? ""} · Accra
       </Text>
+
+      <AvatarPicker
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        current={mascotFromAvatar(profile?.avatarUrl)}
+        onPickMascot={(o) => void chooseMascot(o)}
+        onPickPhoto={() => {
+          setPickerOpen(false);
+          void pickAvatar();
+        }}
+        photoAvailable={Boolean(ImagePicker)}
+      />
 
       <Toast message={toast} onDone={() => setToast(null)} />
     </ScrollView>

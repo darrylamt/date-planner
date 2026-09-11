@@ -109,6 +109,38 @@ export async function updateDisplayName(name: string): Promise<boolean> {
  * timestamp because the URL is public and cached: reusing one would leave the
  * old picture on screen until the cache expired.
  */
+/**
+ * Avatars can be a mascot instead of a photograph.
+ *
+ * Stored in the same column with a prefix rather than a second field: an
+ * avatar is one choice, and two columns would let a picture and a mascot both
+ * be set with nothing to say which wins.
+ */
+export const MASCOT_PREFIX = "mascot:";
+
+export function isMascotAvatar(url: string | null | undefined): boolean {
+  return Boolean(url?.startsWith(MASCOT_PREFIX));
+}
+
+export function mascotFromAvatar(url: string | null | undefined): string | null {
+  return isMascotAvatar(url) ? url!.slice(MASCOT_PREFIX.length) : null;
+}
+
+export async function setMascotAvatar(occasion: string): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const value = `${MASCOT_PREFIX}${occasion}`;
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar_url: value })
+    .eq("id", user.id);
+
+  return error ? null : value;
+}
+
 export async function uploadAvatar(uri: string): Promise<string | null> {
   const {
     data: { user },
