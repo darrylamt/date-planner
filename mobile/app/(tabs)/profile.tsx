@@ -21,21 +21,17 @@ import { GUTTER, TAB_BAR, radius, space, type as typeScale } from "../../src/the
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { useAppearance } from "../../src/lib/appearance";
+import { AppIconPicker, appIconsAvailable } from "../../src/components/AppIconPicker";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 import { resetOnboarding } from "../../src/lib/onboarding";
 import {
   countSavedPlans,
   deleteAccount,
   fetchProfile,
-  mascotFromAvatar,
-  setMascotAvatar,
   updateDisplayName,
   uploadAvatar,
   type Profile as AccountProfile,
 } from "../../src/lib/account";
-import { AvatarPicker } from "../../src/components/AvatarPicker";
-import { Mascot } from "../../src/components/Mascot";
-import type { Occasion } from "../../src/lib/types";
 import { Image } from "expo-image";
 import { nativeOptional } from "../../src/lib/nativeOptional";
 
@@ -72,7 +68,7 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -179,16 +175,6 @@ export default function Profile() {
     setToast("Picture updated.");
   }
 
-  async function chooseMascot(occasion: Occasion) {
-    setPickerOpen(false);
-    const value = await setMascotAvatar(occasion);
-    if (!value) {
-      setToast("Could not save that.");
-      return;
-    }
-    setProfile((cur) => (cur ? { ...cur, avatarUrl: value } : cur));
-  }
-
   async function saveName() {
     const next = nameDraft.trim();
     setEditingName(false);
@@ -237,7 +223,7 @@ export default function Profile() {
                 padding: space.md,
               }}
             >
-              <Pressable onPress={() => setPickerOpen(true)} disabled={uploading}>
+              <Pressable onPress={pickAvatar} disabled={uploading}>
                 <View
                   style={{
                     width: 56,
@@ -251,12 +237,6 @@ export default function Profile() {
                 >
                   {uploading ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : mascotFromAvatar(profile?.avatarUrl) ? (
-                    <Mascot
-                      occasion={mascotFromAvatar(profile?.avatarUrl) as Occasion}
-                      size={52}
-                      animate={false}
-                    />
                   ) : profile?.avatarUrl ? (
                     <Image
                       source={{ uri: profile.avatarUrl }}
@@ -381,6 +361,17 @@ export default function Profile() {
             onPress={() => setPreference("system")}
           />
         ) : null}
+        {/* Hidden rather than disabled on a build without the module: a row
+            that explains why it cannot work is worse than no row. */}
+        {appIconsAvailable() ? (
+          <Row
+            icon="app.badge"
+            title="App icon"
+            subtitle="Pick a mascot for your home screen"
+            chevron
+            onPress={() => setIconPickerOpen(true)}
+          />
+        ) : null}
       </Group>
 
       <Group header="This device">
@@ -494,16 +485,10 @@ export default function Profile() {
         aduro {Constants.expoConfig?.version ?? ""} · Accra
       </Text>
 
-      <AvatarPicker
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        current={mascotFromAvatar(profile?.avatarUrl)}
-        onPickMascot={(o) => void chooseMascot(o)}
-        onPickPhoto={() => {
-          setPickerOpen(false);
-          void pickAvatar();
-        }}
-        photoAvailable={Boolean(ImagePicker)}
+      <AppIconPicker
+        visible={iconPickerOpen}
+        onClose={() => setIconPickerOpen(false)}
+        onChanged={setToast}
       />
 
       <Toast message={toast} onDone={() => setToast(null)} />

@@ -97,6 +97,75 @@
         {
           "photosPermission": "aduro uses this to set your profile picture."
         }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "DateNight",
+            "ios": "./assets/app-icons/date_night.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/date_night.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "FirstDate",
+            "ios": "./assets/app-icons/first_date.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/first_date.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Anniversary",
+            "ios": "./assets/app-icons/anniversary.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/anniversary.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Birthday",
+            "ios": "./assets/app-icons/birthday.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/birthday.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Graduation",
+            "ios": "./assets/app-icons/graduation.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/graduation.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Celebration",
+            "ios": "./assets/app-icons/celebration.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/celebration.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Friends",
+            "ios": "./assets/app-icons/friend_outing.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/friend_outing.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "SoloDay",
+            "ios": "./assets/app-icons/solo_day.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/solo_day.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          }
+        ]
       ]
     ],
     "experiments": {

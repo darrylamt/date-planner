@@ -10,6 +10,7 @@
     "@react-native-segmented-control/segmented-control": "2.5.7",
     "@supabase/supabase-js": "^2.115.0",
     "expo": "~57.0.20",
+    "expo-alternate-app-icons": "^8.0.0",
     "expo-apple-authentication": "~57.0.2",
     "expo-auth-session": "~57.0.12",
     "expo-blur": "~57.0.2",
