@@ -18,9 +18,19 @@
           "whatsapp",
           "maps",
           "comgooglemaps",
+          "tel",
+          "whatsapp",
+          "maps",
+          "comgooglemaps",
           "tel"
         ],
         "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
             "NSPrivacyAccessedAPITypeReasons": [
@@ -47,13 +57,15 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
-    },
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
@@ -90,6 +102,9 @@
     "owner": "darryl_amt",
     "updates": {
       "url": "https://u.expo.dev/05671085-4481-486e-b052-1cf91c28fd79"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
