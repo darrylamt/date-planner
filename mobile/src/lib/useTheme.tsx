@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { useColorScheme } from "react-native";
+import { useAppearance } from "./appearance";
 import {
   Colors,
   OCCASION_HUES,
@@ -31,9 +31,12 @@ export function OccasionThemeProvider({
 }
 
 export function useColorSchemeName(): ColorSchemeName {
-  // Null before the value is known, default to light rather than flashing a
-  // dark frame on a light device.
-  return useColorScheme() === "dark" ? "dark" : "light";
+  /*
+   * Reads the in-app preference rather than the phone directly. When that
+   * preference is "system" it still resolves to the phone, so the default
+   * behaviour is unchanged and only an explicit choice diverges from it.
+   */
+  return useAppearance().scheme;
 }
 
 export function useTheme(): ThemeColors {

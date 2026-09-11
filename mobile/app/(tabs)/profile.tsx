@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Linking, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Switch, View } from "react-native";
 import Constants from "expo-constants";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,15 +8,16 @@ import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { Symbol } from "../../src/components/Symbol";
 import { Toast } from "../../src/components/Toast";
-import { GUTTER, TAB_BAR, space } from "../../src/theme";
+import { GUTTER, TAB_BAR, radius, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
+import { useAppearance } from "../../src/lib/appearance";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 import { resetOnboarding } from "../../src/lib/onboarding";
 import { countSavedPlans, deleteAccount } from "../../src/lib/account";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-const SUPPORT_EMAIL = "amoateydarryl4@gmail.com";
+const SUPPORT_EMAIL = "planbyaduro@gmail.com";
 
 /*
  * The numeric App Store ID, from App Store Connect under App Information.
@@ -31,6 +32,7 @@ export default function Profile() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const { preference, scheme, setPreference } = useAppearance();
 
   const [hasDraft, setHasDraft] = useState(false);
   const [planCount, setPlanCount] = useState<number | null>(null);
@@ -108,24 +110,61 @@ export default function Profile() {
       }}
     >
       <Text
-        variant="display"
-        uppercase
-        style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}
+        variant="title2"
+        center
+        style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}
       >
-        You
+        Settings
       </Text>
 
       {session ? (
-        <Group header="Account">
-          <Row icon="envelope.fill" title={session.user.email ?? "Signed in"} />
-          <Row
-            icon="bookmark.fill"
-            title="Saved plans"
-            value={planCount === null ? "" : String(planCount)}
-            chevron
-            onPress={() => router.push("/(tabs)/saved")}
-          />
-        </Group>
+        <>
+          {/*
+            The identity card, which is what a settings screen opens with on
+            iOS. The avatar is the first letter of the email rather than an
+            upload: there is no photo to show, and a grey silhouette says
+            "unfinished" where a monogram says "you".
+          */}
+          <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
+            <Pressable
+              onPress={() => router.push("/(tabs)/saved")}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.md,
+                backgroundColor: c.backgroundElement,
+                borderRadius: radius.card,
+                padding: space.md,
+              }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: c.accent,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text variant="title3" style={{ color: "#FFFFFF" }}>
+                  {(session.user.email ?? "?").slice(0, 1).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="headline" numberOfLines={1}>
+                  {(session.user.email ?? "Signed in").split("@")[0]}
+                </Text>
+                <Text variant="footnote" tone="secondary" numberOfLines={1}>
+                  {planCount === null
+                    ? (session.user.email ?? "")
+                    : `${planCount} saved plan${planCount === 1 ? "" : "s"}`}
+                </Text>
+              </View>
+              <Symbol name="chevron.right" size={16} color={c.textTertiary} />
+            </Pressable>
+          </View>
+        </>
       ) : (
         <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xxl }}>
           <View
@@ -152,6 +191,28 @@ export default function Profile() {
           </View>
         </View>
       )}
+
+      <Group header="Appearance">
+        <Row
+          icon="moon"
+          title="Dark mode"
+          subtitle={preference === "system" ? "Following your phone" : undefined}
+          trailing={
+            <Switch
+              value={scheme === "dark"}
+              onValueChange={(on) => setPreference(on ? "dark" : "light")}
+              trackColor={{ true: c.accent, false: c.backgroundSelected }}
+            />
+          }
+        />
+        {preference !== "system" ? (
+          <Row
+            icon="iphone"
+            title="Match my phone instead"
+            onPress={() => setPreference("system")}
+          />
+        ) : null}
+      </Group>
 
       <Group header="This device">
         <Row
@@ -229,8 +290,28 @@ export default function Profile() {
             />
           </Group>
 
-          <View style={{ paddingHorizontal: GUTTER }}>
-            <Button title="Sign out" kind="gray" onPress={() => void signOut()} />
+          {/*
+            A full-width pill rather than a list row, which is the one control
+            on this screen someone comes looking for deliberately.
+          */}
+          <View style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}>
+            <Pressable
+              onPress={() => void signOut()}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: space.sm,
+                backgroundColor: c.backgroundElement,
+                borderRadius: radius.pill,
+                paddingVertical: space.md,
+              }}
+            >
+              <Symbol name="rectangle.portrait.and.arrow.right" size={18} color={c.danger} />
+              <Text variant="headline" style={{ color: c.danger }}>
+                Log out
+              </Text>
+            </Pressable>
           </View>
         </>
       ) : null}

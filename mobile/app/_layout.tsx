@@ -14,12 +14,29 @@ import { Figtree_600SemiBold } from "@expo-google-fonts/figtree/600SemiBold";
 import { Figtree_700Bold } from "@expo-google-fonts/figtree/700Bold";
 import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
+import { AppearanceProvider } from "../src/lib/appearance";
 
 // Hold the splash until the face is ready, so the first frame is not set in a
 // fallback font and then reflowed.
 void SplashScreen.preventAutoHideAsync();
 
+/**
+ * Everything theme-aware lives below AppearanceProvider.
+ *
+ * useTheme now reads the stored light/dark preference, so calling it in the
+ * same component that mounts the provider would read the default and never
+ * see the user's choice. Splitting the shell out is what makes the toggle
+ * actually repaint the app.
+ */
 export default function RootLayout() {
+  return (
+    <AppearanceProvider>
+      <RootShell />
+    </AppearanceProvider>
+  );
+}
+
+function RootShell() {
   const c = useTheme();
   const isDark = useIsDark();
 
