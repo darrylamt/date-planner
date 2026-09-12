@@ -220,7 +220,61 @@ export function CsvImporter({
         });
       }
 
-      ok += await insertInChunks("menu_items", pending, log);
+      /*
+       * Re-importing a menu updates it. It used to insert blindly, so a second
+       * CSV that repeated rows already on file added them again: Casa1715's
+       * drinks list went in at 18:16 and again at 18:30 inside a file that had
+       * gained the food, and the venue ended up with 446 drinks where it sells
+       * 223. Nothing complained, because two rows with the same name are
+       * perfectly legal.
+       *
+       * Matching on venue and name, case-insensitively, because that is what
+       * a person means by "the same dish". A price that has changed is the
+       * normal reason to re-import, so an existing row is updated rather than
+       * skipped.
+       */
+      const venueIds = [...new Set(pending.map((p) => String(p.values.venue_id)))];
+      const existing = new Map<string, string>();
+      for (let at = 0; at < venueIds.length; at += 50) {
+        const { data } = await supabase
+          .from("menu_items")
+          .select("id, venue_id, name")
+          .in("venue_id", venueIds.slice(at, at + 50));
+        for (const row of data ?? []) {
+          existing.set(`${row.venue_id}::${(row.name ?? "").trim().toLowerCase()}`, row.id);
+        }
+      }
+
+      const fresh: typeof pending = [];
+      const revised: { id: string; values: Record<string, unknown> }[] = [];
+      /* A file that repeats a dish within itself must not fight itself. */
+      const seen = new Set<string>();
+
+      for (const item of pending) {
+        const k = `${item.values.venue_id}::${String(item.values.name).trim().toLowerCase()}`;
+        if (seen.has(k)) {
+          log.push(`Row ${item.row} (${String(item.values.name)}): listed twice in this file, kept once`);
+          continue;
+        }
+        seen.add(k);
+
+        const id = existing.get(k);
+        if (id) revised.push({ id, values: item.values });
+        else fresh.push(item);
+      }
+
+      ok += await insertInChunks("menu_items", fresh, log);
+
+      let updated = 0;
+      for (let at = 0; at < revised.length; at += 250) {
+        const chunk = revised.slice(at, at + 250);
+        const { error } = await supabase
+          .from("menu_items")
+          .upsert(chunk.map((c) => ({ id: c.id, ...c.values })), { onConflict: "id" });
+        if (error) log.push(`Could not update ${chunk.length} existing rows: ${error.message}`);
+        else updated += chunk.length;
+      }
+      if (updated) log.push(`${updated} item(s) already on file were updated rather than duplicated.`);
     }
 
     if (mapped.size) {
