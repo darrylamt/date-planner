@@ -10,7 +10,7 @@ import { Segmented } from "../src/components/Segmented";
 import { FloatingMascots } from "../src/components/FloatingMascots";
 import { BrandMark } from "../src/components/BrandMark";
 import { GUTTER, radius, space } from "../src/theme";
-import { useTheme } from "../src/lib/useTheme";
+import { useIsDark, useTheme } from "../src/lib/useTheme";
 import {
   MIN_PASSWORD,
   sendPasswordReset,
@@ -41,6 +41,7 @@ export default function Login() {
   const c = useTheme();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
+  const isDark = useIsDark();
 
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -258,24 +259,47 @@ export default function Login() {
           </View>
         ) : null}
 
-        {/* ── one row: the two providers, then the action ── */}
+        {/*
+          ── Apple, in Apple's own button ──
+
+          Not a square with a logo in it. Apple ships this component and the
+          styles it may wear, and an icon-only variant is not among them, so a
+          custom one is a thing a reviewer can reasonably object to on a
+          screen whose entire job is to be trusted. Theirs also carries the
+          wordmark, tracks the system theme, and localises itself.
+
+          Full width and first, which settles guideline 4.8 outright: Apple's
+          option is not merely as prominent as Google's, it is more so.
+        */}
+        {appleReady && AppleAuthentication ? (
+          <View style={{ marginTop: space.xl }}>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={
+                mode === "signin"
+                  ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                  : AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+              }
+              buttonStyle={
+                isDark
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={radius.control}
+              style={{ height: 54, width: "100%" }}
+              onPress={() => void social_("apple")}
+            />
+          </View>
+        ) : null}
+
+        {/* ── Google, then the way in by email ── */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
             gap: space.sm,
-            marginTop: space.xl,
+            marginTop: appleReady && AppleAuthentication ? space.sm : space.xl,
           }}
         >
-          {/*
-            Apple and Google as identical squares. Guideline 4.8 wants Apple's
-            option no less prominent than any other third-party sign-in, and
-            two buttons of the same size satisfy that plainly.
-          */}
-          {appleReady && AppleAuthentication
-            ? socialButton("apple", "Continue with Apple", <BrandMark provider="apple" />)
-            : null}
-
           {googleSignInAvailable()
             ? socialButton("google", "Continue with Google", <BrandMark provider="google" />)
             : null}
