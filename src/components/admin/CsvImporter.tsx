@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ensureAreaId } from "@/lib/areas";
 import { csvToObjects } from "@/lib/csv";
 import { Toast } from "@/components/Toast";
+import { MENU_CATEGORIES, normaliseCategory } from "@/lib/catalog";
 import type { Area } from "@/lib/types";
 
 /**
@@ -36,6 +37,7 @@ export function CsvImporter({
     const text = await file.text();
     const rows = csvToObjects(text);
     const log: string[] = [];
+    const mapped = new Map<string, string>();
     let ok = 0;
 
     if (mode === "venues") {
@@ -86,17 +88,64 @@ export function CsvImporter({
         else ok++;
       }
     } else {
-      const venueByName = new Map(venues.map((v) => [v.name.toLowerCase(), v.id] as [string, string]));
+      const venueByName = new Map(
+        venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
+      );
+
+      /*
+       * Matching is an exact name match, lower-cased and trimmed. No fuzzy
+       * matching on purpose: guessing that "Tea Baa" meant "Tea Baa GH" is the
+       * kind of helpfulness that silently files a hundred dishes under the
+       * wrong restaurant. When it misses, the nearest names are offered so the
+       * fix is obvious rather than a hunt.
+       */
+      const nearest = (typed: string): string => {
+        const key = typed.trim().toLowerCase();
+        if (!key) return "";
+        const close = venues
+          .map((v) => v.name)
+          .filter((n) => {
+            const low = n.toLowerCase();
+            return low.includes(key) || key.includes(low);
+          })
+          .slice(0, 3);
+        return close.length ? `. Did you mean ${close.join(", ")}?` : "";
+      };
+
       for (const [i, r] of rows.entries()) {
-        const venueId = venueByName.get((r.venue ?? "").toLowerCase());
-        if (!r.name || !venueId) {
-          log.push(`Row ${i + 2}: skipped, missing item name or unknown venue "${r.venue}"`);
+        const venueId = venueByName.get((r.venue ?? "").trim().toLowerCase());
+        if (!r.name) {
+          log.push(`Row ${i + 2}: skipped, no item name`);
           continue;
         }
+        if (!venueId) {
+          log.push(`Row ${i + 2}: no venue called "${r.venue}"${nearest(r.venue ?? "")}`);
+          continue;
+        }
+
+        /*
+         * A spreadsheet says "Burgers"; the enum says "main". Sending the raw
+         * text failed every row with a Postgres enum error that told nobody
+         * what to change.
+         */
+        const category = normaliseCategory(r.category);
+        if (!category) {
+          log.push(
+            `Row ${i + 2} (${r.name}): "${r.category}" is not a category we know. ` +
+              `Use one of ${MENU_CATEGORIES.join(", ")}.`
+          );
+          continue;
+        }
+        // Reading "Burgers" as a main is a guess, and a guess belongs on the
+        // screen rather than quietly in the data.
+        if (r.category && r.category.trim().toLowerCase() !== category) {
+          mapped.set(r.category.trim(), category);
+        }
+
         const { error } = await supabase.from("menu_items").insert({
           venue_id: venueId,
           name: r.name,
-          category: r.category || "other",
+          category,
           price_ghs: Number(r.price_ghs) || 0,
           notes: r.notes || null,
         });
@@ -105,6 +154,11 @@ export function CsvImporter({
       }
     }
 
+    if (mapped.size) {
+      log.push("");
+      log.push("Headings read as:");
+      for (const [from, to] of mapped) log.push(`  ${from} → ${to}`);
+    }
     log.unshift(`Imported ${ok} of ${rows.length} rows.`);
     setReport(log);
     setBusy(false);
@@ -153,7 +207,11 @@ export function CsvImporter({
               <b>Headers:</b>{" "}
               <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes</code>
               <br />
-              <span className="text-mutedbrown">venue must match an existing venue name exactly.</span>
+              <span className="text-mutedbrown">
+                venue must match an existing venue name exactly. Category is
+                forgiving: Main, Mains, Starters, Drinks and the like all land in
+                the right place.
+              </span>
             </>
           )}
         </div>

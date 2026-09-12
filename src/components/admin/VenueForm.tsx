@@ -158,10 +158,39 @@ export function VenueForm({
       setTimeout(() => router.push("/admin"), 700);
       router.refresh();
     } catch (e: any) {
-      setError(e.message ?? "Save failed, are you an admin?");
+      setError(await explainSaveError(e));
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * Postgres names the constraint; a person needs the venue.
+   *
+   * "duplicate key value violates unique constraint
+   * venues_google_place_id_idx" is true and useless: the one thing you want
+   * to know is which venue already claims that Google listing, and that takes
+   * one more query. Usually the answer is that the same place was added twice
+   * under two spellings, and knowing the other name is the whole fix.
+   */
+  async function explainSaveError(e: any): Promise<string> {
+    const message: string = e?.message ?? "Save failed, are you an admin?";
+    if (e?.code !== "23505") return message;
+
+    if (/google_place_id/.test(message)) {
+      const { data } = await supabase
+        .from("venues")
+        .select("id, name")
+        .eq("google_place_id", v.google_place_id)
+        .maybeSingle();
+      return data
+        ? `${data.name} is already linked to this Google listing. ` +
+            `Edit that one instead, or unlink it there first.`
+        : "Another venue is already linked to this Google listing.";
+    }
+
+    if (/venues_name/.test(message)) return `There is already a venue called ${v.name}.`;
+    return message;
   }
 
   async function remove() {

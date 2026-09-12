@@ -121,3 +121,152 @@ export function suggestAvgCost(items: IngestedItem[], venue?: IngestedVenue): nu
   const base = mains.length ? median(mains) : median(items.map((i) => i.price_ghs));
   return Math.round(base + median(drinks));
 }
+
+
+/**
+ * Turn what a human wrote into one of our five categories.
+ *
+ * The enum is lower case and a spreadsheet is not. A menu exported by a person
+ * says "Main", "Mains", "Starters", "Drinks", and passing any of those
+ * straight to Postgres fails the whole row on `invalid input value for enum
+ * menu_category`, which is a true error message that tells nobody what to do.
+ *
+ * Plurals and the obvious synonyms are folded in, because "Appetizer" and
+ * "Starter" are the same section of the same menu, and rejecting a hundred
+ * rows over that is not a standard worth holding.
+ */
+/**
+ * Section headings as menus actually write them, mapped to the five we store.
+ *
+ * The exact table is for headings that name a course. The keyword pass below
+ * is for the far commoner case: a menu names its sections after the food.
+ * Tea Baa's card has eighteen headings and only one of them ("Main") is a
+ * course; the rest are Burgers, Tacos, Sliders, Waters, House Wines.
+ */
+const CATEGORY_SYNONYMS: Record<string, (typeof MENU_CATEGORIES)[number]> = {
+  starter: "starter",
+  starters: "starter",
+  appetizer: "starter",
+  appetizers: "starter",
+  appetiser: "starter",
+  small: "starter",
+  smallplates: "starter",
+  sides: "starter",
+  side: "starter",
+
+  main: "main",
+  mains: "main",
+  maincourse: "main",
+  maincourses: "main",
+  entree: "main",
+  entrees: "main",
+  dish: "main",
+  dishes: "main",
+  food: "main",
+
+  dessert: "dessert",
+  desserts: "dessert",
+  sweet: "dessert",
+  sweets: "dessert",
+  pudding: "dessert",
+
+  drink: "drink",
+  drinks: "drink",
+  beverage: "drink",
+  beverages: "drink",
+  cocktail: "drink",
+  cocktails: "drink",
+  wine: "drink",
+  beer: "drink",
+  softdrink: "drink",
+  softdrinks: "drink",
+
+  other: "other",
+  extra: "other",
+  extras: "other",
+  misc: "other",
+};
+
+/**
+ * Words that place a heading, tried in this order.
+ *
+ * Order is the whole design. "Sweet Wine" is a drink, not a dessert, so drink
+ * words are tried before sweet ones; "House Wines" is a drink and not a main,
+ * so "house" is deliberately absent from the main list. Each rule is checked
+ * against whole words rather than substrings, because "Starters" contains the
+ * letters of "tart" and would otherwise become a dessert.
+ */
+const CATEGORY_KEYWORDS: [(typeof MENU_CATEGORIES)[number], string[]][] = [
+  [
+    "drink",
+    [
+      "drink", "beverage", "bar", "cocktail", "mocktail", "wine", "champagne",
+      "prosecco", "sparkling", "bubbly", "beer", "cider", "lager", "stout",
+      "ale", "spirit", "liquor", "whisky", "whiskey", "bourbon", "vodka",
+      "gin", "rum", "tequila", "brandy", "liqueur", "shot", "water", "juice",
+      "soda", "smoothie", "tea", "coffee", "latte", "espresso", "cappuccino",
+      "aperitif",
+    ],
+  ],
+  [
+    "dessert",
+    [
+      "dessert", "sweet", "pudding", "cake", "pastry", "gelato", "sorbet",
+      "brownie", "cheesecake", "waffle", "crepe", "donut", "doughnut",
+      "patisserie", "sundae", "parfait",
+    ],
+  ],
+  [
+    "starter",
+    [
+      "starter", "appetizer", "appetiser", "small", "plate", "side", "snack",
+      "bite", "nibble", "sharing", "tapas", "dip", "soup", "salad", "wing",
+      "finger",
+    ],
+  ],
+  [
+    "main",
+    [
+      "main", "entree", "course", "burger", "taco", "slider", "sandwich",
+      "wrap", "pizza", "pasta", "noodle", "rice", "grill", "grilled", "steak",
+      "chicken", "beef", "pork", "lamb", "fish", "seafood", "prawn", "meat",
+      "bowl", "platter", "stir", "fry", "kebab", "curry", "dish", "food",
+    ],
+  ],
+];
+
+/**
+ * A heading from someone's spreadsheet, turned into one of our five.
+ *
+ * Returns null when nothing matches, which the importer reports per row. It
+ * guesses rather than refusing, because refusing meant a hundred-line menu
+ * imported nothing at all, but it never guesses silently: the importer prints
+ * every heading it mapped so a wrong reading is visible rather than buried in
+ * the data.
+ */
+export function normaliseCategory(
+  raw: string | null | undefined
+): (typeof MENU_CATEGORIES)[number] | null {
+  const text = (raw ?? "").trim().toLowerCase();
+  if (!text) return "other";
+
+  const exact = CATEGORY_SYNONYMS[text.replace(/[\s_-]/g, "")];
+  if (exact) return exact;
+
+  /*
+   * Words, plus a crude singular, so "Waters" finds "water" and "Teas" finds
+   * "tea" without a stemmer.
+   */
+  const words = new Set<string>();
+  for (const w of text.split(/[^a-z]+/).filter(Boolean)) {
+    words.add(w);
+    if (w.endsWith("ies") && w.length > 4) words.add(`${w.slice(0, -3)}y`);
+    else if (w.endsWith("es") && w.length > 3) words.add(w.slice(0, -2));
+    if (w.endsWith("s") && w.length > 2) words.add(w.slice(0, -1));
+  }
+
+  for (const [category, keywords] of CATEGORY_KEYWORDS) {
+    if (keywords.some((k) => words.has(k))) return category;
+  }
+  return null;
+}
