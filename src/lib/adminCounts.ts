@@ -112,10 +112,16 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * menu. Below it, every group that eats there is served the same handful
      * whatever they asked for.
      */
-    thinMenus: active.filter(
-      (v: any) =>
-        (v.type === "restaurant" || v.type === "cafe") && (mainCount.get(v.id) ?? 0) < 5
-    ).length,
+    /*
+     * Counted through the share, so a branch priced from another venue's menu
+     * is judged on that menu. The Honeysuckle's four branches were each
+     * counted as having nothing and inflated this queue by four.
+     */
+    thinMenus: active.filter((v: any) => {
+      if (v.type !== "restaurant" && v.type !== "cafe") return false;
+      const owner = (v.menu_shared_from as string | null) || v.id;
+      return (mainCount.get(owner) ?? 0) < 5;
+    }).length,
     staleMenus: active.filter((v: any) => {
       const latest = menuLatest.get(v.id);
       // A venue priced by its per-person figure has no menu to go stale.

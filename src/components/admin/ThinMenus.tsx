@@ -9,6 +9,8 @@ interface Row {
   area: string;
   type: string;
   cuisine: string | null;
+  /** The venue whose menu prices this one, when it is a branch. */
+  sharedFrom: string | null;
   mains: number;
   starters: number;
   desserts: number;
@@ -21,6 +23,16 @@ interface Row {
 const ENOUGH_MAINS = 5;
 
 function verdict(r: Row): { label: string; className: string } {
+  /*
+   * A branch is judged on the menu it is actually priced from, and the badge
+   * says whose it is. The counts in this row are already the owner's, so a
+   * branch with a full menu reads as fine rather than as work to do.
+   */
+  if (r.sharedFrom) {
+    return r.mains >= ENOUGH_MAINS
+      ? { label: `Shares ${r.sharedFrom}`, className: "badge b-ok" }
+      : { label: `Shares ${r.sharedFrom}, thin`, className: "badge b-stale" };
+  }
   if (r.total === 0) return { label: "No menu at all", className: "badge b-stale" };
   if (r.mains === 0) return { label: "No mains", className: "badge b-stale" };
   if (r.mains < ENOUGH_MAINS) return { label: `Only ${r.mains} mains`, className: "badge b-stale" };
@@ -37,6 +49,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
   );
 
   const needWork = rows.filter((r) => r.mains < ENOUGH_MAINS).length;
+  const branches = rows.filter((r) => r.sharedFrom).length;
   const noCuisine = rows.filter((r) => !r.cuisine).length;
 
   return (
@@ -50,6 +63,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
         <span className="text-[13px] text-mutedbrown">
           {needWork} of {rows.length} need more of their menu on file
           {noCuisine ? `, ${noCuisine} have no cuisine recorded` : ""}
+          {branches ? `, ${branches} are branches sharing another's` : ""}
         </span>
       </div>
 
@@ -101,18 +115,34 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                     <span className={v.className}>{v.label}</span>
                   </td>
                   <td className="whitespace-nowrap">
-                    <Link
-                      href={`/admin/venues/${r.id}`}
-                      className="font-semibold text-flame hover:text-flame-dark"
-                    >
-                      Add dishes
-                    </Link>
-                    <Link
-                      href="/admin/import"
-                      className="ml-3 font-semibold text-cocoa hover:text-ink"
-                    >
-                      CSV
-                    </Link>
+                    {/*
+                      A branch must not be offered "Add dishes". Adding a menu
+                      to it is how the sharing gets undone by accident, and the
+                      price list to edit is the one it points at.
+                    */}
+                    {r.sharedFrom ? (
+                      <Link
+                        href={`/admin/venues/${r.id}`}
+                        className="font-semibold text-cocoa hover:text-ink"
+                      >
+                        Open branch
+                      </Link>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/admin/venues/${r.id}`}
+                          className="font-semibold text-flame hover:text-flame-dark"
+                        >
+                          Add dishes
+                        </Link>
+                        <Link
+                          href="/admin/import"
+                          className="ml-3 font-semibold text-cocoa hover:text-ink"
+                        >
+                          CSV
+                        </Link>
+                      </>
+                    )}
                   </td>
                 </tr>
               );

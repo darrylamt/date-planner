@@ -23,7 +23,7 @@ export default async function AdminMenusPage() {
   const [{ data: venues }, items] = await Promise.all([
     supabase
       .from("venues")
-      .select("id, name, type, is_active, cuisine, areas(name)")
+      .select("id, name, type, is_active, cuisine, menu_shared_from, areas(name)")
       .eq("is_active", true)
       .in("type", ["restaurant", "cafe"])
       .order("name"),
@@ -40,8 +40,22 @@ export default async function AdminMenusPage() {
     counts.set(row.venue_id, bucket);
   }
 
+  /*
+   * A branch is not thin because its menu lives on another row.
+   *
+   * The four Honeysuckle branches are priced from the Osu row, which holds 182
+   * items, and this screen was counting items by venue_id alone: it read all
+   * four as "No menu at all" and put them in a queue of work that does not
+   * exist. Adding dishes to them would be the wrong fix and would undo the
+   * sharing.
+   */
+  const nameById = new Map<string, string>(
+    (venues ?? []).map((v: any) => [v.id as string, v.name as string])
+  );
+
   const rows = (venues ?? []).map((v: any) => {
-    const bucket = counts.get(v.id) ?? {};
+    const owner = (v.menu_shared_from as string | null) || v.id;
+    const bucket = counts.get(owner) ?? {};
     const total = Object.values(bucket).reduce((s: number, n) => s + (n as number), 0);
     return {
       id: v.id,
@@ -49,6 +63,11 @@ export default async function AdminMenusPage() {
       area: v.areas?.name ?? "no area",
       type: v.type,
       cuisine: (v.cuisine as string | null) ?? null,
+      /*
+       * Named rather than a flag, so the row says where the menu actually is.
+       * "Shares Osu" tells you the price list to edit; "shared" would not.
+       */
+      sharedFrom: v.menu_shared_from ? (nameById.get(v.menu_shared_from) ?? "another branch") : null,
       mains: bucket.main ?? 0,
       starters: bucket.starter ?? 0,
       desserts: bucket.dessert ?? 0,
@@ -58,8 +77,14 @@ export default async function AdminMenusPage() {
     };
   });
 
-  // Thinnest first: this is a worklist, not a directory.
-  rows.sort((a, b) => a.mains - b.mains || a.total - b.total || a.name.localeCompare(b.name));
+  /*
+   * Thinnest first, and branches with a full menu are not thin. Sorting on
+   * mains alone put the four Honeysuckle branches at the very top of a
+   * worklist they have no business being on.
+   */
+  rows.sort(
+    (a, b) => a.mains - b.mains || a.total - b.total || a.name.localeCompare(b.name)
+  );
 
   return (
     <div>
