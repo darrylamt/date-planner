@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { SmartImage } from "@/components/SmartImage";
 import { createServiceClient } from "@/lib/supabase/server";
 import { longDate, time12 } from "@/lib/format";
-import { OCCASION_THEME, partyLabel } from "@/lib/planConstants";
+import { OCCASION_THEME, occasionBackdrop, partyLabel } from "@/lib/planConstants";
 import { occasionCard } from "@/lib/occasionCard";
 import type { SavedPlan } from "@/lib/types";
 
@@ -36,8 +36,20 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
 
   return (
     <main
-      className="min-h-screen bg-lagoon text-lagoon-faint"
-      style={{ ["--occasion" as string]: theme.accentDark }}
+      /*
+       * The card used to be the house teal whatever the occasion, so a
+       * birthday arrived looking like any other Tuesday. The occasion theme
+       * already knew a birthday is warm caramel on cream; the card was simply
+       * not asking it. The glyph tile sits over the colour at seven percent,
+       * which reads as a watermark rather than wrapping paper.
+       */
+      className="min-h-screen text-lagoon-faint"
+      style={{
+        ["--occasion" as string]: theme.accentDark,
+        backgroundColor: theme.pageDark,
+        backgroundImage: occasionBackdrop(inputs.occasion),
+        backgroundRepeat: "repeat",
+      }}
     >
       <div className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col md:max-w-[1080px]">
         {/* Header */}

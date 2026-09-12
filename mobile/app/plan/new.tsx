@@ -43,6 +43,23 @@ import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/li
  */
 function ProgressRail({ total, current }: { total: number; current: number }) {
   const c = useTheme();
+
+  /*
+   * The navigation header sits above OccasionThemeProvider in the tree, so it
+   * is painted with the base background while everything below it is painted
+   * with the occasion's. On a birthday that showed as a strip of a different
+   * colour along the top edge, directly above this rail. The header cannot
+   * read the occasion theme, so the occasion theme tells the header.
+   */
+  const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: c.background },
+      headerTintColor: c.accent,
+      headerTitleStyle: { color: c.text },
+    });
+  }, [navigation, c.background, c.accent, c.text]);
+
   return (
     <View
       style={{
@@ -420,7 +437,7 @@ export default function PlanNew() {
         )}
       </ScrollView>
 
-      <ActionBar style={{ paddingBottom: insets.bottom || space.lg }}>
+      <ActionBar>
         <Button
           title={stepIndex === totalSteps - 1 ? `Build ${poss} evening` : "Continue"}
           icon={stepIndex === totalSteps - 1 ? "sparkles" : undefined}

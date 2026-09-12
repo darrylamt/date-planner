@@ -5,6 +5,7 @@ import { Symbol } from "./Symbol";
 import { radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
 import type { SymbolViewProps } from "expo-symbols";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Kind = "filled" | "tinted" | "gray" | "plain" | "destructive";
 type Size = "large" | "medium" | "small";
@@ -109,14 +110,25 @@ export function Button({
 }
 
 /** Bottom action bar that floats above the home indicator. */
+/**
+ * The bar of buttons pinned to the bottom of a screen.
+ *
+ * It applies the home-indicator inset itself. It used to leave that to each
+ * caller, and the itinerary screen forgot, so Save & share and Email sat in
+ * the very bottom of the glass where the swipe-up gesture lives. A layout rule
+ * that every caller must remember is a layout rule that will be forgotten.
+ */
 export function ActionBar({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const c = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <View
       style={[
         {
           paddingHorizontal: space.lg,
           paddingTop: space.md,
+          // A phone with no home indicator still needs the buttons off the edge.
+          paddingBottom: Math.max(insets.bottom, space.lg),
           gap: space.sm,
           borderTopWidth: 0.5,
           borderTopColor: c.border,

@@ -1,14 +1,23 @@
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Screen } from "../src/components/Screen";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Segmented } from "../src/components/Segmented";
+import { Symbol } from "../src/components/Symbol";
+import { FloatingMascots } from "../src/components/FloatingMascots";
 import { GUTTER, radius, space } from "../src/theme";
-import { useIsDark, useTheme } from "../src/lib/useTheme";
+import { useTheme } from "../src/lib/useTheme";
 import {
   MIN_PASSWORD,
   sendPasswordReset,
@@ -26,11 +35,20 @@ import {
 
 type Mode = "signin" | "signup";
 
+/**
+ * Sign in.
+ *
+ * Two halves: the cast of mascots drifting above, and a rounded sheet below
+ * carrying everything you can actually press. The old screen opened on a
+ * segmented control and two empty text boxes, which is what a form looks like,
+ * not what an evening out looks like, and almost nobody was going to type an
+ * address anyway when Apple and Google are right there.
+ */
 export default function Login() {
   const c = useTheme();
   const { session } = useAuth();
+  const insets = useSafeAreaInsets();
 
-  const isDark = useIsDark();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +57,8 @@ export default function Login() {
   const [notice, setNotice] = useState<string | null>(null);
   const [appleReady, setAppleReady] = useState(false);
   const [social, setSocial] = useState<"apple" | "google" | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [hero, setHero] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     let active = true;
@@ -90,7 +110,8 @@ export default function Login() {
     setError(null);
     setNotice(null);
 
-    const outcome = mode === "signin" ? await signIn(email, password) : await signUp(email, password);
+    const outcome =
+      mode === "signin" ? await signIn(email, password) : await signUp(email, password);
     setBusy(false);
 
     if (outcome.error) {
@@ -131,142 +152,209 @@ export default function Login() {
     );
   }
 
+  /*
+   * Email is behind a tap, unless it is the only way in.
+   *
+   * Almost everyone here will use Apple or Google, and two empty text boxes at
+   * the top of the first screen makes an app feel like paperwork. On a build
+   * with neither provider available the form is shown outright, because a
+   * screen whose only button reveals another button is a screen with no way in.
+   */
+  const hasProvider = appleReady || googleSignInAvailable();
+  const showEmail = emailOpen || !hasProvider;
+
+  const socialButton = (
+    provider: "apple" | "google",
+    label: string,
+    glyph: React.ReactNode
+  ) => (
+    <Pressable
+      onPress={() => void social_(provider)}
+      disabled={social !== null}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{
+        width: 54,
+        height: 54,
+        borderRadius: radius.control,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: c.backgroundElement,
+        opacity: social !== null && social !== provider ? 0.5 : 1,
+      }}
+    >
+      {social === provider ? <ActivityIndicator color={c.text} /> : glyph}
+    </Pressable>
+  );
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: c.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Screen grouped contentStyle={{ paddingTop: space.xl }}>
-        <View style={{ paddingHorizontal: GUTTER }}>
-          <Segmented
-            options={[
-              { value: "signin", label: "Sign in" },
-              { value: "signup", label: "Create account" },
-            ]}
-            value={mode}
-            onChange={switchMode}
-          />
+      {/* ── the cast, drifting ── */}
+      <View
+        style={{ flex: 1, minHeight: 140 }}
+        onLayout={(e) => setHero(e.nativeEvent.layout)}
+      >
+        <FloatingMascots width={hero.width} height={hero.height} />
+      </View>
 
-          <Text variant="body" tone="secondary" style={{ marginBottom: space.lg }}>
-            {mode === "signin"
-              ? "Welcome back."
-              : "You only need an account to save and share plans."}
+      {/* ── the sheet ── */}
+      <ScrollView
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{
+          backgroundColor: c.backgroundSunken,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          paddingHorizontal: GUTTER,
+          paddingTop: space.xl,
+          paddingBottom: Math.max(insets.bottom, space.lg) + space.md,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/*
+          Two-tone, so the sentence has a subject. The grey half is the setup
+          and the solid half is the promise, which is the only part anyone
+          reads before deciding whether to bother.
+        */}
+        <Text variant="title1" style={{ color: c.textSecondary }}>
+          Plan a night{" "}
+          <Text variant="title1" style={{ color: c.text }}>
+            worth turning up for
           </Text>
+        </Text>
+        <Text variant="body" tone="secondary" style={{ marginTop: space.sm }}>
+          {mode === "signin"
+            ? "Sign in to save plans, share them, and keep the calendar."
+            : "An account is only needed to save and share plans."}
+        </Text>
 
-          {/*
-            Apple first on iOS, which is both the platform convention and the
-            guideline: where a third-party sign-in is offered, Apple's has to
-            be there and no less prominent.
-          */}
-          {appleReady && AppleAuthentication ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={
-                mode === "signin"
-                  ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-                  : AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
-              }
-              buttonStyle={
-                isDark
-                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-              }
-              cornerRadius={radius.control}
-              style={{ height: 50, marginBottom: space.sm }}
-              onPress={() => void social_("apple")}
-            />
-          ) : null}
+        {error ? (
+          <Text variant="footnote" tone="red" style={{ marginTop: space.md }}>
+            {error}
+          </Text>
+        ) : null}
 
-          {googleSignInAvailable() ? (
-            <Button
-              title="Continue with Google"
-              kind="gray"
-              icon="globe"
-              loading={social === "google"}
-              disabled={social !== null}
-              onPress={() => void social_("google")}
-            />
-          ) : null}
-
-          {appleReady || googleSignInAvailable() ? (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: space.md,
-                marginVertical: space.lg,
-              }}
-            >
-              <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
-              <Text variant="footnote" tone="tertiary">
-                or with email
-              </Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
-            </View>
-          ) : null}
-
-          <Field
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            autoFocus
-          />
-
-          <Field
-            label="Password"
-            placeholder={mode === "signup" ? `At least ${MIN_PASSWORD} characters` : "••••••••"}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            // Lets iOS offer Keychain autofill and, on signup, a strong password.
-            textContentType={mode === "signup" ? "newPassword" : "password"}
-            returnKeyType="go"
-            onSubmitEditing={submit}
-          />
-
-          <Button
-            title={mode === "signin" ? "Sign in" : "Create account"}
-            onPress={submit}
-            loading={busy}
-            disabled={!email || password.length < (mode === "signup" ? MIN_PASSWORD : 1)}
-          />
-
-          {mode === "signin" ? (
-            <Pressable onPress={forgot} disabled={busy} style={{ marginTop: space.lg }}>
-              <Text variant="footnote" tone="tint" weight="600" center>
-                Forgot your password?
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {notice ? (
-            <View
-              style={{
-                marginTop: space.lg,
-                padding: space.md,
-                borderRadius: radius.control,
-                backgroundColor: c.accentSoft,
-              }}
-            >
-              <Text variant="footnote" style={{ color: c.accent }}>
-                {notice}
-              </Text>
-            </View>
-          ) : null}
-
-          {error ? (
-            <Text variant="footnote" tone="red" style={{ marginTop: space.lg }}>
-              {error}
+        {notice ? (
+          <View
+            style={{
+              marginTop: space.md,
+              padding: space.md,
+              borderRadius: radius.control,
+              backgroundColor: c.accentSoft,
+            }}
+          >
+            <Text variant="footnote" style={{ color: c.accent }}>
+              {notice}
             </Text>
-          ) : null}
+          </View>
+        ) : null}
+
+        {/* ── one row: the two providers, then the action ── */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.sm,
+            marginTop: space.xl,
+          }}
+        >
+          {/*
+            Apple and Google as identical squares. Guideline 4.8 wants Apple's
+            option no less prominent than any other third-party sign-in, and
+            two buttons of the same size satisfy that plainly.
+          */}
+          {appleReady && AppleAuthentication
+            ? socialButton(
+                "apple",
+                "Continue with Apple",
+                <Symbol name="apple.logo" size={26} color={c.text} />
+              )
+            : null}
+
+          {googleSignInAvailable()
+            ? socialButton(
+                "google",
+                "Continue with Google",
+                <Text variant="title3" style={{ color: c.text }}>
+                  G
+                </Text>
+              )
+            : null}
+
+          <View style={{ flex: 1 }}>
+            <Button
+              title={
+                showEmail
+                  ? mode === "signin"
+                    ? "Sign in"
+                    : "Create account"
+                  : "Continue with email"
+              }
+              loading={busy}
+              disabled={
+                showEmail &&
+                (!email || password.length < (mode === "signup" ? MIN_PASSWORD : 1))
+              }
+              onPress={() => {
+                if (!showEmail) {
+                  setEmailOpen(true);
+                  return;
+                }
+                void submit();
+              }}
+            />
+          </View>
         </View>
-      </Screen>
+
+        {showEmail ? (
+          <View style={{ marginTop: space.lg }}>
+            <Segmented
+              options={[
+                { value: "signin", label: "Sign in" },
+                { value: "signup", label: "Create account" },
+              ]}
+              value={mode}
+              onChange={switchMode}
+            />
+
+            <Field
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoFocus
+            />
+
+            <Field
+              label="Password"
+              placeholder={mode === "signup" ? `At least ${MIN_PASSWORD} characters` : "••••••••"}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              // Lets iOS offer Keychain autofill and, on signup, a strong password.
+              textContentType={mode === "signup" ? "newPassword" : "password"}
+              returnKeyType="go"
+              onSubmitEditing={submit}
+            />
+
+            {mode === "signin" ? (
+              <Pressable onPress={forgot} disabled={busy} style={{ marginTop: space.sm }}>
+                <Text variant="footnote" tone="tint" weight="600" center>
+                  Forgot your password?
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

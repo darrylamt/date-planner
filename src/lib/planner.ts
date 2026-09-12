@@ -216,6 +216,9 @@ interface OrderPlan {
   cost: number;
 }
 
+/** One line of a bill: a dish, how many of it, and what that comes to. */
+type OrderLine = ItineraryOrder;
+
 const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.price_ghs);
 
 /**
@@ -230,7 +233,9 @@ function planOrders(
   menu: MenuItem[],
   partySize: number,
   tier: 0 | 1,
-  durationMins: number
+  durationMins: number,
+  /** Minutes past midnight the party is expected to arrive. */
+  slotStartMinute: number
 ): OrderPlan | null {
   /*
    * Venues that charge for a thing rather than for a person.
@@ -293,8 +298,33 @@ function planOrders(
     if (m.min_players != null && partySize < m.min_players) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
     if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
-    return true;
+    return onSaleNow(m);
   };
+
+  /*
+   * Whether this price applies at the hour the party arrives.
+   *
+   * Aura sells the same padel court at GHS 300 before 4pm and GHS 600 after
+   * it. Without this the planner would sort by price, find the 300 first and
+   * quote an evening booking at half what the desk charges. The window is
+   * half-open, so a 16:00 arrival is peak rather than off-peak, which is how
+   * the poster reads it.
+   *
+   * The arrival minute can run past midnight for a late plan, so it is wrapped
+   * back into the day before comparing.
+   */
+  function onSaleNow(m: MenuItem): boolean {
+    const from = m.available_from_minute;
+    const to = m.available_to_minute;
+    if (from == null && to == null) return true;
+
+    const at = ((slotStartMinute % 1440) + 1440) % 1440;
+    // A window that runs past midnight, 22:00 to 02:00, is two spans.
+    if (from != null && to != null && to <= from) return at >= from || at < to;
+    if (from != null && at < from) return false;
+    if (to != null && at >= to) return false;
+    return true;
+  }
 
   const pick = (category: string): MenuItem | null => {
     const items = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
@@ -305,30 +335,84 @@ function planOrders(
     return items[Math.floor(items.length / 2)];
   };
 
-  const chosen: MenuItem[] = [];
+  /**
+   * What a group of this size would actually order from one list.
+   *
+   * Not the same dish times seven. The planner used to choose a single item
+   * per category and multiply it by the head count, which is how a birthday
+   * table of seven was quoted seven vegetarian okro stews: nobody orders like
+   * that, and the one dish it landed on was whichever happened to sit at the
+   * median price. A real table orders a spread.
+   *
+   * The spread is drawn from a small window around the tier's price point, so
+   * a cheap plan stays cheap and a typical one stays typical, and it is dealt
+   * round-robin so the variety appears at two people as well as at seven.
+   * With only one dish on the list, this is exactly the old behaviour.
+   */
+  const orderFrom = (category: string, people: number): OrderLine[] => {
+    const items = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    if (!items.length || people < 1) return [];
+
+    // At most four distinct dishes: enough to read as a table rather than a
+    // canteen queue, few enough that the total stays predictable.
+    const WIDTH = 4;
+    const centre = tier === 0 ? 0 : Math.floor(items.length / 2);
+    const from = Math.max(0, Math.min(centre - 1, items.length - WIDTH));
+    const candidates = items.slice(from, from + WIDTH);
+
+    const counts = new Map<string, { item: MenuItem; qty: number }>();
+    let covered = 0;
+    for (let i = 0; covered < people && i < people * 2 + WIDTH; i++) {
+      const m = candidates[i % candidates.length];
+      const seen = counts.get(m.id) ?? { item: m, qty: 0 };
+      seen.qty += 1;
+      counts.set(m.id, seen);
+      covered += Math.max(1, m.covers_people ?? 1);
+    }
+
+    return [...counts.values()].map(({ item, qty }) => ({
+      item: item.name,
+      qty,
+      price_ghs: Math.round(Number(item.price_ghs) * qty),
+    }));
+  };
+
+  const lines: OrderLine[] = [];
 
   if (venue.type === "restaurant" || venue.type === "cafe") {
-    const main = pick("main") ?? pick("other") ?? pick("starter");
-    if (main) chosen.push(main);
-    const drink = pick("drink");
-    if (drink && tier === 1) chosen.push(drink);
+    const mains = [
+      () => orderFrom("main", partySize),
+      () => orderFrom("other", partySize),
+      () => orderFrom("starter", partySize),
+    ].reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+    lines.push(...mains);
+
+    /*
+     * A drink each at a typical order. Spread too, because a table of seven
+     * does not order seven of the same thing to drink either.
+     */
+    if (tier === 1) lines.push(...orderFrom("drink", partySize));
   } else if (venue.type === "dessert") {
-    const sweet = pick("dessert") ?? pick("other");
-    if (sweet) chosen.push(sweet);
+    const sweet = orderFrom("dessert", partySize);
+    lines.push(...(sweet.length ? sweet : orderFrom("other", partySize)));
   } else if (venue.type === "lounge") {
-    const drink = pick("drink") ?? pick("other");
-    if (drink) chosen.push(drink);
+    const drinks = orderFrom("drink", partySize);
+    lines.push(...(drinks.length ? drinks : orderFrom("other", partySize)));
   } else {
     /*
      * Activities and outdoor spots. "activity" first, because a go-kart and a
      * game of bowling are priced lines on a list, while "other" is the bucket
      * a flat entry fee lands in.
      */
-    const entry = pick("activity") ?? pick("other") ?? pick("main");
-    if (entry) chosen.push(entry);
+    const entry = [
+      () => orderFrom("activity", partySize),
+      () => orderFrom("other", partySize),
+      () => orderFrom("main", partySize),
+    ].reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+    lines.push(...entry);
   }
 
-  if (!chosen.length) {
+  if (!lines.length) {
     /*
      * The category we wanted is not on this menu, a restaurant listing only
      * drinks, say. Fall back to the cheapest thing it does sell before
@@ -336,7 +420,14 @@ function planOrders(
      * is empty AND the average is zero produced a free stop, which is the
      * exact failure that made rooftop bars cost nothing.
      */
-    const anything = [...menu].sort(byPrice)[0];
+    /*
+     * Filtered the same way, which the fallback used not to be. Reaching past
+     * fitsParty for "the cheapest thing it does sell" would hand a party of
+     * two a six-player laser tag game, and would quote Aura's GHS 300
+     * afternoon rate for an eleven o'clock booking, because the off-peak line
+     * is the cheapest on the list and nothing here was checking the clock.
+     */
+    const anything = menu.filter(fitsParty).sort(byPrice)[0];
     if (anything) {
       const price = Math.round(Number(anything.price_ghs) * partySize);
       return {
@@ -364,19 +455,11 @@ function planOrders(
   }
 
   /*
-   * One purchase does not always mean one person. A foosball table at GHS 30
-   * is thirty cedis for the table with two people at it, so buying one per
-   * head charges a couple sixty for a game that costs thirty.
+   * covers_people is already accounted for inside orderFrom: a foosball table
+   * at GHS 30 covers two, so a couple is dealt one of them rather than one
+   * each, and a party of four gets two tables.
    */
-  const orders = chosen.map((m) => {
-    const covers = Math.max(1, m.covers_people ?? 1);
-    const qty = Math.max(1, Math.ceil(partySize / covers));
-    return {
-      item: m.name,
-      qty,
-      price_ghs: Math.round(Number(m.price_ghs) * qty),
-    };
-  });
+  const orders = lines;
   const cost = orders.reduce((s, o) => s + o.price_ghs, 0);
 
   /*
@@ -610,7 +693,8 @@ export function planItinerary(
           menu,
           inputs.partySize,
           tier,
-          ROLE_MINUTES[role]
+          ROLE_MINUTES[role],
+          slotStart
         );
         if (!planned) continue;
         if (planned.cost <= 0 && !venue.is_free) continue;

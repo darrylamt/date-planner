@@ -343,3 +343,50 @@ export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
   // Slate, quiet and self-contained.
   solo_day: { accent: "#3D5A73", accentDark: "#9CBBD6", page: "#F5F8FA", pageDark: "#080D12" },
 };
+
+/**
+ * The glyphs scattered behind a shared card.
+ *
+ * The card was the same dark teal for every occasion, with only the accent
+ * colour changing, so a birthday arrived looking exactly like a Tuesday date
+ * night. The theme above already knows a birthday is warm caramel on cream;
+ * the card simply was not asking.
+ *
+ * Kept faint and irregular on purpose. This is a watermark, not wrapping
+ * paper: at full strength a tiled cake reads as a party-supplies advert and
+ * makes the plan underneath harder to read, which is the opposite of the job.
+ */
+const OCCASION_GLYPHS: Record<Occasion, string[]> = {
+  birthday: ["🎂", "🕯", "🎈"],
+  celebration: ["🥂", "✦", "🎉"],
+  graduation: ["🎓", "✦", "📜"],
+  anniversary: ["♥", "✦", "♥"],
+  date_night: ["♥", "✦", "♥"],
+  first_date: ["✦", "♥", "✦"],
+  friend_outing: ["✦", "☻", "✦"],
+  solo_day: ["✦", "☾", "✦"],
+};
+
+/**
+ * A tiling backdrop for one occasion, as a CSS background-image value.
+ *
+ * Built as an inline SVG rather than an image file so it carries the
+ * occasion's own accent colour and needs no network request on a card that is
+ * usually opened once, on mobile data, by someone who was sent a link.
+ */
+export function occasionBackdrop(occasion: Occasion): string {
+  const glyphs = OCCASION_GLYPHS[occasion] ?? OCCASION_GLYPHS.date_night;
+  const [a, b, c] = glyphs;
+
+  // Three glyphs at odd positions and angles, so the repeat does not read as a
+  // grid. 180px keeps the motif clearly readable as a cake at arm's length.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+    <g fill="#ffffff" fill-opacity="0.07" font-size="30" font-family="system-ui,'Apple Color Emoji','Segoe UI Emoji',sans-serif">
+      <text x="18" y="46" transform="rotate(-12 18 46)">${a}</text>
+      <text x="104" y="96" transform="rotate(9 104 96)">${b}</text>
+      <text x="40" y="150" transform="rotate(-5 40 150)">${c}</text>
+    </g>
+  </svg>`;
+
+  return `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, " "))}")`;
+}

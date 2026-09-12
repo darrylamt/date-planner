@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Text } from "../Text";
 import { Group, Row } from "../List";
@@ -368,19 +369,10 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
 
         {inputs.partySize > 2 ? (
           <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.five }}>
-            <Field
-              label="Who else is coming? (optional)"
-              placeholder="Ama, Kofi, Yaw"
-              value={inputs.companions.join(", ")}
-              onChangeText={(text) =>
-                update({
-                  companions: text
-                    .split(",")
-                    .map((n) => n.trim())
-                    .filter(Boolean)
-                    .slice(0, inputs.partySize - 1),
-                })
-              }
+            <CompanionsField
+              names={inputs.companions}
+              max={inputs.partySize - 1}
+              onChange={(companions) => update({ companions })}
             />
             <Text variant="footnote" tone="secondary">
               Only used so the plan reads like it was written for your group.
@@ -460,4 +452,60 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
 
     </>
   );
+}
+
+/**
+ * Who else is coming.
+ *
+ * The comma has to live in local state. This was a controlled field whose
+ * value was the parsed names joined back together, so the moment you typed a
+ * comma it was split on, trimmed, and dropped by filter(Boolean) before the
+ * value was rebuilt without it. The character could never survive its own
+ * round trip, and the field looked broken because it was.
+ *
+ * The text is what you typed; the parsed names go up on every keystroke, so
+ * nothing is lost if the step is left without blurring.
+ */
+function CompanionsField({
+  names,
+  max,
+  onChange,
+}: {
+  names: string[];
+  max: number;
+  onChange: (names: string[]) => void;
+}) {
+  const [text, setText] = useState(names.join(", "));
+
+  /*
+   * Re-sync only when the parsed result no longer matches what is typed, which
+   * happens when the party size shrinks and trims the list from underneath.
+   * Without the guard this would fight the cursor on every keystroke.
+   */
+  useEffect(() => {
+    const typed = parseNames(text, max);
+    if (typed.join("|") !== names.join("|")) setText(names.join(", "));
+    // Deliberately keyed on the parsed names only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [names.join("|"), max]);
+
+  return (
+    <Field
+      label="Who else is coming? (optional)"
+      placeholder="Ama, Kofi, Yaw"
+      value={text}
+      onChangeText={(next) => {
+        setText(next);
+        onChange(parseNames(next, max));
+      }}
+    />
+  );
+}
+
+function parseNames(text: string, max: number): string[] {
+  return text
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .slice(0, Math.max(0, max));
 }

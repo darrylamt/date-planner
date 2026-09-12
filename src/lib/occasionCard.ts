@@ -74,7 +74,7 @@ export function occasionCard(inputs: PlanInputs): OccasionCard {
       closing: detail.age
         ? `${detail.age}, and marked properly.`
         : "Marked properly, rather than squeezed in after work.",
-      motif: "✿",
+      motif: "🎂",
     },
     graduation: {
       eyebrow: "A GRADUATION",

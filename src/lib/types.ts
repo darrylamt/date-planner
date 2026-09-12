@@ -108,6 +108,13 @@ export interface MenuItem {
   duration_minutes?: number | null;
   min_age?: number | null;
   requires_gear?: string | null;
+  /**
+   * When this price is on sale, in minutes from midnight. Aura's padel court
+   * is GHS 300 before 16:00 and GHS 600 after it, and quoting the wrong one
+   * is off by half in whichever direction. Null means all day.
+   */
+  available_from_minute?: number | null;
+  available_to_minute?: number | null;
 }
 
 export interface EventRow {

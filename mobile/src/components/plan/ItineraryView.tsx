@@ -1,5 +1,14 @@
 import { Fragment, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, Share, View } from "react-native";
+import {
+  Alert,
+  InteractionManager,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import * as Calendar from "expo-calendar";
 import * as Haptics from "expo-haptics";
@@ -184,7 +193,17 @@ export function ItineraryView({
     setNoteOpen(true);
   }
 
-  /** Save the note if one was written, then open the share sheet either way. */
+  /**
+   * Save the note if one was written, then open the share sheet either way.
+   *
+   * The wait is not padding. iOS will not present the share sheet while
+   * another modal is still on screen, and the note sheet is a modal that has
+   * only just been told to close, so calling Share.share in the same tick puts
+   * it behind a view that is mid-dismissal and nothing appears. "Add it and
+   * share" happened to work by accident, because awaiting the note save gave
+   * the dismissal time it needed; "Share without a note" has nothing to await
+   * and so did nothing at all.
+   */
   async function shareWith(note: string | null) {
     const slug = pendingSlug;
     setNoteOpen(false);
@@ -195,6 +214,8 @@ export function ItineraryView({
       const saved = await setPlannerNote(slug, note);
       if (!saved) setToast("The note did not save, sharing anyway.");
     }
+
+    await waitForModalToClose();
 
     const url = `${WEB_URL}/p/${slug}`;
     try {
@@ -472,4 +493,18 @@ function parseStopStart(isoDate: string, arrival: string): Date | null {
 
   const [y, mo, d] = isoDate.split("-").map(Number);
   return new Date(y, mo - 1, d, hour, mins, 0, 0);
+}
+
+/**
+ * Long enough for a sheet to finish going away.
+ *
+ * iOS refuses to present one modal over another, and there is no promise to
+ * await for a React Native Modal's dismissal on both platforms: onDismiss is
+ * iOS only. So this waits out the animation, after the interaction queue has
+ * drained, which is the part that actually matters on a slower phone.
+ */
+function waitForModalToClose(): Promise<void> {
+  return new Promise((resolve) => {
+    InteractionManager.runAfterInteractions(() => setTimeout(resolve, 320));
+  });
 }
