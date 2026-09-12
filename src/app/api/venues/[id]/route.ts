@@ -13,7 +13,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       .maybeSingle(),
     supabase
       .from("menu_items")
-      .select("id, venue_id, name, category, price_ghs, notes")
+      // The activity rules too, so the sheet can say "needs 6 players" and
+      // "bring socks" rather than only a name and a price.
+      .select(
+        "id, venue_id, name, category, price_ghs, notes, covers_people, " +
+          "min_players, max_players, duration_minutes, min_age, requires_gear"
+      )
       .eq("venue_id", params.id)
       .order("category")
       .order("name"),

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
+import { VENUE_SELECT } from "./venueColumns";
 
 /**
  * Server-side candidate selection: pull venues, menus and events that
@@ -52,9 +53,16 @@ export async function fetchCandidates(
   const bands = allowedBands(inputs.budget);
   const wantedTags = expandVibes(inputs.vibes);
 
+  /*
+   * Named columns, not "*". Since migration 0014 the venue grant has been an
+   * explicit list, and Postgres refuses SELECT * outright when any one column
+   * is ungranted rather than returning the rest, so every plan request has
+   * been dying on the thirteen phone and verification columns that are
+   * withheld on purpose. See venueColumns.ts.
+   */
   let venueQuery = supabase
     .from("venues")
-    .select("*, areas(name)")
+    .select(VENUE_SELECT)
     .eq("is_active", true)
     .in("price_band", bands);
 
@@ -64,7 +72,13 @@ export async function fetchCandidates(
   const { data: venuesRaw, error } = await venueQuery;
   if (error) throw new Error(`venues query failed: ${error.message}`);
 
-  let venues = (venuesRaw ?? []) as Venue[];
+  /*
+   * Through unknown, because the select string is built from a constant array
+   * rather than written inline, so the client cannot infer the row shape from
+   * it. The shape is still checked: PUBLIC_VENUE_COLUMNS is the list the
+   * database grants, and Venue is what the planner reads.
+   */
+  let venues = (venuesRaw ?? []) as unknown as Venue[];
   if (opts.excludeVenueIds?.length) {
     venues = venues.filter((v) => !opts.excludeVenueIds!.includes(v.id));
   }
