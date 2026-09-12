@@ -22,7 +22,7 @@ export default async function AdminUnpricedPage() {
       id: v.id,
       name: v.name,
       type: v.type,
-      area: v.areas?.name ?? ", ",
+      area: v.areas?.name ?? "no area",
     }));
 
   return (

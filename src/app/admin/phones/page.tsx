@@ -20,7 +20,7 @@ export default async function AdminPhonesPage() {
   const rows = (venues ?? []).map((v: any) => ({
     id: v.id,
     name: v.name,
-    area: v.areas?.name ?? ", ",
+    area: v.areas?.name ?? "no area",
     phone: v.phone,
     phone_pending: v.phone_pending,
     phone_status: v.phone_status,

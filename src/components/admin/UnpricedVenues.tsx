@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,6 +48,19 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saved, setSaved] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * Drafts are keyed by venue id, so a half-typed price survives paging away
+   * and back. Only saving clears it, which is the same rule the bulk price
+   * editor follows.
+   */
+  const paged = usePagedRows(
+    rows,
+    (r, needle) =>
+      r.name.toLowerCase().includes(needle) ||
+      r.area.toLowerCase().includes(needle) ||
+      r.type.toLowerCase().includes(needle)
+  );
 
   function draftFor(row: Row): Draft {
     return (
@@ -122,6 +136,16 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
           person pays and it re-enters planning immediately.
         </p>
 
+        {rows.length > ADMIN_PAGE_SIZE ? (
+          <div className="mt-4">
+            <SearchBox
+              value={paged.query}
+              onChange={paged.setQuery}
+              placeholder="Search name, area or type"
+            />
+          </div>
+        ) : null}
+
         <div className="mt-4 overflow-x-auto">
           <table className="tbl w-full border-collapse">
             <thead>
@@ -134,7 +158,7 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {paged.pageRows.map((row) => {
                 const d = draftFor(row);
                 const done = saved[row.id];
                 return (
@@ -191,16 +215,28 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                   </tr>
                 );
               })}
-              {rows.length === 0 && (
+              {paged.total === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-mutedbrown">
-                    Every active venue has a price. Nothing is being withheld.
+                    {paged.query
+                      ? `No unpriced venue matches “${paged.query}”.`
+                      : "Every active venue has a price. Nothing is being withheld."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        <Pager
+          page={paged.page}
+          pageCount={paged.pageCount}
+          start={paged.start}
+          count={paged.pageRows.length}
+          total={paged.total}
+          unit="unpriced venues"
+          onGoTo={paged.goTo}
+        />
       </div>
     </div>
   );

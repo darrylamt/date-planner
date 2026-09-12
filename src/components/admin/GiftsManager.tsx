@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import { leadTimeLabel } from "@/lib/pickups";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import type { Area } from "@/lib/types";
 
 /**
@@ -51,6 +52,15 @@ export function GiftsManager({ areas, vendors }: { areas: Area[]; vendors: Vendo
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [openVendor, setOpenVendor] = useState<string | null>(null);
+
+  const paged = usePagedRows(
+    vendors,
+    (v, needle) =>
+      v.name.toLowerCase().includes(needle) ||
+      v.kind.includes(needle) ||
+      (v.areas?.name ?? "").toLowerCase().includes(needle) ||
+      v.gift_products.some((p) => p.name.toLowerCase().includes(needle))
+  );
 
   const [draft, setDraft] = useState({
     name: "",
@@ -175,8 +185,18 @@ export function GiftsManager({ areas, vendors }: { areas: Area[]; vendors: Vendo
         </button>
       </div>
 
+      {vendors.length > ADMIN_PAGE_SIZE ? (
+        <div className="mt-6">
+          <SearchBox
+            value={paged.query}
+            onChange={paged.setQuery}
+            placeholder="Search vendor, area or product"
+          />
+        </div>
+      ) : null}
+
       <div className="mt-6 space-y-3">
-        {vendors.map((v) => {
+        {paged.pageRows.map((v) => {
           const open = openVendor === v.id;
           return (
             <div key={v.id} className="card px-5 py-4">
@@ -216,7 +236,23 @@ export function GiftsManager({ areas, vendors }: { areas: Area[]; vendors: Vendo
             products with photographs.
           </p>
         ) : null}
+
+        {vendors.length > 0 && !paged.total ? (
+          <p className="text-[14px] text-mutedbrown">
+            No vendor matches “{paged.query}”.
+          </p>
+        ) : null}
       </div>
+
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="vendors"
+        onGoTo={paged.goTo}
+      />
 
       {toast && <Toast message={toast} />}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 
 interface PendingVenue {
   id: string;
@@ -42,6 +43,21 @@ export function PhoneReview({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * Two independent pagers, because these are two jobs. Working through the
+   * review queue and going to look up one live number are different errands,
+   * and sharing a page index between them would move the list you were not
+   * looking at.
+   */
+  const byNameOrNumber = (v: PendingVenue, needle: string) =>
+    v.name.toLowerCase().includes(needle) ||
+    (v.area ?? "").toLowerCase().includes(needle) ||
+    (v.phone_pending ?? "").includes(needle) ||
+    (v.phone ?? "").includes(needle);
+
+  const pendingPage = usePagedRows(pending, byNameOrNumber);
+  const approvedPage = usePagedRows(approved, byNameOrNumber);
 
   async function act(venueId: string, action: "approve" | "reject" | "clear") {
     setBusyId(venueId);
@@ -105,6 +121,16 @@ export function PhoneReview({
           like three independent sources.
         </p>
 
+        {pending.length > ADMIN_PAGE_SIZE ? (
+          <div className="mt-4">
+            <SearchBox
+              value={pendingPage.query}
+              onChange={pendingPage.setQuery}
+              placeholder="Search venue or number"
+            />
+          </div>
+        ) : null}
+
         <div className="mt-4 overflow-x-auto">
           <table className="tbl w-full border-collapse">
             <thead>
@@ -117,7 +143,7 @@ export function PhoneReview({
               </tr>
             </thead>
             <tbody>
-              {pending.map((v) => {
+              {pendingPage.pageRows.map((v) => {
                 const outcome = done[v.id];
                 const collides = collidingDigits.has(digitsOf(v.phone_pending));
                 return (
@@ -136,7 +162,7 @@ export function PhoneReview({
                         </div>
                       )}
                     </td>
-                    <td className="text-[13px] text-mutedbrown">{v.phone_source ?? ", "}</td>
+                    <td className="text-[13px] text-mutedbrown">{v.phone_source ?? "source not recorded"}</td>
                     <td className="text-[13px]">
                       <div className="flex flex-col gap-1">
                         {v.instagram_handle ? (
@@ -208,6 +234,16 @@ export function PhoneReview({
             </tbody>
           </table>
         </div>
+
+        <Pager
+          page={pendingPage.page}
+          pageCount={pendingPage.pageCount}
+          start={pendingPage.start}
+          count={pendingPage.pageRows.length}
+          total={pendingPage.total}
+          unit="waiting"
+          onGoTo={pendingPage.goTo}
+        />
       </div>
 
       <div className="card px-5 py-5">
@@ -216,6 +252,16 @@ export function PhoneReview({
           These get dialled. Withdraw one the moment it is questioned, a false alarm
           costs a booking, an unreported bad number costs someone their money.
         </p>
+
+        {approved.length > ADMIN_PAGE_SIZE ? (
+          <div className="mt-4">
+            <SearchBox
+              value={approvedPage.query}
+              onChange={approvedPage.setQuery}
+              placeholder="Search venue or number"
+            />
+          </div>
+        ) : null}
 
         <div className="mt-4 overflow-x-auto">
           <table className="tbl w-full border-collapse">
@@ -228,7 +274,7 @@ export function PhoneReview({
               </tr>
             </thead>
             <tbody>
-              {approved.map((v) => (
+              {approvedPage.pageRows.map((v) => (
                 <tr key={v.id}>
                   <td className="font-bold">{v.name}</td>
                   <td className="font-mono">
@@ -243,7 +289,7 @@ export function PhoneReview({
                     {v.phone_report_count > 0 ? (
                       <span className="badge b-stale">{v.phone_report_count}</span>
                     ) : (
-                      <span className="text-mutedbrown">, </span>
+                      <span className="text-mutedbrown">none</span>
                     )}
                   </td>
                   <td>
@@ -272,6 +318,16 @@ export function PhoneReview({
             </tbody>
           </table>
         </div>
+
+        <Pager
+          page={approvedPage.page}
+          pageCount={approvedPage.pageCount}
+          start={approvedPage.start}
+          count={approvedPage.pageRows.length}
+          total={approvedPage.total}
+          unit="live numbers"
+          onGoTo={approvedPage.goTo}
+        />
       </div>
     </div>
   );

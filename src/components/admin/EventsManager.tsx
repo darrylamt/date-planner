@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area, EventRow } from "@/lib/types";
@@ -35,6 +36,15 @@ export function EventsManager({
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const paged = usePagedRows(events, (e, needle) => {
+    const area = areas.find((a) => a.id === e.area_id)?.name ?? "";
+    return (
+      e.title.toLowerCase().includes(needle) ||
+      e.event_date.includes(needle) ||
+      area.toLowerCase().includes(needle)
+    );
+  });
 
   function startEdit(e: EventRow) {
     setEditingId(e.id);
@@ -126,7 +136,7 @@ export function EventsManager({
         <div>
           <span className="flbl">Venue (optional)</span>
           <select className="inp h-[42px]" value={form.venue_id} onChange={(e) => setForm({ ...form, venue_id: e.target.value })}>
-            <option value="">, </option>
+            <option value="">No venue</option>
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
@@ -174,6 +184,16 @@ export function EventsManager({
       </div>
 
       {/* List */}
+      {events.length > ADMIN_PAGE_SIZE ? (
+        <div className="mt-6">
+          <SearchBox
+            value={paged.query}
+            onChange={paged.setQuery}
+            placeholder="Search title, date or area"
+          />
+        </div>
+      ) : null}
+
       <div className="mt-6 overflow-x-auto">
         <table className="tbl w-full">
           <thead>
@@ -187,11 +207,11 @@ export function EventsManager({
             </tr>
           </thead>
           <tbody>
-            {events.map((e) => (
+            {paged.pageRows.map((e) => (
               <tr key={e.id} className={e.is_active ? "" : "opacity-50"}>
                 <td className="font-bold">{e.title}</td>
                 <td className="font-mono">{e.event_date}</td>
-                <td>{areas.find((a) => a.id === e.area_id)?.name ?? ", "}</td>
+                <td>{areas.find((a) => a.id === e.area_id)?.name ?? "anywhere"}</td>
                 <td className="font-mono">{e.cost_ghs === null ? "free" : `GHS ${e.cost_ghs}`}</td>
                 <td>
                   <span className={`badge ${e.is_active ? "b-ok" : "b-stale"}`}>
@@ -211,9 +231,26 @@ export function EventsManager({
                 </td>
               </tr>
             ))}
+            {paged.total === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-mutedbrown">
+                  {paged.query ? `No event matches “${paged.query}”.` : "No events yet."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="events"
+        onGoTo={paged.goTo}
+      />
 
       {toast && <Toast message={toast} />}
     </div>

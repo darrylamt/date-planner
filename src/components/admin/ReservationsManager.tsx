@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReservationRequest, ReservationStatus } from "@/lib/types";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 
 const STATUSES: ReservationStatus[] = ["requested", "sent", "confirmed", "declined", "cancelled"];
 
@@ -16,6 +17,20 @@ function statusBadge(status: ReservationStatus): string {
 export function ReservationsManager({ reservations }: { reservations: ReservationRequest[] }) {
   const [rows, setRows] = useState(reservations);
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  /*
+   * Status is searchable text rather than a separate filter control, so
+   * "requested" finds the ones still needing a call. An inbox only grows, and
+   * this is the table most likely to be read on a phone.
+   */
+  const paged = usePagedRows(
+    rows,
+    (r, needle) =>
+      r.venue_name.toLowerCase().includes(needle) ||
+      (r.guest_name ?? "").toLowerCase().includes(needle) ||
+      r.status.includes(needle) ||
+      r.reservation_date.includes(needle)
+  );
 
   async function setStatus(id: string, status: ReservationStatus) {
     setSavingId(id);
@@ -43,7 +58,18 @@ export function ReservationsManager({ reservations }: { reservations: Reservatio
           No reservation requests yet, they&apos;ll appear here as users accept plans.
         </div>
       ) : (
-        <div className="card mt-6 overflow-x-auto">
+        <div className="card mt-6">
+          {rows.length > ADMIN_PAGE_SIZE ? (
+            <div className="mb-4">
+              <SearchBox
+                value={paged.query}
+                onChange={paged.setQuery}
+                placeholder="Search venue, guest or status"
+              />
+            </div>
+          ) : null}
+
+          <div className="overflow-x-auto">
           <table className="tbl w-full min-w-[720px] border-collapse">
             <thead>
               <tr>
@@ -57,7 +83,7 @@ export function ReservationsManager({ reservations }: { reservations: Reservatio
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {paged.pageRows.map((r) => (
                 <tr key={r.id}>
                   <td className="whitespace-nowrap">
                     {new Date(r.created_at).toLocaleDateString("en-GB", {
@@ -74,8 +100,10 @@ export function ReservationsManager({ reservations }: { reservations: Reservatio
                     · {r.arrival_time}
                   </td>
                   <td>{r.party_size}</td>
-                  <td>{r.guest_name ?? ", "}</td>
-                  <td>{r.plan_slug ? <code className="text-[12px]">{r.plan_slug}</code> : ", "}</td>
+                  <td>{r.guest_name ?? "not given"}</td>
+                  <td className="text-mutedbrown">
+                    {r.plan_slug ? <code className="text-[12px]">{r.plan_slug}</code> : "direct"}
+                  </td>
                   <td>
                     <span className="flex items-center gap-2">
                       <span className={statusBadge(r.status)}>{r.status}</span>
@@ -95,8 +123,26 @@ export function ReservationsManager({ reservations }: { reservations: Reservatio
                   </td>
                 </tr>
               ))}
+              {paged.total === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-mutedbrown">
+                    No request matches “{paged.query}”.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+          </div>
+
+          <Pager
+            page={paged.page}
+            pageCount={paged.pageCount}
+            start={paged.start}
+            count={paged.pageRows.length}
+            total={paged.total}
+            unit="requests"
+            onGoTo={paged.goTo}
+          />
         </div>
       )}
     </div>

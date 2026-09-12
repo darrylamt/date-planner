@@ -160,11 +160,11 @@ function DraftPreview({
   }
 
   const rows: [string, string][] = [
-    ["Name", draft.canonical_name ?? ", "],
-    ["Type", draft.type ?? ", "],
-    ["Area", draft.area_name ?? ", "],
-    ["Address", draft.address ?? ", "],
-    ["Price band", draft.price_band ?? ", "],
+    ["Name", draft.canonical_name ?? "not found"],
+    ["Type", draft.type ?? "not found"],
+    ["Area", draft.area_name ?? "not found"],
+    ["Address", draft.address ?? "not found"],
+    ["Price band", draft.price_band ?? "not found"],
     [
       "Per person",
       draft.is_free
@@ -173,8 +173,8 @@ function DraftPreview({
           ? `GHS ${draft.avg_cost_per_person_ghs}`
           : "not known, goes to the unpriced queue",
     ],
-    ["Phone", draft.phone ?? ", "],
-    ["Coordinates", draft.lat != null && draft.lng != null ? `${draft.lat}, ${draft.lng}` : ", "],
+    ["Phone", draft.phone ?? "not found"],
+    ["Coordinates", draft.lat != null && draft.lng != null ? `${draft.lat}, ${draft.lng}` : "not found"],
   ];
 
   return (

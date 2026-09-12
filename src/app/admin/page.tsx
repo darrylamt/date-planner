@@ -34,7 +34,7 @@ export default async function AdminVenuesPage() {
     return {
       id: v.id,
       name: v.name,
-      area: v.areas?.name ?? ", ",
+      area: v.areas?.name ?? "no area",
       type: v.type,
       is_active: v.is_active,
       items: meta?.count ?? 0,

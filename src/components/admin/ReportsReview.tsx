@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Toast } from "@/components/Toast";
@@ -110,6 +111,15 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
     }
   }
 
+  /*
+   * Ten venues at a time, sorted by how many people reported them, so the
+   * loudest problems are on page one. Called before the early return because a
+   * hook cannot be skipped on some renders and not others.
+   */
+  const paged = usePagedRows(groups, (g, needle) =>
+    g.venue_name.toLowerCase().includes(needle)
+  );
+
   if (!groups.length) {
     return (
       <p className="mt-6 text-[14px] text-mutedbrown">
@@ -119,8 +129,19 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
   }
 
   return (
-    <div className="mt-6 space-y-4">
-      {groups.map((g) => {
+    <div className="mt-6">
+      {groups.length > ADMIN_PAGE_SIZE ? (
+        <div className="mb-4">
+          <SearchBox
+            value={paged.query}
+            onChange={paged.setQuery}
+            placeholder="Search reported venues"
+          />
+        </div>
+      ) : null}
+
+      <div className="space-y-4">
+      {paged.pageRows.map((g) => {
         /* The clearest suggested price is the one most people agree on. */
         const prices = g.reports
           .map((r) => r.suggested_price_ghs)
@@ -236,6 +257,23 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
           </div>
         );
       })}
+      </div>
+
+      {paged.total === 0 ? (
+        <p className="text-[14px] text-mutedbrown">
+          No reported venue matches “{paged.query}”.
+        </p>
+      ) : null}
+
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="reported venues"
+        onGoTo={paged.goTo}
+      />
 
       {toast && <Toast message={toast} />}
     </div>

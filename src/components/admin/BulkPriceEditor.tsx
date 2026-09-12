@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { MenuItem } from "@/lib/types";
+import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 /**
  * Bulk price quick-edit, matching the designed table:
@@ -35,6 +36,31 @@ export function BulkPriceEditor({
   const [toast, setToast] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const paged = usePagedRows(
+    items,
+    (i, needle) =>
+      i.name.toLowerCase().includes(needle) || i.category.toLowerCase().includes(needle)
+  );
+
+  /*
+   * Tab is the point of this screen, so it has to cross a page boundary.
+   * Stopping dead on row ten of a hundred and six would break the one promise
+   * the subtitle makes. The focus has to wait for the new page to render,
+   * hence the flag rather than a call straight after goTo.
+   */
+  const [focusFirst, setFocusFirst] = useState(false);
+  useEffect(() => {
+    if (!focusFirst) return;
+    inputRefs.current[0]?.focus();
+    inputRefs.current[0]?.select();
+    setFocusFirst(false);
+  }, [focusFirst, paged.page]);
+
+  /*
+   * Changes are counted across every page, not just the visible one, because
+   * the prices map is keyed by item id and survives paging. Editing page one
+   * and paging on does not quietly discard the edits.
+   */
   const changed = items.filter((i) => prices[i.id] !== original[i.id]);
   const isStale = staleDays === null || staleDays > 90;
 
@@ -84,17 +110,24 @@ export function BulkPriceEditor({
         </div>
       </div>
 
-      <select
-        className="inp mt-5 h-[42px] max-w-[320px]"
-        value={venueId ?? ""}
-        onChange={(e) => router.push(`/admin/prices?venue=${e.target.value}`)}
-      >
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <select
+          className="inp h-[42px] max-w-[320px]"
+          value={venueId ?? ""}
+          onChange={(e) => router.push(`/admin/prices?venue=${e.target.value}`)}
+        >
         {venues.map((v) => (
           <option key={v.id} value={v.id}>
             {v.name}
           </option>
         ))}
-      </select>
+        </select>
+        <SearchBox
+          value={paged.query}
+          onChange={paged.setQuery}
+          placeholder="Search this menu"
+        />
+      </div>
 
       <div className="mt-4 overflow-x-auto">
         <table className="tbl w-full max-w-[820px]">
@@ -108,7 +141,7 @@ export function BulkPriceEditor({
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => {
+            {paged.pageRows.map((item, idx) => {
               const oldP = original[item.id];
               const newP = prices[item.id];
               const delta = oldP > 0 ? ((newP - oldP) / oldP) * 100 : 0;
@@ -138,22 +171,34 @@ export function BulkPriceEditor({
                           setPrices((p) => ({ ...p, [item.id]: oldP }));
                         } else if (e.key === "Tab" && !e.shiftKey) {
                           e.preventDefault();
-                          inputRefs.current[idx + 1]?.focus();
-                          inputRefs.current[idx + 1]?.select();
+                          /*
+                           * Checked against the page rather than the refs
+                           * array, which still holds entries from a longer
+                           * previous page until React clears them.
+                           */
+                          if (idx < paged.pageRows.length - 1) {
+                            inputRefs.current[idx + 1]?.focus();
+                            inputRefs.current[idx + 1]?.select();
+                          } else if (paged.page < paged.pageCount - 1) {
+                            paged.goTo(paged.page + 1);
+                            setFocusFirst(true);
+                          }
                         }
                       }}
                     />
                   </td>
                   <td className={`font-bold ${dirty ? "text-flame" : "text-mutedbrown"}`}>
-                    {dirty ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%` : ", "}
+                    {dirty ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%` : ""}
                   </td>
                 </tr>
               );
             })}
-            {items.length === 0 && (
+            {paged.total === 0 && (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-mutedbrown">
-                  This venue has no menu items yet.
+                  {paged.query
+                    ? `Nothing on this menu matches “${paged.query}”.`
+                    : "This venue has no menu items yet."}
                 </td>
               </tr>
             )}
@@ -161,8 +206,20 @@ export function BulkPriceEditor({
         </table>
       </div>
 
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="items"
+        onGoTo={paged.goTo}
+      />
+
       <div className="mt-3.5 text-[14px] text-mutedbrown">
-        {changed.length > 0 ? `${changed.length} rows changed · unsaved` : "No unsaved changes"}
+        {changed.length > 0
+          ? `${changed.length} row${changed.length === 1 ? "" : "s"} changed across the whole menu, unsaved`
+          : "No unsaved changes"}
       </div>
 
       {toast && <Toast message={toast} />}

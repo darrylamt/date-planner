@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
@@ -14,6 +15,12 @@ export function AreasManager({ areas }: { areas: Area[] }) {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const paged = usePagedRows(
+    areas,
+    (a, needle) =>
+      a.name.toLowerCase().includes(needle) || (a.city ?? "").toLowerCase().includes(needle)
+  );
 
   async function add() {
     setBusy(true);
@@ -66,6 +73,12 @@ export function AreasManager({ areas }: { areas: Area[] }) {
         {error && <div className="why w-full not-italic text-staletext">{error}</div>}
       </div>
 
+      {areas.length > ADMIN_PAGE_SIZE ? (
+        <div className="mt-6">
+          <SearchBox value={paged.query} onChange={paged.setQuery} placeholder="Search areas" />
+        </div>
+      ) : null}
+
       <table className="tbl mt-6 w-full">
         <thead>
           <tr>
@@ -75,7 +88,7 @@ export function AreasManager({ areas }: { areas: Area[] }) {
           </tr>
         </thead>
         <tbody>
-          {areas.map((a) => (
+          {paged.pageRows.map((a) => (
             <tr key={a.id}>
               <td className="font-bold">{a.name}</td>
               <td>{a.city}</td>
@@ -89,8 +102,25 @@ export function AreasManager({ areas }: { areas: Area[] }) {
               </td>
             </tr>
           ))}
+          {paged.total === 0 && (
+            <tr>
+              <td colSpan={3} className="py-8 text-center text-mutedbrown">
+                {paged.query ? `No area matches “${paged.query}”.` : "No areas yet."}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="areas"
+        onGoTo={paged.goTo}
+      />
 
       {toast && <Toast message={toast} />}
     </div>

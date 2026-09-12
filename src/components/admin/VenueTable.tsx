@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ghs } from "@/lib/format";
+import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 interface Row {
   id: string;
@@ -52,20 +53,28 @@ function badgeLabel(status: string): string {
 }
 
 export function VenueTable({ rows }: { rows: Row[] }) {
-  const [q, setQ] = useState("");
   const [onlyUnverified, setOnlyUnverified] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, VerifyResult>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const filtered = rows.filter((r) => {
-    const matchesQuery =
-      r.name.toLowerCase().includes(q.toLowerCase()) ||
-      r.area.toLowerCase().includes(q.toLowerCase());
-    const matchesFilter = !onlyUnverified || (results[r.id]?.verdict ?? r.verification) !== "real";
-    return matchesQuery && matchesFilter;
-  });
+  /*
+   * The checkbox narrows before paging, so "only unverified" gives ten
+   * unverified venues rather than however many of the first ten happened to
+   * qualify.
+   */
+  const visible = rows.filter(
+    (r) => !onlyUnverified || (results[r.id]?.verdict ?? r.verification) !== "real"
+  );
+  const paged = usePagedRows(
+    visible,
+    (r, needle) =>
+      r.name.toLowerCase().includes(needle) ||
+      r.area.toLowerCase().includes(needle) ||
+      r.type.toLowerCase().includes(needle)
+  );
+  const q = paged.query;
 
   async function verify(id: string) {
     if (busyId) return; // one at a time, each call costs money and ~45s
@@ -94,11 +103,10 @@ export function VenueTable({ rows }: { rows: Row[] }) {
   return (
     <>
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <input
-          className="inp h-[42px] max-w-[280px]"
-          placeholder="Search venues…"
+        <SearchBox
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={paged.setQuery}
+          placeholder="Search name, area or type"
         />
         <label className="flex cursor-pointer items-center gap-2 text-[14px] text-cocoa">
           <input
@@ -133,7 +141,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => {
+            {paged.pageRows.map((r) => {
               const live = results[r.id];
               const status = live?.verdict ?? r.verification;
               const discrepancies = live ? live.discrepancies.length : r.discrepancies;
@@ -256,7 +264,7 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                 </tr>
               );
             })}
-            {filtered.length === 0 && (
+            {paged.total === 0 && (
               <tr>
                 <td colSpan={9} className="py-8 text-center text-mutedbrown">
                   No venues match {q ? `“${q}”` : "the current filter"}.
@@ -266,6 +274,16 @@ export function VenueTable({ rows }: { rows: Row[] }) {
           </tbody>
         </table>
       </div>
+
+      <Pager
+        page={paged.page}
+        pageCount={paged.pageCount}
+        start={paged.start}
+        count={paged.pageRows.length}
+        total={paged.total}
+        unit="venues"
+        onGoTo={paged.goTo}
+      />
 
       <p className="mt-4 text-[13px] text-mutedbrown">
         Verifying searches the web and takes 40–60 seconds per venue. For a whole
