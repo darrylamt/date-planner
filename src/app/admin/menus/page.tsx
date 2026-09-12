@@ -63,6 +63,7 @@ export default async function AdminMenusPage() {
       area: v.areas?.name ?? "no area",
       type: v.type,
       cuisine: (v.cuisine as string | null) ?? null,
+      ...servedFrom(bucket),
       /*
        * Named rather than a flag, so the row says where the menu actually is.
        * "Shares Osu" tells you the price list to edit; "shared" would not.
@@ -78,12 +79,13 @@ export default async function AdminMenusPage() {
   });
 
   /*
-   * Thinnest first, and branches with a full menu are not thin. Sorting on
-   * mains alone put the four Honeysuckle branches at the very top of a
-   * worklist they have no business being on.
+   * Thinnest first by what the venue can actually serve, and branches with a
+   * full menu are not thin. Sorting on mains alone put the four Honeysuckle
+   * branches at the very top of a worklist they have no business being on,
+   * and a boba shop below them.
    */
   rows.sort(
-    (a, b) => a.mains - b.mains || a.total - b.total || a.name.localeCompare(b.name)
+    (a, b) => a.serves - b.serves || a.total - b.total || a.name.localeCompare(b.name)
   );
 
   return (
@@ -99,4 +101,40 @@ export default async function AdminMenusPage() {
       <ThinMenus rows={rows} />
     </div>
   );
+}
+
+/**
+ * What the planner would actually order here, and how much choice it has.
+ *
+ * Mirrors planOrders. A restaurant is served a main, and failing that the
+ * "other" bucket, then starters, and failing all three the cheapest thing on
+ * the list whatever it is. Judging every venue on its main-course count asked
+ * the wrong question of anywhere that does not serve main courses: Daddy boba
+ * is a bubble tea shop with thirty two drinks and no food, and it was being
+ * listed as needing work on a menu it is never going to have.
+ *
+ * The honest question is not "does it have mains" but "can it give a table of
+ * six something other than six identical orders".
+ */
+function servedFrom(bucket: Record<string, number>): {
+  serves: number;
+  servesLabel: string;
+  foodItems: number;
+} {
+  const food =
+    (bucket.main ?? 0) + (bucket.starter ?? 0) + (bucket.dessert ?? 0) + (bucket.other ?? 0);
+
+  for (const [key, label] of [
+    ["main", "mains"],
+    ["other", "items"],
+    ["starter", "starters"],
+    ["dessert", "desserts"],
+    ["drink", "drinks"],
+    ["activity", "activities"],
+  ] as const) {
+    if ((bucket[key] ?? 0) > 0) {
+      return { serves: bucket[key] ?? 0, servesLabel: label, foodItems: food };
+    }
+  }
+  return { serves: 0, servesLabel: "items", foodItems: food };
 }

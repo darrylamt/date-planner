@@ -78,11 +78,17 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
 
   const menuCount = new Map<string, number>();
   const mainCount = new Map<string, number>();
+  /** Items per category per venue, so a queue can ask the right question. */
+  const buckets = new Map<string, Record<string, number>>();
   const menuLatest = new Map<string, string>();
   for (const m of menuMeta ?? []) {
     const id = (m as any).venue_id as string;
     menuCount.set(id, (menuCount.get(id) ?? 0) + 1);
     if ((m as any).category === "main") mainCount.set(id, (mainCount.get(id) ?? 0) + 1);
+    const b = buckets.get(id) ?? {};
+    const cat = (m as any).category as string;
+    b[cat] = (b[cat] ?? 0) + 1;
+    buckets.set(id, b);
     const at = (m as any).updated_at as string | null;
     if (at && (!menuLatest.get(id) || at > menuLatest.get(id)!)) menuLatest.set(id, at);
   }
@@ -117,10 +123,19 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * is judged on that menu. The Honeysuckle's four branches were each
      * counted as having nothing and inflated this queue by four.
      */
+    /*
+     * Counted on what the venue can actually serve, not on main courses, and
+     * through the share. Asking a bubble tea shop how many mains it has is the
+     * wrong question: Daddy boba has 32 drinks and no food and was sitting in
+     * this queue waiting for a menu it is never going to have.
+     */
     thinMenus: active.filter((v: any) => {
       if (v.type !== "restaurant" && v.type !== "cafe") return false;
       const owner = (v.menu_shared_from as string | null) || v.id;
-      return (mainCount.get(owner) ?? 0) < 5;
+      const b = buckets.get(owner) ?? {};
+      const serves =
+        b.main ?? b.other ?? b.starter ?? b.dessert ?? b.drink ?? b.activity ?? 0;
+      return serves < 5;
     }).length,
     staleMenus: active.filter((v: any) => {
       const latest = menuLatest.get(v.id);

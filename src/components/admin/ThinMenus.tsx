@@ -11,6 +11,11 @@ interface Row {
   cuisine: string | null;
   /** The venue whose menu prices this one, when it is a branch. */
   sharedFrom: string | null;
+  /** How many items sit in the bucket the planner would actually order from. */
+  serves: number;
+  servesLabel: string;
+  /** Anything edible. Zero on a restaurant means the food menu is missing. */
+  foodItems: number;
   mains: number;
   starters: number;
   desserts: number;
@@ -22,21 +27,25 @@ interface Row {
 /** Fewer than this and a party is served the same handful whatever it asked for. */
 const ENOUGH_MAINS = 5;
 
+/**
+ * Whether a table of six would be served six different things.
+ *
+ * Judged on the bucket the planner would actually draw from, not on main
+ * courses. Asking "how many mains" of a bubble tea shop is the wrong question:
+ * Daddy boba has thirty two drinks and no food and was being listed as needing
+ * work on a menu it is never going to have.
+ */
 function verdict(r: Row): { label: string; className: string } {
-  /*
-   * A branch is judged on the menu it is actually priced from, and the badge
-   * says whose it is. The counts in this row are already the owner's, so a
-   * branch with a full menu reads as fine rather than as work to do.
-   */
   if (r.sharedFrom) {
-    return r.mains >= ENOUGH_MAINS
+    return r.serves >= ENOUGH_MAINS
       ? { label: `Shares ${r.sharedFrom}`, className: "badge b-ok" }
       : { label: `Shares ${r.sharedFrom}, thin`, className: "badge b-stale" };
   }
   if (r.total === 0) return { label: "No menu at all", className: "badge b-stale" };
-  if (r.mains === 0) return { label: "No mains", className: "badge b-stale" };
-  if (r.mains < ENOUGH_MAINS) return { label: `Only ${r.mains} mains`, className: "badge b-stale" };
-  return { label: "Enough to choose from", className: "badge b-ok" };
+  if (r.serves < ENOUGH_MAINS) {
+    return { label: `Only ${r.serves} ${r.servesLabel}`, className: "badge b-stale" };
+  }
+  return { label: `${r.serves} ${r.servesLabel} to choose from`, className: "badge b-ok" };
 }
 
 export function ThinMenus({ rows }: { rows: Row[] }) {
@@ -48,7 +57,14 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
       r.type.toLowerCase().includes(needle)
   );
 
-  const needWork = rows.filter((r) => r.mains < ENOUGH_MAINS).length;
+  const needWork = rows.filter((r) => r.serves < ENOUGH_MAINS).length;
+  /*
+   * Counted apart from the thin ones, because it is a different job. Casa1715
+   * holds 223 drinks and not one item of food: the bar list was imported and
+   * the kitchen's was not. Nothing is thin about it, and a dinner plan there
+   * would serve someone a glass of wine.
+   */
+  const drinksOnly = rows.filter((r) => r.total > 0 && r.foodItems === 0).length;
   const branches = rows.filter((r) => r.sharedFrom).length;
   const noCuisine = rows.filter((r) => !r.cuisine).length;
 
@@ -64,6 +80,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
           {needWork} of {rows.length} need more of their menu on file
           {noCuisine ? `, ${noCuisine} have no cuisine recorded` : ""}
           {branches ? `, ${branches} are branches sharing another's` : ""}
+          {drinksOnly ? `, ${drinksOnly} hold drinks and no food` : ""}
         </span>
       </div>
 
@@ -91,7 +108,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                   <td className="font-bold">
                     {r.name}
                     <div className="mt-0.5 text-[12px] font-normal text-mutedbrown md:hidden">
-                      {r.area} · {r.mains} mains of {r.total} items
+                      {r.area} · {r.serves} {r.servesLabel} of {r.total} items
                     </div>
                   </td>
                   <td className="hidden md:table-cell">{r.area}</td>
@@ -113,6 +130,17 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                   <td className="hidden font-mono md:table-cell">{r.total}</td>
                   <td>
                     <span className={v.className}>{v.label}</span>
+                    {/*
+                      Said plainly rather than folded into the badge, because
+                      it is a statement about what we hold and not a verdict.
+                      A bar legitimately has no food; a restaurant with none
+                      means the kitchen's list was never imported.
+                    */}
+                    {r.total > 0 && r.foodItems === 0 ? (
+                      <div className="mt-1 text-[12px] text-staletext">
+                        drinks only, no food on file
+                      </div>
+                    ) : null}
                   </td>
                   <td className="whitespace-nowrap">
                     {/*
