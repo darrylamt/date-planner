@@ -14,8 +14,8 @@ import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Segmented } from "../src/components/Segmented";
-import { Symbol } from "../src/components/Symbol";
 import { FloatingMascots } from "../src/components/FloatingMascots";
+import { BrandMark } from "../src/components/BrandMark";
 import { GUTTER, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import {
@@ -266,21 +266,11 @@ export default function Login() {
             two buttons of the same size satisfy that plainly.
           */}
           {appleReady && AppleAuthentication
-            ? socialButton(
-                "apple",
-                "Continue with Apple",
-                <Symbol name="apple.logo" size={26} color={c.text} />
-              )
+            ? socialButton("apple", "Continue with Apple", <BrandMark provider="apple" />)
             : null}
 
           {googleSignInAvailable()
-            ? socialButton(
-                "google",
-                "Continue with Google",
-                <Text variant="title3" style={{ color: c.text }}>
-                  G
-                </Text>
-              )
+            ? socialButton("google", "Continue with Google", <BrandMark provider="google" />)
             : null}
 
           <View style={{ flex: 1 }}>
