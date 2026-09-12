@@ -15,6 +15,8 @@ export const planInputsSchema = z.object({
   // Defaulted rather than required: a plan posted by an older build of the
   // app still has to be plannable.
   focus: z.enum(["everything", "food", "drinks", "activities"]).default("everything"),
+  // Defaulted, so a plan posted by an older build of the app still validates.
+  cuisine: z.enum(["either", "local", "continental"]).default("either"),
   formality: z.enum(["either", "casual", "fancy"]).default("either"),
   occasion: z.enum([
     "first_date",

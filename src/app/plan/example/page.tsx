@@ -25,6 +25,7 @@ const EXAMPLE_INPUTS: PlanInputs = {
   companions: [],
   occasionDetail: {},
   focus: "everything",
+    cuisine: "either",
   formality: "either",
   budget: 800,
   date: DATE,

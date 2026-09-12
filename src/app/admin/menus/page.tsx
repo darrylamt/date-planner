@@ -22,7 +22,7 @@ export default async function AdminMenusPage() {
   const [{ data: venues }, { data: items }] = await Promise.all([
     supabase
       .from("venues")
-      .select("id, name, type, is_active, areas(name)")
+      .select("id, name, type, is_active, cuisine, areas(name)")
       .eq("is_active", true)
       .in("type", ["restaurant", "cafe"])
       .order("name"),
@@ -45,6 +45,7 @@ export default async function AdminMenusPage() {
       name: v.name,
       area: v.areas?.name ?? "no area",
       type: v.type,
+      cuisine: (v.cuisine as string | null) ?? null,
       mains: bucket.main ?? 0,
       starters: bucket.starter ?? 0,
       desserts: bucket.dessert ?? 0,

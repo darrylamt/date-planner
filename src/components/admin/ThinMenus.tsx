@@ -8,6 +8,7 @@ interface Row {
   name: string;
   area: string;
   type: string;
+  cuisine: string | null;
   mains: number;
   starters: number;
   desserts: number;
@@ -36,6 +37,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
   );
 
   const needWork = rows.filter((r) => r.mains < ENOUGH_MAINS).length;
+  const noCuisine = rows.filter((r) => !r.cuisine).length;
 
   return (
     <>
@@ -47,6 +49,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
         />
         <span className="text-[13px] text-mutedbrown">
           {needWork} of {rows.length} need more of their menu on file
+          {noCuisine ? `, ${noCuisine} have no cuisine recorded` : ""}
         </span>
       </div>
 
@@ -56,6 +59,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
             <tr>
               <th>Venue</th>
               <th className="hidden md:table-cell">Area</th>
+              <th>Cuisine</th>
               <th>Mains</th>
               <th className="hidden lg:table-cell">Starters</th>
               <th className="hidden lg:table-cell">Desserts</th>
@@ -77,6 +81,11 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                     </div>
                   </td>
                   <td className="hidden md:table-cell">{r.area}</td>
+                  <td className="whitespace-nowrap capitalize">
+                    {r.cuisine ?? (
+                      <span className="text-staletext">not recorded</span>
+                    )}
+                  </td>
                   <td
                     className={`font-mono font-bold ${
                       r.mains < ENOUGH_MAINS ? "text-staletext" : ""
@@ -110,7 +119,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
             })}
             {paged.total === 0 && (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-mutedbrown">
+                <td colSpan={10} className="py-8 text-center text-mutedbrown">
                   No venue matches “{paged.query}”.
                 </td>
               </tr>

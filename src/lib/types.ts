@@ -60,6 +60,11 @@ export interface Venue {
    */
   minimum_spend_ghs?: number | null;
   /**
+   * local, continental, or both. Null means nobody has recorded it, which is
+   * deliberately not the same as both and is never read as either.
+   */
+  cuisine?: "local" | "continental" | "both" | null;
+  /**
    * Google's opening periods, verbatim. Null means the hours are not known,
    * which is deliberately not the same as closed and is never read as either.
    */
@@ -150,6 +155,12 @@ export type Pronoun = "they" | "she" | "he";
  */
 export type PlanFocus = "everything" | "food" | "drinks" | "activities";
 
+/**
+ * What kind of kitchen. Accra eats two ways and a chop bar and a
+ * Mediterranean place are both type = "restaurant".
+ */
+export type PlanCuisine = "either" | "local" | "continental";
+
 /** How dressed-up the evening should be. */
 export type Formality = "either" | "casual" | "fancy";
 
@@ -167,6 +178,7 @@ export interface PlanInputs {
   hours: number; // duration of the outing
   vibes: string[];
   focus: PlanFocus;
+  cuisine: PlanCuisine;
   formality: Formality;
   occasion: Occasion;
   /**

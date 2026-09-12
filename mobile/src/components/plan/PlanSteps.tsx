@@ -12,6 +12,7 @@ import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
   DURATIONS,
+  CUISINE_OPTIONS,
   FOCUS_OPTIONS,
   FORMALITY_OPTIONS,
   OCCASION_EXTRA,
@@ -222,6 +223,29 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
             />
           ))}
         </Group>
+
+        {/*
+          Only when the evening involves eating. Asking someone who picked
+          "just drinks" whether they want local or continental food is a
+          question with no consequence, and a flow that asks those teaches
+          people to stop reading it.
+        */}
+        {inputs.focus === "everything" || inputs.focus === "food" ? (
+          <>
+            <GroupLabel>Local or continental?</GroupLabel>
+            <Group>
+              {CUISINE_OPTIONS.map((f) => (
+                <Row
+                  key={f.id}
+                  title={f.title}
+                  subtitle={f.sub}
+                  selected={inputs.cuisine === f.id}
+                  onPress={() => update({ cuisine: f.id })}
+                />
+              ))}
+            </Group>
+          </>
+        ) : null}
 
         <GroupLabel>How dressed up?</GroupLabel>
         {/*

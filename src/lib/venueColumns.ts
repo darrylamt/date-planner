@@ -49,6 +49,7 @@ export const PUBLIC_VENUE_COLUMNS = [
   "pricing_mode",
   "unit_price_ghs",
   "minimum_spend_ghs",
+  "cuisine",
   "aesthetics",
   "price_source",
   "price_spread",

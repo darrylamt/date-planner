@@ -107,6 +107,7 @@ export function defaultInputs(): PlanInputs {
     hours: 4,
     vibes: [],
     focus: "everything",
+  cuisine: "either",
     formality: "either",
     occasion: "date_night",
     occasionDetail: {},

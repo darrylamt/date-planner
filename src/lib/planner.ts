@@ -6,6 +6,7 @@ import type {
   PriceConfidence,
   ItineraryOrder,
   MenuItem,
+  PlanCuisine,
   PlanFocus,
   PlanInputs,
   PriceBand,
@@ -196,14 +197,38 @@ function looksScore(v: Venue, occasion: string): number {
   return (Number(v.aesthetics) - 3) * (LOOKS_WEIGHT[occasion] ?? 1);
 }
 
+/**
+ * Does this kitchen cook what was asked for?
+ *
+ * Three answers, not two. `false` means the venue is recorded as the other
+ * thing and must not be offered: someone who asked for waakye should not be
+ * sent for pasta. `null` means nobody has recorded it, which is allowed but
+ * unpreferred, because on the day this ships every row is null and reading
+ * "we do not know" as "no" would empty the shortlist entirely.
+ */
+function cuisineFit(v: Venue, want: PlanCuisine): boolean | null {
+  if (want === "either") return true;
+  // Only a kitchen can be the wrong cuisine. A bowling alley is neither.
+  if (v.type !== "restaurant" && v.type !== "cafe") return true;
+  if (!v.cuisine) return null;
+  return v.cuisine === "both" || v.cuisine === want;
+}
+
 function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number {
   const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
   const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
   const inArea = inputs.areaIds.includes(v.area_id) ? 1 : 0;
+  /*
+   * Weighted above a vibe tag. Someone who picks local has asked for a kind of
+   * food, not a mood, and a recorded match should beat a place that merely
+   * shares an adjective.
+   */
+  const cuisine = cuisineFit(v, inputs.cuisine) === true && inputs.cuisine !== "either" ? 4 : 0;
   return (
     overlap * 3 +
     occasion * 2 +
     inArea +
+    cuisine +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion)
   );
@@ -675,6 +700,10 @@ export function planItinerary(
        * the plan, while reading it as "open" is only the assumption already
        * being made everywhere else.
        */
+      // Recorded as the other thing. Not a ranking matter: it is the wrong
+      // answer to the question that was asked.
+      if (cuisineFit(venue, inputs.cuisine) === false) continue;
+
       if (weekday !== null) {
         const open = isOpenThroughout(
           parsePeriods(venue.opening_periods),

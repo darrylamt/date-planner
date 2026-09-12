@@ -117,6 +117,9 @@ export type Pronoun = "they" | "she" | "he";
  */
 export type PlanFocus = "everything" | "food" | "drinks" | "activities";
 
+/** What kind of kitchen. Accra eats two ways. */
+export type PlanCuisine = "either" | "local" | "continental";
+
 /** How dressed-up the evening should be. */
 export type Formality = "either" | "casual" | "fancy";
 
@@ -134,6 +137,7 @@ export interface PlanInputs {
   hours: number; // duration of the outing
   vibes: string[];
   focus: PlanFocus;
+  cuisine: PlanCuisine;
   formality: Formality;
   occasion: Occasion;
   /**

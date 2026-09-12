@@ -68,6 +68,8 @@ export function VenueForm({
     lng: venue?.lng != null ? String(venue.lng) : "",
     minimum_spend_ghs:
       venue?.minimum_spend_ghs != null ? String(venue.minimum_spend_ghs) : "",
+    // "" is "not recorded", which is deliberately not the same as "both".
+    cuisine: venue?.cuisine ?? "",
   });
 
   /*
@@ -148,6 +150,7 @@ export function VenueForm({
         // Null, not zero: "no floor" and "the floor is nothing" differ.
         minimum_spend_ghs:
           v.minimum_spend_ghs === "" ? null : Number(v.minimum_spend_ghs),
+        cuisine: v.cuisine === "" ? null : v.cuisine,
         opening_periods: hours.periods ?? null,
         opening_hours_text: hours.text ?? null,
         hours_synced_at: hours.periods ? new Date().toISOString() : null,
@@ -468,6 +471,25 @@ export function VenueForm({
           {areaNote ? (
             <span className="mt-1 text-[12.5px] text-mutedbrown">{areaNote}</span>
           ) : null}
+        </div>
+        <div className={field}>
+          <span className="flbl">Cuisine</span>
+          <select
+            className="inp"
+            value={v.cuisine}
+            onChange={(e) => setV({ ...v, cuisine: e.target.value })}
+          >
+            <option value="">Not recorded</option>
+            <option value="local">Local, Ghanaian and West African</option>
+            <option value="continental">Continental, everything else</option>
+            <option value="both">Both, genuinely</option>
+          </select>
+          <span className="mt-1 text-[12px] text-mutedbrown">
+            Someone who asks for local food should not be sent for pasta. Leave
+            it unrecorded rather than guessing: unrecorded venues are still
+            offered, just not preferred, while a wrong answer sends people to
+            the wrong kitchen.
+          </span>
         </div>
         <div className={field}>
           <span className="flbl">Type</span>
