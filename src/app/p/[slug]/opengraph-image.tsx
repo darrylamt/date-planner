@@ -73,7 +73,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           justifyContent: "space-between",
           background: theme.pageDark,
           color: "#F4ECEE",
-          padding: "68px 72px",
+          padding: "54px 64px",
           fontFamily: "sans-serif",
         }}
       >
@@ -81,7 +81,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           <div
             style={{
               display: "flex",
-              fontSize: 26,
+              fontSize: 24,
               letterSpacing: 6,
               fontWeight: 700,
               color: theme.accentDark,
@@ -89,14 +89,14 @@ export default async function Image({ params }: { params: { slug: string } }) {
           >
             {card.eyebrow.toUpperCase()}
           </div>
-          <div style={{ display: "flex", fontSize: 78, fontWeight: 700, marginTop: 14 }}>
+          <div style={{ display: "flex", fontSize: 68, fontWeight: 700, marginTop: 10 }}>
             {longDate(inputs.date)}
           </div>
           <div
             style={{
               display: "flex",
-              fontSize: 34,
-              marginTop: 16,
+              fontSize: 30,
+              marginTop: 12,
               color: "rgba(244,236,238,0.72)",
             }}
           >
@@ -107,18 +107,26 @@ export default async function Image({ params }: { params: { slug: string } }) {
         {/* The stops, named. A plan is the places, so they are the picture. */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {stops.slice(0, 3).map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 30 }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 29 }}>
+              {/*
+                Fixed and non-wrapping. At 92px "11:15 PM" broke onto a second
+                line, which pushed the footer off the bottom of the card, and
+                an overflowing OG image is simply a cropped one: nothing warns
+                you, it is just missing.
+              */}
               <div
                 style={{
                   display: "flex",
-                  width: 92,
+                  width: 132,
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
                   color: theme.accentDark,
                   fontWeight: 700,
                 }}
               >
                 {s.arrival_time}
               </div>
-              <div style={{ display: "flex" }}>{s.name}</div>
+              <div style={{ display: "flex", whiteSpace: "nowrap" }}>{s.name}</div>
             </div>
           ))}
         </div>
@@ -129,11 +137,12 @@ export default async function Image({ params }: { params: { slug: string } }) {
             alignItems: "center",
             justifyContent: "space-between",
             borderTop: "1px solid rgba(244,236,238,0.18)",
-            paddingTop: 26,
+            paddingTop: 22,
+            flexShrink: 0,
           }}
         >
-          <div style={{ display: "flex", fontSize: 30, fontWeight: 700 }}>aduro</div>
-          <div style={{ display: "flex", fontSize: 30, color: "rgba(244,236,238,0.72)" }}>
+          <div style={{ display: "flex", fontSize: 28, fontWeight: 700 }}>aduro</div>
+          <div style={{ display: "flex", fontSize: 28, color: "rgba(244,236,238,0.72)" }}>
             {stops.length} stops · GHS {Math.round(Number(itinerary.est_total_ghs))}
           </div>
         </div>
