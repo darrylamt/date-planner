@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/Logo";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { adminCounts } from "@/lib/adminCounts";
@@ -40,7 +40,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   // Read once here and handed down, so the badges cost one query per page
   // load rather than one per link.
-  const counts = await adminCounts(supabase);
+  /*
+   * Counted through the service role, not the caller's own client.
+   *
+   * The cookie client runs as `authenticated`, and 0014 revoked SELECT on the
+   * venue columns from that role so an ordinary account cannot read unapproved
+   * phone numbers. adminCounts reads venues with select("*"), so leaving it on
+   * the caller's client made every admin page fail with "permission denied"
+   * the moment that migration ran. Elevated only after the is_admin check
+   * above has passed, which is the same trade adminDataClient makes.
+   */
+  const counts = await adminCounts(createServiceClient());
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
