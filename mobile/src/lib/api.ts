@@ -82,3 +82,27 @@ export async function reportVenue(input: {
     return { ok: false, duplicate: false };
   }
 }
+
+/**
+ * What can be picked up on the way to this plan.
+ *
+ * The server filters by occasion and by whether the vendor could have it ready
+ * in time, so anything that comes back can genuinely be collected.
+ */
+export async function fetchPickups(
+  occasion: string,
+  date: string,
+  startTime: string
+): Promise<import("./pickups").GiftVendor[]> {
+  if (!BASE) return [];
+  try {
+    const params = new URLSearchParams({ occasion, date, startTime });
+    const res = await fetch(`${BASE}/api/pickups?${params}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.vendors ?? []) as import("./pickups").GiftVendor[];
+  } catch {
+    // A pickup is an extra. Losing it should never disturb the plan itself.
+    return [];
+  }
+}

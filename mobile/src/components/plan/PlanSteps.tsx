@@ -36,6 +36,41 @@ const FOCUS_ICON: Record<PlanFocus, SymbolViewProps["name"]> = {
   activities: "figure.walk",
 };
 
+/** Icons live in the mobile layer; the shared constants stay platform-free. */
+const FORMALITY_ICON: Record<string, SymbolViewProps["name"]> = {
+  either: "wand.and.stars",
+  casual: "tshirt",
+  fancy: "sparkles",
+};
+
+/**
+ * The pronoun question, asked by example.
+ *
+ * Each option shows the line the plan would actually write, so the choice is
+ * about the copy rather than about the person.
+ */
+const PRONOUN_CHOICES: {
+  value: Gender;
+  sub: string;
+  example: (name: string) => string;
+}[] = [
+  {
+    value: "unspecified",
+    sub: "Neutral, and the default",
+    example: (n) => `${n.trim() || "They"} will love this`,
+  },
+  {
+    value: "female",
+    sub: "She, her",
+    example: (n) => `${n.trim() || "She"} will love this`,
+  },
+  {
+    value: "male",
+    sub: "He, him",
+    example: (n) => `${n.trim() || "He"} will love this`,
+  },
+];
+
 export interface StepProps {
   /** Named, not numbered: the order changes per occasion pathway. */
   step: StepId;
@@ -99,7 +134,12 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
                 onPress={() => {
                   const ids = on
                     ? inputs.areaIds.filter((x) => x !== a.id)
-                    : [...inputs.areaIds, a.id].slice(-2);
+                    // Four, not two. A bar crawl or a whole evening can
+                    // reasonably cross the city, and capping at two quietly
+                    // made those plans smaller than the budget allowed. Still
+                    // capped, because an unbounded pick turns the taxi budget
+                    // into the whole plan.
+                    : [...inputs.areaIds, a.id].slice(-4);
                   update({
                     areaIds: ids,
                     areaNames: areas.filter((x) => ids.includes(x.id)).map((x) => x.name),
@@ -183,11 +223,24 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
         </Group>
 
         <GroupLabel>How dressed up?</GroupLabel>
-        <Segmented
-          options={FORMALITY_OPTIONS.map((f) => ({ value: f.id, label: f.title }))}
-          value={inputs.formality}
-          onChange={(formality) => update({ formality })}
-        />
+        {/*
+          Cards rather than a segmented control. Every other choice in this
+          flow is a row with a subtitle explaining what it does, and one bare
+          three-way toggle in the middle of them read like a settings screen
+          that had wandered in.
+        */}
+        <Group>
+          {FORMALITY_OPTIONS.map((f) => (
+            <Row
+              key={f.id}
+              icon={FORMALITY_ICON[f.id]}
+              title={f.title}
+              subtitle={f.sub}
+              selected={inputs.formality === f.id}
+              onPress={() => update({ formality: f.id })}
+            />
+          ))}
+        </Group>
 
       </>
     );
@@ -278,6 +331,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
         )}
 
         {pair ? (
+          <>
           <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.five }}>
             <Field
               label="Their name (optional)"
@@ -286,19 +340,30 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
               maxLength={60}
               onChangeText={(name) => update({ partner: { ...inputs.partner, name } })}
             />
-            <Segmented
-              label="Is it a him or a her? (optional)"
-              options={
-                [
-                  { value: "unspecified", label: "Rather not say" },
-                  { value: "female", label: "Her" },
-                  { value: "male", label: "Him" },
-                ] as { value: Gender; label: string }[]
-              }
-              value={inputs.partner.gender}
-              onChange={(gender) => update({ partner: { ...inputs.partner, gender } })}
-            />
           </View>
+
+          {/*
+            Asked as "which of these reads right" rather than "is it a him or
+            a her". The app only wants this to write a sentence, so showing
+            the sentence is both a clearer question and a less presumptuous
+            one: you are picking how the plan should read, not filing someone
+            under a category.
+          */}
+          <GroupLabel>Which reads right?</GroupLabel>
+          <Group footer="Only used to write your plan. Skip it and we stay neutral.">
+            {PRONOUN_CHOICES.map((choice) => (
+              <Row
+                key={choice.value}
+                title={choice.example(inputs.partner.name)}
+                subtitle={choice.sub}
+                selected={inputs.partner.gender === choice.value}
+                onPress={() =>
+                  update({ partner: { ...inputs.partner, gender: choice.value } })
+                }
+              />
+            ))}
+          </Group>
+          </>
         ) : null}
 
         {inputs.partySize > 2 ? (

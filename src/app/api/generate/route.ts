@@ -179,7 +179,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
        * enough for a full day, and the earlier fixed threshold of two let the
        * second case fall through to a message about money.
        */
-      if (available < stopCountFor(inputs.hours)) {
+      if (available < stopCountFor(inputs.hours, inputs.focus)) {
         return NextResponse.json({
           status: "no_match",
           headline: FOCUS_SHORTFALL[inputs.focus],

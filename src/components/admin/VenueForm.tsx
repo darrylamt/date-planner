@@ -274,6 +274,14 @@ export function VenueForm({
         {venue ? `Edit, ${venue.name}` : "Add venue"}
       </h1>
 
+      {venue ? (
+        <p className="mt-3 text-[13px] text-mutedbrown">
+          Adding a whole menu? <a className="underline" href="/admin/import">Import CSV</a>{" "}
+          takes columns <code>venue,name,category,price_ghs,notes</code> and matches
+          this venue by name.
+        </p>
+      ) : null}
+
       <div className="mt-5 grid gap-3">
         <PlacesLookup
           initialName={v.name}

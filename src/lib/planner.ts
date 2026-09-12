@@ -111,11 +111,19 @@ export function focusVenueTypes(focus: PlanFocus): VenueType[] {
 }
 
 /** Two stops in a short window, four only when there is genuinely time. */
-export function stopCountFor(hours: number): number {
+export function stopCountFor(hours: number, focus: PlanFocus = "everything"): number {
+  /*
+   * A crawl is the shape where more stops is the point. Three bars is a night
+   * out and two is a drink, so a drinks-only or activity-only evening reaches
+   * further than a mixed one given the same hours. The budget still decides
+   * whether they are affordable: this only sets what to attempt.
+   */
+  const crawl = focus === "drinks" || focus === "activities";
+
   if (hours <= 2) return 2;
-  if (hours <= 4) return 3;
-  if (hours <= 6) return 3;
-  return 4;
+  if (hours <= 4) return crawl ? 4 : 3;
+  if (hours <= 6) return crawl ? 5 : 4;
+  return crawl ? 6 : 5;
 }
 
 const VIBE_ALIASES: Record<string, string[]> = {
@@ -596,7 +604,7 @@ export function planItinerary(
       transportTotal,
       total: foodTotal + transportTotal,
       confidence,
-      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours),
+      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus),
     };
 
     function toStops(picks: Option[]): PlannedStop[] {
@@ -631,7 +639,10 @@ export function planItinerary(
     }
   };
 
-  const wanted = Math.min(stopCountFor(inputs.hours), Math.max(2, candidates.venues.length));
+  const wanted = Math.min(
+    stopCountFor(inputs.hours, inputs.focus),
+    Math.max(2, candidates.venues.length)
+  );
   for (let count = wanted; count >= 2; count--) {
     const plan = attempt(count);
     if (plan) return plan;

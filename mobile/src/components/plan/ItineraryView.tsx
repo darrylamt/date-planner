@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { Alert, Linking, Platform, ScrollView, Share, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, Share, View } from "react-native";
 import { router } from "expo-router";
 import * as Calendar from "expo-calendar";
 import * as Haptics from "expo-haptics";
@@ -9,13 +9,16 @@ import { Symbol } from "../Symbol";
 import { Toast } from "../Toast";
 import { BudgetBar, Hop } from "./BudgetBar";
 import { StopCard } from "./StopCard";
-import { GUTTER, radius, space } from "../../theme";
+import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
+import { PickupSheet } from "./PickupSheet";
+import { giftsForOccasion, pickupLine, pickupTotal } from "../../lib/pickups";
+import type { PickupChoice } from "../../lib/pickups";
 import type {
   Itinerary,
   ItineraryOrder,
@@ -47,6 +50,8 @@ export function ItineraryView({
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [pickupOpen, setPickupOpen] = useState(false);
+  const [pickup, setPickup] = useState<PickupChoice | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
 
   const over = itinerary.est_total_ghs > inputs.budget;
@@ -265,10 +270,63 @@ export function ItineraryView({
 
         {/* Budget */}
         <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
+          {/*
+            Above the itinerary, because it happens before it. A pickup is an
+            errand rather than a stop: it costs money and four minutes, so it
+            joins the total without taking a slot in the evening.
+          */}
+          {giftsForOccasion(inputs.occasion).length ? (
+            <Pressable
+              onPress={() => setPickupOpen(true)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.md,
+                backgroundColor: c.backgroundElement,
+                borderRadius: radius.card,
+                padding: space.md,
+                marginBottom: space.md,
+                borderWidth: pickup ? 1.5 : HAIRLINE,
+                borderColor: pickup ? c.accent : c.border,
+              }}
+            >
+              <Symbol
+                name={pickup?.kind === "cake" ? "birthday.cake.fill" : "leaf.fill"}
+                size={22}
+                color={c.accent}
+              />
+              <View style={{ flex: 1 }}>
+                <Text variant="body" numberOfLines={1}>
+                  {pickup ? pickupLine(pickup) : "Pick something up on the way"}
+                </Text>
+                <Text variant="footnote" tone="secondary" numberOfLines={1}>
+                  {pickup
+                    ? [
+                        ghs(pickupTotal(pickup)),
+                        pickup.message ? `"${pickup.message}"` : null,
+                        pickup.colour,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : giftsForOccasion(inputs.occasion).includes("cake")
+                      ? "Flowers or a cake, collected before you set off"
+                      : "Flowers, collected before you set off"}
+                </Text>
+              </View>
+              {pickup ? (
+                <Pressable onPress={() => setPickup(null)} hitSlop={10}>
+                  <Symbol name="xmark.circle.fill" size={20} color={c.textTertiary} />
+                </Pressable>
+              ) : (
+                <Symbol name="plus.circle.fill" size={22} color={c.accent} />
+              )}
+            </Pressable>
+          ) : null}
+
           <BudgetBar
-            estimated={itinerary.est_total_ghs}
+            estimated={itinerary.est_total_ghs + (pickup ? pickupTotal(pickup) : 0)}
             budget={inputs.budget}
-            food={itinerary.food_total_ghs}
+            food={itinerary.food_total_ghs + (pickup ? pickupTotal(pickup) : 0)}
             transport={itinerary.transport_total_ghs}
             confidence={itinerary.price_confidence}
           />
@@ -370,6 +428,18 @@ export function ItineraryView({
           <Button title="Email" kind="gray" icon="envelope" onPress={handleEmail} />
         </View>
       </ActionBar>
+
+      <PickupSheet
+        visible={pickupOpen}
+        onClose={() => setPickupOpen(false)}
+        occasion={inputs.occasion}
+        date={inputs.date}
+        startTime={inputs.startTime}
+        onChoose={(choice) => {
+          setPickup(choice);
+          setToast(`Added. ${pickupLine(choice)}.`);
+        }}
+      />
 
       <NoteSheet
         visible={noteOpen}

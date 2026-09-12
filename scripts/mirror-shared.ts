@@ -22,6 +22,7 @@ const FILES = [
   "budget.ts",
   "format.ts",
   "planConstants.ts",
+  "pickups.ts",
   "pronouns.ts",
   "swapStop.ts",
   "types.ts",
