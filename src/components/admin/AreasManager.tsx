@@ -5,9 +5,17 @@ import { useState } from "react";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
+import Link from "next/link";
 import type { Area } from "@/lib/types";
+import type { AreaVenue } from "@/app/admin/areas/page";
 
-export function AreasManager({ areas }: { areas: Area[] }) {
+export function AreasManager({
+  areas,
+  venuesByArea,
+}: {
+  areas: Area[];
+  venuesByArea: Record<string, AreaVenue[]>;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
@@ -15,6 +23,7 @@ export function AreasManager({ areas }: { areas: Area[] }) {
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   const paged = usePagedRows(
     areas,
@@ -83,16 +92,50 @@ export function AreasManager({ areas }: { areas: Area[] }) {
         <thead>
           <tr>
             <th>Area</th>
-            <th>City</th>
+            <th className="hidden sm:table-cell">City</th>
+            <th>Venues</th>
+            <th>Plannable</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {paged.pageRows.map((a) => (
+          {paged.pageRows.flatMap((a) => {
+            const here = venuesByArea[a.id] ?? [];
+            /*
+             * Two counts, because they answer different questions. How many
+             * venues are filed here, and how many of those the planner can
+             * actually put in an evening: an unpriced one is withheld, so an
+             * area with six venues and one price produces a one-stop plan.
+             */
+            const plannable = here.filter((v) => v.plannable).length;
+            const isOpen = open === a.id;
+
+            return [
             <tr key={a.id}>
-              <td className="font-bold">{a.name}</td>
-              <td>{a.city}</td>
+              <td className="font-bold">
+                {a.name}
+                <div className="text-[12px] font-normal text-mutedbrown sm:hidden">{a.city}</div>
+              </td>
+              <td className="hidden sm:table-cell">{a.city}</td>
+              <td className="font-mono">{here.length}</td>
+              <td className="font-mono">
+                {plannable === 0 && here.length > 0 ? (
+                  <span className="badge b-stale">none of {here.length}</span>
+                ) : plannable < 2 ? (
+                  <span className="badge b-stale">{plannable}</span>
+                ) : (
+                  <span className="badge b-ok">{plannable}</span>
+                )}
+              </td>
               <td className="whitespace-nowrap">
+                {here.length ? (
+                  <button
+                    className="mr-3 font-semibold text-cocoa hover:text-ink"
+                    onClick={() => setOpen(isOpen ? null : a.id)}
+                  >
+                    {isOpen ? "Hide" : "Show"}
+                  </button>
+                ) : null}
                 <button className="font-semibold text-flame hover:text-flame-dark" onClick={() => rename(a)}>
                   Rename
                 </button>
@@ -100,11 +143,47 @@ export function AreasManager({ areas }: { areas: Area[] }) {
                   Delete
                 </button>
               </td>
-            </tr>
-          ))}
+            </tr>,
+
+            /*
+             * The venues themselves, under the area, only when asked for.
+             * Fifty venues listed all at once is a directory; ten areas you
+             * can open one at a time is a place to work.
+             */
+            isOpen ? (
+              <tr key={`${a.id}-open`} className="bg-cream/40">
+                <td colSpan={5}>
+                  <div className="flex flex-wrap gap-2 px-1 py-2">
+                    {here.map((v) => (
+                      <Link
+                        key={v.id}
+                        href={`/admin/venues/${v.id}`}
+                        className={`rounded-bar border px-3 py-1.5 text-[13px] transition hover:border-mutedbrown ${
+                          v.plannable
+                            ? "border-line bg-shell text-ink"
+                            : "border-staletext/40 bg-shell text-staletext"
+                        } ${v.isActive ? "" : "opacity-50 line-through"}`}
+                        title={
+                          !v.isActive
+                            ? "Paused"
+                            : v.plannable
+                              ? v.type
+                              : "No price and no menu, so plans withhold it"
+                        }
+                      >
+                        {v.name}
+                        <span className="ml-1.5 text-[11px] text-mutedbrown">{v.type}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ) : null,
+            ];
+          })}
           {paged.total === 0 && (
             <tr>
-              <td colSpan={3} className="py-8 text-center text-mutedbrown">
+              <td colSpan={5} className="py-8 text-center text-mutedbrown">
                 {paged.query ? `No area matches “${paged.query}”.` : "No areas yet."}
               </td>
             </tr>
