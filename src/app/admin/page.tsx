@@ -105,6 +105,18 @@ function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> })
       urgent: true,
     },
     {
+      /*
+       * Above the unpriced queue, because an unpriced venue is withheld and a
+       * thin one is not: it looks complete, passes every check, and serves the
+       * same four dishes to everyone who is ever sent there.
+       */
+      href: "/admin/menus",
+      n: counts.thinMenus,
+      label: "with too little menu",
+      hint: "Everyone who eats there gets the same few dishes",
+      urgent: true,
+    },
+    {
       href: "/admin/unpriced",
       n: counts.unpriced,
       label: "unpriced",

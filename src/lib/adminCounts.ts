@@ -28,6 +28,15 @@ export interface AdminCounts {
   unlinked: number;
   /** Open reports from people who were actually there. */
   openReports: number;
+  /**
+   * Restaurants and cafes the planner cannot order a proper meal from.
+   *
+   * The Buka has four dishes on file and all four are vegetarian, so every
+   * plan that sent someone there ordered a table of vegetarian stews. The
+   * planner was not wrong; the catalogue only held that. A place people eat
+   * at needs enough of its menu on file for the choice to mean anything.
+   */
+  thinMenus: number;
 }
 
 const STALE_DAYS = 90;
@@ -41,7 +50,7 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * is the worst one to have fail closed.
      */
     supabase.from("venues").select("*"),
-    supabase.from("menu_items").select("venue_id, updated_at"),
+    supabase.from("menu_items").select("venue_id, updated_at, category"),
   ]);
 
   /*
@@ -58,10 +67,12 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
   const active = rows.filter((v: any) => v.is_active);
 
   const menuCount = new Map<string, number>();
+  const mainCount = new Map<string, number>();
   const menuLatest = new Map<string, string>();
   for (const m of menuMeta ?? []) {
     const id = (m as any).venue_id as string;
     menuCount.set(id, (menuCount.get(id) ?? 0) + 1);
+    if ((m as any).category === "main") mainCount.set(id, (mainCount.get(id) ?? 0) + 1);
     const at = (m as any).updated_at as string | null;
     if (at && (!menuLatest.get(id) || at > menuLatest.get(id)!)) menuLatest.set(id, at);
   }
@@ -86,6 +97,15 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     ).length,
     unlinked: active.filter((v: any) => !v.google_place_id).length,
     openReports: (reports ?? []).length,
+    /*
+     * Five is the point at which a spread of four dishes stops being the whole
+     * menu. Below it, every group that eats there is served the same handful
+     * whatever they asked for.
+     */
+    thinMenus: active.filter(
+      (v: any) =>
+        (v.type === "restaurant" || v.type === "cafe") && (mainCount.get(v.id) ?? 0) < 5
+    ).length,
     staleMenus: active.filter((v: any) => {
       const latest = menuLatest.get(v.id);
       // A venue priced by its per-person figure has no menu to go stale.
