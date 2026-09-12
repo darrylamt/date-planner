@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { planInputsSchema } from "@/lib/schemas";
 import { fetchCandidates } from "@/lib/matching";
 import {
+  openOnDate,
   planItinerary,
   clockFromMinutes,
   focusVenueTypes,
@@ -170,6 +171,27 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
      * someone to raise a number that was never the problem, so the shortage is
      * named and dropping the focus is offered as the fix that would work.
      */
+    /*
+     * Being shut is checked before money, because it is the one reason a
+     * budget can never fix. Bliss closes every Monday and Game It Up shuts at
+     * 21:00 seven days a week, so a late Monday plan can fail with a full
+     * catalogue and plenty of money, and telling that person to spend more
+     * sends them round a loop with no exit.
+     */
+    const hours = openOnDate(candidates.venues, inputs.date, inputs.startTime, inputs.hours);
+    if (hours.closed > 0 && hours.open + hours.unknown < stopCountFor(inputs.hours, inputs.focus)) {
+      const weekday = new Date(`${inputs.date}T12:00:00`).toLocaleDateString("en-GB", {
+        weekday: "long",
+      });
+      return NextResponse.json({
+        status: "no_match",
+        headline: `Most places in ${areaLabel} are closed ${weekday} at ${inputs.startTime}.`,
+        message:
+          "Nothing to do with your budget. Another day or an earlier start would both work.",
+        suggestions: suggestions.filter((sug) => sug.action === "widen_area"),
+      });
+    }
+
     const focusTypes = focusVenueTypes(inputs.focus);
     if (focusTypes.length) {
       const available = candidates.venues.filter((v) => focusTypes.includes(v.type)).length;

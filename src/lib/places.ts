@@ -1,4 +1,5 @@
 import type { PriceBand, VenueType } from "./types";
+import { parsePeriods, type OpeningPeriod } from "./hours";
 
 /**
  * Google Places (New), the factual half of a venue row.
@@ -41,6 +42,13 @@ const DETAIL_MASK = [
   "rating",
   "userRatingCount",
   "regularOpeningHours",
+  /*
+   * Essentials tier, and this mask already reaches Enterprise through
+   * regularOpeningHours and priceLevel. Billing is charged at the highest tier
+   * the mask touches, so this is free to add and it is the only field that can
+   * say which part of town a place is in.
+   */
+  "addressComponents",
 ].join(",");
 
 /**
@@ -95,6 +103,13 @@ export interface PlaceDetails extends PlaceSummary {
   rating: number | null;
   ratingCount: number | null;
   openingHours: string[];
+  /**
+   * The machine-readable half of the hours. weekdayDescriptions is for showing
+   * a person; only these can answer "is it open at 20:00 next Monday".
+   */
+  openingPeriods: OpeningPeriod[] | null;
+  /** Every place name Google attaches to the address, broadest last. */
+  addressParts: string[];
   types: string[];
 }
 
@@ -229,6 +244,8 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
     rating: p.rating ?? null,
     ratingCount: p.userRatingCount ?? null,
     openingHours: p.regularOpeningHours?.weekdayDescriptions ?? [],
+    openingPeriods: parsePeriods(p.regularOpeningHours?.periods),
+    addressParts: addressPartsOf(p),
     types: p.types ?? [],
   };
 }
@@ -367,7 +384,11 @@ interface RawPlace {
   };
   rating?: number;
   userRatingCount?: number;
-  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  regularOpeningHours?: {
+    weekdayDescriptions?: string[];
+    periods?: OpeningPeriod[];
+  };
+  addressComponents?: { longText?: string; shortText?: string; types?: string[] }[];
 }
 
 function toSummary(p: RawPlace): PlaceSummary {
@@ -378,4 +399,183 @@ function toSummary(p: RawPlace): PlaceSummary {
     businessStatus: (p.businessStatus as BusinessStatus) ?? null,
     primaryType: p.primaryType ?? null,
   };
+}
+
+/* ── where in town ────────────────────────────────────────────────────── */
+
+/**
+ * Every place name Google attaches to an address, narrowest first.
+ *
+ * Narrowest first matters. Google returns a nest of them, from a neighbourhood
+ * up to the country, and the useful answer is almost always the smallest one
+ * we recognise: "Labone" rather than "Greater Accra Region".
+ */
+const AREA_COMPONENT_ORDER = [
+  "neighborhood",
+  "sublocality_level_5",
+  "sublocality_level_4",
+  "sublocality_level_3",
+  "sublocality_level_2",
+  "sublocality_level_1",
+  "sublocality",
+  "locality",
+  "administrative_area_level_3",
+  "administrative_area_level_2",
+];
+
+function addressPartsOf(p: RawPlace): string[] {
+  const comps = p.addressComponents ?? [];
+  const out: string[] = [];
+
+  for (const wanted of AREA_COMPONENT_ORDER) {
+    for (const c of comps) {
+      if (c.types?.includes(wanted) && c.longText) out.push(c.longText);
+    }
+  }
+
+  /*
+   * The street line too, because Accra's addresses carry the area in the road
+   * name far more reliably than the administrative components do. Bliss comes
+   * back as sublocality "Kpeshie", which is a sub-metro district nobody gives
+   * as their location, while its address says "Airport Bypass Rd", and Airport
+   * Residential is an area the catalogue actually has.
+   */
+  for (const c of comps) {
+    if (c.types?.includes("route") && c.longText) out.push(c.longText);
+  }
+  if (p.formattedAddress) out.push(p.formattedAddress);
+
+  return [...new Set(out.filter(Boolean))];
+}
+
+export interface AreaMatch {
+  /** An existing area, when one could be identified. */
+  existingId: string | null;
+  /** What to call it. The existing name, or a proposal for a new one. */
+  name: string | null;
+  /** True when nothing matched and `name` is a suggestion to create. */
+  isNew: boolean;
+  /** Which rule decided, so the form can say rather than just fill. */
+  reason: "address" | "nearby" | "proposed" | "none";
+  /** Metres to the matched area's centre, when the decision was distance. */
+  metres?: number;
+  /**
+   * Every area close enough to be plausible, nearest first.
+   *
+   * Populated when two areas are near enough to each other that the distance
+   * cannot honestly choose between them. Cypher Zone sits 450m from the
+   * Cantonments venues and 455m from the Labone ones; it is in Palace Mall
+   * Labone, and five metres of arithmetic is not what should decide that. The
+   * form offers the list instead of picking one and looking certain.
+   */
+  alternatives?: { id: string; name: string; metres: number }[];
+}
+
+export interface AreaForMatch {
+  id: string;
+  name: string;
+  /** Centre of the area, averaged from the venues already filed under it. */
+  lat?: number | null;
+  lng?: number | null;
+}
+
+/** Metres between two points, flat-earth, which is ample across one city. */
+function metresBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const dLat = (aLat - bLat) * 111_320;
+  const dLng = (aLng - bLng) * 111_320 * Math.cos((aLat * Math.PI) / 180);
+  return Math.round(Math.hypot(dLat, dLng));
+}
+
+/**
+ * How far from an area's centre still counts as being in it.
+ *
+ * Two kilometres. Checked against the three venues this was built for: Bliss
+ * is 90m from the Airport Residential venues, Cypher Zone is 455m from the
+ * Labone ones, and Game It Up at Atomic Junction is 3.3km from anything we
+ * hold, which is the right answer too, because it genuinely is somewhere new.
+ */
+const SAME_AREA_METRES = 2000;
+
+/**
+ * Which of our areas a place sits in.
+ *
+ * Google's vocabulary is not Accra's. Ask it where Cypher Zone is and it says
+ * Kpeshie, a sub-metro district; ask anyone in Accra and they say Labone. Ask
+ * about Bliss and it says Kpeshie again, though the two are four kilometres
+ * apart. Filing venues under Google's names would fill the area list with
+ * labels nobody would pick, and the area is what the planner groups stops by
+ * and routes taxis between.
+ *
+ * So the address is only the first thing tried, and coordinates are the
+ * fallback that actually works: an area's centre is the average of the venues
+ * already filed under it, and a place within two kilometres of one is almost
+ * certainly in it. Only when both fail does it propose a new name, which is
+ * the honest outcome for somewhere genuinely in a new part of town.
+ */
+export function matchArea(
+  addressParts: string[],
+  areas: AreaForMatch[],
+  point?: { lat: number | null; lng: number | null }
+): AreaMatch {
+  const haystack = addressParts.join(" | ").toLowerCase();
+
+  /*
+   * Longest name first, so "Airport Residential" wins over a bare "Airport"
+   * if both exist. A shorter name is a substring of the longer one, and
+   * matching it first would file the venue one level too coarse.
+   */
+  const byLength = [...areas].sort((a, b) => b.name.length - a.name.length);
+  for (const area of byLength) {
+    const needle = area.name.toLowerCase();
+    if (needle.length >= 4 && haystack.includes(needle)) {
+      return { existingId: area.id, name: area.name, isNew: false, reason: "address" };
+    }
+  }
+
+  if (point?.lat != null && point?.lng != null) {
+    const ranked = areas
+      .filter((a) => a.lat != null && a.lng != null)
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        metres: metresBetween(point.lat!, point.lng!, a.lat!, a.lng!),
+      }))
+      .sort((a, b) => a.metres - b.metres);
+
+    const best = ranked[0];
+    if (best && best.metres <= SAME_AREA_METRES) {
+      /*
+       * Anything within a quarter of the winner's distance is a tie as far as
+       * this arithmetic is concerned, and is offered rather than discarded.
+       */
+      const close = ranked.filter(
+        (r) => r.metres <= SAME_AREA_METRES && r.metres <= best.metres * 1.25 + 50
+      );
+      return {
+        existingId: best.id,
+        name: best.name,
+        isNew: false,
+        reason: "nearby",
+        metres: best.metres,
+        alternatives: close.length > 1 ? close : undefined,
+      };
+    }
+  }
+
+  /*
+   * Nothing recognised. Offer the narrowest component that is not just the
+   * city, since "Accra" as an area name tells the planner nothing it did not
+   * already assume, and let the admin rename it before saving.
+   */
+  const proposal = addressParts.find(
+    (part) =>
+      part.length >= 3 &&
+      part.length <= 40 &&
+      !/^(accra|ghana|greater accra region)$/i.test(part.trim()) &&
+      !/\d/.test(part) &&
+      !part.includes(",")
+  );
+  return proposal
+    ? { existingId: null, name: proposal, isNew: true, reason: "proposed" }
+    : { existingId: null, name: null, isNew: false, reason: "none" };
 }

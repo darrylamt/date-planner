@@ -142,12 +142,28 @@ export function CsvImporter({
           mapped.set(r.category.trim(), category);
         }
 
+        /*
+         * Optional columns. A spreadsheet of food will not have them and does
+         * not need them; an arcade price list lives or dies on covers_people,
+         * because a GHS 30 foosball table billed per head charges a couple 60.
+         */
+        const num = (raw: string | undefined): number | null => {
+          const n = Number((raw ?? "").trim());
+          return raw && raw.trim() !== "" && Number.isFinite(n) ? n : null;
+        };
+
         const { error } = await supabase.from("menu_items").insert({
           venue_id: venueId,
           name: r.name,
           category,
           price_ghs: Number(r.price_ghs) || 0,
           notes: r.notes || null,
+          covers_people: Math.max(1, num(r.covers_people) ?? 1),
+          min_players: num(r.min_players),
+          max_players: num(r.max_players),
+          duration_minutes: num(r.duration_minutes),
+          min_age: num(r.min_age),
+          requires_gear: r.requires_gear || null,
         });
         if (error) log.push(`Row ${i + 2} (${r.name}): ${error.message}`);
         else ok++;
@@ -206,6 +222,15 @@ export function CsvImporter({
             <>
               <b>Headers:</b>{" "}
               <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes</code>
+              <br />
+              <span className="text-mutedbrown">
+                Activity lists may add{" "}
+                <code className="font-mono text-[12px]">
+                  covers_people,min_players,max_players,duration_minutes,min_age,requires_gear
+                </code>
+                . covers_people is how many people one price covers, so a GHS 30
+                foosball table for two is 30 with covers_people 2, not 30 each.
+              </span>
               <br />
               <span className="text-mutedbrown">
                 venue must match an existing venue name exactly. Category is

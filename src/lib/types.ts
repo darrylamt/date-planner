@@ -2,7 +2,12 @@
 
 export type VenueType = "restaurant" | "activity" | "lounge" | "outdoor" | "cafe" | "dessert";
 export type PriceBand = "budget" | "mid" | "premium";
-export type MenuCategory = "starter" | "main" | "dessert" | "drink" | "other";
+/**
+ * "activity" is a line on a price list rather than a course: a go-kart, a game
+ * of bowling, twelve minutes of laser tag. Kept apart from "other", which the
+ * planner already uses for a flat entry fee.
+ */
+export type MenuCategory = "starter" | "main" | "dessert" | "drink" | "activity" | "other";
 
 export interface Area {
   id: string;
@@ -48,6 +53,20 @@ export interface Venue {
   pricing_mode: "per_person" | "per_group" | "per_hour" | "per_hour_per_person";
   unit_price_ghs: number | null;
   /**
+   * The least one person can spend and actually do anything here.
+   *
+   * Bliss sells arcade play only as a GHS 100 bag of ten tokens, so the median
+   * of its GHS 10 to 50 games is a figure nobody can pay at the counter.
+   */
+  minimum_spend_ghs?: number | null;
+  /**
+   * Google's opening periods, verbatim. Null means the hours are not known,
+   * which is deliberately not the same as closed and is never read as either.
+   */
+  opening_periods?: unknown;
+  opening_hours_text?: string[] | null;
+  hours_synced_at?: string | null;
+  /**
    * 1 to 5 on how the place looks. Null means nobody has judged it, which is
    * deliberately not the same as average.
    */
@@ -77,6 +96,18 @@ export interface MenuItem {
   price_ghs: number;
   notes: string | null;
   updated_at?: string;
+  /**
+   * How many people one purchase covers. A plate of food is 1; a foosball
+   * table sold as a table with two people at it is 2. Getting this wrong on an
+   * arcade price list bills a couple twice for the same game.
+   */
+  covers_people?: number;
+  /** Fewest the venue will run it for. Cypher Zone laser tag is 6. */
+  min_players?: number | null;
+  max_players?: number | null;
+  duration_minutes?: number | null;
+  min_age?: number | null;
+  requires_gear?: string | null;
 }
 
 export interface EventRow {

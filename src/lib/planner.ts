@@ -1,4 +1,5 @@
 import type { Candidates } from "./matching";
+import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
 import type {
   Formality,
@@ -280,8 +281,23 @@ function planOrders(
     }
   }
 
+  /*
+   * Whether this party can actually buy this line.
+   *
+   * Cypher Zone will not run laser tag for fewer than six players, so offering
+   * it to a couple is offering something they will be refused at the desk. A
+   * maximum only bites when one purchase covers one person: a foosball table
+   * caps at two because it IS two, and a party of four simply buys two tables.
+   */
+  const fitsParty = (m: MenuItem): boolean => {
+    if (m.min_players != null && partySize < m.min_players) return false;
+    const covers = Math.max(1, m.covers_people ?? 1);
+    if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
+    return true;
+  };
+
   const pick = (category: string): MenuItem | null => {
-    const items = menu.filter((m) => m.category === category).sort(byPrice);
+    const items = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
     if (!items.length) return null;
     if (tier === 0) return items[0];
     // The median is a better "typical" than the mean, which one costly
@@ -303,8 +319,12 @@ function planOrders(
     const drink = pick("drink") ?? pick("other");
     if (drink) chosen.push(drink);
   } else {
-    // Activities and outdoor spots: one entry line per person.
-    const entry = pick("other") ?? pick("main");
+    /*
+     * Activities and outdoor spots. "activity" first, because a go-kart and a
+     * game of bowling are priced lines on a list, while "other" is the bucket
+     * a flat entry fee lands in.
+     */
+    const entry = pick("activity") ?? pick("other") ?? pick("main");
     if (entry) chosen.push(entry);
   }
 
@@ -343,12 +363,42 @@ function planOrders(
     };
   }
 
-  const orders = chosen.map((m) => ({
-    item: m.name,
-    qty: partySize,
-    price_ghs: Math.round(Number(m.price_ghs) * partySize),
-  }));
-  return { orders, cost: orders.reduce((s, o) => s + o.price_ghs, 0) };
+  /*
+   * One purchase does not always mean one person. A foosball table at GHS 30
+   * is thirty cedis for the table with two people at it, so buying one per
+   * head charges a couple sixty for a game that costs thirty.
+   */
+  const orders = chosen.map((m) => {
+    const covers = Math.max(1, m.covers_people ?? 1);
+    const qty = Math.max(1, Math.ceil(partySize / covers));
+    return {
+      item: m.name,
+      qty,
+      price_ghs: Math.round(Number(m.price_ghs) * qty),
+    };
+  });
+  const cost = orders.reduce((s, o) => s + o.price_ghs, 0);
+
+  /*
+   * A floor on what a visit can cost.
+   *
+   * Bliss sells arcade play only in bags of ten tokens at GHS 100, so the
+   * cheapest line on its list, a single GHS 10 token, is not something anyone
+   * can walk in and buy. Quoting it would put a price in the plan that the
+   * counter will not honour.
+   */
+  const floor = Number(venue.minimum_spend_ghs ?? 0);
+  if (floor > 0) {
+    const least = Math.round(floor * partySize);
+    if (cost < least) {
+      return {
+        orders: [{ item: `Minimum spend, GHS ${floor} each`, qty: partySize, price_ghs: least }],
+        cost: least,
+      };
+    }
+  }
+
+  return { orders, cost };
 }
 
 /* ── planning ─────────────────────────────────────────────────────────── */
@@ -420,6 +470,48 @@ function schedule(stops: PlannedStop[], startMinutes: number, hops: ReturnType<t
  * keeps as much of the evening as possible rather than silently returning a
  * cheap two-stop plan when three were affordable.
  */
+/**
+ * How much of a shortlist is simply shut that evening.
+ *
+ * Asked only when planning has already failed, so the answer can say "most of
+ * Osu is closed on a Monday" instead of blaming a budget that was never the
+ * problem. Telling someone to raise their spend when the real fix is to come
+ * on Tuesday sends them round a loop that cannot end.
+ */
+export function openOnDate(
+  venues: Venue[],
+  dateISO: string,
+  startTime: string,
+  hours: number
+): { open: number; closed: number; unknown: number } {
+  const weekday = weekdayOf(dateISO);
+  if (weekday === null) return { open: venues.length, closed: 0, unknown: 0 };
+
+  const start = minutesOf(startTime);
+  const span = Math.round(hours * 60);
+  let open = 0;
+  let closed = 0;
+  let unknown = 0;
+
+  for (const v of venues) {
+    const periods = parsePeriods(v.opening_periods);
+    if (!periods) {
+      unknown++;
+      continue;
+    }
+    // Open at any point during the outing counts; a plan can start late or
+    // finish early, and this is a diagnosis rather than a selection.
+    let any = false;
+    for (let at = 0; at <= span && !any; at += 30) {
+      const t = start + at;
+      if (isOpenAt(periods, (weekday + Math.floor(t / 1440)) % 7, t % 1440)) any = true;
+    }
+    if (any) open++;
+    else closed++;
+  }
+  return { open, closed, unknown };
+}
+
 export function planItinerary(
   inputs: PlanInputs,
   candidates: Candidates
@@ -453,7 +545,25 @@ export function planItinerary(
    */
   const focusTypes = focusVenueTypes(inputs.focus);
 
-  const optionsFor = (role: Role): Option[] => {
+  /*
+   * Roughly when a slot will be reached, before anything has been chosen.
+   *
+   * Exact arrival is not known until venues are picked and travel between them
+   * is costed, but opening hours have to be checked before picking, or the
+   * choice is made from venues that will be shut. Role lengths plus a flat
+   * quarter hour of travel is close enough to keep a 21:00 slot away from a
+   * place that closes at 21:00, which is the failure this exists to stop.
+   */
+  const TRAVEL_ALLOWANCE = 15;
+  const nominalStart = (roles: Role[], index: number): number => {
+    let t = startMinutes;
+    for (let i = 0; i < index; i++) t += ROLE_MINUTES[roles[i]] + TRAVEL_ALLOWANCE;
+    return t;
+  };
+
+  const weekday = weekdayOf(inputs.date);
+
+  const optionsFor = (role: Role, slotStart: number): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
     /*
@@ -476,6 +586,22 @@ export function planItinerary(
 
     const out: Option[] = [];
     for (const venue of pool) {
+      /*
+       * Shut is shut. Unknown hours are left alone: most of the catalogue has
+       * none on file yet, and reading "we do not know" as "closed" would empty
+       * the plan, while reading it as "open" is only the assumption already
+       * being made everywhere else.
+       */
+      if (weekday !== null) {
+        const open = isOpenThroughout(
+          parsePeriods(venue.opening_periods),
+          weekday,
+          slotStart,
+          ROLE_MINUTES[role]
+        );
+        if (open === false) continue;
+      }
+
       const menu = menuByVenue.get(venue.id) ?? [];
       const score = scoreVenue(venue, inputs, wantedTags);
       for (const tier of [1, 0] as const) {
@@ -513,7 +639,7 @@ export function planItinerary(
 
   const attempt = (stopCount: number): PlannedItinerary | null => {
     const roles = roleSequence(startHour, stopCount, inputs.focus);
-    const slots = roles.map(optionsFor);
+    const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
 
     // Start with each slot's most preferred option, skipping venues already
     // taken by an earlier slot.

@@ -21,7 +21,7 @@ export interface AdminCounts {
   /** Live numbers a user has questioned. The most urgent queue. */
   phonesReported: number;
   /** Active venues not corroborated against the web. */
-  unverified: number;
+  noHours: number;
   /** Menus untouched for more than 90 days, or never priced at all. */
   staleMenus: number;
   /** Active venues with no Google link, so a closure would go unnoticed. */
@@ -81,7 +81,9 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     // venue is still a number that could be dialled if it is switched back on.
     phonesPending: rows.filter((v: any) => v.phone_status === "pending").length,
     phonesReported: rows.filter((v: any) => (v.phone_report_count ?? 0) > 0).length,
-    unverified: active.filter((v: any) => v.verification_status !== "real").length,
+    noHours: active.filter(
+      (v: any) => !Array.isArray(v.opening_periods) || v.opening_periods.length === 0
+    ).length,
     unlinked: active.filter((v: any) => !v.google_place_id).length,
     openReports: (reports ?? []).length,
     staleMenus: active.filter((v: any) => {

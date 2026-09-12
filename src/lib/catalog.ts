@@ -9,7 +9,19 @@ import { z } from "zod";
  * it throws on load for want of an API key.
  */
 
-export const MENU_CATEGORIES = ["starter", "main", "dessert", "drink", "other"] as const;
+/**
+ * "activity" is a line on a price list rather than a course: a go-kart, a game
+ * of bowling, twelve minutes of laser tag. It is not "other", because the
+ * planner already uses "other" as the bucket for a flat entry fee.
+ */
+export const MENU_CATEGORIES = [
+  "starter",
+  "main",
+  "dessert",
+  "drink",
+  "activity",
+  "other",
+] as const;
 
 export const VENUE_TYPES = [
   "restaurant",
@@ -181,6 +193,22 @@ const CATEGORY_SYNONYMS: Record<string, (typeof MENU_CATEGORIES)[number]> = {
   softdrink: "drink",
   softdrinks: "drink",
 
+  activity: "activity",
+  activities: "activity",
+  game: "activity",
+  games: "activity",
+  arcade: "activity",
+  ride: "activity",
+  rides: "activity",
+  experience: "activity",
+  experiences: "activity",
+  session: "activity",
+  sessions: "activity",
+  ticket: "activity",
+  tickets: "activity",
+  entry: "activity",
+  admission: "activity",
+
   other: "other",
   extra: "other",
   extras: "other",
@@ -222,6 +250,23 @@ const CATEGORY_KEYWORDS: [(typeof MENU_CATEGORIES)[number], string[]][] = [
       "starter", "appetizer", "appetiser", "small", "plate", "side", "snack",
       "bite", "nibble", "sharing", "tapas", "dip", "soup", "salad", "wing",
       "finger",
+    ],
+  ],
+  [
+    /*
+     * Before food, because an arcade sheet says "Racers" and "Shooters" and a
+     * menu never does. "bowling" and "golf" would otherwise never be reached.
+     */
+    "activity",
+    [
+      "activity", "game", "arcade", "ride", "experience", "session", "ticket",
+      "entry", "admission", "bowling", "golf", "karting", "kart", "laser",
+      "tag", "vr", "simulator", "trampoline", "inflatable", "karaoke",
+      "racer", "shooter", "crane", "archery", "paintball", "escape",
+      // Headings off the Game It Up poster: Sporty, Win Something, Racers,
+      // Physical Test, Shooters, Experiences, Rhythm/Dance.
+      "sport", "sporty", "win", "prize", "physical", "rhythm", "dance",
+      "racing", "shooting", "bumper", "court", "lane", "round",
     ],
   ],
   [

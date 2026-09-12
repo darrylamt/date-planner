@@ -41,16 +41,15 @@ export default async function AdminVenuesPage() {
       avgForTwo: Math.round(Number(v.avg_cost_per_person_ghs) * 2),
       staleDays,
       isStale: staleDays === null || staleDays > 90,
-      verification: v.verification_status as string,
-      verifiedAt: v.verified_at as string | null,
-      discrepancies: (v.verification_discrepancies ?? []).length as number,
+      // Whether anything stops a plan sending someone when the place is shut.
+      hoursKnown: Array.isArray(v.opening_periods) && v.opening_periods.length > 0,
     };
   });
 
   const staleCount = rows.filter((r) => r.isStale).length;
-  // Anything not corroborated can still be recommended to a real person, so
-  // it is surfaced next to the stale count rather than buried in the table.
-  const unverifiedCount = rows.filter((r) => r.verification !== "real").length;
+  // A venue with no hours can be put in a plan for a day it is closed, so it
+  // sits next to the stale count rather than being buried in the table.
+  const noHoursCount = rows.filter((r) => !r.hoursKnown).length;
 
   return (
     <div>
@@ -59,8 +58,8 @@ export default async function AdminVenuesPage() {
           <h1 className="font-display text-[24px] font-bold">Venues</h1>
           <div className="text-[14px] text-mutedbrown">
             {rows.length} venues · {staleCount} stale ·{" "}
-            <span className={unverifiedCount ? "font-semibold text-staletext" : ""}>
-              {unverifiedCount} unverified
+            <span className={noHoursCount ? "font-semibold text-staletext" : ""}>
+              {noHoursCount} without opening hours
             </span>
           </div>
         </div>
@@ -121,10 +120,10 @@ function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> })
     },
     {
       href: "/admin",
-      n: counts.unverified,
-      label: "unverified",
-      hint: "Not corroborated against the web",
-      urgent: false,
+      n: counts.noHours,
+      label: "without opening hours",
+      hint: "Nothing stops a plan sending someone on a closed day",
+      urgent: true,
     },
     {
       href: "/admin",

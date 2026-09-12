@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import { VenueResearch } from "@/components/admin/VenueResearch";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
-import { bandFromPriceLevel, venueTypeFromPlace } from "@/lib/places";
-import type { PlaceDetails } from "@/lib/places";
+import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places";
+import type { AreaForMatch, PlaceDetails } from "@/lib/places";
+import { describeWeek, parsePeriods } from "@/lib/hours";
 import { ensureAreaId } from "@/lib/areas";
 import type { VenueDraft } from "@/lib/research";
 import type { Area, MenuCategory, MenuItem, Venue } from "@/lib/types";
@@ -16,17 +17,20 @@ const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"]
 const BANDS = ["budget", "mid", "premium"] as const;
 const VIBES = ["calm", "lively", "romantic", "fun", "adventurous", "scenic", "upscale", "casual"];
 const BEST_FOR = ["first_date", "anniversary", "date_night", "friend_outing", "casual_hangout"];
-const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "other"];
+const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "activity", "other"];
 
 type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean };
 
 /** Venue add/edit with inline menu items, built for “add a venue in under 2 minutes”. */
 export function VenueForm({
   areas,
+  areaCentres,
   venue,
   menuItems,
 }: {
   areas: Area[];
+  /** Areas with a centre derived from the venues already in them. */
+  areaCentres: AreaForMatch[];
   venue: Venue | null;
   menuItems: MenuItem[];
 }) {
@@ -62,7 +66,26 @@ export function VenueForm({
     price_level: venue?.price_level ?? "",
     lat: venue?.lat != null ? String(venue.lat) : "",
     lng: venue?.lng != null ? String(venue.lng) : "",
+    minimum_spend_ghs:
+      venue?.minimum_spend_ghs != null ? String(venue.minimum_spend_ghs) : "",
   });
+
+  /*
+   * Opening hours come from Google and are not hand-edited here, so they live
+   * beside the form state rather than in it. Shown, never typed.
+   */
+  const [hours, setHours] = useState<{
+    periods: unknown;
+    text: string[] | null;
+  }>({
+    periods: venue?.opening_periods ?? null,
+    text: venue?.opening_hours_text ?? null,
+  });
+
+  /** What the area field was filled from, so the form can say rather than just fill. */
+  const [areaNote, setAreaNote] = useState<string | null>(null);
+  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; metres: number }[]>([]);
+  const [newAreaName, setNewAreaName] = useState<string | null>(null);
 
   const [items, setItems] = useState<EditableItem[]>(
     menuItems.map((m) => ({ ...m, _tmpId: m.id }))
@@ -77,7 +100,14 @@ export function VenueForm({
   function addItem() {
     setItems((cur) => [
       ...cur,
-      { _tmpId: `new-${Date.now()}-${cur.length}`, name: "", category: "main", price_ghs: 0 },
+      {
+        _tmpId: `new-${Date.now()}-${cur.length}`,
+        name: "",
+        // An activity venue is almost never adding a starter.
+        category: v.type === "activity" || v.type === "outdoor" ? "activity" : "main",
+        price_ghs: 0,
+        covers_people: 1,
+      },
     ]);
   }
 
@@ -115,7 +145,24 @@ export function VenueForm({
         image_url: v.image_url || null,
         lat: v.lat === "" ? null : Number(v.lat),
         lng: v.lng === "" ? null : Number(v.lng),
+        // Null, not zero: "no floor" and "the floor is nothing" differ.
+        minimum_spend_ghs:
+          v.minimum_spend_ghs === "" ? null : Number(v.minimum_spend_ghs),
+        opening_periods: hours.periods ?? null,
+        opening_hours_text: hours.text ?? null,
+        hours_synced_at: hours.periods ? new Date().toISOString() : null,
       };
+
+      /*
+       * A new area gets created here rather than silently dropped. Google put
+       * Game It Up at Atomic Junction, which is nowhere near anything already
+       * in the catalogue, and the alternative to creating it is filing an
+       * arcade in the wrong part of town.
+       */
+      if (newAreaName && !payload.area_id) {
+        const created = await ensureAreaId(supabase, newAreaName);
+        if (created) payload.area_id = created.id;
+      }
 
       let venueId = venue?.id;
       if (venueId) {
@@ -144,6 +191,14 @@ export function VenueForm({
           category: item.category ?? "other",
           price_ghs: Number(item.price_ghs) || 0,
           notes: item.notes || null,
+          covers_people: Math.max(1, Number(item.covers_people) || 1),
+          // Null rather than 0 throughout: the planner reads null as "no
+          // limit", and a 0 would read as a limit of nobody.
+          min_players: item.min_players ?? null,
+          max_players: item.max_players ?? null,
+          duration_minutes: item.duration_minutes ?? null,
+          min_age: item.min_age ?? null,
+          requires_gear: item.requires_gear || null,
         };
         if (isNew) {
           const { error } = await supabase.from("menu_items").insert(row);
@@ -219,11 +274,41 @@ export function VenueForm({
     const mappedType = venueTypeFromPlace(d.primaryType, d.types);
     const band = bandFromPriceLevel(d.priceLevel);
 
+    /*
+     * Where in town, which linking to Google used to leave blank.
+     *
+     * Filling everything else and silently leaving the area on whatever the
+     * dropdown happened to show is worse than leaving it all blank: the form
+     * looks complete, so nobody checks it, and the venue is filed in the first
+     * area alphabetically. The area is what the planner groups stops by and
+     * routes taxis between, so a wrong one quietly ruins the itinerary.
+     */
+    const area = matchArea(d.addressParts, areaCentres, { lat: d.lat, lng: d.lng });
+    setAreaOptions(area.alternatives ?? []);
+    setNewAreaName(area.isNew ? area.name : null);
+    setAreaNote(
+      area.reason === "address"
+        ? `Area read from the address: ${area.name}.`
+        : area.reason === "nearby"
+          ? area.alternatives && area.alternatives.length > 1
+            ? `Closest to ${area.name}, but ${area.alternatives
+                .slice(1)
+                .map((a) => a.name)
+                .join(" and ")} is about as near. Pick the right one.`
+            : `Nearest area is ${area.name}, ${area.metres}m from its other venues.`
+          : area.isNew
+            ? `No area of ours is close. Google calls this "${area.name}", which will be created when you save.`
+            : "Could not work out the area from Google. Pick one."
+    );
+
+    setHours({ periods: d.openingPeriods, text: d.openingHours });
+
     setV((cur) => ({
       ...cur,
       name: d.name || cur.name,
       type: mappedType ?? cur.type,
       price_band: band ?? cur.price_band,
+      area_id: area.existingId ?? (area.isNew ? "" : cur.area_id),
       phone: d.phone ?? cur.phone,
       google_maps_url: d.googleMapsUri ?? cur.google_maps_url,
       lat: d.lat != null ? String(d.lat) : cur.lat,
@@ -234,6 +319,9 @@ export function VenueForm({
     }));
 
     const notes: string[] = [];
+    if (!d.openingPeriods) {
+      notes.push("Google has no opening hours for it, so nothing will stop a plan sending someone when it is shut");
+    }
     if (d.businessStatus && d.businessStatus !== "OPERATIONAL") {
       notes.push(`Google says this place is ${d.businessStatus.replace(/_/g, " ").toLowerCase()}`);
     }
@@ -330,14 +418,56 @@ export function VenueForm({
           <select
             className="inp"
             value={v.area_id}
-            onChange={(e) => setV({ ...v, area_id: e.target.value })}
+            onChange={(e) => {
+              setV({ ...v, area_id: e.target.value });
+              // Choosing an existing area cancels the pending new one.
+              if (e.target.value) setNewAreaName(null);
+            }}
           >
+            {/* Only present while an area is about to be created, so the
+                normal case is not cluttered by a blank row. */}
+            {newAreaName && !v.area_id ? (
+              <option value="">Create &ldquo;{newAreaName}&rdquo;</option>
+            ) : null}
             {areas.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
             ))}
           </select>
+
+          {newAreaName && !v.area_id ? (
+            <input
+              className="inp mt-2"
+              value={newAreaName}
+              onChange={(e) => setNewAreaName(e.target.value)}
+              placeholder="Name for the new area"
+            />
+          ) : null}
+
+          {/* Two areas can be equally near, and saying so beats picking one
+              and looking certain. */}
+          {areaOptions.length > 1 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {areaOptions.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  className={`chip !px-3 !py-1.5 !text-[13px] ${v.area_id === o.id ? "chip-on" : ""}`}
+                  onClick={() => {
+                    setV({ ...v, area_id: o.id });
+                    setNewAreaName(null);
+                  }}
+                >
+                  {o.name} · {o.metres}m
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {areaNote ? (
+            <span className="mt-1 text-[12.5px] text-mutedbrown">{areaNote}</span>
+          ) : null}
         </div>
         <div className={field}>
           <span className="flbl">Type</span>
@@ -457,6 +587,23 @@ export function VenueForm({
             {v.pricing_mode === "per_person"
               ? "From the menu, or the average above."
               : "One bill, split by however many go."}
+          </span>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-mutedbrown">Least one person can spend, GHS</span>
+            <input
+              className="inp h-[38px] max-w-[120px] font-mono"
+              type="number"
+              min={0}
+              value={v.minimum_spend_ghs}
+              onChange={(e) => setV({ ...v, minimum_spend_ghs: e.target.value })}
+              placeholder="none"
+            />
+          </div>
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            Leave blank unless the venue really has a floor. Bliss sells arcade
+            play only as a GHS 100 bag of ten tokens, so quoting its GHS 10
+            single token would be a price the counter will not honour.
           </span>
         </div>
         <div className={field}>
@@ -605,6 +752,33 @@ export function VenueForm({
           <span className="flbl">Longitude</span>
           <input className="inp font-mono" value={v.lng} onChange={(e) => setV({ ...v, lng: e.target.value })} />
         </div>
+        {/*
+          Opening hours: shown, never typed. They come from Google with the
+          place link, because a hand-typed copy of somebody else's hours goes
+          stale silently and there is no way to tell that it has.
+        */}
+        <div className="md:col-span-2">
+          <span className="flbl">Opening hours</span>
+          {parsePeriods(hours.periods) ? (
+            <div className="grid gap-x-6 gap-y-1 rounded-bar border border-line bg-cream/50 p-3 text-[13px] sm:grid-cols-2">
+              {describeWeek(parsePeriods(hours.periods)).map((d) => (
+                <div key={d.day} className="flex justify-between gap-3">
+                  <span className="text-mutedbrown">{d.day}</span>
+                  <span className={d.hours === "closed" ? "font-semibold text-staletext" : ""}>
+                    {d.hours}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-bar border border-line bg-cream/50 p-3 text-[13px] text-mutedbrown">
+              No hours on file. Nothing stops a plan sending someone here on a
+              day it is closed. Use <b className="text-ink">Find on Google</b>{" "}
+              above to fetch them.
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-6 md:col-span-2">
           <label className="flex cursor-pointer items-center gap-2 text-[15px] font-semibold">
             <input
@@ -639,6 +813,7 @@ export function VenueForm({
               <th>Item</th>
               <th>Category</th>
               <th>Price (GHS)</th>
+              <th className="whitespace-nowrap">Covers</th>
               <th>Notes</th>
               <th></th>
             </tr>
@@ -693,6 +868,29 @@ export function VenueForm({
                   />
                 </td>
                 <td>
+                  {/*
+                    How many people this one price covers. A plate of food is
+                    1; a foosball table sold as a table with two people at it
+                    is 2, and billing that per head charges a couple double.
+                  */}
+                  <input
+                    className="pinp !w-[64px]"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={item.covers_people ?? 1}
+                    onChange={(e) =>
+                      setItems((cur) =>
+                        cur.map((x) =>
+                          x._tmpId === item._tmpId
+                            ? { ...x, covers_people: Math.max(1, Number(e.target.value) || 1) }
+                            : x
+                        )
+                      )
+                    }
+                  />
+                </td>
+                <td>
                   <input
                     className="inp h-[38px]"
                     value={item.notes ?? ""}
@@ -717,6 +915,88 @@ export function VenueForm({
                 </td>
               </tr>
             ))}
+            {/*
+              The rest of what an activity line needs, on its own row and only
+              for activities. A menu does not have a minimum number of players
+              and a bowling lane does, so putting these on every row would bury
+              six blank boxes under every plate of jollof.
+            */}
+            {items
+              .filter((i) => !i._deleted && i.category === "activity")
+              .map((item) => (
+                <tr key={`${item._tmpId}-detail`} className="bg-cream/40">
+                  <td colSpan={6}>
+                    <div className="flex flex-wrap items-end gap-3 px-1 py-1">
+                      <span className="text-[12.5px] font-semibold text-mutedbrown">
+                        {item.name || "This activity"}:
+                      </span>
+                      <ActivityNumber
+                        label="Min players"
+                        value={item.min_players}
+                        onChange={(n) =>
+                          setItems((cur) =>
+                            cur.map((x) =>
+                              x._tmpId === item._tmpId ? { ...x, min_players: n } : x
+                            )
+                          )
+                        }
+                      />
+                      <ActivityNumber
+                        label="Max players"
+                        value={item.max_players}
+                        onChange={(n) =>
+                          setItems((cur) =>
+                            cur.map((x) =>
+                              x._tmpId === item._tmpId ? { ...x, max_players: n } : x
+                            )
+                          )
+                        }
+                      />
+                      <ActivityNumber
+                        label="Minutes"
+                        value={item.duration_minutes}
+                        onChange={(n) =>
+                          setItems((cur) =>
+                            cur.map((x) =>
+                              x._tmpId === item._tmpId ? { ...x, duration_minutes: n } : x
+                            )
+                          )
+                        }
+                      />
+                      <ActivityNumber
+                        label="Min age"
+                        value={item.min_age}
+                        onChange={(n) =>
+                          setItems((cur) =>
+                            cur.map((x) =>
+                              x._tmpId === item._tmpId ? { ...x, min_age: n } : x
+                            )
+                          )
+                        }
+                      />
+                      <label className="flex flex-1 flex-col">
+                        <span className="text-[11.5px] font-semibold text-mutedbrown">
+                          Must bring
+                        </span>
+                        <input
+                          className="inp h-[34px] min-w-[180px] text-[13px]"
+                          value={item.requires_gear ?? ""}
+                          placeholder="Socks and bowling shoes"
+                          onChange={(e) =>
+                            setItems((cur) =>
+                              cur.map((x) =>
+                                x._tmpId === item._tmpId
+                                  ? { ...x, requires_gear: e.target.value }
+                                  : x
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
@@ -736,5 +1016,36 @@ export function VenueForm({
 
       {toast && <Toast message={toast} />}
     </div>
+  );
+}
+
+/**
+ * A small optional number.
+ *
+ * Blank has to stay blank rather than becoming 0, because "no minimum" and "a
+ * minimum of nobody" are different claims and the second one is nonsense. The
+ * planner reads null as no limit; a 0 would read as a limit of zero.
+ */
+function ActivityNumber({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number | null | undefined;
+  onChange: (n: number | null) => void;
+}) {
+  return (
+    <label className="flex flex-col">
+      <span className="text-[11.5px] font-semibold text-mutedbrown">{label}</span>
+      <input
+        className="inp h-[34px] w-[86px] font-mono text-[13px]"
+        type="number"
+        min={0}
+        value={value ?? ""}
+        placeholder="any"
+        onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
+      />
+    </label>
   );
 }
