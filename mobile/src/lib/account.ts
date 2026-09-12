@@ -91,14 +91,25 @@ export async function updateDisplayName(name: string): Promise<boolean> {
   if (!user) return false;
 
   const trimmed = name.trim().slice(0, 60);
-  const { error } = await supabase
+  /*
+   * .select() is what makes this honest.
+   *
+   * An update that matches no row-level policy is not an error in Postgres:
+   * it updates nothing and reports success. That is exactly what happened
+   * here for the life of the feature, because profiles had an admin-only
+   * UPDATE policy and no own-row one, so `!error` was true every time and the
+   * name was never written. Asking for the changed rows back turns a silent
+   * no-op into a visible failure.
+   */
+  const { data, error } = await supabase
     .from("profiles")
     // Blank clears it rather than storing an empty string, so the fallback
     // to a name from the email takes over again.
     .update({ display_name: trimmed || null })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("id");
 
-  return !error;
+  return !error && (data?.length ?? 0) > 0;
 }
 
 /**
@@ -135,12 +146,15 @@ export async function uploadAvatar(uri: string): Promise<string | null> {
       data: { publicUrl },
     } = supabase.storage.from("avatars").getPublicUrl(path);
 
-    const { error } = await supabase
+    // Same reasoning as updateDisplayName: a policy miss is silent, so the
+    // changed row is asked for rather than assumed.
+    const { data, error } = await supabase
       .from("profiles")
       .update({ avatar_url: publicUrl })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .select("id");
 
-    return error ? null : publicUrl;
+    return error || !data?.length ? null : publicUrl;
   } catch {
     return null;
   }

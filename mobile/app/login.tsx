@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -188,21 +181,32 @@ export default function Login() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      {/* ── the cast, drifting ── */}
+    <View style={{ flex: 1, backgroundColor: c.background }}>
+      {/*
+        ── the cast, drifting ──
+        Gives up its space first. With the keyboard open there is not room for
+        both a hero and a form, and the form is the part being used.
+      */}
       <View
-        style={{ flex: 1, minHeight: 140 }}
+        style={{ flex: 1, minHeight: 96 }}
         onLayout={(e) => setHero(e.nativeEvent.layout)}
       >
         <FloatingMascots width={hero.width} height={hero.height} />
       </View>
 
-      {/* ── the sheet ── */}
+      {/*
+        ── the sheet ──
+        automaticallyAdjustKeyboardInsets rather than a KeyboardAvoidingView.
+        The wrapper only padded the outside of the sheet, so with the keyboard
+        up the sheet was squeezed and the password field ended up underneath
+        it with no way to scroll to it: the ScrollView was sized to its
+        content and had nothing to scroll. This insets the scrollable area by
+        the keyboard itself and brings the focused field into view, and
+        flexShrink lets the sheet actually give ground rather than being
+        clipped. Android resizes the window instead, which this handles too.
+      */}
       <ScrollView
-        style={{ flexGrow: 0 }}
+        style={{ flexGrow: 0, flexShrink: 1 }}
         contentContainerStyle={{
           backgroundColor: c.backgroundSunken,
           borderTopLeftRadius: 32,
@@ -212,6 +216,9 @@ export default function Login() {
           paddingBottom: Math.max(insets.bottom, space.lg) + space.md,
         }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+        contentInsetAdjustmentBehavior="never"
       >
         {/*
           Two-tone, so the sentence has a subject. The grey half is the setup
@@ -345,6 +352,6 @@ export default function Login() {
           </View>
         ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { clearDraft } from "./draft";
 
 export interface AuthState {
   session: Session | null;
@@ -102,6 +103,16 @@ function friendlyAuthError(message: string): string {
   return message || "Something went wrong. Try again.";
 }
 
+/**
+ * Sign out, and leave nothing of this account behind on the device.
+ *
+ * The session was the only thing being cleared, so the in-progress plan stayed
+ * in storage and the next account to sign in on the same phone saw it on the
+ * home screen: the same title, the same photograph, the partner's name still
+ * in the inputs. Deleting the plan from the first account did not remove it,
+ * because it had never come from the server.
+ */
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
+  await clearDraft();
 }

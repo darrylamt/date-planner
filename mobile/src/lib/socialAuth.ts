@@ -106,6 +106,8 @@ export async function signInWithApple(): Promise<SocialResult> {
       if (user) {
         await supabase
           .from("profiles")
+          // Apple sends the name exactly once, on first authorisation, and
+          // never again, so a silent policy miss here loses it for good.
           .update({ display_name: full })
           .eq("id", user.id)
           .is("display_name", null);

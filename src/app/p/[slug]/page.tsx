@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/Logo";
@@ -9,6 +10,55 @@ import { occasionCard } from "@/lib/occasionCard";
 import type { SavedPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * What the link looks like before anyone opens it.
+ *
+ * A shared plan is almost always pasted into a chat, so the preview is the
+ * first thing the person sees and, if they do not tap, the only thing. It was
+ * showing the site's generic title and description, which made a plan built
+ * for one person look like an advert for the product.
+ *
+ * The occasion's own words, and nothing invented: the eyebrow, the date and
+ * the route all come off the saved plan. Not indexed, because these links are
+ * private in the sense that matters, unlisted and sent to one person, and a
+ * search result naming someone's anniversary is not a feature.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("plans")
+    .select("inputs, itinerary")
+    .eq("share_slug", params.slug)
+    .maybeSingle();
+
+  const plan = data as Pick<SavedPlan, "inputs" | "itinerary"> | null;
+  if (!plan) return { title: "aduro", robots: { index: false, follow: false } };
+
+  const card = occasionCard(plan.inputs);
+  const stops = plan.itinerary.stops?.length ?? 0;
+  const title = `${card.eyebrow}, ${longDate(plan.inputs.date)}`;
+  const description = `${plan.itinerary.summary_route}. ${stops} stop${
+    stops === 1 ? "" : "s"
+  }, from ${time12(plan.inputs.startTime)}.`;
+
+  return {
+    title,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "aduro",
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 /**
  * Shared plan, public read-only view served by slug via the service role
