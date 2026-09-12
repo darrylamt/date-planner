@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
+import { fetchAllRows } from "./fetchAll";
 
 /**
  * Server-side candidate selection: pull venues, menus and events that
@@ -142,11 +143,14 @@ export async function fetchCandidates(
 
   const pricedVenueIds = new Set(
     (
-      await supabase
-        .from("menu_items")
-        .select("venue_id")
-        .in("venue_id", [...new Set(venues.map(menuOwnerOf))])
-    ).data?.map((m: { venue_id: string }) => m.venue_id) ?? []
+      await fetchAllRows<{ venue_id: string }>((from, to) =>
+        supabase
+          .from("menu_items")
+          .select("venue_id")
+          .in("venue_id", [...new Set(venues.map(menuOwnerOf))])
+          .range(from, to)
+      )
+    ).map((m) => m.venue_id)
   );
 
   venues = venues.filter(
@@ -209,10 +213,18 @@ export async function fetchCandidates(
   }
 
   const ownerIds = [...new Set(picked.map(menuOwnerOf))];
-  const [{ data: ownerMenuItems }, eventsRes] = await Promise.all([
+  const [ownerMenuItems, eventsRes] = await Promise.all([
+    /*
+     * Paged. A dozen venues at two hundred dishes each passes PostgREST's
+     * thousand-row cap, and a truncated menu here does not fail, it prices the
+     * evening off whichever half of the menu arrived. The Honeysuckle alone is
+     * 182 items and Bistro 22 is 156.
+     */
     ownerIds.length
-      ? supabase.from("menu_items").select("*").in("venue_id", ownerIds)
-      : Promise.resolve({ data: [] as MenuItem[] }),
+      ? fetchAllRows<MenuItem>((from, to) =>
+          supabase.from("menu_items").select("*").in("venue_id", ownerIds).range(from, to)
+        )
+      : Promise.resolve([] as MenuItem[]),
     supabase
       .from("events")
       .select("*")
@@ -242,7 +254,7 @@ export async function fetchCandidates(
    * its own set: the ids must not collide.
    */
   const byOwner = new Map<string, MenuItem[]>();
-  for (const m of (ownerMenuItems ?? []) as MenuItem[]) {
+  for (const m of ownerMenuItems) {
     const list = byOwner.get(m.venue_id) ?? [];
     list.push(m);
     byOwner.set(m.venue_id, list);

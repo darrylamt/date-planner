@@ -1,5 +1,6 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { ThinMenus } from "@/components/admin/ThinMenus";
+import { fetchAllRows } from "@/lib/fetchAll";
 
 export const dynamic = "force-dynamic";
 
@@ -19,18 +20,20 @@ export const dynamic = "force-dynamic";
 export default async function AdminMenusPage() {
   const supabase = await adminDataClient();
 
-  const [{ data: venues }, { data: items }] = await Promise.all([
+  const [{ data: venues }, items] = await Promise.all([
     supabase
       .from("venues")
       .select("id, name, type, is_active, cuisine, areas(name)")
       .eq("is_active", true)
       .in("type", ["restaurant", "cafe"])
       .order("name"),
-    supabase.from("menu_items").select("venue_id, category"),
+    fetchAllRows<{ venue_id: string; category: string }>((from, to) =>
+      supabase.from("menu_items").select("venue_id, category").range(from, to)
+    ),
   ]);
 
   const counts = new Map<string, Record<string, number>>();
-  for (const it of items ?? []) {
+  for (const it of items) {
     const row = it as { venue_id: string; category: string };
     const bucket = counts.get(row.venue_id) ?? {};
     bucket[row.category] = (bucket[row.category] ?? 0) + 1;

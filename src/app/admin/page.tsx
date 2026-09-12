@@ -2,6 +2,7 @@ import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
 import { VenueTable } from "@/components/admin/VenueTable";
 import { adminCounts } from "@/lib/adminCounts";
+import { fetchAllRows } from "@/lib/fetchAll";
 
 export const dynamic = "force-dynamic";
 
@@ -9,19 +10,27 @@ export const dynamic = "force-dynamic";
 export default async function AdminVenuesPage() {
   const supabase = await adminDataClient();
 
-  const [{ data: venues }, { data: menuMeta }, counts] = await Promise.all([
+  const [{ data: venues }, menuMeta, counts] = await Promise.all([
     supabase.from("venues").select("*, areas(name)").order("name"),
-    supabase.from("menu_items").select("venue_id, price_ghs, updated_at"),
+    // Paged: an unbounded select returns the first thousand, and the catalogue
+    // holds 2,306 menu items, so the item counts and averages on this very
+    // table were reading a third of the data and showing 0 for the rest.
+    fetchAllRows<{ venue_id: string; price_ghs: number; updated_at: string | null }>(
+      (from, to) =>
+        supabase.from("menu_items").select("venue_id, price_ghs, updated_at").range(from, to)
+    ),
     adminCounts(supabase),
   ]);
 
-  const items = menuMeta ?? [];
+  const items = menuMeta;
   const byVenue = new Map<string, { count: number; latest: string | null; avg: number }>();
   for (const it of items) {
     const cur = byVenue.get(it.venue_id) ?? { count: 0, latest: null, avg: 0 };
     cur.count += 1;
     cur.avg += Number(it.price_ghs);
-    if (!cur.latest || it.updated_at > cur.latest) cur.latest = it.updated_at;
+    if (it.updated_at && (!cur.latest || it.updated_at > cur.latest)) {
+      cur.latest = it.updated_at;
+    }
     byVenue.set(it.venue_id, cur);
   }
 

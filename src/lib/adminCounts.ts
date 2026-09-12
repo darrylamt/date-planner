@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllRows } from "./fetchAll";
 
 /**
  * What currently needs attention, in one query.
@@ -50,7 +51,16 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * is the worst one to have fail closed.
      */
     supabase.from("venues").select("*"),
-    supabase.from("menu_items").select("venue_id, updated_at, category"),
+    /*
+     * Paged, because an unbounded select stops at PostgREST's row cap. The
+     * catalogue passed a thousand menu items and these counts silently began
+     * reading a fraction of it: Bistro 22 has 156 dishes and was counted as
+     * having none, so it appeared in the thin-menu queue it does not belong in.
+     */
+    fetchAllRows<{ venue_id: string; updated_at: string | null; category: string }>(
+      (from, to) =>
+        supabase.from("menu_items").select("venue_id, updated_at, category").range(from, to)
+    ).then((data) => ({ data })),
   ]);
 
   /*
