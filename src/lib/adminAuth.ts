@@ -10,17 +10,35 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
  * one implementation means a new admin route cannot be quietly less protected
  * than the others.
  *
- * Returns the Supabase client on success, or the response to send back.
+ * Returns a service-role client on success, or the response to send back.
+ *
+ * Service role, not the caller's own client, and that is the whole point. It
+ * used to hand back the cookie client, which runs as `authenticated`, and
+ * migration 0014 revoked SELECT on the venue columns from that role to stop
+ * every signed-in account reading unapproved phone numbers. Admin is a flag on
+ * a profile row rather than a database role, so an admin is `authenticated`
+ * too, and the approve endpoint's first act is to read phone_pending. It has
+ * been answering "Venue not found" for every approval ever since.
+ *
+ * Proved rather than reasoned about: a throwaway account with is_admin = true
+ * running the approve route's exact select gets 42501 permission denied, while
+ * the service role gets the row.
+ *
+ * The identity check above still runs on the caller's own cookies. Only the
+ * reading and writing is elevated, and only after the caller has been shown to
+ * be an admin, which is the same trade adminDataClient already makes for the
+ * admin pages. Returning the elevated client from the gate itself means a new
+ * admin route cannot forget to make it.
  */
 export async function requireAdmin(): Promise<
-  | { ok: true; supabase: ReturnType<typeof createClient>; userId: string }
+  | { ok: true; supabase: ReturnType<typeof createServiceClient>; userId: string }
   | { ok: false; response: NextResponse }
 > {
-  const supabase = createClient();
+  const identity = createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await identity.auth.getUser();
 
   if (!user) {
     return {
@@ -29,7 +47,7 @@ export async function requireAdmin(): Promise<
     };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await identity
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)
@@ -42,7 +60,7 @@ export async function requireAdmin(): Promise<
     };
   }
 
-  return { ok: true, supabase, userId: user.id };
+  return { ok: true, supabase: createServiceClient(), userId: user.id };
 }
 
 /**

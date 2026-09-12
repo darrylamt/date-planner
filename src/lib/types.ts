@@ -65,6 +65,14 @@ export interface Venue {
    */
   cuisine?: "local" | "continental" | "both" | null;
   /**
+   * This branch is priced from another venue's menu.
+   *
+   * The Honeysuckle has five locations and one menu, held once on the Osu row.
+   * Null means the venue owns its own. One level only, enforced by a trigger,
+   * so nothing has to walk a chain.
+   */
+  menu_shared_from?: string | null;
+  /**
    * Google's opening periods, verbatim. Null means the hours are not known,
    * which is deliberately not the same as closed and is never read as either.
    */

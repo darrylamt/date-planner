@@ -126,12 +126,26 @@ export async function fetchCandidates(
    * quietly makes the whole budget meaningless. Withhold it until someone
    * gives it a price.
    */
+  /*
+   * Which venue's menu prices this one.
+   *
+   * A branch can be priced from another branch: The Honeysuckle has five
+   * locations and one menu, held once on the Osu row. Without this the other
+   * four look unpriced and are withheld from every plan, which is the same
+   * outcome as not having entered them at all.
+   *
+   * One level only, which the database enforces with a trigger, so this is a
+   * lookup rather than a walk.
+   */
+  const menuOwnerOf = (v: Venue): string =>
+    (v as { menu_shared_from?: string | null }).menu_shared_from || v.id;
+
   const pricedVenueIds = new Set(
     (
       await supabase
         .from("menu_items")
         .select("venue_id")
-        .in("venue_id", venues.map((v) => v.id))
+        .in("venue_id", [...new Set(venues.map(menuOwnerOf))])
     ).data?.map((m: { venue_id: string }) => m.venue_id) ?? []
   );
 
@@ -145,7 +159,7 @@ export async function fetchCandidates(
        * an estimate is a claim and "unknown" is the absence of one.
        */
       if (v.price_source === "unknown") return false;
-      return Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(v.id);
+      return Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(menuOwnerOf(v));
     }
   );
 
@@ -194,10 +208,10 @@ export async function fetchCandidates(
     picked = [...picked, ...missing];
   }
 
-  const venueIds = picked.map((v) => v.id);
-  const [{ data: menuItems }, eventsRes] = await Promise.all([
-    venueIds.length
-      ? supabase.from("menu_items").select("*").in("venue_id", venueIds)
+  const ownerIds = [...new Set(picked.map(menuOwnerOf))];
+  const [{ data: ownerMenuItems }, eventsRes] = await Promise.all([
+    ownerIds.length
+      ? supabase.from("menu_items").select("*").in("venue_id", ownerIds)
       : Promise.resolve({ data: [] as MenuItem[] }),
     supabase
       .from("events")
@@ -219,9 +233,32 @@ export async function fetchCandidates(
       .eq("is_active", true),
   ]);
 
+  /*
+   * Re-addressed to the branch that will serve it.
+   *
+   * The planner groups menu items by venue_id, so a branch priced from Osu
+   * needs Osu's items to arrive carrying the branch's own id. Copied rather
+   * than re-pointed, because two branches can be in one plan and each needs
+   * its own set: the ids must not collide.
+   */
+  const byOwner = new Map<string, MenuItem[]>();
+  for (const m of (ownerMenuItems ?? []) as MenuItem[]) {
+    const list = byOwner.get(m.venue_id) ?? [];
+    list.push(m);
+    byOwner.set(m.venue_id, list);
+  }
+
+  const menuItems: MenuItem[] = [];
+  for (const v of picked) {
+    const owner = menuOwnerOf(v);
+    for (const m of byOwner.get(owner) ?? []) {
+      menuItems.push(owner === v.id ? m : { ...m, id: `${v.id}:${m.id}`, venue_id: v.id });
+    }
+  }
+
   return {
     venues: picked,
-    menuItems: (menuItems ?? []) as MenuItem[],
+    menuItems,
     events,
     allAreaNames: (allAreas ?? []).map((a: { name: string }) => a.name),
     totalActiveVenues: totalActiveVenues ?? 0,

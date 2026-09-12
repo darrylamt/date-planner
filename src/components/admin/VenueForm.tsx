@@ -181,35 +181,63 @@ export function VenueForm({
         venueId = data.id;
       }
 
-      for (const item of items) {
-        const isNew = item._tmpId.startsWith("new-");
-        if (item._deleted) {
-          if (!isNew) await supabase.from("menu_items").delete().eq("id", item.id!);
-          continue;
-        }
-        if (!item.name?.trim()) continue;
-        const row = {
-          venue_id: venueId,
-          name: item.name,
-          category: item.category ?? "other",
-          price_ghs: Number(item.price_ghs) || 0,
-          notes: item.notes || null,
-          covers_people: Math.max(1, Number(item.covers_people) || 1),
-          // Null rather than 0 throughout: the planner reads null as "no
-          // limit", and a 0 would read as a limit of nobody.
-          min_players: item.min_players ?? null,
-          max_players: item.max_players ?? null,
-          duration_minutes: item.duration_minutes ?? null,
-          min_age: item.min_age ?? null,
-          requires_gear: item.requires_gear || null,
-        };
-        if (isNew) {
-          const { error } = await supabase.from("menu_items").insert(row);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from("menu_items").update(row).eq("id", item.id!);
-          if (error) throw error;
-        }
+      /*
+       * Three statements, not one per dish.
+       *
+       * This was a loop with an insert, an update or a delete inside it, so
+       * saving a venue cost one round trip per menu item. The Honeysuckle has
+       * 182, which is 182 sequential requests before the button stops
+       * spinning, and on a connection in Accra that is most of a minute for
+       * work the database does in a moment. The rows are sorted into three
+       * groups and each group goes in one call.
+       */
+      const rowFor = (item: EditableItem) => ({
+        venue_id: venueId,
+        name: item.name,
+        category: item.category ?? "other",
+        price_ghs: Number(item.price_ghs) || 0,
+        notes: item.notes || null,
+        covers_people: Math.max(1, Number(item.covers_people) || 1),
+        // Null rather than 0 throughout: the planner reads null as "no
+        // limit", and a 0 would read as a limit of nobody.
+        min_players: item.min_players ?? null,
+        max_players: item.max_players ?? null,
+        duration_minutes: item.duration_minutes ?? null,
+        min_age: item.min_age ?? null,
+        requires_gear: item.requires_gear || null,
+      });
+
+      const live = items.filter((i) => !i._deleted && i.name?.trim());
+      const isNew = (i: EditableItem) => i._tmpId.startsWith("new-");
+
+      const toDelete = items
+        .filter((i) => i._deleted && !isNew(i) && i.id)
+        .map((i) => i.id!);
+      if (toDelete.length) {
+        const { error } = await supabase.from("menu_items").delete().in("id", toDelete);
+        if (error) throw error;
+      }
+
+      const toInsert = live.filter(isNew).map(rowFor);
+      if (toInsert.length) {
+        const { error } = await supabase.from("menu_items").insert(toInsert);
+        if (error) throw error;
+      }
+
+      /*
+       * Existing rows go back through upsert on the primary key, which is the
+       * only way to update many rows with different values in one statement.
+       * The id is carried explicitly so nothing is ever inserted as a
+       * duplicate of a row that already exists.
+       */
+      const toUpdate = live
+        .filter((i) => !isNew(i) && i.id)
+        .map((i) => ({ id: i.id!, ...rowFor(i) }));
+      if (toUpdate.length) {
+        const { error } = await supabase
+          .from("menu_items")
+          .upsert(toUpdate, { onConflict: "id" });
+        if (error) throw error;
       }
 
       setToast("Saved");

@@ -40,6 +40,53 @@ export function CsvImporter({
     const mapped = new Map<string, string>();
     let ok = 0;
 
+    /*
+     * Rows are collected and written in batches.
+     *
+     * This used to be one insert per row inside the loop, so a 106-line menu
+     * was 106 round trips to Supabase and a 600-line one was 600. On a
+     * connection in Accra that is most of a minute of waiting for work the
+     * database does in well under a second.
+     */
+    const pending: { row: number; values: Record<string, unknown> }[] = [];
+
+    /**
+     * Write in chunks, and fall back to one at a time only where it breaks.
+     *
+     * A batch insert reports one error for the whole batch and does not say
+     * which row caused it, which would have thrown away the per-row messages
+     * that make this screen usable. So a failing chunk is retried row by row:
+     * the fast path stays fast, and the slow path only runs over rows that are
+     * actually wrong.
+     */
+    async function insertInChunks(
+      table: "venues" | "menu_items",
+      items: { row: number; values: Record<string, unknown> }[],
+      out: string[]
+    ): Promise<number> {
+      const SIZE = 250;
+      let written = 0;
+
+      for (let at = 0; at < items.length; at += SIZE) {
+        const chunk = items.slice(at, at + SIZE);
+        const { error } = await supabase.from(table).insert(chunk.map((c) => c.values));
+        if (!error) {
+          written += chunk.length;
+          continue;
+        }
+
+        for (const one of chunk) {
+          const { error: rowError } = await supabase.from(table).insert(one.values);
+          if (rowError) {
+            out.push(`Row ${one.row} (${String(one.values.name)}): ${rowError.message}`);
+          } else {
+            written += 1;
+          }
+        }
+      }
+      return written;
+    }
+
     if (mode === "venues") {
       // Areas are created on demand, so a spreadsheet can introduce a new
       // neighbourhood without a separate trip to /admin/areas first.
@@ -62,7 +109,9 @@ export function CsvImporter({
           log.push(`Row ${i + 2}: skipped, missing name or unknown area "${r.area}"`);
           continue;
         }
-        const { error } = await supabase.from("venues").insert({
+        pending.push({
+          row: i + 2,
+          values: {
           name: r.name,
           type: r.type || "restaurant",
           area_id: areaId,
@@ -83,10 +132,11 @@ export function CsvImporter({
           image_url: r.image_url || null,
           lat: r.lat ? Number(r.lat) : null,
           lng: r.lng ? Number(r.lng) : null,
+          },
         });
-        if (error) log.push(`Row ${i + 2} (${r.name}): ${error.message}`);
-        else ok++;
       }
+
+      ok += await insertInChunks("venues", pending, log);
     } else {
       const venueByName = new Map(
         venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
@@ -152,22 +202,25 @@ export function CsvImporter({
           return raw && raw.trim() !== "" && Number.isFinite(n) ? n : null;
         };
 
-        const { error } = await supabase.from("menu_items").insert({
-          venue_id: venueId,
-          name: r.name,
-          category,
-          price_ghs: Number(r.price_ghs) || 0,
-          notes: r.notes || null,
-          covers_people: Math.max(1, num(r.covers_people) ?? 1),
-          min_players: num(r.min_players),
-          max_players: num(r.max_players),
-          duration_minutes: num(r.duration_minutes),
-          min_age: num(r.min_age),
-          requires_gear: r.requires_gear || null,
+        pending.push({
+          row: i + 2,
+          values: {
+            venue_id: venueId,
+            name: r.name,
+            category,
+            price_ghs: Number(r.price_ghs) || 0,
+            notes: r.notes || null,
+            covers_people: Math.max(1, num(r.covers_people) ?? 1),
+            min_players: num(r.min_players),
+            max_players: num(r.max_players),
+            duration_minutes: num(r.duration_minutes),
+            min_age: num(r.min_age),
+            requires_gear: r.requires_gear || null,
+          },
         });
-        if (error) log.push(`Row ${i + 2} (${r.name}): ${error.message}`);
-        else ok++;
       }
+
+      ok += await insertInChunks("menu_items", pending, log);
     }
 
     if (mapped.size) {
