@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
-import { VENUE_SELECT } from "./venueColumns";
+import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 
 /**
  * Server-side candidate selection: pull venues, menus and events that
@@ -56,20 +56,56 @@ export async function fetchCandidates(
   /*
    * Named columns, not "*". Since migration 0014 the venue grant has been an
    * explicit list, and Postgres refuses SELECT * outright when any one column
-   * is ungranted rather than returning the rest, so every plan request has
-   * been dying on the thirteen phone and verification columns that are
-   * withheld on purpose. See venueColumns.ts.
+   * is ungranted rather than returning the rest. See venueColumns.ts.
    */
-  let venueQuery = supabase
-    .from("venues")
-    .select(VENUE_SELECT)
-    .eq("is_active", true)
-    .in("price_band", bands);
+  const runVenueQuery = async (columns: string[]) => {
+    let q = supabase
+      .from("venues")
+      .select(`${columns.join(",")},areas(name)`)
+      .eq("is_active", true)
+      .in("price_band", bands);
 
-  if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
-    venueQuery = venueQuery.in("area_id", inputs.areaIds);
+    if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
+      q = q.in("area_id", inputs.areaIds);
+    }
+    return q;
+  };
+
+  /*
+   * Drop a column the database does not have yet, and carry on.
+   *
+   * Naming columns was supposed to turn a missing one into a missing feature
+   * rather than a dead product. It did not: a column named here that the
+   * database has not got is just as fatal as an ungranted one, and shipping
+   * the code for migration 0022 before the migration itself was run took plan
+   * generation down a second time, in the same week, for the same reason in
+   * mirror image.
+   *
+   * So now the query heals. Postgres answers 42703 and names the column it
+   * cannot find, which is enough to drop it and ask again. A deploy that
+   * arrives before its migration loses one field until the migration lands,
+   * which is what "quietly absent" was always meant to mean.
+   */
+  let columns = [...PUBLIC_VENUE_COLUMNS] as string[];
+  let venuesRaw: unknown[] | null = null;
+  let error: { code?: string; message?: string } | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const result = await runVenueQuery(columns);
+    venuesRaw = result.data as unknown[] | null;
+    error = result.error;
+    if (!error) break;
+
+    const missing = missingColumnOf(error);
+    if (!missing || !columns.includes(missing)) break;
+
+    console.warn(
+      `venues.${missing} does not exist yet, so a migration has not been run. ` +
+        `Planning without it.`
+    );
+    columns = columns.filter((c) => c !== missing);
   }
-  const { data: venuesRaw, error } = await venueQuery;
+
   if (error) throw new Error(`venues query failed: ${error.message}`);
 
   /*
@@ -199,4 +235,17 @@ export function cheapestTwoStopEstimate(venues: Venue[]): number {
     .sort((a, b) => a - b);
   if (costs.length < 2) return 0;
   return Math.round(costs[0] + costs[1] + 40); // + one flat transport hop
+}
+
+/**
+ * The column Postgres could not find, when that is what went wrong.
+ *
+ * 42703 is "undefined column", and PostgREST passes the message through
+ * verbatim, so the name is right there: "column venues.cuisine does not
+ * exist". Anything else is a real failure and is rethrown.
+ */
+function missingColumnOf(error: { code?: string; message?: string } | null): string | null {
+  if (!error || error.code !== "42703") return null;
+  const found = /column\s+(?:\w+\.)?"?([a-z0-9_]+)"?\s+does not exist/i.exec(error.message ?? "");
+  return found?.[1] ?? null;
 }
