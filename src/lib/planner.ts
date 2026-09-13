@@ -289,6 +289,29 @@ type OrderLine = ItineraryOrder;
 const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.price_ghs);
 
 /**
+ * Where on a sorted price list a tier starts looking.
+ *
+ * The cheap tier used to start at the very bottom, and the bottom of a long
+ * menu is not the cheap end of dinner: it is the sides, the breakfast
+ * leftovers and whatever somebody filed under mains because it had to go
+ * somewhere. The Honeysuckle lists seventy mains, and the two cheapest are
+ * Indomie noodles and an egg stew, which is what a table for two was quoted
+ * for an evening out. Nobody sits down in a restaurant to eat that.
+ *
+ * So the modest end rather than the floor. A quarter of the way up is still
+ * unmistakably the cheap choice, and on a cheap menu it is still cheap,
+ * because a percentile moves with the venue instead of assuming a price. What
+ * it is not is the one item nobody orders.
+ */
+const CHEAP_POINT = 0.25;
+
+function priceCentre(tier: 0 | 1, count: number): number {
+  return tier === 0
+    ? Math.floor((count - 1) * CHEAP_POINT)
+    : Math.floor(count / 2);
+}
+
+/**
  * What this many people would actually order here.
  *
  * `tier` picks how far up the menu to reach: 0 is the cheapest thing that
@@ -396,7 +419,7 @@ function planOrders(
   const pick = (category: string): MenuItem | null => {
     const items = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
     if (!items.length) return null;
-    if (tier === 0) return items[0];
+    if (tier === 0) return items[priceCentre(0, items.length)];
     // The median is a better "typical" than the mean, which one costly
     // item drags upward.
     return items[Math.floor(items.length / 2)];
@@ -423,7 +446,7 @@ function planOrders(
     // At most four distinct dishes: enough to read as a table rather than a
     // canteen queue, few enough that the total stays predictable.
     const WIDTH = 4;
-    const centre = tier === 0 ? 0 : Math.floor(items.length / 2);
+    const centre = priceCentre(tier, items.length);
     const from = Math.max(0, Math.min(centre - 1, items.length - WIDTH));
     const candidates = items.slice(from, from + WIDTH);
 
@@ -726,16 +749,11 @@ export function planItinerary(
      */
     const pool = focusTypes.length
       ? candidates.venues.filter((v) => focusTypes.includes(v.type))
-      : (() => {
-          const exact = candidates.venues.filter((v) => roleTypes.includes(v.type));
-          // A thin catalogue should still produce a plan, so a slot with no
-          // venue of its own type falls back to anything rather than
-          // collapsing the evening.
-          return exact.length ? exact : candidates.venues;
-        })();
+      : candidates.venues.filter((v) => roleTypes.includes(v.type));
 
+    const build = (from: Venue[]): Option[] => {
     const out: Option[] = [];
-    for (const venue of pool) {
+    for (const venue of from) {
       /*
        * Shut is shut. Unknown hours are left alone: most of the catalogue has
        * none on file yet, and reading "we do not know" as "closed" would empty
@@ -789,7 +807,28 @@ export function planItinerary(
      * price: start with what someone would actually order, and let the fitting
      * below strip it back only if the budget requires it.
      */
-    return out.sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
+      return out.sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
+    };
+
+    const preferred = build(pool);
+    if (preferred.length || focusTypes.length) return preferred;
+
+    /*
+     * Nothing of this slot's own type survived, so take anything.
+     *
+     * The fallback used to be chosen before the filtering rather than after
+     * it: if the catalogue held even one activity venue the slot narrowed to
+     * activities, and if that one venue then turned out to be shut at the hour
+     * in question the slot had no options at all and the whole evening
+     * returned nothing. A smaller budget could fail where a larger one
+     * succeeded, because widening the price bands changed which venues were in
+     * the shortlist and whether the narrowing happened at all. Two people with
+     * GHS 600 got no plan while GHS 900 planned fine.
+     *
+     * Deciding it on what survives is the difference between "we hold no
+     * bowling alley" and "the one we hold is shut on Tuesdays".
+     */
+    return build(candidates.venues);
   };
 
   const attempt = (stopCount: number): PlannedItinerary | null => {

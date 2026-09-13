@@ -167,7 +167,18 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
+      /*
+       * The height of the navigation header above this view.
+       *
+       * KeyboardAvoidingView measures from the top of the window, not from the
+       * top of its own frame, so with no offset it under-pads by exactly the
+       * header and the composer sits behind the keyboard. Computed rather than
+       * read from useHeaderHeight, which lives in a copy of
+       * @react-navigation/elements that expo-router vendors and does not
+       * re-export: 44 is the iOS navigation bar, and the inset is the notch
+       * above it.
+       */
+      keyboardVerticalOffset={insets.top + 44}
     >
       <ScrollView
         ref={scroller}

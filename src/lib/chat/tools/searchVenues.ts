@@ -20,6 +20,7 @@ import { compactVenue, isPriced, menusFor, openStateAt, type CompactVenue } from
 const LIMIT = 8;
 
 const argsSchema = z.object({
+  name: z.string().min(2).max(80).optional(),
   areas: z.array(z.string()).max(6).optional(),
   types: z
     .array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"]))
@@ -45,6 +46,11 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
   parameters: {
     type: "object",
     properties: {
+      name: {
+        type: "string",
+        description:
+          "Look a venue up by name, whole or partial. Always use this when somebody names a place: without it the search returns only the best few matches for a mood, and a venue that exists but did not rank can look like one we do not hold.",
+      },
       areas: {
         type: "array",
         items: { type: "string" },
@@ -114,6 +120,10 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
       priced = priced.filter((v) => openStateAt(v, args.open_on!, args.open_at) !== "closed");
     }
 
+    // A name lookup is a lookup, not a shortlist: if six branches match, all
+    // six are the answer.
+    const limit = args.name ? Math.max(LIMIT, priced.length) : LIMIT;
+
     const wanted = expandVibes(args.vibes ?? []);
     const ranked = priced
       .map((v) => ({
@@ -123,7 +133,7 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
           cuisineBonus(v, args.cuisine),
       }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, LIMIT)
+      .slice(0, limit)
       .map((s) => s.v);
 
     const names = new Map(venues.map((v) => [v.id, v.name]));
@@ -151,6 +161,21 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
   let q = ctx.catalog.from("venues").select(VENUE_SELECT).eq("is_active", true);
 
   if (args.types?.length) q = q.in("type", args.types);
+
+  /*
+   * Asked for by name.
+   *
+   * Without this the only way to reach a venue was to out-rank sixty others on
+   * a mood, and the model reported anything that did not make the top eight as
+   * absent from the catalogue. Casa1715, three hundred menu rows and all, came
+   * back as "not among the venues aduro holds". Denying something real is a
+   * worse failure than any amount of hedging: it is the product's one promise,
+   * inverted.
+   */
+  if (args.name) {
+    const needle = args.name.trim().replace(/[\%_]/g, (ch) => `\${ch}`);
+    q = q.ilike("name", `%${needle}%`);
+  }
 
   const { data, error } = await q;
   if (error) throw new Error(`venue search failed: ${error.message}`);

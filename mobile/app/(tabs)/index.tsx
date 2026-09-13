@@ -81,9 +81,9 @@ export default function Home() {
             onPress={() => router.push("/chat")}
             hitSlop={8}
             style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
+              width: 56,
+              height: 56,
+              borderRadius: 28,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
@@ -91,7 +91,7 @@ export default function Home() {
               borderColor: c.border,
             })}
           >
-            <Symbol name="sparkles" size={20} color={c.accent} />
+            <Symbol name="sparkles" size={28} color={c.accent} />
           </Pressable>
         </View>
 

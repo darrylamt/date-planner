@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { focusVenueTypes } from "./planner";
-import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
+import type { EventRow, MenuItem, PlanInputs, Venue, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
 
@@ -222,6 +222,32 @@ export async function fetchCandidates(
       .filter((v) => focusTypes.includes(v.type) && !have.has(v.id))
       .slice(0, 8);
     picked = [...picked, ...missing];
+  }
+
+  /*
+   * Keep a couple of each kind in the shortlist.
+   *
+   * Vibe scoring is type-blind, and when nothing is asked for it is nearly
+   * flat, so the top fourteen come back in whatever proportion the catalogue
+   * happens to hold. That catalogue is mostly restaurants, which is how an
+   * evening with no vibe chosen arrived as dinner followed by three more
+   * dinners: the planner asked for something to do, then somewhere for a
+   * drink, then pudding, and had nothing but restaurants to offer any of them.
+   *
+   * Reserving a slot in the shortlist is not preferring these venues. They
+   * still have to win their slot on score. It only means the planner is given
+   * the choice at all.
+   */
+  const SPREAD: VenueType[] = ["cafe", "lounge", "activity", "outdoor", "dessert"];
+  for (const type of SPREAD) {
+    const have = picked.filter((v) => v.type === type).length;
+    if (have >= 2) continue;
+    const held = new Set(picked.map((v) => v.id));
+    const extra = scored
+      .map((sc) => sc.v)
+      .filter((v) => v.type === type && !held.has(v.id))
+      .slice(0, 2 - have);
+    picked = [...picked, ...extra];
   }
 
   const ownerIds = [...new Set(picked.map(menuOwnerOf))];
