@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { expandVibes } from "./catalog";
 import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -22,21 +23,18 @@ export interface Candidates {
   totalActiveVenues: number;
 }
 
-/** "chill" chip maps onto calm/casual venue tags. */
-const VIBE_ALIASES: Record<string, string[]> = {
-  chill: ["calm", "casual"],
-  calm: ["calm"],
-  lively: ["lively"],
-  romantic: ["romantic"],
-  fun: ["fun"],
-  adventurous: ["adventurous"],
-};
-
-function expandVibes(vibes: string[]): string[] {
-  const out = new Set<string>();
-  vibes.forEach((v) => (VIBE_ALIASES[v] ?? [v]).forEach((t) => out.add(t)));
-  return Array.from(out);
-}
+/*
+ * Vibe translation lives in catalog.ts now, rather than in a copy kept here.
+ *
+ * This file had a map covering six of the plan flow's fourteen chips and
+ * planner.ts had a different one covering eight, and this is the half that
+ * decides which venues the model is even shown. So a request for Beach,
+ * Dancing, Club hopping, Sporty, Outdoorsy, Picnic, Artsy or Foodie fell
+ * through to a literal tag lookup that no row could satisfy, and the shortlist
+ * came back ranked as though no vibe had been chosen. Re-exported because
+ * callers already import it from here.
+ */
+export { expandVibes };
 
 /** Which price bands are affordable for this total (two-person) budget. */
 export function allowedBands(budget: number): string[] {

@@ -62,7 +62,13 @@ export function BulkPriceEditor({
    * and paging on does not quietly discard the edits.
    */
   const changed = items.filter((i) => prices[i.id] !== original[i.id]);
-  const isStale = staleDays === null || staleDays > 90;
+  /*
+   * No menu is not a stale menu. Picking a venue priced by a single entrance
+   * fee, which has no items to list here at all, used to show "Stale" over an
+   * empty table and no way to clear it. Same rule as the Venues screen.
+   */
+  const isStale = staleDays !== null && staleDays > 90;
+  const hasNoMenu = items.length === 0;
 
   async function saveRow(item: MenuItem) {
     const { error } = await supabase
@@ -100,7 +106,9 @@ export function BulkPriceEditor({
         </div>
         <div className="flex items-center gap-2.5">
           {isStale ? (
-            <span className="badge b-stale">Stale{staleDays !== null ? ` · ${staleDays}d` : ""}</span>
+            <span className="badge b-stale">Stale · {staleDays}d</span>
+          ) : hasNoMenu ? (
+            <span className="badge b-ok">No menu</span>
           ) : (
             <span className="badge b-ok">Fresh</span>
           )}

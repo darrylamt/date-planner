@@ -28,19 +28,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const { data: venue } = await supabase
+  const { data: venue, error: readError } = await supabase
     .from("venues")
     .select("id, phone, phone_pending")
     .eq("id", body.venueId)
     .maybeSingle();
 
+  /*
+   * A failed read and a missing row are different problems and used to give
+   * the same answer. This route spent a while reporting "Venue not found" for
+   * every approval while the real cause was a permission error on
+   * phone_pending, and swallowing the error is what hid it.
+   */
+  if (readError) {
+    console.error("phone read failed", readError);
+    return NextResponse.json({ error: "Could not read the venue." }, { status: 500 });
+  }
   if (!venue) return NextResponse.json({ error: "Venue not found." }, { status: 404 });
 
   if (body.action === "approve") {
     if (!venue.phone_pending) {
       return NextResponse.json({ error: "Nothing pending to approve." }, { status: 400 });
     }
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("venues")
       .update({
         phone: venue.phone_pending,
@@ -52,11 +62,26 @@ export async function POST(req: Request) {
         phone_reported_at: null,
         phone_report_count: 0,
       })
-      .eq("id", body.venueId);
+      .eq("id", body.venueId)
+      .select("id");
 
     if (error) {
       console.error("phone approve failed", error);
       return NextResponse.json({ error: "Could not approve." }, { status: 500 });
+    }
+    /*
+     * An update that matched nothing is not a success, and without the select
+     * above it was indistinguishable from one: PostgREST answers 204 either
+     * way, so a write blocked at the database returned ok and the screen
+     * painted a green "Approved" over a number that never went live. On the
+     * one field where being wrong is fraud under our name, saying "done" on
+     * no evidence is the wrong default.
+     */
+    if (!updated?.length) {
+      return NextResponse.json(
+        { error: "Nothing was written. Reload and try again." },
+        { status: 409 }
+      );
     }
     return NextResponse.json({ ok: true });
   }
@@ -64,19 +89,26 @@ export async function POST(req: Request) {
   if (body.action === "reject") {
     // Keep the rejected number rather than deleting it, so the same bad number
     // arriving again is visible as a re-proposal rather than looking new.
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("venues")
       .update({ phone_pending: null, phone_status: "rejected" })
-      .eq("id", body.venueId);
+      .eq("id", body.venueId)
+      .select("id");
 
     if (error) return NextResponse.json({ error: "Could not reject." }, { status: 500 });
+    if (!updated?.length) {
+      return NextResponse.json(
+        { error: "Nothing was written. Reload and try again." },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ ok: true });
   }
 
   // "clear" pulls a live number immediately, used when a report comes in and
   // nobody has checked it yet. Costs us a booking; the alternative costs
   // someone their money.
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("venues")
     .update({
       phone: null,
@@ -86,8 +118,17 @@ export async function POST(req: Request) {
       phone_approved_at: null,
       phone_approved_by: null,
     })
-    .eq("id", body.venueId);
+    .eq("id", body.venueId)
+    .select("id");
 
   if (error) return NextResponse.json({ error: "Could not withdraw." }, { status: 500 });
+  // Withdrawal is the safety valve, so a silent no-op here is the worst of the
+  // three: the number stays dialable while the screen says it is gone.
+  if (!updated?.length) {
+    return NextResponse.json(
+      { error: "Nothing was written. The number may still be live, reload and check." },
+      { status: 409 }
+    );
+  }
   return NextResponse.json({ ok: true });
 }

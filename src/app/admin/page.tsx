@@ -35,11 +35,20 @@ export default async function AdminVenuesPage() {
   }
 
   const rows = (venues ?? []).map((v: any) => {
-    const meta = byVenue.get(v.id);
+    /*
+     * Read through the share, like the Menus screen and the sidebar badge
+     * already do. A branch priced from another venue's menu has no items of
+     * its own, so counting by its own id alone showed every Honeysuckle branch
+     * as holding nothing and never updated.
+     */
+    const owner = (v.menu_shared_from as string | null) || v.id;
+    const meta = byVenue.get(owner);
     const latest = meta?.latest ? new Date(meta.latest) : null;
     const staleDays = latest
       ? Math.floor((Date.now() - latest.getTime()) / 86400000)
       : null;
+    const hasMenu = (meta?.count ?? 0) > 0;
+    const priced = v.is_free === true || Number(v.avg_cost_per_person_ghs) > 0 || hasMenu;
     return {
       id: v.id,
       name: v.name,
@@ -49,13 +58,34 @@ export default async function AdminVenuesPage() {
       items: meta?.count ?? 0,
       avgForTwo: Math.round(Number(v.avg_cost_per_person_ghs) * 2),
       staleDays,
-      isStale: staleDays === null || staleDays > 90,
+      /*
+       * A menu can go stale. The absence of one cannot.
+       *
+       * This read `staleDays === null || staleDays > 90`, so any venue with no
+       * menu items was stale forever and no amount of work could clear it.
+       * Aburi Botanical Gardens charges one entrance fee and is never going to
+       * have dishes, so it sat permanently red next to venues whose prices had
+       * genuinely rotted, which is how a real warning stops being read. The
+       * rule adminCounts already applies to the Prices badge is the right one,
+       * and this now matches it.
+       */
+      isStale: staleDays !== null && staleDays > 90,
+      /*
+       * Three states, because "no menu" splits into two very different jobs
+       * and only one of them is anybody's to do. A venue with a per-person
+       * figure and no menu is finished; a venue with neither is unpriced and
+       * belongs in that queue.
+       */
+      pricedBy: hasMenu ? ("menu" as const) : priced ? ("figure" as const) : ("nothing" as const),
       // Whether anything stops a plan sending someone when the place is shut.
       hoursKnown: Array.isArray(v.opening_periods) && v.opening_periods.length > 0,
     };
   });
 
   const staleCount = rows.filter((r) => r.isStale).length;
+  // Counted separately from stale: these are not rotting, they were never
+  // priced, and the fix is the Unpriced queue rather than a menu re-read.
+  const unpricedCount = rows.filter((r) => r.is_active && r.pricedBy === "nothing").length;
   // A venue with no hours can be put in a plan for a day it is closed, so it
   // sits next to the stale count rather than being buried in the table.
   const noHoursCount = rows.filter((r) => !r.hoursKnown).length;
@@ -67,6 +97,10 @@ export default async function AdminVenuesPage() {
           <h1 className="font-display text-[24px] font-bold">Venues</h1>
           <div className="text-[14px] text-mutedbrown">
             {rows.length} venues · {staleCount} stale ·{" "}
+            <span className={unpricedCount ? "font-semibold text-staletext" : ""}>
+              {unpricedCount} with no prices
+            </span>{" "}
+            ·{" "}
             <span className={noHoursCount ? "font-semibold text-staletext" : ""}>
               {noHoursCount} without opening hours
             </span>

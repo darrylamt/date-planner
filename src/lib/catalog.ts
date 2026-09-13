@@ -34,8 +34,16 @@ export const VENUE_TYPES = [
 
 export const PRICE_BANDS = ["budget", "mid", "premium"] as const;
 
-/** Must stay in step with the vibe chips in the plan flow. */
-export const VIBE_TAGS = [
+/**
+ * The tags a venue row may carry.
+ *
+ * This is the vocabulary the catalogue is written in. It is deliberately not
+ * the same list as the chips in the plan flow, which are the words a person
+ * uses: "Club hopping" is a thing to do on a Friday, not a property of a room.
+ * VIBE_CHIP_TAGS below is the translation between the two, and it is the only
+ * place that translation is allowed to happen.
+ */
+export const VENUE_VIBE_TAGS = [
   "romantic",
   "calm",
   "lively",
@@ -43,7 +51,65 @@ export const VIBE_TAGS = [
   "adventurous",
   "chill",
   "casual",
+  "scenic",
+  "upscale",
+  // Added so the eight plan-flow chips that matched nothing have something in
+  // the catalogue to match. Before this, picking "Beach" searched every venue
+  // for a literal `beach` tag, no row had ever carried one, and the vibe was
+  // silently dropped from the ranking.
+  "beach",
+  "outdoorsy",
+  "sporty",
+  "artsy",
+  "foodie",
+  "dancing",
 ] as const;
+
+export type VenueVibeTag = (typeof VENUE_VIBE_TAGS)[number];
+
+/**
+ * Plan-flow chip (lowercased) to the venue tags that satisfy it.
+ *
+ * There were two of these, one in matching.ts and a different one in
+ * planner.ts, and they disagreed. matching.ts is the half that actually
+ * chooses which venues the model gets to see, and it knew about six of the
+ * fourteen chips; the other eight fell through to a literal tag lookup that
+ * could never hit. So a request for Beach, Dancing, Club hopping, Sporty,
+ * Outdoorsy, Picnic, Artsy or Foodie was ranked as though no vibe had been
+ * asked for at all. One map, imported by both, is the fix.
+ *
+ * Every chip in planConstants.VIBES must appear here, and every tag named must
+ * appear in VENUE_VIBE_TAGS. The test for this pair is whether a chip on
+ * screen can ever change the plan you get.
+ */
+export const VIBE_CHIP_TAGS: Record<string, VenueVibeTag[]> = {
+  romantic: ["romantic"],
+  calm: ["calm", "chill"],
+  lively: ["lively"],
+  fun: ["fun"],
+  adventurous: ["adventurous", "sporty"],
+  chill: ["chill", "calm", "casual"],
+  beach: ["beach", "scenic", "outdoorsy"],
+  dancing: ["dancing", "lively"],
+  "club hopping": ["dancing", "lively"],
+  sporty: ["sporty", "adventurous"],
+  outdoorsy: ["outdoorsy", "scenic", "adventurous"],
+  // No `picnic` tag: it would apply to about three rows. The things that make
+  // somewhere good for a picnic are already sayable.
+  picnic: ["outdoorsy", "scenic", "calm"],
+  artsy: ["artsy"],
+  foodie: ["foodie", "upscale"],
+};
+
+/** Chip labels to venue tags, for the one filter both halves of the planner run. */
+export function expandVibes(vibes: string[]): string[] {
+  const out = new Set<string>();
+  for (const v of vibes) {
+    const key = v.toLowerCase();
+    for (const t of VIBE_CHIP_TAGS[key] ?? [key]) out.add(t);
+  }
+  return Array.from(out);
+}
 
 export const BEST_FOR = [
   "first_date",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
+import { VENUE_VIBE_TAGS } from "./catalog";
 
 /**
  * Venue research, turn a name into a draft catalogue row.
@@ -31,16 +32,14 @@ export const VENUE_TYPES = [
   "dessert",
 ] as const;
 
-const VIBE_TAGS = [
-  "calm",
-  "lively",
-  "romantic",
-  "fun",
-  "adventurous",
-  "scenic",
-  "upscale",
-  "casual",
-] as const;
+/*
+ * The catalogue vocabulary, not a copy of it. The researcher could only ever
+ * return eight of the fifteen tags, so a beach bar or an art studio came back
+ * described as "casual" and the plan flow's own chips for those things had
+ * nothing to match. The prompt below interpolates this list, so widening it
+ * teaches the model the new words in the same move.
+ */
+const VIBE_TAGS = VENUE_VIBE_TAGS;
 
 const BEST_FOR = [
   "first_date",

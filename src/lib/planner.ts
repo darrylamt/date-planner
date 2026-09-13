@@ -1,4 +1,5 @@
 import type { Candidates } from "./matching";
+import { expandVibes } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
 import type {
@@ -128,22 +129,12 @@ export function stopCountFor(hours: number, focus: PlanFocus = "everything"): nu
   return crawl ? 6 : 5;
 }
 
-const VIBE_ALIASES: Record<string, string[]> = {
-  chill: ["calm", "casual"],
-  beach: ["beach", "outdoorsy"],
-  "club hopping": ["lively", "dancing"],
-  dancing: ["dancing", "lively"],
-  sporty: ["sporty", "adventurous"],
-  picnic: ["picnic", "outdoorsy", "calm"],
-  foodie: ["foodie"],
-  artsy: ["artsy"],
-};
-
-function expandVibes(vibes: string[]): string[] {
-  const out = new Set<string>();
-  vibes.forEach((v) => (VIBE_ALIASES[v] ?? [v]).forEach((t) => out.add(t)));
-  return Array.from(out);
-}
+/*
+ * The chip-to-tag map used to be duplicated here, and it had drifted: this
+ * copy knew about beach, dancing, sporty, picnic, foodie and artsy while the
+ * one in matching.ts did not, so the shortlist and the itinerary disagreed
+ * about what the user had asked for. Both read catalog.ts now.
+ */
 
 const BAND_RANK: Record<PriceBand, number> = { budget: 0, mid: 1, premium: 2 };
 

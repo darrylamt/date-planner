@@ -97,12 +97,21 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
 
   return {
     venues: rows.length,
-    // `?? false` so this reads correctly before migration 0005 adds the column.
+    /*
+     * `?? false` so this reads correctly before migration 0005 adds the column.
+     *
+     * Counted through the share, like thinMenus below. A branch priced from
+     * another venue's menu has no items under its own id, so counting by that
+     * alone called it unpriced and put it in a queue whose whole job is
+     * "somebody type a price in here" when the price already exists one row
+     * over. Same mistake the thin-menu badge made with the Honeysuckle
+     * branches, and there are eight branches in the catalogue now.
+     */
     unpriced: active.filter(
       (v: any) =>
         !(v.is_free ?? false) &&
         Number(v.avg_cost_per_person_ghs) <= 0 &&
-        (menuCount.get(v.id) ?? 0) === 0
+        (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) === 0
     ).length,
     // Counted across every venue, not just active ones: a number on a paused
     // venue is still a number that could be dialled if it is switched back on.
