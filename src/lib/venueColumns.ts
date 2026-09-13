@@ -66,6 +66,11 @@ export const PUBLIC_VENUE_COLUMNS = [
   "lat",
   "lng",
   "created_at",
+  // 0031. Null until a person rang the venue and asked; never inferred from
+  // dish names, and never a claim this catalogue makes on its own.
+  "has_vegetarian_options",
+  "dietary_checked_at",
+  "dietary_source",
 ] as const;
 
 /** Ready to hand to `.select()`, with the area name joined on. */

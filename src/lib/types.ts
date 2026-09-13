@@ -92,6 +92,15 @@ export interface Venue {
   price_source: "menu" | "estimated" | "unknown";
   /** Half-width of an estimate, as a fraction. Ignored for menu prices. */
   price_spread: number;
+  /**
+   * Whether somebody rang and asked. Null until they did.
+   *
+   * The only dietary claim in this schema with a human behind it, which is the
+   * only reason it is allowed to be a boolean. Never inferred from a menu.
+   */
+  has_vegetarian_options?: boolean | null;
+  dietary_checked_at?: string | null;
+  dietary_source?: string | null;
   /** Google Places link, the join key, and how closures get noticed. */
   google_place_id: string | null;
   business_status: string | null;
@@ -108,6 +117,17 @@ export interface MenuItem {
   category: MenuCategory;
   price_ghs: number;
   notes: string | null;
+  /**
+   * True, false, or null for unknown, and null is emphatically not safe.
+   *
+   * A plan for somebody who does not drink orders only from rows recorded
+   * false. Corona and Ciroc both read as null, because a name-based rule
+   * misses real drinks, and a miss in the other direction is the one that
+   * matters.
+   */
+  is_alcoholic?: boolean | null;
+  /** What the menu says about the dish, quoted. Never our own claim. */
+  dietary_note?: string | null;
   updated_at?: string;
   /**
    * How many people one purchase covers. A plate of food is 1; a foosball
