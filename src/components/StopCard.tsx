@@ -5,13 +5,23 @@ import { SmartImage } from "./SmartImage";
 import { ghs } from "@/lib/format";
 import type { ItineraryOrder, ItineraryStop, MenuItem } from "@/lib/types";
 
-const CATEGORY_ORDER = ["starter", "main", "dessert", "drink", "other"] as const;
+/*
+ * "activity" is its own category, not a kind of "other".
+ *
+ * Migration 0019 split it out so a go-kart, a game of bowling and twelve
+ * minutes of laser tag stopped being priced like a course. Both menu drawers
+ * kept the old five-category list, so the 56 rows that moved had nowhere to
+ * render: an arcade's entire price list was invisible, and its label here
+ * still promised activities that were being filtered out one line below.
+ */
+const CATEGORY_ORDER = ["starter", "main", "dessert", "drink", "activity", "other"] as const;
 const CATEGORY_LABEL: Record<string, string> = {
   starter: "Starters",
   main: "Mains",
   dessert: "Desserts",
   drink: "Drinks",
-  other: "Extras & activities",
+  activity: "Things to do",
+  other: "Extras",
 };
 
 /** Venue/stop card from the style tile (.stop), mobile stacked, desktop side-by-side. */
@@ -39,6 +49,14 @@ export function StopCard({
   desktopRow?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  /*
+   * Typed filter over the drawer. Casa1715 lists 311 items and The Honeysuckle
+   * 182, so "swap the rice for something else" meant scrolling a price list on
+   * a phone until you gave up. The whole menu is already in memory by the time
+   * this renders, so the search is local and instant, and no request is made
+   * for a keystroke.
+   */
+  const [menuQuery, setMenuQuery] = useState("");
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuError, setMenuError] = useState(false);
@@ -47,6 +65,7 @@ export function StopCard({
 
   async function toggleMenu() {
     const opening = !menuOpen;
+    if (!opening) setMenuQuery("");
     setMenuOpen(opening);
     if (opening && menu === null && !menuLoading) {
       setMenuLoading(true);
@@ -108,12 +127,29 @@ export function StopCard({
     );
   }
 
-  const grouped = menu
+  // Name and notes both, because "vegetarian" and "serves two" live in notes
+  // and are exactly the sort of thing somebody types when changing an order.
+  const needle = menuQuery.trim().toLowerCase();
+  const matching = menu
+    ? needle
+      ? menu.filter(
+          (m) =>
+            m.name.toLowerCase().includes(needle) ||
+            (m.notes ?? "").toLowerCase().includes(needle)
+        )
+      : menu
+    : null;
+
+  const grouped = matching
     ? CATEGORY_ORDER.map((cat) => ({
         cat,
-        items: menu.filter((m) => m.category === cat),
+        items: matching.filter((m) => m.category === cat),
       })).filter((g) => g.items.length > 0)
     : [];
+
+  // Short menus are quicker to read than to search, so the box only appears
+  // where it earns its space.
+  const searchable = (menu?.length ?? 0) > 8;
 
   const body = (
     <div className={`px-[18px] pb-[18px] pt-4 ${desktopRow ? "flex-1" : ""}`}>
@@ -189,6 +225,31 @@ export function StopCard({
           )}
           {menu && menu.length === 0 && (
             <div className="text-[14px] text-mutedbrown">No menu on file for this spot yet.</div>
+          )}
+          {searchable && (
+            <div className="mb-2.5 flex items-center gap-2">
+              <input
+                type="search"
+                value={menuQuery}
+                onChange={(e) => setMenuQuery(e.target.value)}
+                placeholder={`Search ${menu!.length} items…`}
+                aria-label={`Search the menu at ${stop.name}`}
+                className="w-full rounded-md border border-line bg-blush px-2.5 py-1.5 text-[14px] text-cocoa placeholder:text-mutedbrown focus:border-flame focus:outline-none"
+              />
+              {needle && (
+                <button
+                  className="shrink-0 text-[13px] text-mutedbrown hover:text-flame"
+                  onClick={() => setMenuQuery("")}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
+          {menu && menu.length > 0 && matching && matching.length === 0 && (
+            <div className="text-[14px] text-mutedbrown">
+              Nothing on this menu matches &ldquo;{menuQuery.trim()}&rdquo;.
+            </div>
           )}
           {grouped.map((g) => (
             <div key={g.cat} className="mb-2 last:mb-0">

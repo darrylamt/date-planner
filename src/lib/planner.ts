@@ -1,5 +1,5 @@
 import type { Candidates } from "./matching";
-import { expandVibes } from "./catalog";
+import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
 import type {
@@ -73,7 +73,12 @@ const ROLE_LABEL: Record<Role, string> = {
  * A plan beginning at 10am is not a shorter version of one beginning at 7pm,
  * so the sequence is chosen from the clock rather than scaled.
  */
-function roleSequence(startHour: number, stopCount: number, focus: PlanFocus): Role[] {
+function roleSequence(
+  startHour: number,
+  stopCount: number,
+  focus: PlanFocus,
+  vibes: string[] = []
+): Role[] {
   /*
    * A narrowed focus overrides the time of day entirely. Someone asking for
    * drinks wants a second bar, not dinner at the sensible hour for it, and
@@ -81,7 +86,10 @@ function roleSequence(startHour: number, stopCount: number, focus: PlanFocus): R
    */
   if (focus !== "everything") {
     const base = FOCUS_ROLES[focus];
-    return Array.from({ length: stopCount }, (_, i) => base[i % base.length]);
+    return withLoungeFloor(
+      Array.from({ length: stopCount }, (_, i) => base[i % base.length]),
+      loungeFloor(vibes)
+    );
   }
 
   let base: Role[];
@@ -89,7 +97,33 @@ function roleSequence(startHour: number, stopCount: number, focus: PlanFocus): R
   else if (startHour < 15) base = ["meal", "activity", "dessert", "lounge"];
   else if (startHour < 17) base = ["activity", "meal", "lounge", "dessert"];
   else base = ["meal", "activity", "lounge", "dessert"];
-  return base.slice(0, stopCount);
+  return withLoungeFloor(base.slice(0, stopCount), loungeFloor(vibes));
+}
+
+/**
+ * Make the sequence carry the bars a vibe asked for.
+ *
+ * Converted from the end, because an evening is built front to back: dinner
+ * first, then somewhere to go afterwards. Taking the dessert slot for a second
+ * bar is what somebody choosing "club hopping" meant; taking the meal slot is
+ * not, unless the evening is short enough that there is nowhere else for the
+ * bars to go, in which case two bars is precisely and only what they asked
+ * for.
+ */
+function withLoungeFloor(seq: Role[], floor: number): Role[] {
+  if (floor <= 0) return seq;
+
+  let need = floor - seq.filter((r) => r === "lounge").length;
+  if (need <= 0) return seq;
+
+  const out = [...seq];
+  for (let i = out.length - 1; i >= 0 && need > 0; i--) {
+    if (out[i] !== "lounge") {
+      out[i] = "lounge";
+      need--;
+    }
+  }
+  return out;
 }
 
 /** What each narrowed focus is made of, cycled to fill the stops asked for. */
@@ -114,14 +148,22 @@ export function focusVenueTypes(focus: PlanFocus): VenueType[] {
 }
 
 /** Two stops in a short window, four only when there is genuinely time. */
-export function stopCountFor(hours: number, focus: PlanFocus = "everything"): number {
+export function stopCountFor(
+  hours: number,
+  focus: PlanFocus = "everything",
+  vibes: string[] = []
+): number {
   /*
    * A crawl is the shape where more stops is the point. Three bars is a night
    * out and two is a drink, so a drinks-only or activity-only evening reaches
    * further than a mixed one given the same hours. The budget still decides
    * whether they are affordable: this only sets what to attempt.
+   *
+   * "Club hopping" is the same shape asked for a different way, and it arrives
+   * as a vibe rather than a focus, so it has to be read here too or the chip
+   * reaches the planner with nowhere to put the bars it wants.
    */
-  const crawl = focus === "drinks" || focus === "activities";
+  const crawl = focus === "drinks" || focus === "activities" || loungeFloor(vibes) >= 2;
 
   if (hours <= 2) return 2;
   if (hours <= 4) return crawl ? 4 : 3;
@@ -742,7 +784,7 @@ export function planItinerary(
   };
 
   const attempt = (stopCount: number): PlannedItinerary | null => {
-    const roles = roleSequence(startHour, stopCount, inputs.focus);
+    const roles = roleSequence(startHour, stopCount, inputs.focus, inputs.vibes);
     const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
 
     // Start with each slot's most preferred option, skipping venues already
@@ -834,7 +876,7 @@ export function planItinerary(
       transportTotal,
       total: foodTotal + transportTotal,
       confidence,
-      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus),
+      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus, inputs.vibes),
     };
 
     function toStops(picks: Option[]): PlannedStop[] {
@@ -870,7 +912,7 @@ export function planItinerary(
   };
 
   const wanted = Math.min(
-    stopCountFor(inputs.hours, inputs.focus),
+    stopCountFor(inputs.hours, inputs.focus, inputs.vibes),
     Math.max(2, candidates.venues.length)
   );
   for (let count = wanted; count >= 2; count--) {

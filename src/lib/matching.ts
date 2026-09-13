@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { expandVibes } from "./catalog";
+import { expandVibes, loungeFloor } from "./catalog";
 import { focusVenueTypes } from "./planner";
 import type { EventRow, MenuItem, PlanInputs, Venue } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -201,6 +201,20 @@ export async function fetchCandidates(
    * from the full scored list, best first.
    */
   const focusTypes = focusVenueTypes(inputs.focus);
+
+  /*
+   * A crawl asked for by vibe needs the same reservation a crawl asked for by
+   * focus gets. "Club hopping" leaves the focus on everything, so focusTypes
+   * comes back empty, and the shortlist fills with restaurants exactly as it
+   * did before focus reservation existed. The planner would then be handed two
+   * lounge slots and one bar to put in them, and quietly fill the second with
+   * whatever else was to hand, which is the chip meaning nothing all over
+   * again.
+   */
+  if (loungeFloor(inputs.vibes) > 0 && !focusTypes.includes("lounge")) {
+    focusTypes.push("lounge");
+  }
+
   if (focusTypes.length) {
     const have = new Set(picked.map((v) => v.id));
     const missing = scored

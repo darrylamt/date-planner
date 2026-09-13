@@ -179,7 +179,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
      * sends them round a loop with no exit.
      */
     const hours = openOnDate(candidates.venues, inputs.date, inputs.startTime, inputs.hours);
-    if (hours.closed > 0 && hours.open + hours.unknown < stopCountFor(inputs.hours, inputs.focus)) {
+    if (hours.closed > 0 && hours.open + hours.unknown < stopCountFor(inputs.hours, inputs.focus, inputs.vibes)) {
       const weekday = new Date(`${inputs.date}T12:00:00`).toLocaleDateString("en-GB", {
         weekday: "long",
       });
@@ -201,7 +201,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
        * enough for a full day, and the earlier fixed threshold of two let the
        * second case fall through to a message about money.
        */
-      if (available < stopCountFor(inputs.hours, inputs.focus)) {
+      if (available < stopCountFor(inputs.hours, inputs.focus, inputs.vibes)) {
         return NextResponse.json({
           status: "no_match",
           headline: FOCUS_SHORTFALL[inputs.focus],

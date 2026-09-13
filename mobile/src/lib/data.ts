@@ -31,11 +31,31 @@ export async function fetchVenueContact(venueId: string): Promise<{
   return data ?? null;
 }
 
+/**
+ * The menu for a stop, through the share if it borrows one.
+ *
+ * This queried menu_items by the requested id alone, so every branch priced
+ * from another row came back empty and the sheet said "no menu on file for
+ * this spot yet". Eight active venues were in that state: four Honeysuckles,
+ * three Flicks & Licks and Arcadia West Hills, each of them a venue whose
+ * menu we hold in full, one row over. The web route was fixed the same way.
+ *
+ * One level only, enforced by a trigger in 0024, so this is a lookup rather
+ * than a walk.
+ */
 export async function fetchMenu(venueId: string): Promise<MenuItem[]> {
+  const { data: venue } = await supabase
+    .from("venues")
+    .select("menu_shared_from")
+    .eq("id", venueId)
+    .maybeSingle();
+
+  const owner = (venue as { menu_shared_from?: string | null } | null)?.menu_shared_from || venueId;
+
   const { data } = await supabase
     .from("menu_items")
     .select("id, venue_id, name, category, price_ghs, notes")
-    .eq("venue_id", venueId)
+    .eq("venue_id", owner)
     .order("category")
     .order("name");
   return (data ?? []) as MenuItem[];

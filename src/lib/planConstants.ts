@@ -1,5 +1,5 @@
 import { BUDGET_DEFAULT } from "./budget";
-import type { Formality, Occasion, PlanFocus, PlanInputs } from "./types";
+import type { Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -47,6 +47,27 @@ export const FOCUS_OPTIONS: { id: PlanFocus; title: string; sub: string }[] = [
   { id: "food", title: "Mostly food", sub: "A meal, something sweet, coffee" },
   { id: "drinks", title: "Just drinks", sub: "Bars and lounges, nothing else" },
   { id: "activities", title: "Things to do", sub: "Something to play, see or make" },
+];
+
+/**
+ * Local or continental.
+ *
+ * Accra eats two ways and the catalogue could not tell them apart: a chop bar
+ * and a Mediterranean place are both type "restaurant", so wanting waakye and
+ * wanting pasta produced the same shortlist and the difference came down to
+ * luck. Only asked when the plan involves eating.
+ *
+ * Lives here rather than only in the app because this file is mirrored
+ * verbatim into mobile, and the app had grown a question the web copy did not
+ * know about. That made `npm run mirror`, which mobile/AGENTS.md tells you to
+ * run, a command that deleted a constant the app imports and broke its build.
+ * The mirror can hold what one client has and the other has not yet; it cannot
+ * hold the reverse.
+ */
+export const CUISINE_OPTIONS: { id: PlanCuisine; title: string; sub: string }[] = [
+  { id: "either", title: "Either is fine", sub: "Whatever fits the evening best" },
+  { id: "local", title: "Local", sub: "Ghanaian and West African, chop bars included" },
+  { id: "continental", title: "Continental", sub: "Italian, Asian, grills, anything else" },
 ];
 
 /** How dressed-up it should be. */

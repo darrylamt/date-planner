@@ -111,6 +111,32 @@ export function expandVibes(vibes: string[]): string[] {
   return Array.from(out);
 }
 
+/**
+ * Bar or club stops a vibe insists on, rather than merely prefers.
+ *
+ * Most chips are a mood: they rank the shortlist and change nothing about the
+ * shape of the evening. Two are a shape. "Club hopping" names the hopping, and
+ * ranking bars higher while still building dinner, an activity and a dessert
+ * gave one bar and called it a crawl. "Dancing" is milder but has the same
+ * hole at the wrong end of the day: the morning and afternoon sequences carry
+ * no lounge at all, so asking to dance on a plan starting at ten got a cafe, a
+ * gallery and a pudding.
+ *
+ * Read by both halves. planner.ts turns the floor into lounge slots;
+ * matching.ts reserves the candidates to fill them, because a slot the
+ * shortlist holds no bar for is a slot that quietly becomes something else.
+ * That split is exactly how the chips came to mean nothing the first time.
+ */
+export const VIBE_LOUNGE_FLOOR: Record<string, number> = {
+  "club hopping": 2,
+  dancing: 1,
+};
+
+/** The most any chosen vibe insists on. Zero for every other chip. */
+export function loungeFloor(vibes: string[]): number {
+  return vibes.reduce((most, v) => Math.max(most, VIBE_LOUNGE_FLOOR[v.toLowerCase()] ?? 0), 0);
+}
+
 export const BEST_FOR = [
   "first_date",
   "anniversary",

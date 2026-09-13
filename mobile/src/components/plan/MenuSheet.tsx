@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
@@ -11,13 +11,23 @@ import { ghs } from "../../lib/format";
 import { fetchMenu } from "../../lib/data";
 import type { ItineraryOrder, MenuItem } from "../../lib/types";
 
-const CATEGORY_ORDER = ["starter", "main", "dessert", "drink", "other"] as const;
+/*
+ * "activity" is its own category, not a kind of "other".
+ *
+ * Migration 0019 split it out so a go-kart, a game of bowling and twelve
+ * minutes of laser tag stopped being priced like a course. Both menu drawers
+ * kept the old five-category list, so the 56 rows that moved had nowhere to
+ * render: an arcade's entire price list was invisible, and its label here
+ * still promised activities that were being filtered out one line below.
+ */
+const CATEGORY_ORDER = ["starter", "main", "dessert", "drink", "activity", "other"] as const;
 const CATEGORY_LABEL: Record<string, string> = {
   starter: "Starters",
   main: "Mains",
   dessert: "Desserts",
   drink: "Drinks",
-  other: "Extras & activities",
+  activity: "Things to do",
+  other: "Extras",
 };
 
 /**
@@ -44,6 +54,17 @@ export function MenuSheet({
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  /*
+   * Typed filter. Casa1715 lists 311 items and The Honeysuckle 182, so
+   * changing one dish meant thumbing a price list until you gave up. The whole
+   * menu is already loaded by the time this renders, so the search is local
+   * and costs nothing per keystroke.
+   */
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
 
   useEffect(() => {
     if (!visible || menu !== null || loading) return;
@@ -70,10 +91,25 @@ export function MenuSheet({
     onOrdersChange([...orders, { item: item.name, qty: 1, price_ghs: Math.round(unit) }]);
   }
 
+  // Name and notes both: "vegetarian" and "serves two" live in notes, and are
+  // exactly what somebody types when they are changing an order.
+  const needle = query.trim().toLowerCase();
+  const matching = needle
+    ? (menu ?? []).filter(
+        (m) =>
+          m.name.toLowerCase().includes(needle) ||
+          (m.notes ?? "").toLowerCase().includes(needle)
+      )
+    : (menu ?? []);
+
   const grouped = CATEGORY_ORDER.map((cat) => ({
     cat,
-    items: (menu ?? []).filter((m) => m.category === cat),
+    items: matching.filter((m) => m.category === cat),
   })).filter((g) => g.items.length > 0);
+
+  // A short menu is quicker to read than to search, so the box only appears
+  // where it earns its space.
+  const searchable = (menu?.length ?? 0) > 8;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -102,7 +138,42 @@ export function MenuSheet({
           <Button title="Done" kind="plain" size="medium" onPress={onClose} />
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingVertical: space.lg, paddingBottom: insets.bottom + space.xxxl }}>
+        {searchable && (
+          <View
+            style={{
+              paddingHorizontal: GUTTER,
+              paddingVertical: space.sm,
+              borderBottomWidth: HAIRLINE,
+              borderBottomColor: c.border,
+              backgroundColor: c.background,
+            }}
+          >
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={`Search ${menu!.length} items`}
+              placeholderTextColor={c.textSecondary}
+              clearButtonMode="while-editing"
+              autoCorrect={false}
+              returnKeyType="search"
+              accessibilityLabel={`Search the menu at ${venueName}`}
+              style={{
+                backgroundColor: c.backgroundElement,
+                borderRadius: radius.row,
+                paddingHorizontal: space.md,
+                minHeight: 40,
+                color: c.text,
+                fontSize: 17,
+              }}
+            />
+          </View>
+        )}
+
+        <ScrollView
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingVertical: space.lg, paddingBottom: insets.bottom + space.xxxl }}
+        >
           {loading ? (
             <ActivityIndicator style={{ marginTop: space.xxxl }} color={c.accent} />
           ) : failed ? (
@@ -111,7 +182,9 @@ export function MenuSheet({
             </Text>
           ) : grouped.length === 0 ? (
             <Text variant="body" tone="secondary" center style={{ marginTop: space.xxxl }}>
-              No menu on file for this spot yet.
+              {needle
+                ? `Nothing on this menu matches “${query.trim()}”.`
+                : "No menu on file for this spot yet."}
             </Text>
           ) : (
             grouped.map((g) => (
