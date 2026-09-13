@@ -73,6 +73,9 @@ function RootShell() {
               button borrows, which otherwise reads "(tabs)". */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
           <Stack.Screen name="plan/new" options={{ title: "" }} />
+          {/* A focused task rather than a destination, so it is pushed like
+              the planner instead of sitting in the tab bar. */}
+          <Stack.Screen name="chat" options={{ title: "Ask" }} />
           <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
           {/* Full screen and gesture-locked: a half-swiped intro that lands
               back on an empty app is worse than no intro. */}

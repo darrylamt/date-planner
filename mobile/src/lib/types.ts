@@ -231,6 +231,16 @@ export type Occasion =
 export interface ItineraryStop {
   venue_id: string;
   kind: "venue" | "event";
+  /**
+   * What sort of place this is, carried so the card can offer the right
+   * actions without fetching the venue again.
+   *
+   * "Menu" is the wrong word for a bowling alley, and until this was here the
+   * card had no way to tell one from a restaurant: the stop knew its name, its
+   * area and its price, and nothing about what it was. Optional, because a
+   * plan saved before this existed has no value for it and must still render.
+   */
+  venue_type?: VenueType;
   name: string;
   area: string;
   arrival_time: string; // "5:30 PM"
@@ -254,6 +264,8 @@ export interface ItineraryStop {
 
 export interface StopAlternate {
   venue_id: string;
+  /** Carried for the same reason as on the stop: a swap can change the kind. */
+  venue_type?: VenueType;
   name: string;
   area: string;
   image_url: string | null;

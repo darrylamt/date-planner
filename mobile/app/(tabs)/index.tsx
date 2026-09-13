@@ -62,7 +62,40 @@ export default function Home() {
       showsVerticalScrollIndicator={false}
     >
       <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.five }}>
-        <Text variant="display" style={{ marginTop: Spacing.four }}>
+        {/*
+          The concierge, top right.
+          *
+          * Not a tab: it answers a question rather than being somewhere you
+          * go, and a fifth destination would have made the bar a list. Top
+          * right is where a phone puts the thing you reach for while already
+          * looking at something else.
+          *
+          * Sparkles because that is what this means now. Any other glyph has
+          * to be learned; this one is already read as "ask the model" before
+          * the label is.
+        */}
+        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ask about Accra"
+            onPress={() => router.push("/chat")}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+            })}
+          >
+            <Symbol name="sparkles" size={20} color={c.accent} />
+          </Pressable>
+        </View>
+
+        <Text variant="display" style={{ marginTop: Spacing.two }}>
           Plan a date worth turning up for.
         </Text>
       </View>

@@ -52,6 +52,7 @@ function assemble(
     // unpriced venue as free.
     const alternates: StopAlternate[] = s.alternates.map((a) => ({
       venue_id: a.venue.id,
+      venue_type: a.venue.type,
       name: a.venue.name,
       area: a.venue.areas?.name ?? "",
       image_url: a.venue.image_url,
@@ -65,6 +66,7 @@ function assemble(
     return {
       venue_id: s.venue.id,
       kind: "venue",
+      venue_type: s.venue.type,
       name: s.venue.name,
       area: s.venue.areas?.name ?? "",
       arrival_time: clockFromMinutes(s.arrivalMinutes),

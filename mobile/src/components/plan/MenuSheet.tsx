@@ -41,6 +41,7 @@ export function MenuSheet({
   venueName,
   orders,
   onOrdersChange,
+  only,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -48,6 +49,15 @@ export function MenuSheet({
   venueName: string;
   orders: ItineraryOrder[];
   onOrdersChange: (orders: ItineraryOrder[]) => void;
+  /**
+   * Show one category only.
+   *
+   * An arcade's price list and its kitchen are different questions, and
+   * "Menu" is the wrong word for a game of bowling. The card opens this sheet
+   * twice over, once for each, rather than making somebody scroll past the
+   * burgers to find the lanes.
+   */
+  only?: (typeof CATEGORY_ORDER)[number];
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -102,14 +112,17 @@ export function MenuSheet({
       )
     : (menu ?? []);
 
-  const grouped = CATEGORY_ORDER.map((cat) => ({
-    cat,
-    items: matching.filter((m) => m.category === cat),
-  })).filter((g) => g.items.length > 0);
+  const grouped = CATEGORY_ORDER.filter((cat) => !only || cat === only)
+    .map((cat) => ({
+      cat,
+      items: matching.filter((m) => m.category === cat),
+    }))
+    .filter((g) => g.items.length > 0);
 
   // A short menu is quicker to read than to search, so the box only appears
   // where it earns its space.
-  const searchable = (menu?.length ?? 0) > 8;
+  const inScope = only ? (menu ?? []).filter((m) => m.category === only) : (menu ?? []);
+  const searchable = inScope.length > 8;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -132,7 +145,7 @@ export function MenuSheet({
               {venueName}
             </Text>
             <Text variant="footnote" tone="secondary">
-              Tap to add to your order
+              {only === "activity" ? "Tap to add it to your plan" : "Tap to add to your order"}
             </Text>
           </View>
           <Button title="Done" kind="plain" size="medium" onPress={onClose} />
@@ -151,7 +164,7 @@ export function MenuSheet({
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder={`Search ${menu!.length} items`}
+              placeholder={`Search ${inScope.length} items`}
               placeholderTextColor={c.textSecondary}
               clearButtonMode="while-editing"
               autoCorrect={false}
@@ -183,8 +196,10 @@ export function MenuSheet({
           ) : grouped.length === 0 ? (
             <Text variant="body" tone="secondary" center style={{ marginTop: space.xxxl }}>
               {needle
-                ? `Nothing on this menu matches “${query.trim()}”.`
-                : "No menu on file for this spot yet."}
+                ? `Nothing here matches “${query.trim()}”.`
+                : only === "activity"
+                  ? "No price list on file for this spot yet."
+                  : "No menu on file for this spot yet."}
             </Text>
           ) : (
             grouped.map((g) => (

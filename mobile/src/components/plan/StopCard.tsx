@@ -36,9 +36,17 @@ export function StopCard({
 }) {
   const c = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
   const editable = stop.kind !== "event";
+  /*
+   * Places you do something at. Read from the venue's own type rather than
+   * guessed from the menu, so the button is there before anything is fetched
+   * and does not flicker in once a sheet has been opened. A plan saved before
+   * venue_type existed carries none, and simply keeps the old actions.
+   */
+  const isActivityVenue = stop.venue_type === "activity" || stop.venue_type === "outdoor";
   const canReserve = stop.reservation_required && !stop.reservation_requested;
 
   /** Quantity stepper. Dropping to zero removes the line entirely. */
@@ -225,6 +233,20 @@ export function StopCard({
           {editable ? (
             <StopAction icon="list.bullet" label="Menu" onPress={() => setMenuOpen(true)} />
           ) : null}
+          {/*
+            Somewhere you do something rather than eat something, so what is on
+            offer is a price list of lanes and courts and not a menu. Shown
+            from the venue's own type, which the itinerary now carries: the
+            card used to know this stop's name, area and price and nothing at
+            all about what kind of place it was.
+          */}
+          {editable && isActivityVenue ? (
+            <StopAction
+              icon="figure.bowling"
+              label="Activity"
+              onPress={() => setActivityOpen(true)}
+            />
+          ) : null}
           <StopAction icon="map" label="Map" onPress={openMaps} />
           {canReserve ? (
             <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
@@ -257,6 +279,16 @@ export function StopCard({
         venueName={stop.name}
         orders={stop.orders}
         onOrdersChange={onOrdersChange}
+      />
+
+      <MenuSheet
+        visible={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        venueId={stop.venue_id}
+        venueName={stop.name}
+        orders={stop.orders}
+        onOrdersChange={onOrdersChange}
+        only="activity"
       />
     </View>
   );

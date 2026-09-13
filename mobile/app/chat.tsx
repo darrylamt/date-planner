@@ -11,11 +11,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Text } from "../../src/components/Text";
-import { Symbol } from "../../src/components/Symbol";
-import { GUTTER, HAIRLINE, TAB_BAR, radius, space } from "../../src/theme";
-import { useTheme } from "../../src/lib/useTheme";
-import { useAuth } from "../../src/lib/useAuth";
+import { Text } from "../src/components/Text";
+import { Symbol } from "../src/components/Symbol";
+import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
+import { useTheme } from "../src/lib/useTheme";
+import { useAuth } from "../src/lib/useAuth";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -23,7 +23,7 @@ import {
   fetchConversation,
   fetchLatestConversation,
   streamChat,
-} from "../../src/lib/chat";
+} from "../src/lib/chat";
 
 /**
  * The concierge.
@@ -173,7 +173,7 @@ export default function ChatScreen() {
         ref={scroller}
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top + space.xl,
+          paddingTop: space.lg,
           paddingHorizontal: GUTTER,
           paddingBottom: space.xl,
         }}
@@ -181,12 +181,11 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={toBottom}
       >
-        <Text variant="title2" style={{ marginBottom: space.xs }}>
-          Ask about Accra
-        </Text>
-        <Text variant="footnote" tone="secondary" style={{ marginBottom: space.xl }}>
-          Everything here comes from our own catalogue. If we do not hold it, it will say so.
-        </Text>
+        {bubbles.length === 0 && (
+          <Text variant="footnote" tone="secondary" style={{ marginBottom: space.xl }}>
+            Everything here comes from our own catalogue. If we do not hold it, it will say so.
+          </Text>
+        )}
 
         {empty ? (
           <View style={{ gap: space.sm }}>
@@ -276,6 +275,7 @@ function Composer({
   remaining: number | null;
 }) {
   const c = useTheme();
+  const insets = useSafeAreaInsets();
   const ready = value.trim().length > 0 && !busy && !disabled;
 
   return (
@@ -283,8 +283,7 @@ function Composer({
       style={{
         paddingHorizontal: GUTTER,
         paddingTop: space.sm,
-        // Clears the floating tab bar, which sits over the content.
-        paddingBottom: TAB_BAR.clearance,
+        paddingBottom: insets.bottom + space.md,
         borderTopWidth: HAIRLINE,
         borderTopColor: c.border,
         backgroundColor: c.background,

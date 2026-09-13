@@ -38,6 +38,7 @@ export function swapStopLocally(
     ...alternates.slice(1),
     {
       venue_id: stop.venue_id,
+      venue_type: stop.venue_type,
       name: stop.name,
       area: stop.area,
       image_url: stop.image_url,
@@ -52,6 +53,7 @@ export function swapStopLocally(
   const swapped = {
     ...stop,
     venue_id: next.venue_id,
+    venue_type: next.venue_type,
     name: next.name,
     area: next.area,
     image_url: next.image_url,
