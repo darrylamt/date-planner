@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 
 interface PendingVenue {
@@ -40,6 +41,7 @@ export function PhoneReview({
   approved: PendingVenue[];
   collisions: Collision[];
 }) {
+  const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [done, setDone] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +76,15 @@ export function PhoneReview({
         return;
       }
       setDone((d) => ({ ...d, [venueId]: action }));
+      /*
+       * Re-read the server rather than trusting the badge just painted. The
+       * two lists, both counts and the sidebar badge are all rendered from a
+       * snapshot taken before the click, so without this the screen kept
+       * showing the pre-approval state and a second click on the same stale
+       * row came back "Nothing pending to approve", which reads exactly like
+       * the approval having failed.
+       */
+      router.refresh();
     } catch {
       setError("Could not reach the server.");
     } finally {

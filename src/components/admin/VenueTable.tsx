@@ -23,6 +23,12 @@ interface Row {
   avgForTwo: number;
   staleDays: number | null;
   isStale: boolean;
+  /**
+   * How the venue is priced at all. "figure" is a per-person amount with no
+   * menu behind it, an entrance fee or a flat cover, which is a finished state
+   * rather than a missing menu. "nothing" is genuinely unpriced.
+   */
+  pricedBy: "menu" | "figure" | "nothing";
   /** Null when Google has no hours for it, so nothing guards the plan. */
   hoursKnown: boolean;
 }
@@ -84,16 +90,26 @@ export function VenueTable({ rows }: { rows: Row[] }) {
                 <td className="hidden font-mono md:table-cell">{ghs(r.avgForTwo)}</td>
                 <td className="hidden lg:table-cell">
                   {r.staleDays === null
-                    ? "never"
+                    ? r.pricedBy === "figure"
+                      ? "no menu"
+                      : "never"
                     : r.staleDays === 0
                       ? "today"
                       : `${r.staleDays} days ago`}
                 </td>
                 <td className="whitespace-nowrap">
+                  {/*
+                    "Stale" used to cover three unrelated situations, and two of
+                    them could never be cleared, so the badge stopped carrying
+                    information. Now it means one thing: there is a menu and it
+                    is old.
+                  */}
                   {r.isStale ? (
-                    <span className="badge b-stale">
-                      Stale{r.staleDays !== null ? ` · ${r.staleDays}d` : ""}
-                    </span>
+                    <span className="badge b-stale">Stale · {r.staleDays}d</span>
+                  ) : r.pricedBy === "nothing" ? (
+                    <span className="badge b-stale">No prices</span>
+                  ) : r.pricedBy === "figure" ? (
+                    <span className="badge b-ok">Fee only</span>
                   ) : (
                     <span className="badge b-ok">Fresh</span>
                   )}

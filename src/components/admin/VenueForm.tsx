@@ -10,12 +10,17 @@ import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places"
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
 import { describeWeek, parsePeriods } from "@/lib/hours";
 import { ensureAreaId } from "@/lib/areas";
+import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/research";
 import type { Area, MenuCategory, MenuItem, Venue } from "@/lib/types";
 
 const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] as const;
 const BANDS = ["budget", "mid", "premium"] as const;
-const VIBES = ["calm", "lively", "romantic", "fun", "adventurous", "scenic", "upscale", "casual"];
+// From the catalogue vocabulary, so the checkboxes here cannot fall behind the
+// tags the planner knows how to match. This list was missing chill, which 8
+// venues already carried, and all six of the tags the plan flow's Beach,
+// Dancing, Sporty, Outdoorsy, Artsy and Foodie chips look for.
+const VIBES = [...VENUE_VIBE_TAGS];
 const BEST_FOR = ["first_date", "anniversary", "date_night", "friend_outing", "casual_hangout"];
 const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "activity", "other"];
 
@@ -117,8 +122,35 @@ export function VenueForm({
     setBusy(true);
     setError(null);
     try {
-      const payload = {
-        ...v,
+      /*
+       * Phone is the one field a venue edit may not write, and this payload
+       * was writing it twice over.
+       *
+       * `phone` rode in on the spread below, and the pending trio was reset on
+       * every save, so the gate came undone in two directions. Saving a venue
+       * whose number was already live re-proposed that same number and dropped
+       * it back into the review queue: 20 venues in the catalogue were sitting
+       * with an approved number and a digit-identical "pending" copy of it,
+       * every one stamped "admin edit, unreviewed", which is what "I approved
+       * it and it came back" actually was. And a venue still awaiting review
+       * has phone = null, so the box renders empty, and saving it wrote
+       * phone = '' with phone_status = 'none', destroying the proposal with
+       * nothing to show it had ever been made.
+       *
+       * So the approved column is never written from here, and a proposal is
+       * recorded only when the box holds a number that differs from the one
+       * already approved. An unchanged box is not an edit. Clearing the box is
+       * not a withdrawal either, because withdrawing a live number is what the
+       * Withdraw button on Phone review is for, and doing half of it here
+       * would leave the number dialable with no proposal left to review.
+       */
+      const { phone: typedPhone, ...fields } = v;
+      const digitsOf = (n: string | null | undefined) => (n ?? "").replace(/\D/g, "");
+      const typed = typedPhone.trim();
+      const proposesNewNumber = typed !== "" && digitsOf(typed) !== digitsOf(venue?.phone);
+
+      const payload: Record<string, unknown> = {
+        ...fields,
         // The check constraint refuses a free venue that also carries a
         // price, so the flag wins and the figure is zeroed rather than
         // failing the save with a database error nobody can act on.
@@ -138,11 +170,6 @@ export function VenueForm({
         max_party_size: v.max_party_size === "" ? null : Number(v.max_party_size),
         dress_code: v.dress_code || null,
         instagram_handle: v.instagram_handle || null,
-        // Even an admin edit routes through review, so approval happens in
-        // exactly one place and is always recorded with who and when.
-        phone_pending: v.phone || null,
-        phone_status: v.phone ? "pending" : "none",
-        phone_source: "admin edit, unreviewed",
         google_maps_url: v.google_maps_url || null,
         image_url: v.image_url || null,
         lat: v.lat === "" ? null : Number(v.lat),
@@ -155,6 +182,14 @@ export function VenueForm({
         opening_hours_text: hours.text ?? null,
         hours_synced_at: hours.periods ? new Date().toISOString() : null,
       };
+
+      // Only an actual change to the number is a proposal. Everything else
+      // leaves all four phone columns exactly as review left them.
+      if (proposesNewNumber) {
+        payload.phone_pending = typed;
+        payload.phone_status = "pending";
+        payload.phone_source = "admin edit, unreviewed";
+      }
 
       /*
        * A new area gets created here rather than silently dropped. Google put
@@ -773,9 +808,12 @@ export function VenueForm({
           <span className="flbl">Phone</span>
           <input className="inp" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} />
           <div className="mt-1 text-[12.5px] text-mutedbrown">
-            Saved as a proposal. It stays unusable until approved at{" "}
-            <b className="text-ink">Phone review</b>, this number gets dialled
-            under our name, so it never goes live on an edit alone.
+            Shows the approved number. Type a different one and it is saved as a
+            proposal, unusable until approved at{" "}
+            <b className="text-ink">Phone review</b>, because this number gets
+            dialled under our name. Leaving it untouched changes nothing, and
+            emptying it does not withdraw a live number, that is the{" "}
+            <b className="text-ink">Withdraw</b> button on Phone review.
           </div>
         </div>
         <div className={field}>
