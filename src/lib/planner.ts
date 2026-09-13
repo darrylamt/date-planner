@@ -93,11 +93,23 @@ function roleSequence(
   }
 
   let base: Role[];
-  if (startHour < 11) base = ["cafe", "activity", "meal", "dessert"];
-  else if (startHour < 15) base = ["meal", "activity", "dessert", "lounge"];
-  else if (startHour < 17) base = ["activity", "meal", "lounge", "dessert"];
-  else base = ["meal", "activity", "lounge", "dessert"];
-  return withLoungeFloor(base.slice(0, stopCount), loungeFloor(vibes));
+  /*
+   * Six long, and cycled if a request ever runs past them.
+   *
+   * These were four, and the sequence was taken with slice, so asking for five
+   * places returned four roles and the planner built four stops without ever
+   * reporting that it had not done what was asked. Somebody chose five and got
+   * four, with no fallback and no message, because the list simply ran out.
+   */
+  if (startHour < 11) base = ["cafe", "activity", "meal", "dessert", "activity", "lounge"];
+  else if (startHour < 15) base = ["meal", "activity", "dessert", "lounge", "activity", "cafe"];
+  else if (startHour < 17) base = ["activity", "meal", "lounge", "dessert", "lounge", "activity"];
+  else base = ["meal", "activity", "lounge", "dessert", "lounge", "activity"];
+
+  return withLoungeFloor(
+    Array.from({ length: stopCount }, (_, i) => base[i % base.length]),
+    loungeFloor(vibes)
+  );
 }
 
 /**
@@ -305,7 +317,26 @@ const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.pri
  */
 const CHEAP_POINT = 0.25;
 
-function priceCentre(tier: 0 | 1, count: number): number {
+/**
+ * How much of an evening to order.
+ *
+ * 0 is the modest end of the menu, 1 is what somebody would typically order,
+ * and 2 is a proper sit-down: something to start, something to drink and
+ * something sweet after.
+ *
+ * Two exists because the fitting could only ever give things up. It walks down
+ * when the plan costs too much and climbs back to what it surrendered, but a
+ * plan that never exceeded the budget surrendered nothing, so there was
+ * nothing to climb back to and the leftover money simply sat there. Somebody
+ * with a generous budget got a typical order and half their money unspent.
+ *
+ * Note what generosity is here: more courses at the same prices, not dearer
+ * plates. Reaching up the price list to spend a budget would be choosing
+ * expensive food on somebody's behalf, which is not what they asked for.
+ */
+export type OrderTier = 0 | 1 | 2;
+
+function priceCentre(tier: OrderTier, count: number): number {
   return tier === 0
     ? Math.floor((count - 1) * CHEAP_POINT)
     : Math.floor(count / 2);
@@ -322,7 +353,7 @@ function planOrders(
   venue: Venue,
   menu: MenuItem[],
   partySize: number,
-  tier: 0 | 1,
+  tier: OrderTier,
   durationMins: number,
   /** Minutes past midnight the party is expected to arrive. */
   slotStartMinute: number
@@ -475,13 +506,24 @@ function planOrders(
       () => orderFrom("other", partySize),
       () => orderFrom("starter", partySize),
     ].reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+
+    /*
+     * Courses around the mains, only at the fullest tier and only when there
+     * are real mains to put them around. Without that guard a venue with no
+     * main course falls back to ordering its starters as the main event, and
+     * would then be served the same starters again as a first course.
+     */
+    const hasMains = menu.some((m) => m.category === "main");
+    if (tier === 2 && hasMains) lines.push(...orderFrom("starter", partySize));
+
     lines.push(...mains);
 
     /*
      * A drink each at a typical order. Spread too, because a table of seven
      * does not order seven of the same thing to drink either.
      */
-    if (tier === 1) lines.push(...orderFrom("drink", partySize));
+    if (tier >= 1) lines.push(...orderFrom("drink", partySize));
+    if (tier === 2 && hasMains) lines.push(...orderFrom("dessert", partySize));
   } else if (venue.type === "dessert") {
     const sweet = orderFrom("dessert", partySize);
     lines.push(...(sweet.length ? sweet : orderFrom("other", partySize)));
@@ -703,7 +745,7 @@ export function planItinerary(
   /** Every way one slot could be filled, cheapest order first within a venue. */
   interface Option {
     venue: Venue;
-    tier: 0 | 1;
+    tier: OrderTier;
     orders: ItineraryOrder[];
     cost: number;
     score: number;
@@ -776,7 +818,7 @@ export function planItinerary(
 
       const menu = menuByVenue.get(venue.id) ?? [];
       const score = scoreVenue(venue, inputs, wantedTags);
-      for (const tier of [1, 0] as const) {
+      for (const tier of [2, 1, 0] as const) {
         const planned = planOrders(
           venue,
           menu,
@@ -811,24 +853,31 @@ export function planItinerary(
     };
 
     const preferred = build(pool);
-    if (preferred.length || focusTypes.length) return preferred;
+
+    // Inside a narrowed focus there is no wider pool to fall back to: reaching
+    // outside it would answer a different question from the one asked.
+    if (focusTypes.length) return preferred;
 
     /*
-     * Nothing of this slot's own type survived, so take anything.
+     * Everything else, behind everything of the right type.
      *
-     * The fallback used to be chosen before the filtering rather than after
-     * it: if the catalogue held even one activity venue the slot narrowed to
-     * activities, and if that one venue then turned out to be shut at the hour
-     * in question the slot had no options at all and the whole evening
-     * returned nothing. A smaller budget could fail where a larger one
-     * succeeded, because widening the price bands changed which venues were in
-     * the shortlist and whether the narrowing happened at all. Two people with
-     * GHS 600 got no plan while GHS 900 planned fine.
+     * The slot used to be restricted to its own kind, and that restriction
+     * failed in two different ways. If no venue of the kind survived the hours
+     * check the slot was empty and the whole evening returned nothing: two
+     * people with GHS 600 got no plan while GHS 900 planned fine, because
+     * widening the price band changed which venues were in the shortlist.
+     * And if the sequence wanted two bars while only one survived, the second
+     * bar slot found its single venue already taken and failed the same way,
+     * which is how asking for five places produced four with no word said.
      *
-     * Deciding it on what survives is the difference between "we hold no
-     * bowling alley" and "the one we hold is shut on Tuesdays".
+     * Preference by ordering rather than by exclusion fixes both. Every venue
+     * of the right type comes first, whatever it scores, so the natural pick
+     * is always the right kind of place; anything else is reachable only once
+     * those are exhausted or unaffordable. A bar slot filled by a restaurant
+     * is a compromise, and a compromise beats an empty screen.
      */
-    return build(candidates.venues);
+    const rest = build(candidates.venues.filter((v) => !roleTypes.includes(v.type)));
+    return [...preferred, ...rest];
   };
 
   const attempt = (stopCount: number): PlannedItinerary | null => {
@@ -865,7 +914,16 @@ export function planItinerary(
      * same move fixes that, and taking the largest saving first means the plan
      * gives up as little of what was preferred as possible.
      */
-    for (let guard = 0; guard < 40; guard++) {
+    /*
+     * Generous enough to walk the whole way down.
+     *
+     * This was forty, which was ample when a plan started at a typical order.
+     * Starting at a full sit-down across five stops is a much longer descent,
+     * and running out of moves mid-walk does not report a problem: the plan
+     * simply fails, the caller tries one fewer stop, and somebody who asked
+     * for five places is quietly given four.
+     */
+    for (let guard = 0; guard < 300; guard++) {
       const total = totalOf(chosen);
       if (total <= inputs.budget) break;
 
