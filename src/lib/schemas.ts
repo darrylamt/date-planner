@@ -11,6 +11,9 @@ export const planInputsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.number().min(1).max(12),
+  // Optional: a plan built before this was asked carries no value, and the
+  // planner falls back to reading it off the duration.
+  stops: z.number().int().min(2).max(5).optional(),
   vibes: z.array(z.string()).min(1).max(3),
   // Defaulted rather than required: a plan posted by an older build of the
   // app still has to be plannable.

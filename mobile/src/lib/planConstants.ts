@@ -28,6 +28,22 @@ export const VIBES = [
   "Foodie",
 ] as const;
 
+/**
+ * How many places, asked rather than inferred.
+ *
+ * Zero keeps the old behaviour and is deliberately first, so the default costs
+ * nobody a decision. The ceiling is five because a sixth stop has never
+ * survived a budget in this catalogue, and offering it would be offering
+ * something we cannot build.
+ */
+export const STOP_OPTIONS: { label: string; stops: number }[] = [
+  { label: "Up to you", stops: 0 },
+  { label: "2 places", stops: 2 },
+  { label: "3 places", stops: 3 },
+  { label: "4 places", stops: 4 },
+  { label: "5 places", stops: 5 },
+];
+
 export const DURATIONS: { label: string; hours: number }[] = [
   { label: "1h", hours: 1 },
   { label: "2h", hours: 2 },

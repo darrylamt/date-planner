@@ -184,6 +184,15 @@ export interface PlanInputs {
   date: string; // ISO yyyy-mm-dd
   startTime: string; // e.g. "17:30"
   hours: number; // duration of the outing
+  /**
+   * How many places they want to go, when they have said.
+   *
+   * Inferred from the duration until now, which is a guess about intent
+   * dressed up as arithmetic: four hours is a long dinner for one person and
+   * four stops for another, and nothing in the questionnaire let them settle
+   * it. Undefined, or anything under two, means the old inference still runs.
+   */
+  stops?: number;
   vibes: string[];
   focus: PlanFocus;
   cuisine: PlanCuisine;

@@ -18,6 +18,7 @@ import {
   OCCASION_EXTRA,
   OCCASIONS,
   PARTY_RULES,
+  STOP_OPTIONS,
   partySizeOptions,
   VIBES,
   cap,
@@ -199,6 +200,19 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           options={DURATIONS.map((d) => ({ value: d.hours, label: d.label }))}
           value={inputs.hours}
           onChange={(hours) => update({ hours })}
+        />
+
+        {/*
+          Asked, not inferred. Four hours is a long dinner for one person and
+          four stops for another, and until now the clock decided that on
+          their behalf. "Up to you" keeps the old inference, so the default
+          still costs nobody a decision.
+        */}
+        <GroupLabel>How many places?</GroupLabel>
+        <WheelPicker
+          options={STOP_OPTIONS.map((o) => ({ value: o.stops, label: o.label }))}
+          value={inputs.stops ?? 0}
+          onChange={(stops) => update({ stops: stops || undefined })}
         />
       </>
     );

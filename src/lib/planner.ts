@@ -151,8 +151,17 @@ export function focusVenueTypes(focus: PlanFocus): VenueType[] {
 export function stopCountFor(
   hours: number,
   focus: PlanFocus = "everything",
-  vibes: string[] = []
+  vibes: string[] = [],
+  /** What they asked for, when they were asked. Beats every inference here. */
+  stops?: number
 ): number {
+  /*
+   * A stated answer is not a starting point to be reasoned about. Somebody who
+   * says two places has told us the shape of their evening, and deriving four
+   * from the clock instead is the app overruling them with arithmetic.
+   */
+  if (stops && stops >= 2) return stops;
+
   /*
    * A crawl is the shape where more stops is the point. Three bars is a night
    * out and two is a drink, so a drinks-only or activity-only evening reaches
@@ -821,9 +830,38 @@ export function planItinerary(
       const total = totalOf(chosen);
       if (total <= inputs.budget) break;
 
+      /*
+       * The smallest saving that actually closes the gap, not the largest one
+       * on the table.
+       *
+       * Taking the biggest saving first overshoots, badly. Being fifty cedis
+       * over budget would trigger a four-hundred-cedi downgrade because that
+       * was the largest move available, and the loop then stopped, because it
+       * only ever checked whether the plan fitted and never whether it had
+       * given up more than it needed to. That is how a table for two at a
+       * seventy-dish restaurant ended up with the two cheapest plates on the
+       * menu while most of the budget went unspent.
+       *
+       * When nothing on offer closes the gap, the biggest saving is still the
+       * right move: it is the one that makes the most progress towards a plan
+       * that fits at all.
+       */
+      const shortfall = total - inputs.budget;
       let best: { index: number; option: Option; saving: number } | null = null;
       const consider = (c: { index: number; option: Option; saving: number }) => {
-        if (!best || c.saving > best.saving) best = c;
+        if (!best) {
+          best = c;
+          return;
+        }
+        const bestEnough = best.saving >= shortfall;
+        const thisEnough = c.saving >= shortfall;
+        if (thisEnough && bestEnough) {
+          if (c.saving < best.saving) best = c;
+        } else if (thisEnough) {
+          best = c;
+        } else if (!bestEnough && c.saving > best.saving) {
+          best = c;
+        }
       };
 
       chosen.forEach((current, i) => {
@@ -842,6 +880,67 @@ export function planItinerary(
     }
 
     if (totalOf(chosen) > inputs.budget) return null;
+
+    /*
+     * Now spend what is left.
+     *
+     * A budget is what somebody is willing to spend, not a ceiling to creep
+     * under. The walk-down above gives things up in order to make the evening
+     * fit, and until now that was the end of it: whatever it had surrendered
+     * stayed surrendered even when the plan came in hundreds of cedis short,
+     * so the answer to "I have a thousand" could be two of the cheapest plates
+     * in the building.
+     *
+     * So climb back. Each move restores something the sort already preferred
+     * and that the remaining money covers, best first: a full order before a
+     * better venue, because a bare order is the more obvious disappointment.
+     * Every move costs strictly more than the one it replaces, so the headroom
+     * only shrinks and this terminates.
+     */
+    const gainOf = (option: Option, current: Option) =>
+      (option.tier - current.tier) * 1000 + (option.score - current.score) * 10;
+
+    for (let guard = 0; guard < 40; guard++) {
+      const before = totalOf(chosen);
+      if (before >= inputs.budget) break;
+
+      let move: { index: number; option: Option; gain: number; extra: number } | null = null;
+
+      chosen.forEach((current, i) => {
+        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => c.venue.id));
+        for (const option of slots[i]) {
+          if (option === current || taken.has(option.venue.id)) continue;
+
+          const gain = gainOf(option, current);
+          if (gain <= 0) continue;
+
+          /*
+           * Priced as the whole evening, not as the difference between two
+           * orders. A swap moves the stop as well as the order, and the taxi
+           * to the new place is part of what it costs: judging the move on
+           * food alone put a plan at GHS 1,225 against a budget of 1,200,
+           * because the hop that grew was not in the sum being checked.
+           */
+          const trial = chosen.slice();
+          trial[i] = option;
+          const after = totalOf(trial);
+          if (after > inputs.budget) continue;
+
+          const extra = after - before;
+          // An upgrade that also costs less would already have been taken on
+          // the way down.
+          if (extra <= 0) continue;
+
+          if (!move || gain > move.gain || (gain === move.gain && extra > move.extra)) {
+            move = { index: i, option, gain, extra };
+          }
+        }
+      });
+
+      const up = move as { index: number; option: Option; gain: number; extra: number } | null;
+      if (!up) break;
+      chosen[up.index] = up.option;
+    }
 
     const stops = toStops(chosen);
     const hops = hopsFor(stops);
@@ -876,7 +975,7 @@ export function planItinerary(
       transportTotal,
       total: foodTotal + transportTotal,
       confidence,
-      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus, inputs.vibes),
+      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops),
     };
 
     function toStops(picks: Option[]): PlannedStop[] {
@@ -912,7 +1011,7 @@ export function planItinerary(
   };
 
   const wanted = Math.min(
-    stopCountFor(inputs.hours, inputs.focus, inputs.vibes),
+    stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops),
     Math.max(2, candidates.venues.length)
   );
   for (let count = wanted; count >= 2; count--) {
