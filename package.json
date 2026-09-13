@@ -12,7 +12,8 @@
     "mirror": "tsx scripts/mirror-shared.ts",
     "mirror:check": "tsx scripts/mirror-shared.ts --check",
     "chat:smoke": "tsx scripts/chat-tools-smoke.ts",
-    "chat:ask": "tsx scripts/chat-smoke.ts"
+    "chat:ask": "tsx scripts/chat-smoke.ts",
+    "grant": "tsx scripts/grant-pro.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
