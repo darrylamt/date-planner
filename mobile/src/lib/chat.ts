@@ -1,5 +1,23 @@
-import { fetch as expoFetch } from "expo/fetch";
 import { supabase } from "./supabase";
+import { nativeOptional } from "./nativeOptional";
+
+/**
+ * Expo's streaming fetch, if this binary has it.
+ *
+ * Required defensively rather than imported, because JavaScript ships over the
+ * air and native code does not: a build already on a phone receives this
+ * bundle without ever having compiled the module behind expo/fetch, and an
+ * Expo module throws at import when its native half is missing, taking the
+ * whole screen down rather than the one feature that wanted it.
+ *
+ * Falling back to the global fetch costs the progress and not the answer. Its
+ * Response exposes no body reader in React Native, so the reader check below
+ * misses, the events are read in one go, and the reply still arrives, just
+ * without "Searching menus" appearing on the way.
+ */
+const streamingFetch = nativeOptional(
+  () => (require("expo/fetch") as typeof import("expo/fetch")).fetch
+);
 
 /**
  * The chat stream, read a chunk at a time.
@@ -55,7 +73,9 @@ export async function* streamChat(opts: {
   } = await supabase.auth.getSession();
   if (!session?.access_token) throw new SignInRequiredError();
 
-  const res = await expoFetch(`${BASE}/api/chat`, {
+  const doFetch = (streamingFetch ?? globalThis.fetch) as typeof globalThis.fetch;
+
+  const res = await doFetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -75,7 +95,7 @@ export async function* streamChat(opts: {
   }
   if (!res.ok) throw new Error(`chat failed: ${res.status}`);
 
-  const reader = res.body?.getReader();
+  const reader = (res.body as ReadableStream<Uint8Array> | null | undefined)?.getReader?.();
   if (!reader) {
     // No streaming available. Read it whole and replay the events in order, so
     // the conversation still works and only the progress is lost.
