@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
+import { Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -75,7 +76,18 @@ function RootShell() {
           <Stack.Screen name="plan/new" options={{ title: "" }} />
           {/* A focused task rather than a destination, so it is pushed like
               the planner instead of sitting in the tab bar. */}
-          <Stack.Screen name="chat" options={{ title: "Ask" }} />
+          {/*
+            Named, because "Ask" described the verb rather than the thing. A
+            product people call by name is one they come back to on purpose.
+            The face sits on the right, where an avatar goes.
+          */}
+          <Stack.Screen
+            name="chat"
+            options={{
+              title: "adurobot",
+              headerRight: () => <Text style={{ fontSize: 26 }}>🤖</Text>,
+            }}
+          />
           <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
           {/* Full screen and gesture-locked: a half-swiped intro that lands
               back on an empty app is worse than no intro. */}

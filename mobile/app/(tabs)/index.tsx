@@ -77,21 +77,60 @@ export default function Home() {
         <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Ask about Accra"
+            accessibilityLabel="Ask adurobot"
             onPress={() => router.push("/chat")}
             hitSlop={8}
-            style={({ pressed }) => ({
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
-              borderWidth: HAIRLINE,
-              borderColor: c.border,
-            })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
           >
-            <Symbol name="sparkles" size={28} color={c.accent} />
+            {/*
+              A four-colour ring, drawn rather than imported.
+
+              expo-linear-gradient is not a dependency and adding one would
+              mean a native build, which cannot ship over the air: every phone
+              already carrying this app would keep its old binary and never see
+              it. Two bordered circles, each colouring two of its four sides
+              and the second rotated half a turn, give the same read for
+              nothing.
+            */}
+            <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center" }}>
+              <View
+                style={{
+                  position: "absolute",
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  borderWidth: 3,
+                  borderColor: "transparent",
+                  borderTopColor: "#7C5CFF",
+                  borderRightColor: "#FF5CA8",
+                }}
+              />
+              <View
+                style={{
+                  position: "absolute",
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  borderWidth: 3,
+                  borderColor: "transparent",
+                  borderTopColor: "#33D6C7",
+                  borderRightColor: "#FFB020",
+                  transform: [{ rotate: "180deg" }],
+                }}
+              />
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: c.backgroundElement,
+                }}
+              >
+                <Symbol name="sparkles" size={26} color={c.accent} />
+              </View>
+            </View>
           </Pressable>
         </View>
 
