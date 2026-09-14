@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
 import { Toast } from "@/components/Toast";
 import { VenueResearch } from "@/components/admin/VenueResearch";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
@@ -12,7 +13,7 @@ import { describeWeek, parsePeriods } from "@/lib/hours";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/research";
-import type { Area, MenuCategory, MenuItem, Venue } from "@/lib/types";
+import type { Area, MenuCategory, MenuItem, Venue, VenueSchedule } from "@/lib/types";
 
 const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] as const;
 const BANDS = ["budget", "mid", "premium"] as const;
@@ -27,17 +28,45 @@ const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "acti
 type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean };
 
 /** Venue add/edit with inline menu items, built for “add a venue in under 2 minutes”. */
+interface EditableSchedule {
+  _tmpId: string;
+  _deleted?: boolean;
+  id?: string;
+  weekday: number;
+  /** "19:00", so the input and the eye agree. Minutes on the way to the database. */
+  starts: string;
+  ends: string;
+  title: string;
+  cover_ghs: number | "";
+  notes: string;
+}
+
+function clockOf(minute: number): string {
+  const h = Math.floor(minute / 60) % 24;
+  const m = minute % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function minutesOf(clock: string): number {
+  const [h, m] = clock.split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return 0;
+  return Math.max(0, Math.min(1439, h * 60 + m));
+}
+
 export function VenueForm({
   areas,
   areaCentres,
   venue,
   menuItems,
+  schedules,
 }: {
   areas: Area[];
   /** Areas with a centre derived from the venues already in them. */
   areaCentres: AreaForMatch[];
   venue: Venue | null;
   menuItems: MenuItem[];
+  /** Weekly fixtures: karaoke on Thursdays, a band on Fridays. */
+  schedules: VenueSchedule[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -105,6 +134,23 @@ export function VenueForm({
 
   const [items, setItems] = useState<EditableItem[]>(
     menuItems.map((m) => ({ ...m, _tmpId: m.id }))
+  );
+  /*
+   * Weekly fixtures, edited like the menu: rows carry a temporary id until
+   * they are saved, and a deleted flag rather than vanishing, so one save can
+   * work out what to insert, update and remove.
+   */
+  const [fixtures, setFixtures] = useState<EditableSchedule[]>(
+    schedules.map((f) => ({
+      _tmpId: f.id,
+      id: f.id,
+      weekday: f.weekday,
+      starts: clockOf(f.starts_minute),
+      ends: clockOf(f.ends_minute),
+      title: f.title,
+      cover_ghs: f.cover_ghs ?? "",
+      notes: f.notes ?? "",
+    }))
   );
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -297,6 +343,48 @@ export function VenueForm({
           .from("menu_items")
           .upsert(toUpdate, { onConflict: "id" });
         if (error) throw error;
+      }
+
+      /*
+       * Fixtures, same three-way save. Only reachable on an existing venue:
+       * a new one has no id to hang them off until after its own insert.
+       */
+      if (venueId) {
+        const liveF = fixtures.filter((f) => !f._deleted && f.title.trim());
+        const newF = (f: EditableSchedule) => f._tmpId.startsWith("new-");
+
+        const rowForF = (f: EditableSchedule) => ({
+          venue_id: venueId,
+          weekday: f.weekday,
+          starts_minute: minutesOf(f.starts),
+          ends_minute: minutesOf(f.ends),
+          title: f.title.trim(),
+          // Blank is not zero: no cover recorded and free at the door are
+          // different claims, and only one of them is ours to make.
+          cover_ghs: f.cover_ghs === "" ? null : Number(f.cover_ghs),
+          notes: f.notes.trim() || null,
+          is_active: true,
+        });
+
+        const dropF = fixtures.filter((f) => f._deleted && !newF(f) && f.id).map((f) => f.id!);
+        if (dropF.length) {
+          const { error } = await supabase.from("venue_schedules").delete().in("id", dropF);
+          if (error) throw error;
+        }
+
+        const addF = liveF.filter(newF).map(rowForF);
+        if (addF.length) {
+          const { error } = await supabase.from("venue_schedules").insert(addF);
+          if (error) throw error;
+        }
+
+        const editF = liveF.filter((f) => !newF(f) && f.id).map((f) => ({ id: f.id!, ...rowForF(f) }));
+        if (editF.length) {
+          const { error } = await supabase
+            .from("venue_schedules")
+            .upsert(editF, { onConflict: "id" });
+          if (error) throw error;
+        }
       }
 
       setToast("Saved");
@@ -941,6 +1029,159 @@ export function VenueForm({
             Active
           </label>
         </div>
+      </div>
+
+      {/* Weekly fixtures */}
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="font-display text-[18px] font-bold">What is on, weekly</h2>
+        <button
+          className="btn2 btnsm"
+          onClick={() =>
+            setFixtures((cur) => [
+              ...cur,
+              {
+                _tmpId: `new-${Date.now()}-${cur.length}`,
+                // Thursday, because that is when this sort of thing usually is,
+                // and a sensible default is one field nobody has to touch.
+                weekday: 4,
+                starts: "19:00",
+                ends: "22:00",
+                title: "",
+                cover_ghs: "",
+                notes: "",
+              },
+            ])
+          }
+        >
+          + Add fixture
+        </button>
+      </div>
+      <p className="mt-1 text-[13px] text-mutedbrown">
+        Things that happen every week: karaoke on Thursdays, a live band on Fridays. A one-off on
+        a particular date is an event, not a fixture. An end time at or before the start means it
+        runs past midnight.
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="tbl w-full">
+          <thead>
+            <tr>
+              <th>What</th>
+              <th>Day</th>
+              <th>From</th>
+              <th>To</th>
+              <th className="whitespace-nowrap">Cover (GHS)</th>
+              <th>Notes</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {fixtures.filter((f) => !f._deleted).length === 0 && (
+              <tr>
+                <td colSpan={7} className="text-[14px] text-mutedbrown">
+                  Nothing recorded. Most venues have none, and an empty list means exactly that.
+                </td>
+              </tr>
+            )}
+            {fixtures.map((f, i) =>
+              f._deleted ? null : (
+                <tr key={f._tmpId}>
+                  <td>
+                    <input
+                      className="w-full"
+                      placeholder="Karaoke"
+                      value={f.title}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, title: e.target.value } : x))
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <select
+                      value={f.weekday}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) =>
+                            j === i ? { ...x, weekday: Number(e.target.value) } : x
+                          )
+                        )
+                      }
+                    >
+                      {SCHEDULE_DAYS.map((d, idx) => (
+                        <option key={d} value={idx}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      value={f.starts}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, starts: e.target.value } : x))
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      value={f.ends}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, ends: e.target.value } : x))
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="none"
+                      value={f.cover_ghs}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) =>
+                            j === i
+                              ? { ...x, cover_ghs: e.target.value === "" ? "" : Number(e.target.value) }
+                              : x
+                          )
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="w-full"
+                      value={f.notes}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, notes: e.target.value } : x))
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <button
+                      className="btn2 btnsm"
+                      onClick={() =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, _deleted: true } : x))
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Menu items */}

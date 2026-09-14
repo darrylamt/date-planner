@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { VENUE_SELECT } from "../../venueColumns";
 import { describeWeek, parsePeriods } from "../../hours";
-import type { MenuCategory, MenuItem, Venue } from "../../types";
+import { describeSchedule } from "../../schedules";
+import type { MenuCategory, MenuItem, Venue, VenueSchedule } from "../../types";
 import type { ChatTool } from "./types";
 import { describePrice, menusFor, type PriceNote } from "./shared";
 
@@ -64,6 +65,20 @@ export const getVenue: ChatTool<GetVenueArgs> = {
     // venue_id directly, so a Honeysuckle branch comes back with no menu.
     const menu = (await menusFor(ctx.catalog, [venue])).get(venue.id) ?? [];
 
+    /*
+     * What the place does on a given day of the week. Recorded for very few
+     * venues, so an empty list means nobody has told us rather than that the
+     * bar is quiet on Thursdays, and the note below says so.
+     */
+    const { data: fixtureRows } = await ctx.catalog
+      .from("venue_schedules")
+      .select("*")
+      .eq("venue_id", venue.id)
+      .eq("is_active", true)
+      .order("weekday");
+
+    const fixtures = (fixtureRows ?? []) as VenueSchedule[];
+
     let ownerName: string | undefined;
     if (venue.menu_shared_from) {
       const { data: owner } = await ctx.catalog
@@ -99,6 +114,9 @@ export const getVenue: ChatTool<GetVenueArgs> = {
       phone: venue.phone ?? null,
       google_maps_url: venue.google_maps_url ?? null,
       hours: hours(venue),
+      whats_on_weekly: fixtures.length
+        ? fixtures.map(describeSchedule)
+        : "nothing recorded, which is not the same as nothing happening",
       /*
        * Two different kinds of claim, kept apart on purpose. The venue-level
        * answer came from a person who rang and asked. The per-item notes are

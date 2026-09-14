@@ -155,6 +155,27 @@ export interface MenuItem {
   available_to_minute?: number | null;
 }
 
+/**
+ * Something a venue does every week, on a given day.
+ *
+ * Distinct from EventRow, which is a dated one-off happening somewhere in the
+ * city. This is a property of the venue, like its opening hours, and it uses
+ * the same conventions: weekday 0 is Sunday, times are minutes from midnight,
+ * and an end at or before the start runs into the next day.
+ */
+export interface VenueSchedule {
+  id: string;
+  venue_id: string;
+  weekday: number;
+  starts_minute: number;
+  ends_minute: number;
+  title: string;
+  /** Null is no cover, or nobody recorded one. Never added to a plan's total. */
+  cover_ghs: number | null;
+  notes: string | null;
+  is_active: boolean;
+}
+
 export interface EventRow {
   id: string;
   title: string;
