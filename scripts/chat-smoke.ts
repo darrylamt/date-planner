@@ -95,6 +95,18 @@ async function main() {
 
     for await (const ev of runChat({ provider, system: SYSTEM, history: [], userContent, ctx })) {
       if (ev.type === "tool") console.log(`\x1b[2m  · ${ev.label} (${ev.name})\x1b[0m`);
+      else if (ev.type === "plan") {
+        // The event the app turns into a "View plan" button.
+        const it = ev.itinerary as {
+          title: string;
+          est_total_ghs: number;
+          stops: { name: string; area: string; arrival_time: string }[];
+        };
+        console.log(`\x1b[32m  [plan event] ${it.title} — GHS ${it.est_total_ghs}\x1b[0m`);
+        for (const st of it.stops) {
+          console.log(`\x1b[32m      ${st.arrival_time}  ${st.name} (${st.area})\x1b[0m`);
+        }
+      }
       else if (ev.type === "text") answer += ev.text;
       else if (ev.type === "error") console.log(`\x1b[31m  error: ${ev.message}\x1b[0m`);
       else if (ev.type === "done") {

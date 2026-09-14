@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { Itinerary, PlanInputs } from "./types";
 import { nativeOptional } from "./nativeOptional";
 
 /**
@@ -38,6 +39,8 @@ const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 export type ChatEvent =
   | { type: "conversation"; id: string; remaining: number; tier: "free" | "pro" }
   | { type: "tool"; name: string; label: string }
+  /** A real itinerary, sent beside the prose so the card is never retyped. */
+  | { type: "plan"; itinerary: Itinerary; inputs: PlanInputs }
   | { type: "text"; text: string }
   | { type: "done" }
   | { type: "error"; message: string };

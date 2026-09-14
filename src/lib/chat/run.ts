@@ -1,4 +1,4 @@
-import { CHAT_TOOLS, runTool, type ToolContext } from "./tools";
+import { CHAT_TOOLS, planFrom, runTool, type ToolContext } from "./tools";
 import {
   MAX_TOKENS,
   MAX_TOOL_ROUNDS,
@@ -26,6 +26,15 @@ import {
  */
 export type ChatEvent =
   | { type: "tool"; name: string; label: string }
+  /*
+   * A real itinerary, streamed beside the prose rather than inside it.
+   *
+   * The alternative is asking the model to read the plan back, which costs a
+   * great many output tokens to restate something already assembled, and gets
+   * a price wrong sooner or later. The app renders the card from this and the
+   * assistant only has to say what it is.
+   */
+  | { type: "plan"; itinerary: unknown; inputs: unknown }
   | { type: "text"; text: string }
   | { type: "done"; turns: ChatTurn[]; usage: ModelUsage[] }
   | { type: "error"; message: string };
@@ -35,6 +44,7 @@ const TOOL_LABEL: Record<string, string> = {
   search_venues: "Looking through the catalogue",
   get_venue: "Reading the details",
   search_menu_items: "Searching menus",
+  build_plan: "Building the evening",
   check_opening_hours: "Checking opening hours",
   estimate_budget: "Working out the cost",
 };
@@ -121,6 +131,7 @@ export async function* runChat(opts: {
      * than one at a time, which costs a round trip on every later question.
      */
     const results: ChatBlock[] = [];
+    const plans: { itinerary: unknown; inputs: unknown }[] = [];
     for (const call of calls) {
       yield { type: "tool", name: call.name, label: TOOL_LABEL[call.name] ?? "Looking that up" };
     }
@@ -128,6 +139,13 @@ export async function* runChat(opts: {
     await Promise.all(
       calls.map(async (call) => {
         const outcome = await runTool(call.name, call.input, ctx);
+
+        // A successful build carries the itinerary itself off to one side. It
+        // never enters the conversation: the model reads the digest, the app
+        // renders the card.
+        const plan = planFrom(outcome.content);
+        if (plan) plans.push(plan);
+
         results.push({
           type: "tool_result",
           tool_use_id: call.id,
@@ -136,6 +154,10 @@ export async function* runChat(opts: {
         });
       })
     );
+
+    for (const plan of plans) {
+      yield { type: "plan", itinerary: plan.itinerary, inputs: plan.inputs };
+    }
 
     const resultTurn: ChatTurn = { role: "user", content: results };
     added.push(resultTurn);

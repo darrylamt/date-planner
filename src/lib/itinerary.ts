@@ -1,6 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateHop } from "./transport";
-import type { Itinerary, ItineraryStop, TransportHop, Venue } from "./types";
+import { clockFromMinutes, type PlannedItinerary } from "./planner";
+import type {
+  Itinerary,
+  ItineraryStop,
+  PlanInputs,
+  StopAlternate,
+  TransportHop,
+  Venue,
+} from "./types";
 
 /**
  * Server-side verification & recomputation. The model proposes stops; the
@@ -117,4 +125,73 @@ export function stopsAreGrounded(
   return stops.every((s) =>
     s.kind === "event" ? eventIds.has(s.venue_id) : venueIds.has(s.venue_id)
   );
+}
+
+/**
+ * Turn a planned itinerary plus its words into the client's shape.
+ *
+ * Lives here rather than beside the route that first needed it, because two
+ * things now build plans: the questionnaire, which asks a model for prose
+ * afterwards, and the concierge, which narrates the result itself. Two copies
+ * of this would drift, and the field that went missing from one of them would
+ * be missing from one kind of plan only, which is the hardest sort of bug to
+ * notice.
+ */
+export function assembleItinerary(
+  inputs: PlanInputs,
+  plan: PlannedItinerary,
+  copy: { title: string; personal_summary: string; budget_note: string | null; stops: { label: string; what_to_do: string; why_this_fits: string }[] }
+): Itinerary {
+  const stops: ItineraryStop[] = plan.stops.map((s, i) => {
+    const words = copy.stops[i];
+    // The planner already priced each runner-up and only kept ones that fit
+    // the budget. Those figures are carried through as-is: re-deriving them
+    // from avg_cost here would discard the menu-based price and show an
+    // unpriced venue as free.
+    const alternates: StopAlternate[] = s.alternates.map((a) => ({
+      venue_id: a.venue.id,
+      venue_type: a.venue.type,
+      name: a.venue.name,
+      area: a.venue.areas?.name ?? "",
+      image_url: a.venue.image_url,
+      google_maps_url: a.venue.google_maps_url,
+      reservation_required: a.venue.reservation_required,
+      orders: a.orders,
+      est_cost_ghs: a.cost,
+      why_this_fits: "",
+    }));
+
+    return {
+      venue_id: s.venue.id,
+      kind: "venue",
+      venue_type: s.venue.type,
+      name: s.venue.name,
+      area: s.venue.areas?.name ?? "",
+      arrival_time: clockFromMinutes(s.arrivalMinutes),
+      duration_mins: s.durationMins,
+      label: words?.label || s.label,
+      what_to_do: words?.what_to_do ?? "",
+      orders: s.orders,
+      est_cost_ghs: s.cost,
+      why_this_fits: words?.why_this_fits ?? "",
+      image_url: s.venue.image_url,
+      google_maps_url: s.venue.google_maps_url,
+      reservation_required: s.venue.reservation_required,
+      alternates,
+    };
+  });
+
+  return {
+    title: copy.title,
+    date: inputs.date,
+    summary_route: Array.from(new Set(stops.map((s) => s.area).filter(Boolean))).join(" → "),
+    stops,
+    hops: plan.hops,
+    food_total_ghs: Math.round(plan.foodTotal),
+    transport_total_ghs: Math.round(plan.transportTotal),
+    est_total_ghs: Math.round(plan.total),
+    price_confidence: plan.confidence,
+    budget_note: copy.budget_note,
+    personal_summary: copy.personal_summary,
+  };
 }

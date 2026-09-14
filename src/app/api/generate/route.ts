@@ -4,20 +4,17 @@ import { fetchCandidates } from "@/lib/matching";
 import {
   openOnDate,
   planItinerary,
-  clockFromMinutes,
   focusVenueTypes,
   stopCountFor,
-  type PlannedItinerary,
 } from "@/lib/planner";
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
+import { assembleItinerary } from "@/lib/itinerary";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
 import type {
   GenerateResponse,
   Itinerary,
-  ItineraryStop,
   PlanInputs,
-  StopAlternate,
 } from "@/lib/types";
 
 /**
@@ -37,66 +34,6 @@ const FOCUS_SHORTFALL: Record<string, string> = {
   activities: "We do not have enough priced activities in the catalog yet for a full day of them.",
   everything: "We could not fill the whole evening.",
 };
-
-/** Turn the planned itinerary plus its copy into the client's shape. */
-function assemble(
-  inputs: PlanInputs,
-  plan: PlannedItinerary,
-  copy: { title: string; personal_summary: string; budget_note: string | null; stops: { label: string; what_to_do: string; why_this_fits: string }[] }
-): Itinerary {
-  const stops: ItineraryStop[] = plan.stops.map((s, i) => {
-    const words = copy.stops[i];
-    // The planner already priced each runner-up and only kept ones that fit
-    // the budget. Those figures are carried through as-is: re-deriving them
-    // from avg_cost here would discard the menu-based price and show an
-    // unpriced venue as free.
-    const alternates: StopAlternate[] = s.alternates.map((a) => ({
-      venue_id: a.venue.id,
-      venue_type: a.venue.type,
-      name: a.venue.name,
-      area: a.venue.areas?.name ?? "",
-      image_url: a.venue.image_url,
-      google_maps_url: a.venue.google_maps_url,
-      reservation_required: a.venue.reservation_required,
-      orders: a.orders,
-      est_cost_ghs: a.cost,
-      why_this_fits: "",
-    }));
-
-    return {
-      venue_id: s.venue.id,
-      kind: "venue",
-      venue_type: s.venue.type,
-      name: s.venue.name,
-      area: s.venue.areas?.name ?? "",
-      arrival_time: clockFromMinutes(s.arrivalMinutes),
-      duration_mins: s.durationMins,
-      label: words?.label || s.label,
-      what_to_do: words?.what_to_do ?? "",
-      orders: s.orders,
-      est_cost_ghs: s.cost,
-      why_this_fits: words?.why_this_fits ?? "",
-      image_url: s.venue.image_url,
-      google_maps_url: s.venue.google_maps_url,
-      reservation_required: s.venue.reservation_required,
-      alternates,
-    };
-  });
-
-  return {
-    title: copy.title,
-    date: inputs.date,
-    summary_route: Array.from(new Set(stops.map((s) => s.area).filter(Boolean))).join(" → "),
-    stops,
-    hops: plan.hops,
-    food_total_ghs: Math.round(plan.foodTotal),
-    transport_total_ghs: Math.round(plan.transportTotal),
-    est_total_ghs: Math.round(plan.total),
-    price_confidence: plan.confidence,
-    budget_note: copy.budget_note,
-    personal_summary: copy.personal_summary,
-  };
-}
 
 export async function POST(req: Request): Promise<NextResponse<GenerateResponse>> {
   let inputs: PlanInputs;
@@ -229,5 +166,5 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   const written = await writePlanCopy(inputs, plan);
   const copy = written.ok ? written.copy : fallbackCopy(inputs, plan);
 
-  return NextResponse.json({ status: "ok", itinerary: assemble(inputs, plan, copy) });
+  return NextResponse.json({ status: "ok", itinerary: assembleItinerary(inputs, plan, copy) });
 }

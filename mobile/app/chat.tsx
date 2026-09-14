@@ -16,6 +16,7 @@ import { Symbol } from "../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth } from "../src/lib/useAuth";
+import { saveDraft } from "../src/lib/draft";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -60,6 +61,12 @@ export default function ChatScreen() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [paywalled, setPaywalled] = useState(false);
+  /*
+   * Set when a turn actually built something. Kept on the screen rather than
+   * in the bubble, because the plan is a thing you go and look at, not a
+   * paragraph: the assistant says what it made and this opens it.
+   */
+  const [plan, setPlan] = useState<{ title: string; total: number } | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   const scroller = useRef<ScrollView>(null);
@@ -100,6 +107,7 @@ export default function ChatScreen() {
     setDraft("");
     setBubbles((b) => [...b, { role: "user", text: message }]);
     setBusy(true);
+    setPlan(null);
     setStatus("Thinking");
     toBottom();
 
@@ -125,6 +133,15 @@ export default function ChatScreen() {
           if (ev.tier === "free") {
             setAllowance({ tier: "free", remaining: ev.remaining, allowance: 5 });
           }
+        } else if (ev.type === "plan") {
+          /*
+           * Straight into the draft, which is where /plan/new looks when it
+           * opens. That screen already knows how to resume an itinerary, with
+           * swapping, menus and saving intact, so the plan built here lands in
+           * exactly the same place as one built from the questionnaire.
+           */
+          await saveDraft({ inputs: ev.inputs, itinerary: ev.itinerary, shareSlug: null });
+          setPlan({ title: ev.itinerary.title, total: ev.itinerary.est_total_ghs });
         } else if (ev.type === "tool") {
           setStatus(ev.label);
         } else if (ev.type === "text") {
@@ -230,6 +247,35 @@ export default function ChatScreen() {
               {status}…
             </Text>
           </View>
+        )}
+
+        {plan && (
+          <Pressable
+            onPress={() => router.push("/plan/new")}
+            style={({ pressed }) => ({
+              marginTop: space.sm,
+              marginBottom: space.md,
+              alignSelf: "flex-start",
+              maxWidth: "88%",
+              backgroundColor: pressed ? c.backgroundSunken : c.accent,
+              borderRadius: radius.card,
+              paddingHorizontal: space.lg,
+              paddingVertical: space.md,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.sm,
+            })}
+          >
+            <Symbol name="calendar" size={18} color={c.textOnBrand} />
+            <View>
+              <Text variant="body" tone="onTint">
+                View plan
+              </Text>
+              <Text variant="caption1" tone="onTint">
+                {plan.title} · GHS {plan.total}
+              </Text>
+            </View>
+          </Pressable>
         )}
 
         {paywalled && <Paywall tier={allowance?.tier ?? "free"} />}
