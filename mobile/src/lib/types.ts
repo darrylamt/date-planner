@@ -197,6 +197,16 @@ export type PlanCuisine = "either" | "local" | "continental";
 /** How dressed-up the evening should be. */
 export type Formality = "either" | "casual" | "fancy";
 
+/**
+ * Whether the evening should involve alcohol.
+ *
+ * Steers what gets ordered, not where they are taken. A bar serves coffee and
+ * mocktails, and excluding every lounge from somebody who does not drink would
+ * shrink an already thin catalogue over a preference that only concerns what
+ * goes in the glass.
+ */
+export type AlcoholChoice = "either" | "none";
+
 export interface PlanInputs {
   areaIds: string[];
   areaNames: string[];
@@ -222,6 +232,8 @@ export interface PlanInputs {
   focus: PlanFocus;
   cuisine: PlanCuisine;
   formality: Formality;
+  /** Undefined behaves as "either", so a plan made before this still loads. */
+  alcohol?: AlcoholChoice;
   occasion: Occasion;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it

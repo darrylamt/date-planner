@@ -1,5 +1,5 @@
 import { BUDGET_DEFAULT } from "./budget";
-import type { Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs } from "./types";
+import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -84,6 +84,19 @@ export const CUISINE_OPTIONS: { id: PlanCuisine; title: string; sub: string }[] 
   { id: "either", title: "Either is fine", sub: "Whatever fits the evening best" },
   { id: "local", title: "Local", sub: "Ghanaian and West African, chop bars included" },
   { id: "continental", title: "Continental", sub: "Italian, Asian, grills, anything else" },
+];
+
+/**
+ * Whether there should be alcohol.
+ *
+ * Only asked when the evening involves drinking at all. Answering it changes
+ * what is ordered rather than where they go: a bar pours coffee too, and
+ * striking every lounge off would cost somebody the evening over a preference
+ * about one glass.
+ */
+export const ALCOHOL_OPTIONS: { id: AlcoholChoice; title: string; sub: string }[] = [
+  { id: "either", title: "Happy either way", sub: "Order whatever suits the place" },
+  { id: "none", title: "No alcohol", sub: "We only order drinks we can confirm are alcohol-free" },
 ];
 
 /** How dressed-up it should be. */

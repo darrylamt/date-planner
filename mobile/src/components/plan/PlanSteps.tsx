@@ -11,6 +11,7 @@ import { DayStrip } from "./DayStrip";
 import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
+  ALCOHOL_OPTIONS,
   DURATIONS,
   CUISINE_OPTIONS,
   FOCUS_OPTIONS,
@@ -255,6 +256,28 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
                   subtitle={f.sub}
                   selected={inputs.cuisine === f.id}
                   onPress={() => update({ cuisine: f.id })}
+                />
+              ))}
+            </Group>
+          </>
+        ) : null}
+
+        {/*
+          Only when there is drinking to be done. A "things to do" afternoon
+          orders no drinks, so asking would be a question with no consequence,
+          and a flow that asks those teaches people to stop reading it.
+        */}
+        {inputs.focus !== "activities" ? (
+          <>
+            <GroupLabel>Alcohol?</GroupLabel>
+            <Group>
+              {ALCOHOL_OPTIONS.map((a) => (
+                <Row
+                  key={a.id}
+                  title={a.title}
+                  subtitle={a.sub}
+                  selected={(inputs.alcohol ?? "either") === a.id}
+                  onPress={() => update({ alcohol: a.id })}
                 />
               ))}
             </Group>

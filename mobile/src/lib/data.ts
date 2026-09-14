@@ -54,7 +54,7 @@ export async function fetchMenu(venueId: string): Promise<MenuItem[]> {
 
   const { data } = await supabase
     .from("menu_items")
-    .select("id, venue_id, name, category, price_ghs, notes")
+    .select("id, venue_id, name, category, price_ghs, notes, dietary_note, is_alcoholic")
     .eq("venue_id", owner)
     .order("category")
     .order("name");

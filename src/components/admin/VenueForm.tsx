@@ -59,6 +59,15 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    // Three-valued in the database and three-valued here: "" is nobody has
+    // asked, which is not the same as "no".
+    has_vegetarian_options:
+      venue?.has_vegetarian_options === true
+        ? "yes"
+        : venue?.has_vegetarian_options === false
+          ? "no"
+          : "",
+    dietary_source: venue?.dietary_source ?? "",
     aesthetics: venue?.aesthetics ?? null,
     price_source: venue?.price_source ?? "menu",
     price_spread: venue?.price_spread != null ? String(venue.price_spread) : "0.3",
@@ -163,6 +172,21 @@ export function VenueForm({
             ? null
             : Number(v.unit_price_ghs),
         aesthetics: v.aesthetics,
+        /*
+         * The only dietary claim in this catalogue with a person behind it, so
+         * it is only ever written from this form and never from a menu. Blank
+         * stays null: nobody has asked, which a blank cell must not be allowed
+         * to read as "no".
+         */
+        has_vegetarian_options:
+          v.has_vegetarian_options === "yes"
+            ? true
+            : v.has_vegetarian_options === "no"
+              ? false
+              : null,
+        dietary_source: v.dietary_source.trim() || null,
+        dietary_checked_at:
+          v.has_vegetarian_options === "" ? null : new Date().toISOString(),
         price_source: v.price_source,
         price_spread: Number(v.price_spread) || 0.3,
         min_party_size: Number(v.min_party_size) || 1,
@@ -865,6 +889,38 @@ export function VenueForm({
               above to fetch them.
             </div>
           )}
+        </div>
+
+        {/*
+          Asked of the venue, not read off the menu.
+          *
+          * There is deliberately no allergen field anywhere in this schema: a
+          * blank one reads as "no allergens" to whoever is scanning it, and it
+          * would have to be filled by guessing from dish names. This is the
+          * one dietary claim allowed to be a yes or a no, and only because a
+          * person rang and asked. Leave it blank until somebody has.
+        */}
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-[13px] font-bold uppercase tracking-wide text-mutedbrown">
+            Vegetarian options
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              className="rounded-md border border-line px-2 py-1.5 text-[15px]"
+              value={v.has_vegetarian_options}
+              onChange={(e) => setV({ ...v, has_vegetarian_options: e.target.value })}
+            >
+              <option value="">Nobody has asked</option>
+              <option value="yes">Yes, they have some</option>
+              <option value="no">No, they do not</option>
+            </select>
+            <input
+              className="min-w-[240px] flex-1 rounded-md border border-line px-2 py-1.5 text-[15px]"
+              placeholder="Who said so, and when. e.g. phoned the manager, 12 Sep"
+              value={v.dietary_source}
+              onChange={(e) => setV({ ...v, dietary_source: e.target.value })}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-6 md:col-span-2">

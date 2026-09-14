@@ -102,7 +102,14 @@ Rules, in order of importance:
    not apply a service charge, do not round. If the menu prices in something
    other than cedis, put the currency in detected_currency and still report the
    printed numbers unconverted, a human will handle it.
-3. Skip section headings, allergen keys and marketing copy. Items only.
+3. Skip section headings and marketing copy. Items only.
+3a. If the menu itself says something about a dish's diet or contents,
+   "Vegetarian", "Vegan", "Contains nuts", "Gluten free", "Spicy", copy that
+   into dietary_note word for word, as printed. Do not translate it, do not
+   tidy it, and above all do not work it out yourself: a dish that looks
+   vegetarian but is not labelled gets null. This field is a quotation from
+   the menu, never a judgement about the food, because somebody with an
+   allergy may act on it.
 4. If the same dish appears at several sizes, use the smallest priced portion
    and note the variants in that item's notes.
 5. Not every venue sells food. A padel court's hourly rates, a bowling alley's

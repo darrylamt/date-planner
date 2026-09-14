@@ -251,6 +251,17 @@ export function MenuSheet({
                               {item.notes}
                             </Text>
                           ) : null}
+                          {/*
+                            Attributed, because the wording is the menu's and
+                            not ours. "Vegetarian" printed by the kitchen is a
+                            different thing from us having decided a dish looks
+                            vegetarian, and only the first is worth showing.
+                          */}
+                          {item.dietary_note ? (
+                            <Text variant="footnote" tone="tertiary">
+                              Menu says: {item.dietary_note}
+                            </Text>
+                          ) : null}
                         </View>
                         <Text variant="body" tone="secondary" tabular>
                           {ghs(Number(item.price_ghs))}

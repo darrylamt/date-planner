@@ -99,6 +99,18 @@ export const getVenue: ChatTool<GetVenueArgs> = {
       phone: venue.phone ?? null,
       google_maps_url: venue.google_maps_url ?? null,
       hours: hours(venue),
+      /*
+       * Two different kinds of claim, kept apart on purpose. The venue-level
+       * answer came from a person who rang and asked. The per-item notes are
+       * the menu's own words, quoted. Neither is an allergen statement and the
+       * catalogue holds none.
+       */
+      vegetarian_options:
+        venue.has_vegetarian_options == null
+          ? "nobody has asked the venue"
+          : venue.has_vegetarian_options
+            ? `yes, per ${venue.dietary_source ?? "a call to the venue"}`
+            : `no, per ${venue.dietary_source ?? "a call to the venue"}`,
       menu: summarise(menu, args.category),
       menu_shared_from: ownerName ?? null,
       note: guidance(venue, menu),
@@ -155,6 +167,9 @@ function summarise(menu: MenuItem[], only?: MenuCategory): CategorySummary[] {
           name: m.name,
           price_ghs: Number(m.price_ghs),
           ...(m.notes ? { notes: m.notes } : {}),
+          // Printed on the menu, quoted. Not our assessment of the dish.
+          ...(m.dietary_note ? { menu_says: m.dietary_note } : {}),
+          ...(m.is_alcoholic === true ? { alcoholic: true } : {}),
         })),
     });
   }

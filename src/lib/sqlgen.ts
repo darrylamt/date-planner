@@ -69,7 +69,7 @@ export function buildVenueMigration(venue: VenueSql, items: IngestedItem[]): str
   const itemRows = items
     .map(
       (i) =>
-        `    (${lit(i.name)}, ${lit(i.category)}::menu_category, ${num(i.price_ghs)}, ${lit(i.notes)})`
+        `    (${lit(i.name)}, ${lit(i.category)}::menu_category, ${num(i.price_ghs)}, ${lit(i.notes)}, ${lit(i.dietary_note ?? null)})`
     )
     .join(",\n");
 
@@ -116,7 +116,7 @@ ${venueValues}
   returning id
 )
 -- Menu items. Prices are per single item, as printed on the menu.
-insert into public.menu_items (venue_id, name, category, price_ghs, notes)
+insert into public.menu_items (venue_id, name, category, price_ghs, notes, dietary_note)
 -- Columns are cast explicitly: a VALUES list whose every row is null for a
 -- column leaves Postgres unable to infer its type, which fails at run time.
 select
@@ -124,10 +124,11 @@ select
   x.name::text,
   x.category,
   x.price_ghs::numeric,
-  x.notes::text
+  x.notes::text,
+  x.dietary_note::text
 from (values
 ${itemRows}
-) as x(name, category, price_ghs, notes);`
+) as x(name, category, price_ghs, notes, dietary_note);`
     : `-- No menu items were extracted. The planner can still choose this venue for
 -- an activity stop, but it cannot build a food order from it.
 insert into public.venues (

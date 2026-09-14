@@ -150,6 +150,15 @@ export const ingestedItemSchema = z.object({
   /** Price for ONE item, in cedis, exactly as printed. */
   price_ghs: z.number().min(0).max(100000),
   notes: z.string().max(200).nullable().default(null),
+  /**
+   * What the menu prints about the dish's diet or contents, verbatim.
+   *
+   * A quotation, not a conclusion. Null unless the menu actually says
+   * something, because the difference between "the menu says vegetarian" and
+   * "this looks vegetarian to me" is the difference between a fact and a
+   * guess, and somebody with an allergy may act on either.
+   */
+  dietary_note: z.string().max(200).nullable().default(null),
 });
 
 export const PRICING_MODES = [

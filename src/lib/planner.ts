@@ -298,6 +298,31 @@ interface OrderPlan {
 /** One line of a bill: a dish, how many of it, and what that comes to. */
 type OrderLine = ItineraryOrder;
 
+/**
+ * The menu somebody who does not drink may be ordered from.
+ *
+ * The asymmetry is the whole point. A drink counts as safe only when it is
+ * recorded false; recorded nothing is not good enough, because the rule that
+ * filled that column reads names, and names miss things. Corona, Monkey 47,
+ * Olmeca and Ciroc all came out of the backfill unknown, and every one of them
+ * is a drink. Offering an unknown to the person who asked not to drink would
+ * be treating our own ignorance as their reassurance.
+ *
+ * Food is the other way round: unknown is fine, and only a dish that names the
+ * bottle it was cooked in is withheld. Requiring a positive clearance on every
+ * plate would leave them nothing to eat.
+ *
+ * There are 398 drinks in the catalogue confirmed alcohol-free, which is
+ * enough to build an evening from. If that number ever gets thin, the fix is
+ * to record more of them, not to relax this.
+ */
+function drinkable(menu: MenuItem[], choice: PlanInputs["alcohol"]): MenuItem[] {
+  if (choice !== "none") return menu;
+  return menu.filter((m) =>
+    m.category === "drink" ? m.is_alcoholic === false : m.is_alcoholic !== true
+  );
+}
+
 const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.price_ghs);
 
 /**
@@ -816,7 +841,7 @@ export function planItinerary(
         if (open === false) continue;
       }
 
-      const menu = menuByVenue.get(venue.id) ?? [];
+      const menu = drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol);
       const score = scoreVenue(venue, inputs, wantedTags);
       for (const tier of [2, 1, 0] as const) {
         const planned = planOrders(
