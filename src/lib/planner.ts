@@ -649,7 +649,12 @@ export interface PlannedStop {
   venue: Venue;
   role: Role;
   /** Set when this stop is the event the evening was built around. */
-  event?: { id: string; title: string; start_time: string | null } | null;
+  event?: {
+    id: string;
+    title: string;
+    start_time: string | null;
+    image_url: string | null;
+  } | null;
   label: string;
   durationMins: number;
   arrivalMinutes: number;
@@ -1278,6 +1283,7 @@ export function planItinerary(
                 id: onTonight.id,
                 title: onTonight.title,
                 start_time: onTonight.start_time,
+                image_url: onTonight.image_url ?? null,
               }
             : null,
           // Calling a restaurant "SOMETHING TO DO" because the activity slot

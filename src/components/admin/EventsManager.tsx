@@ -6,6 +6,7 @@ import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area, EventRow } from "@/lib/types";
+import { ImageField } from "./ImageField";
 
 const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "workshop", "film_night", "other"];
 
@@ -18,6 +19,7 @@ const EMPTY = {
   cost_ghs: "",
   category: "live_music",
   source_url: "",
+  image_url: "",
 };
 
 export function EventsManager({
@@ -57,6 +59,7 @@ export function EventsManager({
       cost_ghs: e.cost_ghs === null ? "" : String(e.cost_ghs),
       category: e.category,
       source_url: e.source_url ?? "",
+      image_url: e.image_url ?? "",
     });
   }
 
@@ -72,6 +75,7 @@ export function EventsManager({
       cost_ghs: form.cost_ghs === "" ? null : Number(form.cost_ghs),
       category: form.category,
       source_url: form.source_url || null,
+      image_url: form.image_url.trim() || null,
     };
     const q = editingId
       ? supabase.from("events").update(payload).eq("id", editingId)
@@ -159,6 +163,20 @@ export function EventsManager({
         <div>
           <span className="flbl">Source URL</span>
           <input className="inp h-[42px]" value={form.source_url} onChange={(e) => setForm({ ...form, source_url: e.target.value })} />
+        </div>
+        {/*
+          The poster. An event is the one stop where the venue's usual
+          photograph is a picture of the wrong thing, and a poster almost
+          always exists as a file on somebody's phone rather than as a URL.
+        */}
+        <div className="md:col-span-3">
+          <ImageField
+            label="Poster or picture"
+            value={form.image_url}
+            onChange={(image_url) => setForm({ ...form, image_url })}
+            folder="events"
+            hint="Shown first on the stop, ahead of the venue's own picture"
+          />
         </div>
         <div className="flex items-end gap-2 md:col-span-3">
           <button

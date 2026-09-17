@@ -146,7 +146,17 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
           {itinerary.stops.map((stop, i) => (
             <div key={`${stop.venue_id}-${i}`} className="md:w-[320px]">
               <div className="card text-ink">
-                <SmartImage src={stop.image_url} alt={stop.name} className="h-[130px] md:h-[170px]" />
+                {/*
+                  The first picture only, which is the event's poster where
+                  there is one. A carousel here would need a client component
+                  for a page whose whole job is to be opened once from a chat
+                  and read straight down.
+                */}
+                <SmartImage
+                  src={stop.images?.[0] ?? stop.image_url}
+                  alt={stop.name}
+                  className="h-[130px] md:h-[170px]"
+                />
                 <div className="px-[18px] pb-[18px] pt-4">
                   <div className="stime">{stop.arrival_time}</div>
                   <div className="text-vname font-semibold">{stop.name}</div>

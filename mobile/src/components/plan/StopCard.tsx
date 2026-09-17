@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ActivityIndicator, Linking, Pressable, View } from "react-native";
-import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
+import { StopGallery } from "./StopGallery";
 import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
 import { HAIRLINE, radius, space } from "../../theme";
@@ -81,14 +81,12 @@ export function StopCard({
         opacity: swapping ? 0.5 : 1,
       }}
     >
-      {stop.image_url ? (
-        <Image
-          source={{ uri: stop.image_url }}
-          style={{ width: "100%", height: 168, backgroundColor: c.skeleton }}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : null}
+      {/*
+        Falls back to the single hero for a plan saved before galleries
+        existed, which is every plan made until now: those carry image_url and
+        nothing else, and must still show their picture.
+      */}
+      <StopGallery images={stop.images ?? (stop.image_url ? [stop.image_url] : [])} alt={stop.name} />
 
       <View style={{ padding: space.lg, gap: space.sm }}>
         {/* Label + time */}

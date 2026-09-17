@@ -57,6 +57,10 @@ export function StopCard({
    * for a keystroke.
    */
   const [menuQuery, setMenuQuery] = useState("");
+  /* Which picture the gallery is on. Clamped where it is read rather than
+     reset on change, because a swap can shorten the list under it and page 3
+     of a one-image gallery is a blank card with no way back. */
+  const [shown, setShown] = useState(0);
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuError, setMenuError] = useState(false);
@@ -150,6 +154,18 @@ export function StopCard({
   // Short menus are quicker to read than to search, so the box only appears
   // where it earns its space.
   const searchable = (menu?.length ?? 0) > 8;
+
+  /*
+   * Falls back to the single hero for a plan saved before galleries existed,
+   * which is every plan made until now: those carry image_url and nothing
+   * else, and must still show their picture.
+   */
+  const pictures = stop.images?.length
+    ? stop.images
+    : stop.image_url
+      ? [stop.image_url]
+      : [];
+  const at = Math.min(shown, Math.max(0, pictures.length - 1));
 
   const body = (
     <div className={`px-[18px] pb-[18px] pt-4 ${desktopRow ? "flex-1" : ""}`}>
@@ -353,10 +369,48 @@ export function StopCard({
     >
       <div className={`relative ${desktopRow ? "md:w-[220px] md:shrink-0" : ""}`}>
         <SmartImage
-          src={stop.image_url}
+          src={pictures[at] ?? null}
           alt={stop.name}
           className={desktopRow ? "h-[150px] md:h-full md:min-h-full" : "h-[150px]"}
         />
+
+        {/*
+          Only when there is somewhere to go. One picture with a pair of dead
+          arrows on it reads as a gallery that is broken rather than as a
+          photograph.
+        */}
+        {pictures.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label="Previous picture"
+              className="absolute left-2 top-1/2 z-[2] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-[15px] font-bold text-white transition-opacity hover:bg-black/60 disabled:opacity-0"
+              disabled={at === 0}
+              onClick={() => setShown(Math.max(0, at - 1))}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Next picture"
+              className="absolute right-2 top-1/2 z-[2] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-[15px] font-bold text-white transition-opacity hover:bg-black/60 disabled:opacity-0"
+              disabled={at === pictures.length - 1}
+              onClick={() => setShown(Math.min(pictures.length - 1, at + 1))}
+            >
+              ›
+            </button>
+            <div className="absolute bottom-2 left-0 right-0 z-[2] flex justify-center gap-1.5">
+              {pictures.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 rounded-full bg-white transition-all ${
+                    i === at ? "w-4 opacity-95" : "w-1.5 opacity-50"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
         {!desktopRow && onSwap && (
           <div className="absolute right-3 top-3 z-[2]">
             <button className="swapbtn" onClick={onSwap} aria-label={`Swap ${stop.name}`}>

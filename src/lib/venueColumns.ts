@@ -42,6 +42,8 @@ export const PUBLIC_VENUE_COLUMNS = [
   "phone",
   "google_maps_url",
   "image_url",
+  // 0036. The pictures after the hero, in the order they are shown.
+  "gallery_urls",
   "is_active",
   "is_free",
   "min_party_size",

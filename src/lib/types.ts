@@ -31,6 +31,12 @@ export interface Venue {
   phone: string | null;
   google_maps_url: string | null;
   image_url: string | null;
+  /**
+   * Further pictures, in the order they should be shown. The hero above is not
+   * repeated here. Optional, because a build running against a database
+   * without migration 0036 simply has no such column.
+   */
+  gallery_urls?: string[] | null;
   is_active: boolean;
   /**
    * Entry genuinely costs nothing, a park, a beach, a free gallery.
@@ -189,6 +195,12 @@ export interface EventRow {
   cost_ghs: number | null;
   category: string;
   source_url: string | null;
+  /**
+   * The event's own picture, usually a poster. Null means nobody has added
+   * one, and the stop falls back to the venue's. Optional, because a build
+   * running against a database without migration 0036 has no such column.
+   */
+  image_url?: string | null;
   is_active: boolean;
 }
 
@@ -331,6 +343,15 @@ export interface ItineraryStop {
   est_cost_ghs: number;
   why_this_fits: string;
   image_url: string | null;
+  /**
+   * Every picture for this stop, in the order they should be shown.
+   *
+   * The event's own poster first where there is one, because that is what the
+   * stop is for, then the venue's hero, then the rest of its gallery.
+   * image_url stays alongside rather than being replaced: a plan saved before
+   * this existed has only that field, and every card must still render.
+   */
+  images?: string[];
   google_maps_url?: string | null;
   reservation_required?: boolean;
   reservation_requested?: boolean; // set client-side once a request is sent
@@ -342,7 +363,13 @@ export interface ItineraryStop {
    * and the event is the reason it was chosen rather than an alternative to
    * being a place. Absent on every stop the planner picked on its own merits.
    */
-  event?: { id: string; title: string; start_time: string | null } | null;
+  event?: {
+    id: string;
+    title: string;
+    start_time: string | null;
+    /** The poster, when there is one. Leads the stop's pictures. */
+    image_url?: string | null;
+  } | null;
   /**
    * Runners-up for this slot, chosen at the same time as the stop itself.
    * A swap is then a local substitution rather than another model call.
@@ -357,6 +384,8 @@ export interface StopAlternate {
   name: string;
   area: string;
   image_url: string | null;
+  /** Carried for the same reason as image_url: a swap changes the pictures. */
+  images?: string[];
   google_maps_url: string | null;
   reservation_required: boolean;
   orders: ItineraryOrder[];

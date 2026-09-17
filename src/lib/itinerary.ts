@@ -142,6 +142,27 @@ export function assembleItinerary(
   plan: PlannedItinerary,
   copy: { title: string; personal_summary: string; budget_note: string | null; stops: { label: string; what_to_do: string; why_this_fits: string }[] }
 ): Itinerary {
+  /*
+   * Every picture for one stop, in the order they are shown.
+   *
+   * The event's poster leads where there is one, because the event is why the
+   * stop exists and the venue's usual photograph is a picture of a different
+   * evening. Deduplicated, since a venue that repeats its hero in its own
+   * gallery would otherwise put the same image on two slides and look like a
+   * carousel that is not moving.
+   */
+  const picturesOf = (
+    venue: Venue,
+    event?: { image_url: string | null } | null
+  ): string[] => {
+    const all = [
+      event?.image_url ?? null,
+      venue.image_url,
+      ...(venue.gallery_urls ?? []),
+    ];
+    return [...new Set(all.filter((u): u is string => Boolean(u && u.trim())))];
+  };
+
   const stops: ItineraryStop[] = plan.stops.map((s, i) => {
     const words = copy.stops[i];
     // The planner already priced each runner-up and only kept ones that fit
@@ -154,6 +175,7 @@ export function assembleItinerary(
       name: a.venue.name,
       area: a.venue.areas?.name ?? "",
       image_url: a.venue.image_url,
+      images: picturesOf(a.venue),
       google_maps_url: a.venue.google_maps_url,
       reservation_required: a.venue.reservation_required,
       orders: a.orders,
@@ -178,6 +200,7 @@ export function assembleItinerary(
       est_cost_ghs: s.cost,
       why_this_fits: words?.why_this_fits ?? "",
       image_url: s.venue.image_url,
+      images: picturesOf(s.venue, s.event),
       google_maps_url: s.venue.google_maps_url,
       reservation_required: s.venue.reservation_required,
       alternates,

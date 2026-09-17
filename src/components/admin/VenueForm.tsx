@@ -10,6 +10,7 @@ import { PlacesLookup } from "@/components/admin/PlacesLookup";
 import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places";
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
 import { HoursEditor } from "./HoursEditor";
+import { ImageField, ImageListField } from "./ImageField";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/research";
@@ -86,6 +87,7 @@ export function VenueForm({
     phone: venue?.phone ?? "",
     google_maps_url: venue?.google_maps_url ?? "",
     image_url: venue?.image_url ?? "",
+    gallery_urls: venue?.gallery_urls ?? [],
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
     cuisines: (venue?.cuisines ?? []).join(", "),
@@ -252,6 +254,9 @@ export function VenueForm({
         instagram_handle: v.instagram_handle || null,
         google_maps_url: v.google_maps_url || null,
         image_url: v.image_url || null,
+        // Blanks dropped: an empty row in the editor is somebody who started
+        // pasting a URL and changed their mind, not a picture of nothing.
+        gallery_urls: v.gallery_urls.map((u) => u.trim()).filter(Boolean),
         lat: v.lat === "" ? null : Number(v.lat),
         lng: v.lng === "" ? null : Number(v.lng),
         // Null, not zero: "no floor" and "the floor is nothing" differ.
@@ -952,11 +957,21 @@ export function VenueForm({
           />
         </div>
         <div className={field}>
-          <span className="flbl">Image URL</span>
-          <input
-            className="inp"
+          <ImageField
+            label="Main picture"
             value={v.image_url}
-            onChange={(e) => setV({ ...v, image_url: e.target.value })}
+            onChange={(image_url) => setV({ ...v, image_url })}
+            folder="venues"
+            hint="The one that leads the card"
+          />
+        </div>
+        <div className={field}>
+          <ImageListField
+            label="More pictures"
+            values={v.gallery_urls}
+            onChange={(gallery_urls) => setV({ ...v, gallery_urls })}
+            folder="venues"
+            hint="Swipeable on the stop card, in this order"
           />
         </div>
         <div className={field}>

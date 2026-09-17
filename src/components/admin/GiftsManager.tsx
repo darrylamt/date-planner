@@ -7,6 +7,7 @@ import { Toast } from "@/components/Toast";
 import { leadTimeLabel } from "@/lib/pickups";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import type { Area } from "@/lib/types";
+import { ImageField } from "./ImageField";
 
 /**
  * Managing florists, bakers and what they sell.
@@ -288,15 +289,14 @@ function VendorProducts({
             placeholder={vendor.kind === "cake" ? "Chocolate fudge" : "Red roses"}
           />
         </label>
-        <label className="flex flex-col flex-1">
-          <span className="flbl">Image URL</span>
-          <input
-            className="inp"
+        <div className="flex-1">
+          <ImageField
+            label="Picture"
             value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://…"
+            onChange={setImageUrl}
+            folder="gifts"
           />
-        </label>
+        </div>
         <button
           className="btn btnsm"
           disabled={busy || !name.trim()}
