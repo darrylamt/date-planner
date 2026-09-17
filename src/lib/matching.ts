@@ -53,6 +53,18 @@ export async function fetchCandidates(
   const wantedTags = expandVibes(inputs.vibes);
 
   /*
+   * Started here rather than beside the menu fetch below, because what is on
+   * that night decides part of the shortlist and the shortlist is settled
+   * before the menus are read. Nothing in it depends on the venue query, so it
+   * runs alongside rather than after.
+   */
+  const eventsPromise = supabase
+    .from("events")
+    .select("*")
+    .eq("is_active", true)
+    .eq("event_date", inputs.date);
+
+  /*
    * Named columns, not "*". Since migration 0014 the venue grant has been an
    * explicit list, and Postgres refuses SELECT * outright when any one column
    * is ungranted rather than returning the rest. See venueColumns.ts.
@@ -250,30 +262,47 @@ export async function fetchCandidates(
     picked = [...picked, ...extra];
   }
 
-  const ownerIds = [...new Set(picked.map(menuOwnerOf))];
-  const [ownerMenuItems, eventsRes] = await Promise.all([
-    /*
-     * Paged. A dozen venues at two hundred dishes each passes PostgREST's
-     * thousand-row cap, and a truncated menu here does not fail, it prices the
-     * evening off whichever half of the menu arrived. The Honeysuckle alone is
-     * 182 items and Bistro 22 is 156.
-     */
-    ownerIds.length
-      ? fetchAllRows<MenuItem>((from, to) =>
-          supabase.from("menu_items").select("*").in("venue_id", ownerIds).range(from, to)
-        )
-      : Promise.resolve([] as MenuItem[]),
-    supabase
-      .from("events")
-      .select("*")
-      .eq("is_active", true)
-      .eq("event_date", inputs.date),
-  ]);
-
+  const eventsRes = await eventsPromise;
   let events = (eventsRes.data ?? []) as EventRow[];
   if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
     events = events.filter((e) => inputs.areaIds.includes(e.area_id));
   }
+
+  /*
+   * A venue with something on that night joins the shortlist outright.
+   *
+   * Scoring knows nothing about events, so the one place the evening is meant
+   * to be built around could finish sixteenth of a hundred and never be
+   * offered at all. This is the difference between an event the planner
+   * declined to use and an event it was never shown.
+   *
+   * Only venues that already passed the filters above are added. An event at a
+   * place that is inactive, unpriced, the wrong size for the party or outside
+   * the budget's price band is an event this plan cannot honestly include, and
+   * forcing it in would put a stop with no price into a budget that is
+   * supposed to mean something.
+   */
+  const alreadyPicked = new Set(picked.map((v) => v.id));
+  const eventVenueIds = new Set(
+    events.map((e) => e.venue_id).filter((id): id is string => Boolean(id))
+  );
+  picked = [
+    ...picked,
+    ...venues.filter((v) => eventVenueIds.has(v.id) && !alreadyPicked.has(v.id)),
+  ];
+
+  const ownerIds = [...new Set(picked.map(menuOwnerOf))];
+  /*
+   * Paged. A dozen venues at two hundred dishes each passes PostgREST's
+   * thousand-row cap, and a truncated menu here does not fail, it prices the
+   * evening off whichever half of the menu arrived. The Honeysuckle alone is
+   * 182 items and Bistro 22 is 156.
+   */
+  const ownerMenuItems = ownerIds.length
+    ? await fetchAllRows<MenuItem>((from, to) =>
+        supabase.from("menu_items").select("*").in("venue_id", ownerIds).range(from, to)
+      )
+    : ([] as MenuItem[]);
 
   const [{ data: allAreas }, { count: totalActiveVenues }] = await Promise.all([
     supabase.from("areas").select("name"),

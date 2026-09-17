@@ -169,7 +169,10 @@ export function assembleItinerary(
       area: s.venue.areas?.name ?? "",
       arrival_time: clockFromMinutes(s.arrivalMinutes),
       duration_mins: s.durationMins,
-      label: words?.label || s.label,
+      // An event's title is a fact about the night, not a phrase to be
+      // improved on, so it outranks whatever the copy pass wrote for the slot.
+      label: s.event ? s.event.title : words?.label || s.label,
+      event: s.event ?? null,
       what_to_do: words?.what_to_do ?? "",
       orders: s.orders,
       est_cost_ghs: s.cost,

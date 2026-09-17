@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SmartImage } from "./SmartImage";
-import { ghs } from "@/lib/format";
+import { ghs, time12 } from "@/lib/format";
 import type { ItineraryOrder, ItineraryStop, MenuItem } from "@/lib/types";
 
 /*
@@ -168,6 +168,18 @@ export function StopCard({
         {stop.area}
         {stop.what_to_do ? ` · ${stop.what_to_do}` : ""}
       </div>
+
+      {/*
+        Why this stop is here at all. The label above is already the event's
+        name, but a name on its own reads like any other heading; this says
+        plainly that it is happening on this date and not every night.
+      */}
+      {stop.event && (
+        <div className="mt-1 text-[13px] font-semibold text-flame">
+          On this date only
+          {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
+        </div>
+      )}
 
       {stop.orders.length > 0 && (
         <div className="mt-3">

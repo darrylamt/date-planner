@@ -321,6 +321,15 @@ export interface ItineraryStop {
   reservation_required?: boolean;
   reservation_requested?: boolean; // set client-side once a request is sent
   /**
+   * What is on here that night, when the evening was built around it.
+   *
+   * Separate from `kind`, which says what `venue_id` points at. A stop with an
+   * event is still a venue stop: it has a menu, coordinates and a map link,
+   * and the event is the reason it was chosen rather than an alternative to
+   * being a place. Absent on every stop the planner picked on its own merits.
+   */
+  event?: { id: string; title: string; start_time: string | null } | null;
+  /**
    * Runners-up for this slot, chosen at the same time as the stop itself.
    * A swap is then a local substitution rather than another model call.
    */

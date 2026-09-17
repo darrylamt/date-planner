@@ -8,7 +8,7 @@ import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { ghs } from "../../lib/format";
+import { ghs, time12 } from "../../lib/format";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -109,6 +109,23 @@ export function StopCard({
             {stop.area}
           </Text>
         </View>
+
+        {/*
+          Why this stop is here at all. The label above is already the event's
+          name, but a name on its own reads like any other heading; this says
+          plainly that it is happening on this date and not every night, and
+          gives the hour it starts, which is the one thing the arrival time
+          cannot tell you.
+        */}
+        {stop.event ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
+            <Symbol name="ticket" size={12} color={c.accent} />
+            <Text variant="footnote" tone="tint" weight="600">
+              On this date only
+              {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
+            </Text>
+          </View>
+        ) : null}
 
         {stop.what_to_do ? (
           <Text variant="subheadline" tone="secondary" style={{ marginTop: space.xs }}>

@@ -3,6 +3,7 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
 import type {
+  EventRow,
   Formality,
   PriceConfidence,
   ItineraryOrder,
@@ -646,6 +647,8 @@ function planOrders(
 export interface PlannedStop {
   venue: Venue;
   role: Role;
+  /** Set when this stop is the event the evening was built around. */
+  event?: { id: string; title: string; start_time: string | null } | null;
   label: string;
   durationMins: number;
   arrivalMinutes: number;
@@ -767,6 +770,47 @@ export function planItinerary(
   const startMinutes = minutesOf(inputs.startTime);
   const startHour = Math.floor(startMinutes / 60);
 
+  /*
+   * What is on that night, if anything, and the evening is built around it.
+   *
+   * fetchCandidates has been loading the day's events since the first version
+   * of this file and nothing ever read them. So an event entered in the admin
+   * could not reach a plan however precisely somebody aimed at it, right date,
+   * right area, right hours, and the slot still went to whichever restaurant
+   * scored highest, with nothing said about why.
+   *
+   * Only an event at a venue in the shortlist can be honoured. One with no
+   * venue is a happening somewhere in an area: there is no menu to order from,
+   * no price to put against it and no coordinates to route to, and inventing
+   * any of the three is worse than leaving it out.
+   */
+  type Anchor = { event: EventRow; venue: Venue; at: number | null };
+  const anchor: Anchor | null = (() => {
+    const byId = new Map(candidates.venues.map((v) => [v.id, v]));
+    const endMinutes = startMinutes + Math.round(inputs.hours * 60);
+
+    const placeable = candidates.events
+      .map((event) => ({
+        event,
+        venue: event.venue_id ? byId.get(event.venue_id) : undefined,
+        // "19:00:00" and "19:00" both give the same answer here.
+        at: event.start_time ? minutesOf(event.start_time) : null,
+      }))
+      .filter(
+        (x): x is Anchor =>
+          x.venue !== undefined &&
+          // An event already over, or starting after everyone has gone home,
+          // is not part of this outing. No time on file is not a clash, so it
+          // stays in rather than being ruled out by a blank.
+          (x.at === null || (x.at >= startMinutes - 30 && x.at < endMinutes))
+      )
+      // Earliest first, so a night with two of them anchors on the one the
+      // evening reaches first rather than doubling back.
+      .sort((a, b) => (a.at ?? startMinutes) - (b.at ?? startMinutes));
+
+    return placeable[0] ?? null;
+  })();
+
   /** Every way one slot could be filled, cheapest order first within a venue. */
   interface Option {
     venue: Venue;
@@ -803,6 +847,70 @@ export function planItinerary(
 
   const weekday = weekdayOf(inputs.date);
 
+  /**
+   * Every way one venue could fill one slot, one entry per order tier.
+   *
+   * Split out from the slot builder below so a venue can be considered on its
+   * own, which is what pinning an event to a slot needs: the slot's own pool
+   * is filtered by role type and by opening hours, and an event is itself the
+   * statement that this place is open that night and worth being at.
+   */
+  const optionsForVenue = (
+    venue: Venue,
+    role: Role,
+    slotStart: number,
+    opts: { ignoreHours?: boolean } = {}
+  ): Option[] => {
+    const roleTypes = ROLE_TYPES[role];
+    const out: Option[] = [];
+
+    // Recorded as the other thing. Not a ranking matter: it is the wrong
+    // answer to the question that was asked.
+    if (cuisineFit(venue, inputs.cuisine) === false) return out;
+
+    /*
+     * Shut is shut. Unknown hours are left alone: most of the catalogue has
+     * none on file yet, and reading "we do not know" as "closed" would empty
+     * the plan, while reading it as "open" is only the assumption already
+     * being made everywhere else.
+     */
+    if (weekday !== null && !opts.ignoreHours) {
+      const open = isOpenThroughout(
+        parsePeriods(venue.opening_periods),
+        weekday,
+        slotStart,
+        ROLE_MINUTES[role]
+      );
+      if (open === false) return out;
+    }
+
+    const menu = drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol);
+    const score = scoreVenue(venue, inputs, wantedTags);
+    for (const tier of [2, 1, 0] as const) {
+      const planned = planOrders(
+        venue,
+        menu,
+        inputs.partySize,
+        tier,
+        ROLE_MINUTES[role],
+        slotStart
+      );
+      if (!planned) continue;
+      if (planned.cost <= 0 && !venue.is_free) continue;
+      out.push({
+        venue,
+        tier,
+        orders: planned.orders,
+        cost: planned.cost,
+        // Within a focus every venue is allowed, so nudge the slot towards
+        // its own role to keep the evening varied rather than three of the
+        // same thing.
+        score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+      });
+    }
+    return out;
+  };
+
   const optionsFor = (role: Role, slotStart: number): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
@@ -818,54 +926,6 @@ export function planItinerary(
       ? candidates.venues.filter((v) => focusTypes.includes(v.type))
       : candidates.venues.filter((v) => roleTypes.includes(v.type));
 
-    const build = (from: Venue[]): Option[] => {
-    const out: Option[] = [];
-    for (const venue of from) {
-      /*
-       * Shut is shut. Unknown hours are left alone: most of the catalogue has
-       * none on file yet, and reading "we do not know" as "closed" would empty
-       * the plan, while reading it as "open" is only the assumption already
-       * being made everywhere else.
-       */
-      // Recorded as the other thing. Not a ranking matter: it is the wrong
-      // answer to the question that was asked.
-      if (cuisineFit(venue, inputs.cuisine) === false) continue;
-
-      if (weekday !== null) {
-        const open = isOpenThroughout(
-          parsePeriods(venue.opening_periods),
-          weekday,
-          slotStart,
-          ROLE_MINUTES[role]
-        );
-        if (open === false) continue;
-      }
-
-      const menu = drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol);
-      const score = scoreVenue(venue, inputs, wantedTags);
-      for (const tier of [2, 1, 0] as const) {
-        const planned = planOrders(
-          venue,
-          menu,
-          inputs.partySize,
-          tier,
-          ROLE_MINUTES[role],
-          slotStart
-        );
-        if (!planned) continue;
-        if (planned.cost <= 0 && !venue.is_free) continue;
-        out.push({
-          venue,
-          tier,
-          orders: planned.orders,
-          cost: planned.cost,
-          // Within a focus every venue is allowed, so nudge the slot towards
-          // its own role to keep the evening varied rather than three of the
-          // same thing.
-          score: score + (roleTypes.includes(venue.type) ? 2 : 0),
-        });
-      }
-    }
     /*
      * Preference, then a full order before a minimal one, then price.
      *
@@ -874,8 +934,10 @@ export function planItinerary(
      * price: start with what someone would actually order, and let the fitting
      * below strip it back only if the budget requires it.
      */
-      return out.sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
-    };
+    const build = (from: Venue[]): Option[] =>
+      from
+        .flatMap((venue) => optionsForVenue(venue, role, slotStart))
+        .sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
 
     const preferred = build(pool);
 
@@ -905,19 +967,86 @@ export function planItinerary(
     return [...preferred, ...rest];
   };
 
-  const attempt = (stopCount: number): PlannedItinerary | null => {
+  const attempt = (
+    stopCount: number,
+    pin: Anchor | null
+  ): PlannedItinerary | null => {
     const roles = roleSequence(startHour, stopCount, inputs.focus, inputs.vibes);
     const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
 
+    /*
+     * The event's slot, and its venue nailed into it.
+     *
+     * Chosen by time rather than by kind of place: somebody planning around a
+     * block party at seven means seven o'clock, and the slot that lands
+     * nearest seven is the one the evening should spend there.
+     *
+     * Replacing the slot's whole option list rather than reordering it is what
+     * makes the pin hold. Everything below, the walk down to fit the budget
+     * and the climb back up to spend it, moves within a slot's own list, so a
+     * list holding one venue can still trade a full order for a plainer one
+     * and can never trade the venue away. The alternates offered on the card
+     * come from the same list, so there is nothing to swap it for there
+     * either, which is right: the event is the point of the evening.
+     */
+    let pinnedIndex = -1;
+    if (pin) {
+      const at = pin.at ?? startMinutes;
+      let closest = Infinity;
+      roles.forEach((_, i) => {
+        const gap = Math.abs(nominalStart(roles, i) - at);
+        if (gap < closest) {
+          closest = gap;
+          pinnedIndex = i;
+        }
+      });
+
+      const built = optionsForVenue(
+        pin.venue,
+        roles[pinnedIndex],
+        nominalStart(roles, pinnedIndex),
+        // An event is the statement that the place is open and worth being at
+        // that night. Opening hours on file are the ordinary week.
+        { ignoreHours: true }
+      );
+      if (!built.length) return null;
+
+      /*
+       * A cover charge is spent as surely as the food is, so it goes in as a
+       * line of the order rather than beside it. Left out, the walk-down below
+       * would fit an evening to the budget and the door would put it over.
+       */
+      const cover = Number(pin.event.cost_ghs ?? 0);
+      if (cover > 0) {
+        for (const option of built) {
+          option.orders = [
+            ...option.orders,
+            {
+              item: `${pin.event.title} — entry`,
+              qty: inputs.partySize,
+              price_ghs: cover * inputs.partySize,
+            },
+          ];
+          option.cost += cover * inputs.partySize;
+        }
+      }
+
+      slots[pinnedIndex] = built.sort((a, b) => b.tier - a.tier || a.cost - b.cost);
+    }
+
     // Start with each slot's most preferred option, skipping venues already
-    // taken by an earlier slot.
-    const chosen: Option[] = [];
+    // taken by an earlier slot. The pinned slot picks first, because it has
+    // only the one venue to offer and an earlier slot taking it would fail the
+    // whole attempt.
+    const chosen = new Array<Option>(slots.length);
     const used = new Set<string>();
-    for (const options of slots) {
-      const pick = options.find((o) => !used.has(o.venue.id));
+    const pickOrder = slots.map((_, i) => i);
+    if (pinnedIndex >= 0) pickOrder.unshift(...pickOrder.splice(pinnedIndex, 1));
+    for (const i of pickOrder) {
+      const pick = slots[i].find((o) => !used.has(o.venue.id));
       if (!pick) return null;
       used.add(pick.venue.id);
-      chosen.push(pick);
+      chosen[i] = pick;
     }
     if (chosen.length < 2) return null;
 
@@ -1068,6 +1197,23 @@ export function planItinerary(
     const hops = hopsFor(stops);
     schedule(stops, startMinutes, hops);
 
+    /*
+     * Never turn up before the doors open.
+     *
+     * Arrival times are laid out from the start of the evening, so the stop
+     * that exists because of an event can land before the event does: a 6:00
+     * PM arrival printed under a 7:00 PM block party is the plan contradicting
+     * itself on one line. Push that stop to the hour it starts and carry
+     * everything after it along, which reads as a longer dinner beforehand
+     * rather than an hour spent standing outside.
+     */
+    if (pinnedIndex >= 0 && pin?.at != null) {
+      const early = pin.at - stops[pinnedIndex].arrivalMinutes;
+      if (early > 0) {
+        for (let i = pinnedIndex; i < stops.length; i++) stops[i].arrivalMinutes += early;
+      }
+    }
+
     const foodTotal = stops.reduce((s, x) => s + x.cost, 0);
     const transportTotal = hops.reduce((s, h) => s + h.cost_ghs, 0);
 
@@ -1104,15 +1250,27 @@ export function planItinerary(
       return picks.map((p, i) => {
         const role = roles[i];
         const taken = new Set(picks.map((x) => x.venue.id));
+        const onTonight = i === pinnedIndex && pin ? pin.event : null;
         return {
           venue: p.venue,
           role,
+          event: onTonight
+            ? {
+                id: onTonight.id,
+                title: onTonight.title,
+                start_time: onTonight.start_time,
+              }
+            : null,
           // Calling a restaurant "SOMETHING TO DO" because the activity slot
           // had nothing to fill it reads as a mistake, so the venue's own type
-          // wins whenever the slot fell back.
-          label: ROLE_TYPES[role].includes(p.venue.type)
-            ? ROLE_LABEL[role]
-            : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
+          // wins whenever the slot fell back. An event outranks both: it is
+          // the name of what is happening, not a guess at what sort of stop
+          // this is.
+          label: onTonight
+            ? onTonight.title
+            : ROLE_TYPES[role].includes(p.venue.type)
+              ? ROLE_LABEL[role]
+              : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
           durationMins: ROLE_MINUTES[role],
           arrivalMinutes: 0,
           orders: p.orders,
@@ -1137,8 +1295,21 @@ export function planItinerary(
     Math.max(2, candidates.venues.length)
   );
   for (let count = wanted; count >= 2; count--) {
-    const plan = attempt(count);
+    const plan = attempt(count, anchor);
     if (plan) return plan;
+  }
+
+  /*
+   * The night had something on and no evening could be built around it, most
+   * likely because the venue is dearer than the budget allows once the rest of
+   * the stops are paid for. An evening without the event beats no evening, so
+   * try again without the pin rather than report that nothing fits.
+   */
+  if (anchor) {
+    for (let count = wanted; count >= 2; count--) {
+      const plan = attempt(count, null);
+      if (plan) return plan;
+    }
   }
   return null;
 }

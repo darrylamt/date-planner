@@ -99,7 +99,14 @@ function buildUserMessage(inputs: PlanInputs, plan: PlannedItinerary): string {
       return [
         `${i + 1}. ${s.venue.name}, ${s.venue.type} in ${s.venue.areas?.name ?? ""}`,
         `   arriving ${clockFromMinutes(s.arrivalMinutes)}, ${s.durationMins} min`,
-        `   generic fallback label (improve on it): ${s.label}`,
+        // The evening was built around this one. Its label is a fact about the
+        // night rather than a phrase to improve on, and saying so stops the
+        // model renaming "Block Party" to "DRINKS" and writing about the bar.
+        s.event
+          ? `   THIS STOP IS AN EVENT: "${s.event.title}"${
+              s.event.start_time ? `, starts ${s.event.start_time.slice(0, 5)}` : ""
+            }. Keep this exact label. Write what_to_do and why_this_fits about the event, not about the venue's usual evening. Do not invent details about it.`
+          : `   generic fallback label (improve on it): ${s.label}`,
         `   ordering: ${orders}`,
         s.venue.description ? `   about: ${s.venue.description}` : "",
       ]
