@@ -53,15 +53,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const counts = await adminCounts(createServiceClient());
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col gap-0.5 bg-lagoon py-6 md:min-h-screen md:w-[220px]">
+    <div className="admin flex min-h-screen flex-col md:flex-row">
+      <aside className="admin-aside flex shrink-0 flex-col gap-0.5 bg-lagoon py-6 md:min-h-screen md:w-[220px]">
         <div className="flex items-baseline gap-2 px-6 pb-5">
           <Logo size={22} dark href="/" />
           <span className="text-[12px] text-lagoon-soft">admin</span>
         </div>
         <AdminNav counts={counts} />
       </aside>
-      <div className="flex-1 px-5 py-7 md:px-8">{children}</div>
+      <div className="admin-main flex-1 px-4 py-6 md:px-8">{children}</div>
     </div>
   );
 }

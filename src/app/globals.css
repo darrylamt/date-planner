@@ -251,3 +251,180 @@ input[type="range"].budget-slider::-webkit-slider-thumb {
 input[type="range"].budget-slider::-moz-range-thumb {
   @apply h-[26px] w-[26px] rounded-full border-[3px] border-flame bg-shell shadow-knob;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Admin theme
+
+   The admin shared the app's palette: plum-black ground, pink text, rose
+   accents. That is a dating app's colouring doing a data-entry tool's job,
+   and it fought the work. Long columns of figures in low-contrast pink are
+   tiring within minutes, a red-pink "stale" warning barely separates from a
+   red-pink everything else, and nothing on the screen told you where you
+   were.
+
+   So the admin gets its own ground: near-white surfaces, near-black text, one
+   teal accent, and warning colours that are the only warm thing in view. The
+   typeface is untouched, as asked.
+
+   Scoped under .admin and expressed as overrides rather than as a change to
+   the Tailwind palette, so the consumer app is not touched at all. That is
+   what buys the !important: these deliberately beat utilities that are
+   correct everywhere else on the site and wrong on exactly these pages.
+   ───────────────────────────────────────────────────────────────────────── */
+.admin {
+  --a-bg: #f5f7f9;
+  --a-surface: #ffffff;
+  --a-sunken: #eef1f5;
+  --a-text: #111827;
+  --a-text-2: #46505f;
+  --a-muted: #6b7280;
+  --a-line: #dde3ea;
+  --a-line-soft: #eaeff4;
+  --a-accent: #0f766e;
+  --a-accent-dark: #0b5a54;
+  --a-accent-faint: #d8f0ed;
+  --a-warn: #b45309;
+  --a-warn-bg: #fdf1dc;
+  --a-danger: #b42318;
+  --a-nav: #111827;
+  --a-nav-2: #1f2937;
+  --a-nav-text: #e5e7eb;
+  --a-nav-muted: #9aa4b2;
+
+  background: var(--a-bg);
+  color: var(--a-text);
+}
+
+/* Utilities the admin inherited from the app's palette. */
+.admin .text-mutedbrown { color: var(--a-muted) !important; }
+.admin .text-cocoa { color: var(--a-text-2) !important; }
+.admin .text-ink { color: var(--a-text) !important; }
+.admin .text-blush { color: #ffffff !important; }
+.admin .text-flame { color: var(--a-accent) !important; }
+.admin .text-flame-dark { color: var(--a-accent-dark) !important; }
+.admin .text-staletext { color: var(--a-warn) !important; }
+.admin .text-line { color: var(--a-line) !important; }
+
+.admin .bg-cream { background-color: var(--a-surface) !important; }
+.admin .bg-flame { background-color: var(--a-accent) !important; }
+.admin .bg-staletext { background-color: var(--a-warn) !important; }
+
+.admin .border-line { border-color: var(--a-line) !important; }
+.admin .border-flame { border-color: var(--a-accent) !important; }
+.admin .border-staletext { border-color: var(--a-warn) !important; }
+.admin .border-mutedbrown { border-color: var(--a-line) !important; }
+
+/* The sidebar keeps its dark ground, in this palette's neutrals. */
+.admin .bg-lagoon,
+.admin .bg-lagoon-mid,
+.admin .bg-lagoon-soft { background-color: var(--a-nav) !important; }
+.admin .text-lagoon-soft,
+.admin .text-lagoon-faint { color: var(--a-nav-muted) !important; }
+
+/* Surfaces. */
+.admin .card {
+  background: var(--a-surface) !important;
+  border-color: var(--a-line) !important;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+}
+
+/* Controls. Shorter than the app's 54px: a form of thirty fields is a
+   different thing from a questionnaire of one. */
+.admin .inp,
+.admin .ta,
+.admin .pinp {
+  background: var(--a-surface) !important;
+  border-color: var(--a-line) !important;
+  color: var(--a-text) !important;
+}
+.admin .inp { height: 40px; font-size: 14.5px; border-radius: 8px; }
+.admin .ta { font-size: 14.5px; border-radius: 8px; }
+.admin .inp:focus,
+.admin .ta:focus,
+.admin .pinp:focus { border-color: var(--a-accent) !important; }
+
+.admin .flbl {
+  color: var(--a-text-2) !important;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.admin select {
+  background: var(--a-surface);
+  border: 1.5px solid var(--a-line);
+  border-radius: 8px;
+  color: var(--a-text);
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14.5px;
+}
+.admin input[type="time"],
+.admin input[type="number"] { color: var(--a-text); }
+
+.admin .btn {
+  background: var(--a-accent) !important;
+  color: #fff !important;
+  height: 42px;
+  font-size: 15px;
+  border-radius: 9px;
+}
+.admin .btn:hover { background: var(--a-accent-dark) !important; }
+.admin .btn2 {
+  border-color: var(--a-line) !important;
+  color: var(--a-text) !important;
+  background: var(--a-surface) !important;
+  height: 40px;
+  font-size: 14px;
+  border-radius: 9px;
+}
+.admin .btn2:hover { background: var(--a-sunken) !important; }
+.admin .btnsm { height: 34px; padding: 0 12px; font-size: 13.5px; }
+
+/* Tables: denser, lighter rules, and a header that survives a long scroll. */
+.admin .tbl { background: var(--a-surface); }
+.admin .tbl th {
+  background: var(--a-sunken) !important;
+  border-bottom: 1px solid var(--a-line) !important;
+  color: var(--a-text-2) !important;
+  font-size: 11.5px;
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.admin .tbl td {
+  border-bottom: 1px solid var(--a-line-soft) !important;
+  color: var(--a-text) !important;
+  font-size: 14px;
+  padding: 9px 12px;
+}
+.admin .tbl tbody tr:hover td { background: var(--a-sunken) !important; }
+
+.admin .badge { border-radius: 999px; padding: 2px 9px; font-size: 11.5px; }
+.admin .b-ok { background: var(--a-accent-faint) !important; color: var(--a-accent-dark) !important; }
+.admin .b-stale { background: var(--a-warn-bg) !important; color: var(--a-warn) !important; }
+
+.admin .vic { background: var(--a-sunken) !important; }
+
+/* Only the table scrolls sideways on a phone, never the page. */
+.admin .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+/* The nav's own surfaces, including the alpha variants Tailwind emits. */
+.admin .bg-lagoon-mid\/50 { background-color: var(--a-nav-2) !important; }
+.admin .snav { color: var(--a-nav-muted); }
+.admin .snav:hover { background: var(--a-nav-2); color: #fff; }
+.admin .snav.on { background: var(--a-accent); color: #fff; }
+
+/* A sidebar that scrolls away is a sidebar you scroll back up to find. */
+@media (min-width: 768px) {
+  .admin-aside {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+/* Long forms read better bounded than full-bleed on a wide monitor. */
+.admin-main { max-width: 1240px; }
