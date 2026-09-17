@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
@@ -62,8 +63,24 @@ export default function Profile() {
   const { session } = useAuth();
   const { preference, scheme, setPreference } = useAppearance();
 
+  const [showBuild, setShowBuild] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [planCount, setPlanCount] = useState<number | null>(null);
+
+  /*
+   * "Built in" is the app binary from TestFlight; anything newer arrived as an
+   * over-the-air update. Updates.createdAt is null on a build running its own
+   * bundled code, which is exactly the case worth naming out loud.
+   */
+  const buildLine = Updates.createdAt
+    ? `Updated ${Updates.createdAt.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      })}, ${Updates.createdAt.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : "Running the installed build";
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -482,14 +499,33 @@ export default function Profile() {
         </>
       ) : null}
 
-      <Text
-        variant="caption1"
-        tone="tertiary"
-        center
+      {/*
+        Which build is actually running, not which one was published.
+        
+        Updates download in the background and apply on the next launch, so a
+        tester who has just been told a fix is out can be a launch behind it
+        with no way to tell. Every report of "I still cannot see it" has so far
+        been this, and answering it has meant guessing. The date is here rather
+        than the update's id because a person can compare a date to a message
+        they were sent; an id is only useful once something is already wrong,
+        so it sits behind a tap.
+      */}
+      <Pressable
+        onPress={() => setShowBuild((v) => !v)}
         style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}
       >
-        aduro {Constants.expoConfig?.version ?? ""} · Accra
-      </Text>
+        <Text variant="caption1" tone="tertiary" center>
+          aduro {Constants.expoConfig?.version ?? ""} · Accra
+        </Text>
+        <Text variant="caption2" tone="tertiary" center style={{ marginTop: 2 }}>
+          {buildLine}
+        </Text>
+        {showBuild ? (
+          <Text variant="caption2" tone="tertiary" center style={{ marginTop: 2 }}>
+            {Updates.updateId ?? "no update id"}
+          </Text>
+        ) : null}
+      </Pressable>
 
       <AppIconPicker
         visible={iconPickerOpen}

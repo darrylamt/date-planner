@@ -163,6 +163,11 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
                   <div className="text-[14px] text-mutedbrown">
                     {stop.area}, {stop.what_to_do || stop.label.toLowerCase()}
                   </div>
+                  {(stop.whats_on ?? []).map((line) => (
+                    <div key={line} className="mt-1 text-[13px] font-semibold text-flame">
+                      {line}
+                    </div>
+                  ))}
                   {/*
                     The one link worth having here. Somebody opening a plan
                     they did not make wants to see what the place looks like,

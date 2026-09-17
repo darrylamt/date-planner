@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimateHop } from "./transport";
 import { clockFromMinutes, type PlannedItinerary } from "./planner";
+import { describeSchedule } from "./schedules";
 import type {
   Itinerary,
   ItineraryStop,
@@ -196,6 +197,9 @@ export function assembleItinerary(
       // improved on, so it outranks whatever the copy pass wrote for the slot.
       label: s.event ? s.event.title : words?.label || s.label,
       event: s.event ?? null,
+      // Worded once, here, so both clients and the share page say the same
+      // thing about the same fixture.
+      whats_on: (s.fixtures ?? []).map(describeSchedule),
       what_to_do: words?.what_to_do ?? "",
       orders: s.orders,
       est_cost_ghs: s.cost,

@@ -134,6 +134,26 @@ export function StopCard({
           </View>
         ) : null}
 
+        {/*
+          What the place does every week that is on while you are here.
+          
+          Under the event badge rather than merged with it: an event is a dated
+          one-off the evening was built around, a fixture is a property of the
+          place like its opening hours, and a stop can carry both. The wording
+          is the server's, so this card and the shared link say the same thing.
+        */}
+        {(stop.whats_on ?? []).map((line) => (
+          <View
+            key={line}
+            style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
+          >
+            <Symbol name="music.note" size={12} color={c.textSecondary} />
+            <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+              {line}
+            </Text>
+          </View>
+        ))}
+
         {stop.what_to_do ? (
           <Text variant="subheadline" tone="secondary" style={{ marginTop: space.xs }}>
             {stop.what_to_do}

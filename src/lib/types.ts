@@ -377,6 +377,15 @@ export interface ItineraryStop {
     image_url?: string | null;
   } | null;
   /**
+   * What the venue does every week that is on while you are here, already
+   * worded: "Karaoke, Thursdays 21:00 to 01:00, GHS 20 in".
+   *
+   * Distinct from `event`, which is a dated one-off the whole evening was
+   * built around. This is a property of the place, like its opening hours, and
+   * a stop can carry both. Absent on plans saved before this existed.
+   */
+  whats_on?: string[];
+  /**
    * Runners-up for this slot, chosen at the same time as the stop itself.
    * A swap is then a local substitution rather than another model call.
    */

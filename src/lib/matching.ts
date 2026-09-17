@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { focusVenueTypes } from "./planner";
-import type { EventRow, MenuItem, PlanInputs, Venue, VenueType } from "./types";
+import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
 
@@ -14,6 +14,13 @@ export interface Candidates {
   venues: Venue[];
   menuItems: MenuItem[];
   events: EventRow[];
+  /**
+   * What the shortlisted venues do every week: karaoke on Thursdays, a band on
+   * Fridays. Loaded for the whole shortlist and matched to a slot's own hours
+   * by the planner, because a fixture only counts if it is on while the party
+   * is actually there.
+   */
+  schedules: VenueSchedule[];
   allAreaNames: string[];
   /**
    * Active venues in the whole catalog, ignoring every filter. Lets the caller
@@ -299,6 +306,21 @@ export async function fetchCandidates(
     ...venues.filter((v) => eventVenueIds.has(v.id) && !alreadyPicked.has(v.id)),
   ];
 
+  /*
+   * Fixtures for the shortlist, not for the catalogue.
+   *
+   * Keyed on the venue's own id rather than the menu owner's: a branch shares
+   * a menu with Osu but has its own Thursday, and treating a fixture the way
+   * prices are treated would put Osu's karaoke in the East Legon plan.
+   */
+  const { data: scheduleRows } = await supabase
+    .from("venue_schedules")
+    .select("*")
+    .eq("is_active", true)
+    .in("venue_id", picked.map((v) => v.id));
+
+  const schedules = (scheduleRows ?? []) as VenueSchedule[];
+
   const ownerIds = [...new Set(picked.map(menuOwnerOf))];
   /*
    * Paged. A dozen venues at two hundred dishes each passes PostgREST's
@@ -347,6 +369,7 @@ export async function fetchCandidates(
     venues: picked,
     menuItems,
     events,
+    schedules,
     allAreaNames: (allAreas ?? []).map((a: { name: string }) => a.name),
     totalActiveVenues: totalActiveVenues ?? 0,
   };

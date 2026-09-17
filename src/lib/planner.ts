@@ -3,6 +3,7 @@ import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
+import { schedulesDuring } from "./schedules";
 import type {
   EventRow,
   Formality,
@@ -14,6 +15,7 @@ import type {
   PlanInputs,
   PriceBand,
   Venue,
+  VenueSchedule,
   VenueType,
 } from "./types";
 
@@ -240,6 +242,30 @@ const LOOKS_WEIGHT: Record<string, number> = {
   birthday: 1,
   solo_day: 1,
   friend_outing: 0.5,
+};
+
+/**
+ * How much a weekly fixture is worth to this occasion.
+ *
+ * Karaoke on a Thursday is the reason to pick one bar over another if you came
+ * out to be somewhere lively, and the reason to pick the other one if you came
+ * to hear each other speak. So it is weighted by why they are out rather than
+ * treated as universally good news.
+ *
+ * Never negative, and never a filter. A first date at the only decent
+ * restaurant in the area should not be refused because a band happens to be
+ * on, and the card names what is on, so anyone who wanted quiet can see it and
+ * swap. Scoring it down would hide a real fact to protect a guess about taste.
+ */
+const FIXTURE_WEIGHT: Record<string, number> = {
+  friend_outing: 3,
+  birthday: 3,
+  celebration: 3,
+  graduation: 2.5,
+  date_night: 1.5,
+  solo_day: 1,
+  first_date: 0,
+  anniversary: 0,
 };
 
 function looksScore(v: Venue, occasion: string): number {
@@ -648,6 +674,8 @@ function planOrders(
 export interface PlannedStop {
   venue: Venue;
   role: Role;
+  /** Weekly fixtures on while the party is here. Usually empty. */
+  fixtures?: VenueSchedule[];
   /** Set when this stop is the event the evening was built around. */
   event?: {
     id: string;
@@ -780,6 +808,20 @@ export function planItinerary(
     menuByVenue.set(m.venue_id, list);
   });
 
+  /*
+   * What each venue does weekly, indexed by the venue's own id.
+   *
+   * fetchCandidates has loaded these since migration 0032 and, like the day's
+   * events before today, nothing has ever read them: karaoke on a Thursday
+   * could be entered in the admin and had no way of reaching a plan or a card.
+   */
+  const schedulesByVenue = new Map<string, VenueSchedule[]>();
+  for (const row of candidates.schedules ?? []) {
+    const list = schedulesByVenue.get(row.venue_id) ?? [];
+    list.push(row);
+    schedulesByVenue.set(row.venue_id, list);
+  }
+
   const startMinutes = minutesOf(inputs.startTime);
   const startHour = Math.floor(startMinutes / 60);
 
@@ -842,6 +884,8 @@ export function planItinerary(
     orders: ItineraryOrder[];
     cost: number;
     score: number;
+    /** Weekly fixtures on while the party is here. Usually none. */
+    fixtures: VenueSchedule[];
   }
 
   /*
@@ -909,7 +953,47 @@ export function planItinerary(
     }
 
     const menu = drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol);
-    const score = scoreVenue(venue, inputs, wantedTags);
+
+    /*
+     * On while they are here, not merely on that day.
+     *
+     * Karaoke that starts at nine is no use to a table booked for six and gone
+     * by eight, and a plan that boasted about it would be selling an evening
+     * nobody got. The overlap is tested against this slot's own hours, so the
+     * same venue can carry the fixture in a late slot and not in an early one.
+     */
+    const fixtures = schedulesDuring(
+      schedulesByVenue.get(venue.id) ?? [],
+      inputs.date,
+      slotStart,
+      ROLE_MINUTES[role]
+    );
+    const score =
+      scoreVenue(venue, inputs, wantedTags) +
+      (fixtures.length ? (FIXTURE_WEIGHT[inputs.occasion] ?? 1) : 0);
+
+    /*
+     * A cover charge is money, so it goes in the order rather than beside it.
+     *
+     * 0032 recorded covers and said they were never added to a plan's total,
+     * on the reasoning that null is ambiguous. Null still is, and is still
+     * left alone. But a cover somebody actually wrote down is a figure the
+     * door will charge, and a budget that fits an evening without it is a
+     * budget that breaks at the door. Only counted when the fixture overlaps,
+     * because a band starting after they leave costs them nothing.
+     */
+    const cover = fixtures.reduce((sum, f) => sum + Number(f.cover_ghs ?? 0), 0);
+    const coverLine: ItineraryOrder[] =
+      cover > 0
+        ? [
+            {
+              item: `${fixtures.map((f) => f.title).join(" and ")} — entry`,
+              qty: inputs.partySize,
+              price_ghs: Math.round(cover * inputs.partySize),
+            },
+          ]
+        : [];
+
     for (const tier of [2, 1, 0] as const) {
       const planned = planOrders(
         venue,
@@ -924,8 +1008,9 @@ export function planItinerary(
       out.push({
         venue,
         tier,
-        orders: planned.orders,
-        cost: planned.cost,
+        orders: [...planned.orders, ...coverLine],
+        cost: planned.cost + Math.round(cover * inputs.partySize),
+        fixtures,
         // Within a focus every venue is allowed, so nudge the slot towards
         // its own role to keep the evening varied rather than three of the
         // same thing.
@@ -1278,6 +1363,7 @@ export function planItinerary(
         return {
           venue: p.venue,
           role,
+          fixtures: p.fixtures,
           event: onTonight
             ? {
                 id: onTonight.id,
