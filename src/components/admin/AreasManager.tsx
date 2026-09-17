@@ -19,10 +19,31 @@ export function AreasManager({
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const [moving, setMoving] = useState<string | null>(null);
+
+  /**
+   * Put a venue in the neighbourhood it is actually in.
+   *
+   * Refreshes rather than patching the list in place: the area counts above,
+   * the plannable tallies and the emptiness that decides whether an area can
+   * be deleted all derive from this, and keeping four of them in step by hand
+   * is how one of them ends up lying.
+   */
+  async function moveVenue(venueId: string, venueName: string, areaId: string) {
+    setMoving(venueId);
+    const { error } = await supabase.from("venues").update({ area_id: areaId }).eq("id", venueId);
+    setMoving(null);
+    if (error) {
+      setError(`Could not move ${venueName}: ${error.message}`);
+      return;
+    }
+    router.refresh();
+  }
   const [city, setCity] = useState("Accra");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
   const paged = usePagedRows(
@@ -153,27 +174,63 @@ export function AreasManager({
             isOpen ? (
               <tr key={`${a.id}-open`} className="bg-cream/40">
                 <td colSpan={5}>
+                  {/*
+                    Each venue with somewhere to move it to.
+                    *
+                    * Kpeshie, Ayawaso and Laboma are sub-metro districts and a
+                    * beach, holding about forty venues between them that
+                    * genuinely belong in several different neighbourhoods.
+                    * Nothing can place those from the data: geometry put a
+                    * venue named "Cantonments" in North Ridge, and a default
+                    * per district filed the Kwame Nkrumah Memorial Park in
+                    * Labone. Somebody has to know.
+                    *
+                    * So the knowing stays with a person and the work does not:
+                    * a dropdown on the row rather than a venue form, a page
+                    * load and six actions away.
+                  */}
                   <div className="flex flex-wrap gap-2 px-1 py-2">
                     {here.map((v) => (
-                      <Link
+                      <span
                         key={v.id}
-                        href={`/admin/venues/${v.id}`}
-                        className={`rounded-bar border px-3 py-1.5 text-[13px] transition hover:border-mutedbrown ${
+                        className={`inline-flex items-center gap-1.5 rounded-bar border px-2.5 py-1.5 text-[13px] ${
                           v.plannable
                             ? "border-line bg-shell text-ink"
                             : "border-staletext/40 bg-shell text-staletext"
-                        } ${v.isActive ? "" : "opacity-50 line-through"}`}
-                        title={
-                          !v.isActive
-                            ? "Paused"
-                            : v.plannable
-                              ? v.type
-                              : "No price and no menu, so plans withhold it"
-                        }
+                        } ${v.isActive ? "" : "opacity-50"}`}
                       >
-                        {v.name}
-                        <span className="ml-1.5 text-[11px] text-mutedbrown">{v.type}</span>
-                      </Link>
+                        <Link
+                          href={`/admin/venues/${v.id}`}
+                          className={`hover:text-flame ${v.isActive ? "" : "line-through"}`}
+                          title={
+                            !v.isActive
+                              ? "Paused"
+                              : v.plannable
+                                ? v.type
+                                : "No price and no menu, so plans withhold it"
+                          }
+                        >
+                          {v.name}
+                        </Link>
+                        <span className="text-[11px] text-mutedbrown">{v.type}</span>
+                        <select
+                          className="h-[26px] max-w-[132px] rounded-md border border-line bg-shell px-1 text-[12px]"
+                          value=""
+                          disabled={moving === v.id}
+                          onChange={(e) => {
+                            if (e.target.value) void moveVenue(v.id, v.name, e.target.value);
+                          }}
+                        >
+                          <option value="">{moving === v.id ? "moving…" : "move to…"}</option>
+                          {areas
+                            .filter((other) => other.id !== a.id)
+                            .map((other) => (
+                              <option key={other.id} value={other.id}>
+                                {other.name}
+                              </option>
+                            ))}
+                        </select>
+                      </span>
                     ))}
                   </div>
                 </td>
