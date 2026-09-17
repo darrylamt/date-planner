@@ -42,6 +42,7 @@ const GROUPS: {
       { href: "/admin/unpriced", label: "Unpriced venues", badge: "unpriced", urgent: true },
       { href: "/admin/menus", label: "Thin menus", badge: "thinMenus", urgent: true },
       { href: "/admin/prices", label: "Bulk price edit", badge: "staleMenus" },
+      { href: "/admin/kitchens", label: "Kitchens" },
     ],
   },
   {
