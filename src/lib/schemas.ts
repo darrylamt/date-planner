@@ -8,6 +8,9 @@ export const planInputsSchema = z.object({
   partySize: z.number().int().min(1).max(20).default(2),
   companions: z.array(z.string().max(60)).max(20).default([]),
   budget: z.number().min(BUDGET_MIN).max(BUDGET_MAX),
+  // Optional, so a plan posted by an older build of the app still validates.
+  // A zero budget counts as driving regardless; see isDriving in budget.ts.
+  driving: z.boolean().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   hours: z.number().min(1).max(12),

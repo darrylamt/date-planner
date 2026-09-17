@@ -32,6 +32,7 @@ import {
   vibeBlurb,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
+import { isDriving } from "../../lib/budget";
 import type { StepId } from "../../lib/planConstants";
 import type { SymbolViewProps } from "expo-symbols";
 import type { Area, Gender, PlanFocus, PlanInputs } from "../../lib/types";
@@ -51,31 +52,36 @@ const FORMALITY_ICON: Record<string, SymbolViewProps["name"]> = {
   fancy: "sparkles",
 };
 
-/**
- * The pronoun question, asked by example.
+/*
+ * The pronoun, asked as the pronoun.
  *
- * Each option shows the line the plan would actually write, so the choice is
- * about the copy rather than about the person.
+ * This used to lead with the sentence, "Ama will love this", under the heading
+ * "Which reads right?", on the theory that showing the sentence was a less
+ * presumptuous way to ask. In practice it made a one-second question into a
+ * puzzle: you had to read three near-identical sentences and work out what was
+ * being asked before you could answer it. Naming the pronouns is both quicker
+ * and no more presumptuous, and the sentence stays underneath as the reason
+ * the question is being asked at all.
  */
 const PRONOUN_CHOICES: {
   value: Gender;
-  sub: string;
+  label: string;
   example: (name: string) => string;
 }[] = [
   {
-    value: "unspecified",
-    sub: "Neutral, and the default",
-    example: (n) => `${n.trim() || "They"} will love this`,
-  },
-  {
     value: "female",
-    sub: "She, her",
+    label: "She, her",
     example: (n) => `${n.trim() || "She"} will love this`,
   },
   {
     value: "male",
-    sub: "He, him",
+    label: "He, him",
     example: (n) => `${n.trim() || "He"} will love this`,
+  },
+  {
+    value: "unspecified",
+    label: "They, them",
+    example: (n) => `${n.trim() || "They"} will love this`,
   },
 ];
 
@@ -180,6 +186,11 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   }
 
   if (step === "budget") {
+    const driving = isDriving(inputs);
+    // A zero budget is driving whether or not it was ticked, so the choice
+    // is shown made rather than offered and then quietly overruled.
+    const forced = inputs.budget <= 0;
+
     return (
       <>
         {/*
@@ -189,7 +200,11 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
         */}
         <StepHeading
           title="What is the budget?"
-          subtitle={`Everything for ${partyLabel(inputs.partySize)}, food and taxis included.`}
+          subtitle={
+            driving
+              ? `Everything for ${partyLabel(inputs.partySize)}. You are driving, so none of it goes on fares.`
+              : `Everything for ${partyLabel(inputs.partySize)}, food and taxis included.`
+          }
         />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
 
@@ -199,7 +214,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           somebody who wanted a free day still had to find Continue afterwards.
         */}
         {inputs.budget === 0 ? (
-          <Note>Free places only. Nothing that charges to get in.</Note>
+          <Note>Free places only, and we have assumed you are driving.</Note>
         ) : (
           <Button
             title="Set my budget to zero"
@@ -208,6 +223,37 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
             onPress={() => update({ budget: 0 })}
           />
         )}
+
+        {/*
+          Asked here rather than on its own screen, because it is a question
+          about the budget: it changes what the same number buys. Roughly a
+          fifth of every plan used to go on getting between stops, and for
+          somebody with a car that fifth was never going to be spent, it was
+          simply absent from the table.
+        */}
+        <GroupLabel>Getting between places</GroupLabel>
+        <Group
+          footer={
+            driving
+              ? "No fares in the total, so all of it goes on food, drinks and things to do."
+              : "We price a ride between each stop and keep it inside your budget."
+          }
+        >
+          <Row
+            title="We'll take taxis"
+            subtitle="Fares come out of the budget"
+            selected={!driving}
+            disabled={forced}
+            onPress={() => update({ driving: false })}
+          />
+          <Row
+            title="We're driving"
+            subtitle="Spend the fare on the evening instead"
+            selected={driving}
+            disabled={forced}
+            onPress={() => update({ driving: true })}
+          />
+        </Group>
       </>
     );
   }
@@ -465,20 +511,13 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
             />
           </View>
 
-          {/*
-            Asked as "which of these reads right" rather than "is it a him or
-            a her". The app only wants this to write a sentence, so showing
-            the sentence is both a clearer question and a less presumptuous
-            one: you are picking how the plan should read, not filing someone
-            under a category.
-          */}
-          <GroupLabel>Which reads right?</GroupLabel>
+          <GroupLabel>She, he or they?</GroupLabel>
           <Group footer="Only used to write your plan. Skip it and we stay neutral.">
             {PRONOUN_CHOICES.map((choice) => (
               <Row
                 key={choice.value}
-                title={choice.example(inputs.partner.name)}
-                subtitle={choice.sub}
+                title={choice.label}
+                subtitle={choice.example(inputs.partner.name)}
                 selected={inputs.partner.gender === choice.value}
                 onPress={() =>
                   update({ partner: { ...inputs.partner, gender: choice.value } })

@@ -71,6 +71,42 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
 
   const areaLabel = inputs.surpriseMe ? "Accra" : inputs.areaNames.join(" & ");
 
+  /*
+   * A budget of nothing, checked before anything blames the budget.
+   *
+   * Zero means free, and free is a claim about a venue that somebody has to
+   * have made: a place with no prices on file is withheld rather than shown as
+   * free, because planning a free visit to somewhere that charges is how a
+   * plan lies about what an evening costs. So only rows flagged is_free can
+   * carry a stop here, and a plan needs two of them.
+   *
+   * Checked here rather than after planning, because an empty shortlist falls
+   * into the message below, which says "the spots there run pricier" and
+   * offers to raise a budget that is already at its floor. That is both wrong
+   * and a loop with no exit: nothing they change about their answers will
+   * conjure a free venue into the catalogue.
+   */
+  if (inputs.budget <= 0) {
+    const free = candidates.venues.filter((v) => v.is_free === true).length;
+    if (free < 2) {
+      return NextResponse.json({
+        status: "no_match",
+        headline:
+          free === 0
+            ? `We have no free places recorded in ${areaLabel} yet.`
+            : `We only have one free place recorded in ${areaLabel}.`,
+        message:
+          "A day out can genuinely cost nothing, but we will not put a venue in a free plan until somebody has confirmed it is free. That is a gap in our catalogue rather than in your answers, and even a small budget opens up the rest of it.",
+        suggestions: [
+          ...(inputs.surpriseMe
+            ? []
+            : ([{ label: "Look across all of Accra", action: "widen_area" }] as const)),
+          { label: "Nudge budget to GHS 200", action: "raise_budget", value: 200 },
+        ],
+      });
+    }
+  }
+
   if (candidates.venues.length < 2) {
     const widerAreas = candidates.allAreaNames
       .filter((n) => !inputs.areaNames.includes(n))
@@ -96,7 +132,16 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want.
   if (!plan) {
-    const nudge = Math.min(BUDGET_MAX, Math.ceil((inputs.budget * 1.5) / 50) * 50);
+    /*
+     * A floor under the nudge, because half again of nothing is nothing.
+     * A zero budget used to be offered only "widen the area", which cannot
+     * help: the whole of Accra at GHS 0 is the same answer as one suburb
+     * at GHS 0.
+     */
+    const nudge = Math.min(
+      BUDGET_MAX,
+      Math.max(200, Math.ceil((inputs.budget * 1.5) / 50) * 50)
+    );
     const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [
       { label: "Widen the search area", action: "widen_area" },
     ];

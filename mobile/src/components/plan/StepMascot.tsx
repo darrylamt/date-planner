@@ -13,6 +13,7 @@ import type { Occasion } from "../../lib/types";
  */
 const TIPS: Partial<Record<StepId, string>> = {
   area: "Close together beats far apart.",
+  // Overridden below when they are driving, where it would be a lie.
   budget: "Food and taxis, all in.",
   when: "Weeknights are quieter.",
   // The date and the clock are two screens now, so the clock gets its own.
@@ -47,8 +48,20 @@ const OCCASION_TIPS: Partial<Record<Occasion, Partial<Record<StepId, string>>>> 
   },
 };
 
-export function StepMascot({ step, occasion }: { step: StepId; occasion: Occasion }) {
-  const tip = OCCASION_TIPS[occasion]?.[step] ?? TIPS[step];
+export function StepMascot({
+  step,
+  occasion,
+  driving = false,
+}: {
+  step: StepId;
+  occasion: Occasion;
+  /** Their own car, so the budget tip must not promise to cover fares. */
+  driving?: boolean;
+}) {
+  const tip =
+    step === "budget" && driving
+      ? "No fares to pay, so it all goes on the evening."
+      : (OCCASION_TIPS[occasion]?.[step] ?? TIPS[step]);
   if (!tip) return null;
 
   return (

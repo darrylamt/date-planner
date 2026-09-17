@@ -39,13 +39,19 @@ export function planEmail(
 
     const hop = itinerary.hops[i];
     if (hop && i < itinerary.stops.length - 1) {
-      lines.push(`   ↓ about ${hop.mins} min, ${ghs(Number(hop.cost_ghs))}`);
+      // A hop priced at nothing is somebody driving, not a free taxi.
+      lines.push(
+        `   ↓ about ${hop.mins} min` +
+          (Number(hop.cost_ghs) > 0 ? `, ${ghs(Number(hop.cost_ghs))}` : ", your own drive")
+      );
     }
     lines.push("");
   });
 
   lines.push(`Food and entry: ${ghs(Number(itinerary.food_total_ghs))}`);
-  lines.push(`Transport: ${ghs(Number(itinerary.transport_total_ghs))}`);
+  if (Number(itinerary.transport_total_ghs) > 0) {
+    lines.push(`Transport: ${ghs(Number(itinerary.transport_total_ghs))}`);
+  }
   lines.push(`Total: ${ghs(Number(itinerary.est_total_ghs))}`);
 
   if (itinerary.budget_note) {

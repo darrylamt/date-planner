@@ -169,18 +169,21 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
 
         {/* Footer */}
         <div className="mt-auto px-7 pb-10 pt-2 text-center md:pb-14">
+          {/*
+            No prices here, deliberately.
+
+            This page used to carry the estimate range, on the reasoning that
+            whoever opens the link often ends up paying. That reasoning does not
+            survive who actually opens it: a plan for two is shared with the
+            person it was made for, and telling them what the evening costs is
+            the one thing the sender did not want to say. Every stop card here
+            was already priceless and the footer was the last line that was not.
+
+            The person who made the plan still sees every figure, in their own
+            app and in their own list of plans. This is the guest's copy.
+          */}
           {/* The sign-off, which is the one line that changes most between a
               graduation and a solo day. */}
-          {/* Said on the card too, because the person opening the link is
-              often the one who ends up paying. */}
-          {itinerary.price_confidence && !itinerary.price_confidence.exact ? (
-            <p className="mx-auto mb-4 max-w-[420px] text-[14px] text-lagoon-soft">
-              Around GHS {itinerary.price_confidence.low.toLocaleString()} to{" "}
-              {itinerary.price_confidence.high.toLocaleString()}. Some prices here
-              are estimates rather than menu prices.
-            </p>
-          ) : null}
-
           <p className="mx-auto mb-6 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
             {card.closing}
           </p>

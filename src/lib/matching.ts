@@ -70,11 +70,19 @@ export async function fetchCandidates(
    * is ungranted rather than returning the rest. See venueColumns.ts.
    */
   const runVenueQuery = async (columns: string[]) => {
+    /*
+     * Free is affordable at every budget.
+     *
+     * The band filter is a price filter, and a venue flagged free has a price
+     * of nothing whatever band somebody happened to file it under. Filtering
+     * on band alone made a free park recorded as "mid" invisible to exactly
+     * the plan that needs it, the one with no money.
+     */
     let q = supabase
       .from("venues")
       .select(`${columns.join(",")},areas(name)`)
       .eq("is_active", true)
-      .in("price_band", bands);
+      .or(`price_band.in.(${bands.join(",")}),is_free.is.true`);
 
     if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
       q = q.in("area_id", inputs.areaIds);

@@ -16,6 +16,7 @@ export function BudgetBar({
   food,
   transport,
   confidence,
+  driving = false,
 }: {
   estimated: number;
   budget: number;
@@ -23,6 +24,8 @@ export function BudgetBar({
   transport: number;
   /** Absent on plans made before estimates existed, which are all exact. */
   confidence?: PriceConfidence;
+  /** Their own car, so there is no transport half of the split to show. */
+  driving?: boolean;
 }) {
   const c = useTheme();
   const approximate = confidence ? !confidence.exact : false;
@@ -74,8 +77,12 @@ export function BudgetBar({
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        {/* A "Transport GHS 0" line is noise. Saying the fare is not in the
+            total at all is the thing worth the space. */}
         <Text variant="footnote" tone="secondary" tabular>
-          Food {ghs(food)} · Transport {ghs(transport)} est.
+          {driving
+            ? `Food and entry ${ghs(food)} · you are driving`
+            : `Food ${ghs(food)} · Transport ${ghs(transport)} est.`}
         </Text>
         <Text variant="footnote" tone={over ? "red" : "green"} weight="600" tabular>
           {over ? `${ghs(Math.abs(remaining))} over` : `${ghs(remaining)} left`}
@@ -102,7 +109,16 @@ export function BudgetBar({
  * rail with the cost floating on it, so the itinerary reads as one continuous
  * evening rather than a stack of unrelated cards.
  */
-export function Hop({ mins, cost }: { mins: number; cost: number }) {
+export function Hop({
+  mins,
+  cost,
+  driving = false,
+}: {
+  mins: number;
+  cost: number;
+  /** Their own car: the journey still takes as long, it just is not bought. */
+  driving?: boolean;
+}) {
   const c = useTheme();
 
   return (
@@ -122,8 +138,10 @@ export function Hop({ mins, cost }: { mins: number; cost: number }) {
         }}
       >
         <Symbol name="car.fill" size={12} color={c.textSecondary} />
+        {/* "GHS 0 est." would read as a broken estimate rather than as a
+            journey nobody is paying a fare for. */}
         <Text variant="caption1" tone="secondary" tabular>
-          {mins} min · {ghs(cost)} est.
+          {mins} min · {driving ? "your own drive" : `${ghs(cost)} est.`}
         </Text>
       </View>
       <Dashes />

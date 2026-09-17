@@ -240,6 +240,20 @@ export interface PlanInputs {
   /** Names of the others, for groups. Optional and purely for warmth in copy. */
   companions: string[];
   budget: number;
+  /**
+   * They are driving themselves, so the budget buys no taxis.
+   *
+   * Every plan used to spend roughly a fifth of its money getting between
+   * stops, and for somebody with a car that fifth was never going to be spent:
+   * it was simply missing from the table. Saying so puts it back into the
+   * food, the drinks and the things to do, which is where they were going to
+   * spend it anyway.
+   *
+   * Undefined behaves as false, so a plan made before this still loads. Read
+   * through isDriving in budget.ts rather than directly: a zero budget cannot
+   * pay for a taxi whether or not this was ticked.
+   */
+  driving?: boolean;
   date: string; // ISO yyyy-mm-dd
   startTime: string; // e.g. "17:30"
   hours: number; // duration of the outing

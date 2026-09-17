@@ -1,4 +1,5 @@
 import type { Candidates } from "./matching";
+import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
@@ -679,7 +680,14 @@ function minutesOf(hhmm: string): number {
   return h * 60 + m;
 }
 
-function hopsFor(stops: PlannedStop[]) {
+/**
+ * The rides between stops, and what they cost.
+ *
+ * Driving zeroes the fare and keeps the minutes: the journey still takes as
+ * long, it just is not bought. The time matters as much as the money here,
+ * because arrival times and the opening-hours checks are laid out from it.
+ */
+function hopsFor(stops: PlannedStop[], driving = false) {
   const hops = [];
   for (let i = 0; i < stops.length - 1; i++) {
     const a = stops[i].venue;
@@ -689,7 +697,7 @@ function hopsFor(stops: PlannedStop[]) {
       from: a.areas?.name ?? "",
       to: b.areas?.name ?? "",
       mins: est.mins,
-      cost_ghs: est.cost_ghs,
+      cost_ghs: driving ? 0 : est.cost_ghs,
     });
   }
   return hops;
@@ -769,6 +777,17 @@ export function planItinerary(
 
   const startMinutes = minutesOf(inputs.startTime);
   const startHour = Math.floor(startMinutes / 60);
+
+  /*
+   * Their own car, so the budget buys no fares.
+   *
+   * The money does not vanish, it moves: the walk-down and the climb below
+   * both price the whole evening, hops included, so a plan that stops paying
+   * for taxis has the same amount left over for a fuller order or a better
+   * venue. A budget of zero counts as driving whatever was ticked, because
+   * nothing at zero could pay a fare anyway.
+   */
+  const driving = isDriving(inputs);
 
   /*
    * What is on that night, if anything, and the evening is built around it.
@@ -1052,7 +1071,7 @@ export function planItinerary(
 
     const totalOf = (picks: Option[]) => {
       const stops = toStops(picks);
-      const hops = hopsFor(stops);
+      const hops = hopsFor(stops, driving);
       return (
         picks.reduce((s, p) => s + p.cost, 0) + hops.reduce((s, h) => s + h.cost_ghs, 0)
       );
@@ -1194,7 +1213,7 @@ export function planItinerary(
     }
 
     const stops = toStops(chosen);
-    const hops = hopsFor(stops);
+    const hops = hopsFor(stops, driving);
     schedule(stops, startMinutes, hops);
 
     /*

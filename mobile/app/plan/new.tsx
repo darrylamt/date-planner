@@ -30,6 +30,7 @@ import {
 } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
+import { isDriving } from "../../src/lib/budget";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
@@ -350,10 +351,9 @@ export default function PlanNew() {
             void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
           }
         }}
-        onStartOver={() => {
-          setInputs(defaultInputs());
-          void clearDraft();
+        onEditAnswers={() => {
           setPhase({ name: "steps", step: 0 });
+          void saveDraft({ step: 0, itinerary: null, shareSlug: null });
         }}
       />
     );
@@ -432,7 +432,7 @@ export default function PlanNew() {
         ) : (
           <>
             <PlanSteps step={stepId} inputs={inputs} areas={areas} update={update} />
-            <StepMascot step={stepId} occasion={inputs.occasion} />
+            <StepMascot step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />
           </>
         )}
       </ScrollView>

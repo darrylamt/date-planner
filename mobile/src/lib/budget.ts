@@ -21,3 +21,19 @@ export const BUDGET_STEP = 50;
 
 /** Where the slider starts when someone drags it off zero. */
 export const BUDGET_DEFAULT = 800;
+
+/**
+ * Whether this plan pays for taxis between stops.
+ *
+ * Two ways to arrive at no: saying you are driving, and setting the budget to
+ * zero. The second is not an inference about the person, it is arithmetic,
+ * nothing at zero can pay a fare, so a plan that still charged for hops would
+ * be unbuildable for a reason it never explained.
+ *
+ * One function rather than the same condition written in the planner, the
+ * route, the budget bar and the hop pill. Four copies of a rule is four
+ * chances for the meter to disagree with the plan it is metering.
+ */
+export function isDriving(inputs: { driving?: boolean; budget: number }): boolean {
+  return inputs.driving === true || inputs.budget <= 0;
+}

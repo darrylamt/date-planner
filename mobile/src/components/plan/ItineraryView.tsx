@@ -21,6 +21,7 @@ import { StopCard } from "./StopCard";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
+import { isDriving } from "../../lib/budget";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
 import { swapStopLocally } from "../../lib/swapStop";
@@ -64,6 +65,9 @@ export function ItineraryView({
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
 
   const over = itinerary.est_total_ghs > inputs.budget;
+  // Read from the inputs rather than inferred from a zero hop cost: an old
+  // plan saved before this existed has real fares and must keep showing them.
+  const driving = isDriving(inputs);
 
   /**
    * Swap a stop for its next alternate.
@@ -350,6 +354,7 @@ export function ItineraryView({
             food={itinerary.food_total_ghs + (pickup ? pickupTotal(pickup) : 0)}
             transport={itinerary.transport_total_ghs}
             confidence={itinerary.price_confidence}
+            driving={driving}
           />
         </View>
 
@@ -407,7 +412,11 @@ export function ItineraryView({
                 onOrdersChange={(orders) => handleOrdersChange(i, orders)}
               />
               {itinerary.hops[i] && i < itinerary.stops.length - 1 ? (
-                <Hop mins={itinerary.hops[i].mins} cost={itinerary.hops[i].cost_ghs} />
+                <Hop
+                  mins={itinerary.hops[i].mins}
+                  cost={itinerary.hops[i].cost_ghs}
+                  driving={driving}
+                />
               ) : null}
             </Fragment>
           ))}
@@ -432,7 +441,9 @@ export function ItineraryView({
           center
           style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}
         >
-          Prices can change. Transport is an estimate.
+          {driving
+            ? "Prices can change. Nothing here is a taxi fare."
+            : "Prices can change. Transport is an estimate."}
         </Text>
       </ScrollView>
 

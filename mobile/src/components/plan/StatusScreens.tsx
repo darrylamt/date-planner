@@ -73,14 +73,14 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
 export function NoMatch({
   data,
   onSuggestion,
-  onStartOver,
+  onEditAnswers,
 }: {
   data: Extract<GenerateResponse, { status: "no_match" }>;
   onSuggestion: (s: {
     action: "widen_area" | "raise_budget" | "clear_focus";
     value?: number;
   }) => void;
-  onStartOver: () => void;
+  onEditAnswers: () => void;
 }) {
   const c = useTheme();
 
@@ -104,13 +104,18 @@ export function NoMatch({
         </Group>
       </View>
 
+      {/*
+        Back to the first question with every answer still in it.
+
+        This used to wipe the lot and start from an empty form, which punished
+        the wrong person: nothing they typed was wrong, one answer was simply
+        too narrow for the catalogue, and making them retype their date, their
+        budget, their partner's name and six vibe chips to widen one of them is
+        how somebody leaves. The suggestions above change one field for you;
+        this is for when the field you want to change is not among them.
+      */}
       <View style={{ paddingHorizontal: GUTTER }}>
-        <Button
-          title="Start over with different answers"
-          kind="plain"
-          onPress={onStartOver}
-          block
-        />
+        <Button title="Go back and change my answers" kind="plain" onPress={onEditAnswers} block />
       </View>
     </View>
   );

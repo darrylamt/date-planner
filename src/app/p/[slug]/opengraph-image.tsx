@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { createServiceClient } from "@/lib/supabase/server";
-import { longDate } from "@/lib/format";
+import { longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard } from "@/lib/occasionCard";
 import type { SavedPlan } from "@/lib/types";
@@ -142,8 +142,16 @@ export default async function Image({ params }: { params: { slug: string } }) {
           }}
         >
           <div style={{ display: "flex", fontSize: 28, fontWeight: 700 }}>aduro</div>
+          {/*
+            The total used to sit here, and a preview is the worst place for it:
+            it shows in the chat before anyone taps, so a plan made for two
+            announced its own cost to the person it was made for, in a thread
+            neither of them can take it back out of. The start time says the
+            same useful thing about the evening and gives nothing away.
+          */}
           <div style={{ display: "flex", fontSize: 28, color: "rgba(244,236,238,0.72)" }}>
-            {stops.length} stops · GHS {Math.round(Number(itinerary.est_total_ghs))}
+            {stops.length} stop{stops.length === 1 ? "" : "s"} · from{" "}
+            {time12(inputs.startTime)}
           </div>
         </div>
       </div>
