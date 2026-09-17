@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ghs } from "@/lib/format";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
@@ -31,11 +33,36 @@ interface Row {
   pricedBy: "menu" | "figure" | "nothing";
   /** Null when Google has no hours for it, so nothing guards the plan. */
   hoursKnown: boolean;
+  /** Linked venues are the only ones the closure sweep can notice. */
+  linked: boolean;
 }
 
+/**
+ * The views the dashboard tiles point at.
+ *
+ * Those tiles used to link to /admin, the page they were already on, so
+ * clicking "4 not linked to Google" did nothing at all and there was no way
+ * from the count to the four venues it was counting. A number you cannot act
+ * on is decoration.
+ */
+const FILTERS = [
+  { id: "all", label: "All", test: () => true },
+  { id: "no-hours", label: "No hours", test: (r: Row) => !r.hoursKnown },
+  { id: "unlinked", label: "Not on Google", test: (r: Row) => !r.linked },
+  { id: "unpriced", label: "Unpriced", test: (r: Row) => r.is_active && r.pricedBy === "nothing" },
+  { id: "stale", label: "Stale menu", test: (r: Row) => r.isStale },
+  { id: "inactive", label: "Inactive", test: (r: Row) => !r.is_active },
+] as const;
+
 export function VenueTable({ rows }: { rows: Row[] }) {
+  const params = useSearchParams();
+  const active = params.get("filter") ?? "all";
+  const current = FILTERS.find((f) => f.id === active) ?? FILTERS[0];
+
+  const visible = useMemo(() => rows.filter((r) => current.test(r)), [rows, current]);
+
   const paged = usePagedRows(
-    rows,
+    visible,
     (r, needle) =>
       r.name.toLowerCase().includes(needle) ||
       r.area.toLowerCase().includes(needle) ||
@@ -44,12 +71,39 @@ export function VenueTable({ rows }: { rows: Row[] }) {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {FILTERS.map((f) => {
+          const n = rows.filter((r) => f.test(r)).length;
+          const on = f.id === current.id;
+          return (
+            <Link
+              key={f.id}
+              href={f.id === "all" ? "/admin" : `/admin?filter=${f.id}`}
+              scroll={false}
+              className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                on
+                  ? "border-flame bg-flame text-blush"
+                  : "border-line text-cocoa hover:border-flame hover:text-flame"
+              }`}
+            >
+              {f.label}
+              <span className={on ? "ml-1.5 opacity-80" : "ml-1.5 text-mutedbrown"}>{n}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <SearchBox
           value={paged.query}
           onChange={paged.setQuery}
           placeholder="Search name, area or type"
         />
+        {current.id !== "all" && (
+          <span className="text-[13px] text-mutedbrown">
+            Showing {visible.length} of {rows.length}
+          </span>
+        )}
       </div>
 
       <div className="mt-4 overflow-x-auto">

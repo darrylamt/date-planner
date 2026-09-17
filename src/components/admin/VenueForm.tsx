@@ -9,7 +9,7 @@ import { VenueResearch } from "@/components/admin/VenueResearch";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
 import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places";
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
-import { describeWeek, parsePeriods } from "@/lib/hours";
+import { HoursEditor } from "./HoursEditor";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/research";
@@ -695,7 +695,12 @@ export function VenueForm({
           </select>
         </div>
         <div className={field}>
-          <span className="flbl">Avg cost / person (GHS)</span>
+          {/*
+            The same words the Unpriced queue uses. It said "what one person
+            pays" there and "avg cost / person" here, for one column, and the
+            two readings sounded like two different numbers.
+          */}
+          <span className="flbl">Cost per person (GHS)</span>
           <input
             className="inp font-mono"
             type="number"
@@ -787,7 +792,7 @@ export function VenueForm({
           </span>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-[13px] text-mutedbrown">Least one person can spend, GHS</span>
+            <span className="text-[13px] text-mutedbrown">Minimum spend, GHS (rare)</span>
             <input
               className="inp h-[38px] max-w-[120px] font-mono"
               type="number"
@@ -952,32 +957,18 @@ export function VenueForm({
           <span className="flbl">Longitude</span>
           <input className="inp font-mono" value={v.lng} onChange={(e) => setV({ ...v, lng: e.target.value })} />
         </div>
-        {/*
-          Opening hours: shown, never typed. They come from Google with the
-          place link, because a hand-typed copy of somebody else's hours goes
-          stale silently and there is no way to tell that it has.
-        */}
-        <div className="md:col-span-2">
-          <span className="flbl">Opening hours</span>
-          {parsePeriods(hours.periods) ? (
-            <div className="grid gap-x-6 gap-y-1 rounded-bar border border-line bg-cream/50 p-3 text-[13px] sm:grid-cols-2">
-              {describeWeek(parsePeriods(hours.periods)).map((d) => (
-                <div key={d.day} className="flex justify-between gap-3">
-                  <span className="text-mutedbrown">{d.day}</span>
-                  <span className={d.hours === "closed" ? "font-semibold text-staletext" : ""}>
-                    {d.hours}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-bar border border-line bg-cream/50 p-3 text-[13px] text-mutedbrown">
-              No hours on file. Nothing stops a plan sending someone here on a
-              day it is closed. Use <b className="text-ink">Find on Google</b>{" "}
-              above to fetch them.
-            </div>
-          )}
-        </div>
+        <HoursEditor
+          raw={hours.periods}
+          onChange={(periods) =>
+            /*
+             * Hand-edited hours drop the weekday text that came from Google
+             * alongside them. That text is Google's rendering of Google's
+             * periods; keeping it next to hours somebody has since changed
+             * would leave two answers on the row, one of them quietly wrong.
+             */
+            setHours({ periods, text: null })
+          }
+        />
 
         {/*
           Asked of the venue, not read off the menu.

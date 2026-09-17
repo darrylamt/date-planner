@@ -79,6 +79,8 @@ export default async function AdminVenuesPage() {
       pricedBy: hasMenu ? ("menu" as const) : priced ? ("figure" as const) : ("nothing" as const),
       // Whether anything stops a plan sending someone when the place is shut.
       hoursKnown: Array.isArray(v.opening_periods) && v.opening_periods.length > 0,
+      // Linked venues are the only ones the closure sweep can notice.
+      linked: Boolean(v.google_place_id),
     };
   });
 
@@ -174,14 +176,14 @@ function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> })
       urgent: false,
     },
     {
-      href: "/admin",
+      href: "/admin?filter=no-hours",
       n: counts.noHours,
       label: "without opening hours",
       hint: "Nothing stops a plan sending someone on a closed day",
       urgent: true,
     },
     {
-      href: "/admin",
+      href: "/admin?filter=unlinked",
       n: counts.unlinked,
       label: "not linked to Google",
       hint: "Nothing will notice if these close",

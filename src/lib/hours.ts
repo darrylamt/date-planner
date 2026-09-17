@@ -136,6 +136,31 @@ export function isOpenThroughout(
   return true;
 }
 
+/**
+ * Open at every hour of every day.
+ *
+ * A beach, a public park, a stretch of shore: places with no door to lock, and
+ * the one case a weekly grid of opening and closing times cannot express. Said
+ * in Google's own vocabulary rather than a flag of our own, because everything
+ * that reads hours already understands it: a period with an open and no close
+ * runs a full day from that point, so seven of them cover the week and
+ * isOpenAt, isOpenThroughout, closedAllDay and describeDay all keep working
+ * with no idea anything unusual happened.
+ */
+export function alwaysOpenPeriods(): OpeningPeriod[] {
+  return Array.from({ length: 7 }, (_, day) => ({ open: { day, hour: 0, minute: 0 } }));
+}
+
+/** Whether a set of periods is the always-open shape. */
+export function isAlwaysOpen(periods: OpeningPeriod[] | null | undefined): boolean {
+  if (!periods || periods.length !== 7) return false;
+  const days = new Set(periods.map((p) => p.open.day));
+  return (
+    days.size === 7 &&
+    periods.every((p) => !p.close && p.open.hour === 0 && p.open.minute === 0)
+  );
+}
+
 /** Weekday of an ISO date, read as a local calendar date rather than UTC. */
 export function weekdayOf(dateISO: string): number | null {
   const [y, m, d] = dateISO.split("-").map(Number);

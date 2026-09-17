@@ -12,14 +12,21 @@ interface Row {
   area: string;
 }
 
-/** A sensible default label per venue type, what one person is actually buying. */
+/**
+ * What one person is buying, in words they would recognise on a plan.
+ *
+ * These become real menu_items rows, and a plan card lists them as things to
+ * order. "Typical spend, per person" was honest bookkeeping and nonsense on a
+ * card: somebody read an evening that told them to order two Typical Spends.
+ * An admin can still type anything; this is only the starting point.
+ */
 const DEFAULT_LABEL: Record<string, string> = {
   activity: "Entry, per person",
   outdoor: "Entry, per person",
-  lounge: "Typical spend, per person",
-  cafe: "Typical spend, per person",
-  dessert: "Typical spend, per person",
-  restaurant: "Typical spend, per person",
+  lounge: "Drinks, per person",
+  cafe: "Coffee and something, per person",
+  dessert: "Dessert, per person",
+  restaurant: "A meal, per person",
 };
 
 interface Draft {
@@ -152,8 +159,8 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
               <tr>
                 <th>Venue</th>
                 <th>Area</th>
-                <th>What one person pays</th>
-                <th>Called</th>
+                <th>Cost per person (GHS)</th>
+                <th>Shown on the plan as</th>
                 <th></th>
               </tr>
             </thead>
