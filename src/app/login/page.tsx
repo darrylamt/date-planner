@@ -14,7 +14,12 @@ type Mode = "signin" | "signup" | "forgot";
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/plans";
+  /*
+   * Admin, because that is the only thing left to sign in to here. The web
+   * kept a consumer account area; people plan in the app now, and the only
+   * reason to have a session in this browser is to run the catalogue.
+   */
+  const next = params.get("next") ?? "/admin";
   const linkError = params.get("error") === "link";
 
   const [mode, setMode] = useState<Mode>("signin");

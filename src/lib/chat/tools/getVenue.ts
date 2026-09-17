@@ -112,6 +112,13 @@ export const getVenue: ChatTool<GetVenueArgs> = {
        * by remembering. See 0013 and 0014.
        */
       phone: venue.phone ?? null,
+      /*
+       * Offered so the assistant can point somebody at the place rather than
+       * only describe it. The catalogue holds twenty-nine of these against a
+       * hundred and eighty-five venues, so null here is the common case and
+       * means nobody has found one, which is not the same as there being none.
+       */
+      instagram: venue.instagram_handle ?? null,
       google_maps_url: venue.google_maps_url ?? null,
       hours: hours(venue),
       whats_on_weekly: fixtures.length

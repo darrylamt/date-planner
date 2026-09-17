@@ -55,8 +55,15 @@ export default function ResetPasswordPage() {
       return;
     }
     setDone(true);
+    /*
+     * Home, not a saved-plans page, which no longer exists.
+     *
+     * Most people reaching this screen got here from a reset email sent by the
+     * phone app, so the useful next step is to go back to the app rather than
+     * anywhere on this site. The landing page says where the app is.
+     */
     setTimeout(() => {
-      router.push("/plans");
+      router.push("/");
       router.refresh();
     }, 1400);
   }

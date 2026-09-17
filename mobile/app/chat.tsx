@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -17,6 +18,7 @@ import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
+import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -297,6 +299,12 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
   const c = useTheme();
   const mine = bubble.role === "user";
 
+  /*
+   * Only on the assistant's side. A number somebody typed themselves is one
+   * they already have, and offering to dial it back at them is noise.
+   */
+  const links = mine ? [] : linksIn(bubble.text);
+
   return (
     <View
       style={{
@@ -312,6 +320,115 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
       <Text variant="body" tone={mine ? "onTint" : "label"}>
         {bubble.text}
       </Text>
+
+      {/*
+        Under the words rather than woven through them. React Native cannot put
+        a View inside a Text, so an inline icon would have to be an emoji or a
+        glyph character, and neither takes the theme's colour or grows a tap
+        target. A row underneath is tappable at a thumb's size and leaves the
+        prose exactly as the model wrote it.
+      */}
+      {links.length > 0 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: space.sm,
+            marginTop: space.md,
+          }}
+        >
+          {links.map((link) => (
+            <ChatLinkChip key={link.href} link={link} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * One tappable thing the assistant mentioned.
+ *
+ * Carries the value as written rather than a word like "Call", because the
+ * number is the useful part: somebody who wants to ring from another phone
+ * can read it off the chip, and somebody who wants to ring from this one taps
+ * it. The icon says which kind of thing it is at a glance.
+ */
+function ChatLinkChip({ link }: { link: ChatLink }) {
+  const c = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={
+        link.kind === "phone" ? `Call ${link.label}` : `Open ${link.label} on Instagram`
+      }
+      onPress={() => {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        void Linking.openURL(link.href).catch(() => {
+          // A simulator with no dialler, or Instagram not installed. Nothing
+          // to recover, and a thrown promise here would take the screen down.
+        });
+      }}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: space.md,
+        height: 30,
+        borderRadius: radius.pill,
+        backgroundColor: c.backgroundSelected,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      {link.kind === "phone" ? (
+        <Symbol name="phone.fill" size={12} color={c.accent} weight="semibold" />
+      ) : (
+        <ChatInstagramGlyph color={c.accent} />
+      )}
+      <Text variant="footnote" weight="600" style={{ color: c.accent }}>
+        {link.label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The Instagram mark, drawn.
+ *
+ * SF Symbols carries no third-party logos and the app ships no icon font, so
+ * the alternatives were a bundled PNG that cannot take the theme's colour or
+ * three nested Views that can. A rounded square, a circle and a dot is the
+ * whole mark, and at twelve points it is read by shape rather than by detail.
+ */
+function ChatInstagramGlyph({ color }: { color: string }) {
+  const SIZE = 13;
+  return (
+    <View
+      style={{
+        width: SIZE,
+        height: SIZE,
+        borderRadius: 4,
+        borderWidth: 1.4,
+        borderColor: color,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <View
+        style={{ width: 5.5, height: 5.5, borderRadius: 3, borderWidth: 1.4, borderColor: color }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          top: 1.4,
+          right: 1.4,
+          width: 1.7,
+          height: 1.7,
+          borderRadius: 1,
+          backgroundColor: color,
+        }}
+      />
     </View>
   );
 }

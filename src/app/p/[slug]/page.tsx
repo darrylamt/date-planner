@@ -221,8 +221,11 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
           <div className="my-2">
             <Logo size={24} dark href={null} />
           </div>
+          {/* The one place a stranger meets aduro, so it goes where planning
+              actually happens rather than to a web form that no longer
+              exists. */}
           <Link
-            href="/plan/new"
+            href="/get"
             className="btn mx-auto mt-3 w-full max-w-[260px] !bg-amber !text-lagoon hover:!bg-amber-deep"
           >
             Plan your own

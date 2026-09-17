@@ -59,8 +59,10 @@ export default function LandingPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 pt-[22px]">
         <Logo size={22} />
-        <Link href="/plans" className="text-[14px] font-semibold text-mutedbrown hover:text-flame">
-          Saved plans
+        {/* Saved plans live in the app now, so there is nothing here to link
+            to. The only onward journey from this page is getting the app. */}
+        <Link href="/get" className="text-[14px] font-semibold text-mutedbrown hover:text-flame">
+          Get the app
         </Link>
       </div>
 
@@ -77,13 +79,19 @@ export default function LandingPage() {
             </p>
           </div>
 
+          {/*
+            Both buttons used to open a full questionnaire on the web, a second
+            implementation of every question the app already asks. Planning
+            happens in the app now, so the promise is unchanged and the door is
+            different.
+          */}
           <div className="mt-6 flex flex-col gap-2.5 px-6 md:px-0">
-            <Link href="/plan/new" className="btn">
+            <Link href="/get" className="btn">
               Plan a date
             </Link>
-            <Link href="/plan/example" className="btn2">
-              See an example plan
-            </Link>
+            <p className="text-center text-caption text-mutedbrown">
+              aduro is an iPhone app, free while we are testing
+            </p>
           </div>
         </div>
 
@@ -146,7 +154,14 @@ export default function LandingPage() {
         <div className="kente" />
         <div className="mt-1.5 flex justify-between text-caption text-mutedbrown">
           <span>aduro · Accra first</span>
-          <span>About · Contact</span>
+          <span className="flex gap-3">
+            <Link href="/privacy" className="hover:text-flame">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-flame">
+              Terms
+            </Link>
+          </span>
         </div>
       </div>
     </main>
