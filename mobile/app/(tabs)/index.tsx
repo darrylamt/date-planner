@@ -135,7 +135,12 @@ export default function Home() {
         </View>
 
         <Text variant="display" style={{ marginTop: Spacing.two }}>
-          Plan a date worth turning up for.
+          {/*
+            Not "a date". The catalogue plans birthdays, friends out, solo
+            days and graduations, and the word on the first screen decides what
+            people think the app is for before they have opened anything.
+          */}
+          Plan something worth turning up for.
         </Text>
       </View>
 

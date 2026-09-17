@@ -59,9 +59,9 @@ export const DURATIONS: { label: string; hours: number }[] = [
  * no thought.
  */
 export const FOCUS_OPTIONS: { id: PlanFocus; title: string; sub: string }[] = [
-  { id: "everything", title: "A bit of everything", sub: "We shape it around the time of day" },
-  { id: "food", title: "Mostly food", sub: "A meal, something sweet, coffee" },
-  { id: "drinks", title: "Just drinks", sub: "Bars and lounges, nothing else" },
+  { id: "everything", title: "A bit of everything", sub: "We shape it around when you are going" },
+  { id: "food", title: "Mostly eating", sub: "A meal, something sweet, coffee" },
+  { id: "drinks", title: "Mostly drinks", sub: "Bars and lounges, nothing else" },
   { id: "activities", title: "Things to do", sub: "Something to play, see or make" },
 ];
 
@@ -81,7 +81,7 @@ export const FOCUS_OPTIONS: { id: PlanFocus; title: string; sub: string }[] = [
  * hold the reverse.
  */
 export const CUISINE_OPTIONS: { id: PlanCuisine; title: string; sub: string }[] = [
-  { id: "either", title: "Either is fine", sub: "Whatever fits the evening best" },
+  { id: "either", title: "No preference", sub: "Whichever suits the places we pick" },
   { id: "local", title: "Local", sub: "Ghanaian and West African, chop bars included" },
   { id: "continental", title: "Continental", sub: "Italian, Asian, grills, anything else" },
 ];
@@ -95,21 +95,21 @@ export const CUISINE_OPTIONS: { id: PlanCuisine; title: string; sub: string }[] 
  * about one glass.
  */
 export const ALCOHOL_OPTIONS: { id: AlcoholChoice; title: string; sub: string }[] = [
-  { id: "either", title: "Happy either way", sub: "Order whatever suits the place" },
-  { id: "none", title: "No alcohol", sub: "We only order drinks we can confirm are alcohol-free" },
+  { id: "either", title: "No preference", sub: "Order whatever suits the place" },
+  { id: "none", title: "Nothing alcoholic", sub: "We order only drinks we can confirm are alcohol-free" },
 ];
 
 /** How dressed-up it should be. */
 export const FORMALITY_OPTIONS: { id: Formality; title: string; sub: string }[] = [
-  { id: "either", title: "Either", sub: "Whatever suits the evening" },
-  { id: "casual", title: "Casual", sub: "Relaxed, no dress code" },
-  { id: "fancy", title: "Fancy", sub: "Dress up, make an occasion of it" },
+  { id: "either", title: "No preference", sub: "We will not factor it in" },
+  { id: "casual", title: "Casual", sub: "Somewhere you can turn up as you are" },
+  { id: "fancy", title: "Dressed up", sub: "Somewhere worth making an effort for" },
 ];
 
 export const OCCASIONS: { id: Occasion; title: string; sub: string }[] = [
   { id: "first_date", title: "First date", sub: "Low pressure, easy exits, great talking spots" },
   { id: "anniversary", title: "Anniversary", sub: "Pull out the stops, this one matters" },
-  { id: "date_night", title: "Date night", sub: "Keep it fresh without the fuss" },
+  { id: "date_night", title: "Just the two of you", sub: "No occasion needed, day or evening" },
   { id: "birthday", title: "Birthday", sub: "Make a fuss of someone" },
   { id: "graduation", title: "Graduation", sub: "Earned it, celebrate properly" },
   { id: "celebration", title: "Celebration", sub: "A promotion, a win, good news" },

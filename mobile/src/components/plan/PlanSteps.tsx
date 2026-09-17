@@ -4,6 +4,7 @@ import { Text } from "../Text";
 import { Group, Row } from "../List";
 import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
+import { Button } from "../Button";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
 import { WheelPicker } from "../WheelPicker";
@@ -126,7 +127,23 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "area") {
     return (
       <>
-        <StepHeading title="Where in Accra?" subtitle="Up to two." />
+        <StepHeading title="Which part of Accra?" subtitle="Pick up to two, or let us choose." />
+
+        {/*
+          Above the list, not below it. Somebody who does not mind where they
+          go should not have to read twenty neighbourhoods to find that out.
+        */}
+        <Group>
+          <Row
+            icon="dice.fill"
+            title="Surprise me"
+            subtitle="Anywhere in the city"
+            selected={inputs.surpriseMe}
+            onPress={() =>
+              update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
+            }
+          />
+        </Group>
         <Group>
           {areas.map((a) => {
             const on = inputs.areaIds.includes(a.id);
@@ -155,16 +172,6 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           })}
         </Group>
 
-        <Group>
-          <Row
-            icon="dice.fill"
-            title="Surprise me"
-            selected={inputs.surpriseMe}
-            onPress={() =>
-              update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
-            }
-          />
-        </Group>
       </>
     );
   }
@@ -172,12 +179,32 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "budget") {
     return (
       <>
+        {/*
+          What the figure covers belongs with the question, not under the
+          slider. It sat below as "Includes transport.", far enough from
+          anything it referred to that it read as a stray label.
+        */}
         <StepHeading
           title="What is the budget?"
-          subtitle={`For ${partyLabel(inputs.partySize)}, all in.`}
+          subtitle={`Everything for ${partyLabel(inputs.partySize)}, food and taxis included.`}
         />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
-        <Note>{inputs.budget === 0 ? "Free places only." : "Includes transport."}</Note>
+
+        {/*
+          A button rather than coloured text. This was a tinted line under the
+          slider that did not look like a control, and it only set the number:
+          somebody who wanted a free day still had to find Continue afterwards.
+        */}
+        {inputs.budget === 0 ? (
+          <Note>Free places only. Nothing that charges to get in.</Note>
+        ) : (
+          <Button
+            title="Set my budget to zero"
+            kind="plain"
+            size="medium"
+            onPress={() => update({ budget: 0 })}
+          />
+        )}
       </>
     );
   }
@@ -185,7 +212,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "when") {
     return (
       <>
-        <StepHeading title="When is it?" />
+        <StepHeading title="When are you going?" />
 
         <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
 
@@ -196,7 +223,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           onChange={(startTime) => update({ startTime })}
         />
 
-        <GroupLabel>How long?</GroupLabel>
+        <GroupLabel>How long are you out for?</GroupLabel>
         <WheelPicker
           options={DURATIONS.map((d) => ({ value: d.hours, label: d.label }))}
           value={inputs.hours}
@@ -223,8 +250,8 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
     return (
       <>
         <StepHeading
-          title="What are you after?"
-          subtitle="Pick one."
+          title="What is the outing made of?"
+          subtitle="Pick one. It decides what kind of places we look for."
         />
         <Group>
           {FOCUS_OPTIONS.map((f) => (
@@ -247,7 +274,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
         */}
         {inputs.focus === "everything" || inputs.focus === "food" ? (
           <>
-            <GroupLabel>Local or continental?</GroupLabel>
+            <GroupLabel>What kind of food?</GroupLabel>
             <Group>
               {CUISINE_OPTIONS.map((f) => (
                 <Row
@@ -284,7 +311,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           </>
         ) : null}
 
-        <GroupLabel>How dressed up?</GroupLabel>
+        <GroupLabel>Dress code</GroupLabel>
         {/*
           Cards rather than a segmented control. Every other choice in this
           flow is a row with a subtitle explaining what it does, and one bare
@@ -311,7 +338,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "vibe") {
     return (
       <>
-        <StepHeading title="What is the vibe?" subtitle="Up to three." />
+        <StepHeading title="What should it feel like?" subtitle="Pick up to three." />
         <ChipRow>
           {VIBES.map((v) => {
             const val = v.toLowerCase();

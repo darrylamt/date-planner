@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Animated, Easing, Pressable, View } from "react-native";
+import { Animated, Easing, PanResponder, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -29,27 +29,27 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     occasion: "first_date",
-    says: "Hello. I plan evenings.",
-    title: "A whole evening, not a list of places.",
-    body: "Dinner, something to do, somewhere to end up. Timed back to back.",
+    says: "Hello. I plan outings.",
+    title: "A whole outing, not a list of places.",
+    body: "Somewhere to eat, something to do, somewhere to end up, timed one after another so you are not left working it out on the night.",
   },
   {
     occasion: "date_night",
     says: "Real menus. Real prices.",
     title: "Know what it costs before you go.",
-    body: "Priced from actual menus, transport included.",
+    body: "Every price comes from the venue's own menu, and we add up the taxis between stops too. Set a budget and the plan stays inside it.",
   },
   {
     occasion: "friend_outing",
     says: "Two of you, six of you, or just you.",
-    title: "Built around who is coming.",
-    body: "Pick the occasion and the questions change to match.",
+    title: "We ask about the occasion first.",
+    body: "A first date and a friend's birthday need very different evenings, so the questions you get change depending on which one it is.",
   },
   {
     occasion: "solo_day",
     says: "One promise.",
-    title: "We never invent a place.",
-    body: "If we cannot fill your evening honestly, we say so.",
+    title: "Every place is real.",
+    body: "We only suggest places we actually hold prices for. If we cannot build your outing from those, we tell you so rather than filling the gap with a guess.",
   },
 ];
 
@@ -61,6 +61,45 @@ export default function Onboarding() {
 
   const slide = SLIDES[index];
   const last = index === SLIDES.length - 1;
+
+  /*
+   * Swipe, because four dots and a Next button look like something you swipe.
+   *
+   * PanResponder rather than a gesture-handler or reanimated version: it is in
+   * React Native itself, it needs no worklet, and this is four slides rather
+   * than a carousel. The gesture is only claimed once the finger has clearly
+   * gone sideways, so a vertical scroll or a tap on Next still behaves.
+   */
+  const swipe = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx <= -45) advance();
+        else if (g.dx >= 45) retreat();
+      },
+    })
+  ).current;
+
+  /*
+   * The gesture reads the slide from a ref rather than from state.
+   *
+   * PanResponder is built once and keeps whatever it closed over, so a handler
+   * reading `index` would act on the slide that was showing when the screen
+   * mounted, for the whole of onboarding. The ref is rewritten on every render
+   * and is always current.
+   */
+  const indexRef = useRef(0);
+  indexRef.current = index;
+
+  /** Forward and back, stopping at the ends rather than wrapping. */
+  function advance() {
+    if (indexRef.current < SLIDES.length - 1) go(indexRef.current + 1);
+  }
+
+  function retreat() {
+    if (indexRef.current > 0) go(indexRef.current - 1);
+  }
 
   function go(next: number) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -89,6 +128,7 @@ export default function Onboarding() {
 
   return (
     <View
+      {...swipe.panHandlers}
       style={{
         flex: 1,
         backgroundColor: c.background,
