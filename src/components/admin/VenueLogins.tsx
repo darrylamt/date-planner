@@ -151,7 +151,14 @@ export function VenueLogins({
             className="mt-3 text-[13px] font-semibold text-mutedbrown hover:text-flame"
             onClick={() =>
               copy(
-                `Your aduro login\n\nGo to https://aduro.app/venue\nUsername: ${issued.username}\nPassword: ${issued.password}`
+                /*
+                 * The origin this page is actually served from, rather than a
+                 * domain written down here. A hardcoded one is correct until
+                 * the day it is not, and the failure is silent: the venue is
+                 * sent to a site that does not exist and reports that the
+                 * login we gave them is broken.
+                 */
+                `Your aduro login\n\nGo to ${window.location.origin}/venue\nUsername: ${issued.username}\nPassword: ${issued.password}`
               )
             }
           >
