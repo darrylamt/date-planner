@@ -30,11 +30,32 @@ export function CsvImporter({
   const [report, setReport] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  /*
+   * What a file would do, held back until somebody says go.
+   *
+   * Choosing a file used to write it straight into the catalogue. There was no
+   * way to see that a column had shifted, that every venue name had missed, or
+   * that you had picked last week's file, until it was already in and the
+   * report was the first you heard of it. Every check this screen already
+   * performed ran before the insert; it simply did not stop to show anybody.
+   */
+  const [raw, setRaw] = useState("");
+  const [staged, setStaged] = useState<{
+    rows: { row: number; values: Record<string, unknown> }[];
+    log: string[];
+  } | null>(null);
 
-  async function handleFile(file: File) {
+  /**
+   * Read a CSV, and either report what it would do or do it.
+   *
+   * One function for both so the preview cannot drift from the import: what
+   * you are shown is produced by the code that writes, stopped one step
+   * earlier, rather than by a second implementation that agrees with it today.
+   */
+  async function run(text: string, dryRun: boolean) {
     setBusy(true);
     setReport([]);
-    const text = await file.text();
+    if (dryRun) setStaged(null);
     const rows = csvToObjects(text);
     const log: string[] = [];
     const mapped = new Map<string, string>();
@@ -136,6 +157,14 @@ export function CsvImporter({
         });
       }
 
+      if (dryRun) {
+        setStaged({ rows: pending, log });
+        setStaged(null);
+    setRaw("");
+    setReport(log);
+        setBusy(false);
+        return;
+      }
       ok += await insertInChunks("venues", pending, log);
     } else {
       const venueByName = new Map(
@@ -218,6 +247,13 @@ export function CsvImporter({
             requires_gear: r.requires_gear || null,
           },
         });
+      }
+
+      if (dryRun) {
+        setStaged({ rows: pending, log });
+        setReport(log);
+        setBusy(false);
+        return;
       }
 
       /*
@@ -348,21 +384,141 @@ export function CsvImporter({
           )}
         </div>
 
-        <label className="btn btnsm mt-4 inline-flex w-fit cursor-pointer px-6">
-          {busy ? "Importing…" : "Choose CSV file"}
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            disabled={busy}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handleFile(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        {/* Paste or choose. Pasting is how most of these arrive. */}
+        <textarea
+          className="ta mt-4 min-h-[140px] font-mono text-[12.5px]"
+          placeholder={"Paste the CSV here, header row first…"}
+          value={raw}
+          disabled={busy}
+          onChange={(e) => setRaw(e.target.value)}
+        />
+
+        <div className="mt-3 flex flex-wrap items-center gap-2.5">
+          <button
+            className="btn btnsm px-6"
+            disabled={busy || !raw.trim()}
+            onClick={() => void run(raw, true)}
+          >
+            {busy ? "Reading…" : "Check this file"}
+          </button>
+
+          <label className="btn2 btnsm inline-flex w-fit cursor-pointer px-5">
+            Choose a file
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={busy}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const text = await f.text();
+                setRaw(text);
+                // Straight into the check, never straight into the catalogue.
+                void run(text, true);
+              }}
+            />
+          </label>
+
+          {raw.trim() && (
+            <button
+              className="text-[13px] font-semibold text-mutedbrown hover:text-flame"
+              onClick={() => {
+                setRaw("");
+                setStaged(null);
+                setReport([]);
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
+
+      {/*
+        What it would write, before it writes it.
+        *
+        * The rows shown are the ones that passed every check, built by the
+        * same code that does the inserting, so this cannot drift from what
+        * actually happens. Rows with problems are not here: they are in the
+        * report below, with the reason and the line number.
+      */}
+      {staged && (
+        <div className="card mt-4 p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-display text-[18px] font-bold">
+              {staged.rows.length} row{staged.rows.length === 1 ? "" : "s"} ready
+            </h2>
+            {staged.log.length > 0 && (
+              <span className="text-[13px] text-staletext">
+                {staged.log.length} line{staged.log.length === 1 ? "" : "s"} need attention
+              </span>
+            )}
+          </div>
+
+          {staged.rows.length === 0 ? (
+            <p className="mt-2 text-[14px] text-mutedbrown">
+              Nothing here would be written. The report below says why, line by line.
+            </p>
+          ) : (
+            <>
+              <div className="mt-3 max-h-[420px] overflow-auto">
+                <table className="tbl w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th>Line</th>
+                      {Object.keys(staged.rows[0].values)
+                        .filter((k) => k !== "venue_id")
+                        .map((k) => (
+                          <th key={k}>{k.replace(/_/g, " ")}</th>
+                        ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staged.rows.slice(0, 200).map((r) => (
+                      <tr key={r.row}>
+                        <td className="font-mono text-[12.5px] text-mutedbrown">{r.row}</td>
+                        {Object.entries(r.values)
+                          .filter(([k]) => k !== "venue_id")
+                          .map(([k, val]) => (
+                            <td key={k} className="whitespace-nowrap">
+                              {val === null || val === "" ? (
+                                <span className="text-mutedbrown">—</span>
+                              ) : (
+                                String(val)
+                              )}
+                            </td>
+                          ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {staged.rows.length > 200 && (
+                <p className="mt-2 text-[13px] text-mutedbrown">
+                  Showing the first 200. All {staged.rows.length} would be written.
+                </p>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  className="btn btnsm px-6"
+                  disabled={busy}
+                  onClick={() => void run(raw, false)}
+                >
+                  {busy ? "Importing…" : `Import ${staged.rows.length} rows`}
+                </button>
+                <span className="text-[13px] text-mutedbrown">
+                  Re-importing a menu updates the prices already on file rather than adding the
+                  dishes twice.
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {report.length > 0 && (
         <div className="card mt-4 max-h-[320px] overflow-y-auto p-5 font-mono text-[13px] leading-relaxed text-cocoa">
