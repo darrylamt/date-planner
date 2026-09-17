@@ -56,7 +56,10 @@ const GROUPS: {
   },
   {
     label: "Operations",
-    links: [{ href: "/admin/reservations", label: "Reservations" }],
+    links: [
+      { href: "/admin/reservations", label: "Reservations" },
+      { href: "/admin/venue-logins", label: "Venue logins" },
+    ],
   },
 ];
 

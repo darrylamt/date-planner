@@ -172,7 +172,9 @@ export async function fetchCandidates(
         supabase
           .from("menu_items")
           .select("venue_id")
-          .in("venue_id", [...new Set(venues.map(menuOwnerOf))])
+          // Both, for the same reason as below: a branch with a dish of its
+          // own is priced even before its owner's list is counted.
+          .in("venue_id", [...new Set(venues.flatMap((v) => [v.id, menuOwnerOf(v)]))])
           .range(from, to)
       )
     ).map((m) => m.venue_id)
@@ -188,7 +190,11 @@ export async function fetchCandidates(
        * an estimate is a claim and "unknown" is the absence of one.
        */
       if (v.price_source === "unknown") return false;
-      return Number(v.avg_cost_per_person_ghs) > 0 || pricedVenueIds.has(menuOwnerOf(v));
+      return (
+        Number(v.avg_cost_per_person_ghs) > 0 ||
+        pricedVenueIds.has(menuOwnerOf(v)) ||
+        pricedVenueIds.has(v.id)
+      );
     }
   );
 
@@ -321,16 +327,24 @@ export async function fetchCandidates(
 
   const schedules = (scheduleRows ?? []) as VenueSchedule[];
 
-  const ownerIds = [...new Set(picked.map(menuOwnerOf))];
+  /*
+   * Both lists: the one a branch borrows and the one it keeps itself.
+   *
+   * A shared menu is right for the ninety percent of a list that is the same
+   * at every branch and wrong for the dish only one kitchen does. The portal
+   * writes the difference by choosing which row an item lands on, so reading
+   * has to do the same in reverse: the owner's items, plus this venue's own.
+   */
+  const menuIds = [...new Set(picked.flatMap((v) => [v.id, menuOwnerOf(v)]))];
   /*
    * Paged. A dozen venues at two hundred dishes each passes PostgREST's
    * thousand-row cap, and a truncated menu here does not fail, it prices the
    * evening off whichever half of the menu arrived. The Honeysuckle alone is
    * 182 items and Bistro 22 is 156.
    */
-  const ownerMenuItems = ownerIds.length
+  const ownerMenuItems = menuIds.length
     ? await fetchAllRows<MenuItem>((from, to) =>
-        supabase.from("menu_items").select("*").in("venue_id", ownerIds).range(from, to)
+        supabase.from("menu_items").select("*").in("venue_id", menuIds).range(from, to)
       )
     : ([] as MenuItem[]);
 
@@ -360,9 +374,15 @@ export async function fetchCandidates(
   const menuItems: MenuItem[] = [];
   for (const v of picked) {
     const owner = menuOwnerOf(v);
-    for (const m of byOwner.get(owner) ?? []) {
-      menuItems.push(owner === v.id ? m : { ...m, id: `${v.id}:${m.id}`, venue_id: v.id });
+    // Borrowed, re-addressed so the planner finds it under the branch's id.
+    if (owner !== v.id) {
+      for (const m of byOwner.get(owner) ?? []) {
+        menuItems.push({ ...m, id: `${v.id}:${m.id}`, venue_id: v.id });
+      }
     }
+    // Its own, which needs no re-addressing and which a venue that shares with
+    // nobody has all of.
+    for (const m of byOwner.get(v.id) ?? []) menuItems.push(m);
   }
 
   return {

@@ -40,6 +40,9 @@ export const PUBLIC_VENUE_COLUMNS = [
   "instagram_handle",
   // The approved number only. phone_pending is deliberately not here.
   "phone",
+  // 0038. The number that takes WhatsApp bookings, where there is one. Null
+  // means ring them instead; it is not the absence of a phone.
+  "whatsapp_phone",
   "google_maps_url",
   "image_url",
   // 0036. The pictures after the hero, in the order they are shown.

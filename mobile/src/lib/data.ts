@@ -20,12 +20,21 @@ export async function fetchAreas(): Promise<Area[]> {
 
 export async function fetchVenueContact(venueId: string): Promise<{
   phone: string | null;
+  /**
+   * The number that takes WhatsApp bookings, when the venue has one.
+   *
+   * Null is the common case and is not the same as having no phone. Most of
+   * these numbers are lines somebody answers, and a booking sent into a
+   * WhatsApp account that does not exist fails without telling anybody, which
+   * is the worst way for a table to go unbooked.
+   */
+  whatsapp_phone: string | null;
   instagram_handle: string | null;
   reservation_required: boolean;
 } | null> {
   const { data } = await supabase
     .from("venues")
-    .select("phone, instagram_handle, reservation_required")
+    .select("phone, whatsapp_phone, instagram_handle, reservation_required")
     .eq("id", venueId)
     .maybeSingle();
   return data ?? null;

@@ -138,14 +138,32 @@ export function ItineraryView({
       );
       onItineraryChange({ ...itinerary, stops });
 
-      const phone = contact?.phone?.replace(/\D/g, "");
-      if (phone) {
+      /*
+       * WhatsApp only where the venue says it takes WhatsApp.
+       *
+       * This used to open wa.me with whatever was in `phone`, on the
+       * assumption that a Ghanaian mobile is a WhatsApp number. Mostly it is
+       * not: most of these are lines somebody answers, and a booking sent to
+       * an account that does not exist fails without telling anybody, which is
+       * the worst way for a table to go unbooked. A venue now says which it
+       * takes, and null means ring them.
+       */
+      const digits = (n: string | null | undefined) => n?.replace(/\D/g, "") || null;
+      const whatsapp = digits(contact?.whatsapp_phone);
+      const callable = digits(contact?.phone);
+
+      if (whatsapp) {
         const msg =
           `Hello ${stop.name}! I would like to reserve a table for two on ` +
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
           `Please confirm availability., sent via aduro`;
-        await Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
+        await Linking.openURL(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`);
         setToast("Sent, they will confirm on WhatsApp.");
+      } else if (callable) {
+        // The request is logged either way, so this is a handover rather than
+        // a fallback: they ring, and we already have the booking on file.
+        await Linking.openURL(`tel:${contact?.phone?.replace(/[^\d+]/g, "")}`);
+        setToast("They take bookings by phone, so we are calling them.");
       } else {
         setToast("Logged, no number on file, we will follow up.");
       }
