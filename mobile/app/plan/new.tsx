@@ -437,14 +437,26 @@ export default function PlanNew() {
         )}
       </ScrollView>
 
-      <ActionBar>
+      {/*
+        Back beside Continue, not beneath it.
+        *
+        * Stacked, Back sat directly under the full-width primary button and
+        * about a thumb's width from it, so the tap that was meant to go back a
+        * question went forward instead. Side by side, the two are in different
+        * places as well as different weights: Back is a bordered button at the
+        * left, Continue takes the rest of the row and stays the obvious one.
+      */}
+      <ActionBar style={{ flexDirection: "row", alignItems: "center" }}>
+        {stepIndex > 0 ? (
+          <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
+        ) : null}
         <Button
           title={stepIndex === totalSteps - 1 ? `Build ${poss} evening` : "Continue"}
           icon={stepIndex === totalSteps - 1 ? "sparkles" : undefined}
           onPress={goNext}
           disabled={!canContinue}
+          style={{ flex: 1 }}
         />
-        {step > 0 ? <Button title="Back" kind="plain" size="medium" onPress={goBack} /> : null}
       </ActionBar>
     </KeyboardAvoidingView>
   );

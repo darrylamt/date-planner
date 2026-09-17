@@ -15,6 +15,8 @@ const TIPS: Partial<Record<StepId, string>> = {
   area: "Close together beats far apart.",
   budget: "Food and taxis, all in.",
   when: "Weeknights are quieter.",
+  // The date and the clock are two screens now, so the clock gets its own.
+  timing: "I leave room to get between places.",
   shape: "Just drinks means just drinks.",
   vibe: "I blend them.",
   party: "Changes the table, not just the bill.",

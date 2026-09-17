@@ -12,6 +12,9 @@ import { DayStrip } from "./DayStrip";
 import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
+  DAYTIME_START,
+  DEFAULT_START_TIME,
+  wantsDaylight,
   ALCOHOL_OPTIONS,
   DURATIONS,
   CUISINE_OPTIONS,
@@ -212,9 +215,30 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
   if (step === "when") {
     return (
       <>
-        <StepHeading title="When are you going?" />
-
+        {/*
+          The date, on its own.
+          *
+          * This screen used to carry the date, the start time, how long and
+          * how many places: four pickers, of which the last three were pushed
+          * into a strip too short to scroll without fighting it. The calendar
+          * needs the room and the rest is a separate question.
+        */}
+        <StepHeading
+          title="Which day?"
+          subtitle="Pick one, or choose another date from the calendar."
+        />
         <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
+      </>
+    );
+  }
+
+  if (step === "timing") {
+    return (
+      <>
+        <StepHeading
+          title="What time, and how long?"
+          subtitle="We fit each stop around this, travel between them included."
+        />
 
         <GroupLabel>Start time</GroupLabel>
         <WheelPicker
@@ -348,13 +372,23 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
                 key={v}
                 label={v}
                 selected={on}
-                onPress={() =>
-                  update({
-                    vibes: on
-                      ? inputs.vibes.filter((x) => x !== val)
-                      : [...inputs.vibes, val].slice(-3),
-                  })
-                }
+                onPress={() => {
+                  const vibes = on
+                    ? inputs.vibes.filter((x) => x !== val)
+                    : [...inputs.vibes, val].slice(-3);
+
+                  /*
+                   * A picnic at half five is most of an hour of daylight. The
+                   * vibe is now asked before the clock, so the default can
+                   * follow it, but only while it is still the default:
+                   * somebody who has already chosen a time has answered, and
+                   * moving it under them would be the app overruling them.
+                   */
+                  const daylight =
+                    wantsDaylight(vibes) && inputs.startTime === DEFAULT_START_TIME;
+
+                  update({ vibes, ...(daylight ? { startTime: DAYTIME_START } : {}) });
+                }}
               />
             );
           })}

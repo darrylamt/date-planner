@@ -127,7 +127,8 @@ export const OCCASION_IDS = OCCASIONS.map((o) => o.id);
 /** Party presets. Anything larger is typed in. */
 export const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12] as const;
 
-export const TOTAL_STEPS = 8;
+/** Typical length, for the home screen's progress ring. */
+export const TOTAL_STEPS = 9;
 
 export const START_TIME_MIN_HOUR = 6;
 export const START_TIME_MAX_HOUR = 23;
@@ -210,12 +211,13 @@ export type StepId =
   | "occasion"
   | "party"
   | "extra"
+  | "details"
+  | "vibe"
+  | "shape"
   | "area"
   | "budget"
   | "when"
-  | "shape"
-  | "vibe"
-  | "details";
+  | "timing";
 
 export interface OccasionExtra {
   /** The screen's question. */
@@ -303,12 +305,58 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
  * Arriving from an occasion card means that question is already answered, so
  * asking it again is a step nobody should have to tap through.
  */
+/**
+ * The order the questions are asked in.
+ *
+ * Rearranged after a walkthrough, and the reasoning is worth keeping.
+ *
+ * Who it is for now sits beside how many are coming, rather than eight screens
+ * later: those two questions are about the same thing and reading one of them
+ * at the very end felt like an afterthought bolted on.
+ *
+ * The character of the outing comes before its particulars. Being asked to
+ * settle the dress code and whether it is a food night before anybody has
+ * asked what it should feel like is backwards, and it also let somebody pick
+ * "dressed up, mostly eating" and then choose "club hopping" three screens
+ * later with nothing reconciling the two.
+ *
+ * Vibe also comes before the date, which matters more than it looks: picnic,
+ * artsy and beach are daytime answers, and knowing them before the clock is
+ * set is what lets the start time default sensibly instead of offering nine at
+ * night for a picnic.
+ *
+ * The date is its own screen. It shared one with the start time, the duration
+ * and the number of places, and four wheels on one screen meant the bottom
+ * three were squeezed into a strip too short to scroll properly.
+ */
+/** The start time a fresh plan carries until somebody chooses one. */
+export const DEFAULT_START_TIME = "17:30";
+
+/**
+ * Vibes that only make sense in daylight, and the hour to offer instead.
+ *
+ * A picnic at half five in the evening is most of an hour of light, and a
+ * beach or a gallery even less. Asking for the vibe before the clock is what
+ * makes this possible at all: by the time the time question is reached we know
+ * what kind of day it is meant to be.
+ *
+ * Only ever applied to an untouched default. Somebody who has already set a
+ * time has answered the question, and moving it afterwards would be the app
+ * overruling them.
+ */
+const DAYTIME_VIBES = ["picnic", "beach", "outdoorsy", "artsy", "sporty"];
+export const DAYTIME_START = "11:00";
+
+export function wantsDaylight(vibes: string[]): boolean {
+  return vibes.some((v) => DAYTIME_VIBES.includes(v.toLowerCase()));
+}
+
 export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] {
   const steps: StepId[] = [];
   if (!occasionPreset) steps.push("occasion");
   if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
   if (OCCASION_EXTRA[occasion]) steps.push("extra");
-  steps.push("area", "budget", "when", "shape", "vibe", "details");
+  steps.push("details", "vibe", "shape", "area", "budget", "when", "timing");
   return steps;
 }
 
