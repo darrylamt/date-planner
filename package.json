@@ -10,6 +10,7 @@
     "places:sync": "tsx scripts/places-sync.ts",
     "places:hours": "tsx scripts/places-hours.ts",
     "phones:approve": "tsx scripts/approve-phones.ts",
+    "research:venues": "tsx scripts/research-venues.ts",
     "places:link": "tsx scripts/places-link.ts",
     "mirror": "tsx scripts/mirror-shared.ts",
     "mirror:check": "tsx scripts/mirror-shared.ts --check",
