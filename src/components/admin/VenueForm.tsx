@@ -88,6 +88,7 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     is_active: venue?.is_active ?? true,
     is_free: venue?.is_free ?? false,
+    cuisines: (venue?.cuisines ?? []).join(", "),
     // Three-valued in the database and three-valued here: "" is nobody has
     // asked, which is not the same as "no".
     has_vegetarian_options:
@@ -217,6 +218,15 @@ export function VenueForm({
           v.pricing_mode === "per_person" || v.unit_price_ghs === ""
             ? null
             : Number(v.unit_price_ghs),
+        /*
+         * Comma-separated in the box, an array in the column. Lower-cased on
+         * the way in so "Korean" and "korean" are the same kitchen: the search
+         * matches on these strings and two spellings would be two cuisines.
+         */
+        cuisines: v.cuisines
+          .split(",")
+          .map((x: string) => x.trim().toLowerCase())
+          .filter(Boolean),
         aesthetics: v.aesthetics,
         /*
          * The only dietary claim in this catalogue with a person behind it, so
@@ -979,6 +989,24 @@ export function VenueForm({
           * one dietary claim allowed to be a yes or a no, and only because a
           * person rang and asked. Leave it blank until somebody has.
         */}
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-[13px] font-bold uppercase tracking-wide text-mutedbrown">
+            Kitchen
+          </label>
+          <input
+            className="inp"
+            placeholder="italian, seafood"
+            value={v.cuisines}
+            onChange={(e) => setV({ ...v, cuisines: e.target.value })}
+          />
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            Comma separated, and only what the place actually is. This is how somebody asking for
+            Korean food finds it; the Local/Continental field above stays as it is, because that is
+            the one the planner uses. Leaving it blank means nobody has recorded a kitchen, which
+            is not the same as the food being from nowhere.
+          </span>
+        </div>
+
         <div className="md:col-span-2">
           <label className="mb-1 block text-[13px] font-bold uppercase tracking-wide text-mutedbrown">
             Vegetarian options

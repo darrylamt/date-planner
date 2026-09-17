@@ -137,6 +137,50 @@ export function loungeFloor(vibes: string[]): number {
   return vibes.reduce((most, v) => Math.max(most, VIBE_LOUNGE_FLOOR[v.toLowerCase()] ?? 0), 0);
 }
 
+/**
+ * Specific kitchens, as somebody would ask for them.
+ *
+ * venues.cuisine answers local, continental or both, which is the distinction
+ * the planner needs and a useless answer to "is there Korean food". This is
+ * the other question.
+ *
+ * Open-ended on purpose: the column is text[], so a kitchen missing from this
+ * list can still be recorded, and this is the vocabulary the search offers
+ * rather than a constraint on the data. It lives here, next to the vibe tags,
+ * because 0030 exists entirely because a word the chips used and the catalogue
+ * did not was a word that matched nothing.
+ */
+export const CUISINE_KINDS = [
+  "ghanaian",
+  "west african",
+  "nigerian",
+  "ethiopian",
+  "continental",
+  "italian",
+  "french",
+  "mediterranean",
+  "lebanese",
+  "turkish",
+  "indian",
+  "chinese",
+  "japanese",
+  "korean",
+  "thai",
+  "vietnamese",
+  "asian fusion",
+  "american",
+  "mexican",
+  "caribbean",
+  "jamaican",
+  "seafood",
+  "grill",
+  "vegetarian",
+  "bakery",
+  "coffee",
+] as const;
+
+export type CuisineKind = (typeof CUISINE_KINDS)[number];
+
 export const BEST_FOR = [
   "first_date",
   "anniversary",

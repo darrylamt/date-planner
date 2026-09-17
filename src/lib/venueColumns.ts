@@ -50,6 +50,8 @@ export const PUBLIC_VENUE_COLUMNS = [
   "unit_price_ghs",
   "minimum_spend_ghs",
   "cuisine",
+  // 0033. The specific kitchen, where cuisine is only local/continental/both.
+  "cuisines",
   "menu_shared_from",
   "aesthetics",
   "price_source",

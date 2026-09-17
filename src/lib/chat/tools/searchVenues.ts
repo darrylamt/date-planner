@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VIBE_CHIP_TAGS, expandVibes } from "../../catalog";
+import { CUISINE_KINDS, VIBE_CHIP_TAGS, expandVibes } from "../../catalog";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { Venue } from "../../types";
 import type { ChatTool, ToolContext } from "./types";
@@ -28,6 +28,7 @@ const argsSchema = z.object({
     .optional(),
   vibes: z.array(z.string()).max(6).optional(),
   cuisine: z.enum(["local", "continental"]).optional(),
+  serves: z.string().min(2).max(40).optional(),
   max_per_person_ghs: z.number().positive().optional(),
   party_size: z.number().int().positive().max(50).optional(),
   open_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -69,6 +70,12 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
         // once already: this listed seven words while the chips offered
         // fourteen, and the missing eight matched nothing.
         description: `What kind of place. One or more of: ${Object.keys(VIBE_CHIP_TAGS).join(", ")}.`,
+      },
+      serves: {
+        type: "string",
+        description:
+          `A specific kitchen, when somebody names one: ${CUISINE_KINDS.join(", ")}. ` +
+          "Very few venues have this recorded, so an empty result means nobody has written it down rather than that no such place exists. Say that difference out loud.",
       },
       cuisine: {
         enum: ["local", "continental"],
@@ -201,6 +208,20 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
       const max = v.max_party_size == null ? Infinity : Number(v.max_party_size);
       return args.party_size! >= min && args.party_size! <= max;
     });
+  }
+
+  /*
+   * Matched against what the venue is recorded as serving, not guessed from
+   * its dishes. A venue with nothing recorded is dropped from a search that
+   * named a kitchen rather than kept and hoped over: "we have not recorded
+   * anywhere Korean" is a true sentence, and "here is somewhere that might be"
+   * is not.
+   */
+  if (args.serves) {
+    const want = args.serves.trim().toLowerCase();
+    venues = venues.filter((v) =>
+      (v.cuisines ?? []).some((k) => k.toLowerCase().includes(want) || want.includes(k.toLowerCase()))
+    );
   }
 
   /*

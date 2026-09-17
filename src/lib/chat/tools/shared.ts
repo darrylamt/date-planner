@@ -214,6 +214,8 @@ export interface CompactVenue {
   vibes: string[];
   /** Null means nobody has recorded it, which is not the same as "both". */
   cuisine: Venue["cuisine"];
+  /** Specific kitchens. Empty means unrecorded, not "from nowhere". */
+  serves?: string[];
   open?: OpenState;
   /** Only when the caller asked about a specific day. */
   hours?: string;
@@ -234,6 +236,7 @@ export function compactVenue(
     price: describePrice(v, menu),
     vibes: v.vibe_tags ?? [],
     cuisine: v.cuisine ?? null,
+    ...(v.cuisines?.length ? { serves: v.cuisines } : {}),
   };
   if (opts.date) {
     row.open = openStateAt(v, opts.date, opts.time);

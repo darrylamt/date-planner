@@ -70,6 +70,14 @@ export interface Venue {
    */
   cuisine?: "local" | "continental" | "both" | null;
   /**
+   * The specific kitchen: italian, korean, jamaican.
+   *
+   * Separate from cuisine, which stays coarse because that is the distinction
+   * the planner needs. Empty means nobody has recorded one, never that the
+   * food is from nowhere.
+   */
+  cuisines?: string[] | null;
+  /**
    * This branch is priced from another venue's menu.
    *
    * The Honeysuckle has five locations and one menu, held once on the Osu row.
