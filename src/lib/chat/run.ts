@@ -81,10 +81,30 @@ export async function* runChat(opts: {
         maxTokens: MAX_TOKENS,
       });
     } catch (e) {
-      console.error("chat provider failed", e);
+      /*
+       * Say which kind of failure it was.
+       *
+       * Every one of these used to read "we could not reach the assistant",
+       * which is true of a wrong key, an empty balance, a rate limit and a
+       * dropped connection alike, and tells whoever is looking at it nothing
+       * at all. The status code is the one thing that separates a problem
+       * waiting will fix from a problem only we can.
+       */
+      const status = (e as { status?: number })?.status;
+      console.error(`chat provider failed (${provider.id}/${provider.model}, status ${status})`, e);
+
       yield {
         type: "error",
-        message: "We could not reach the assistant just now. Try again in a moment.",
+        message:
+          status === 401 || status === 403
+            ? "Our assistant is misconfigured at our end. We are on it."
+            : status === 429
+              ? "A lot of people are asking at once. Try again in a moment."
+              : status === 400
+                ? "Something about that conversation confused the assistant. Start a new one and it should be fine."
+                : status && status >= 500
+                  ? "The assistant is having a moment. Try again shortly."
+                  : "We could not reach the assistant just now. Try again in a moment.",
       };
       return;
     }

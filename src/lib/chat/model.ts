@@ -98,8 +98,20 @@ export function getProvider(): Provider {
 
   switch (id) {
     case "deepseek":
-      // Required lazily so a missing DEEPSEEK_API_KEY cannot break the
-      // Anthropic path at module load.
+      /*
+       * Named loudly rather than left to fail on the first message.
+       *
+       * Setting CHAT_PROVIDER=deepseek without the key produced a generic "we
+       * could not reach the assistant" on every single turn, identical to a
+       * network failure, a rate limit and an exhausted balance. A
+       * misconfiguration that looks like weather is a misconfiguration nobody
+       * finds.
+       */
+      if (!process.env.DEEPSEEK_API_KEY) {
+        throw new Error(
+          "CHAT_PROVIDER is deepseek but DEEPSEEK_API_KEY is not set. Set the key, or unset CHAT_PROVIDER to use Anthropic."
+        );
+      }
       return require("./providers/deepseek").deepseekProvider() as Provider;
     case "anthropic":
       return require("./providers/anthropic").anthropicProvider() as Provider;
