@@ -177,6 +177,7 @@ export function assembleItinerary(
       image_url: a.venue.image_url,
       images: picturesOf(a.venue),
       google_maps_url: a.venue.google_maps_url,
+      instagram_handle: a.venue.instagram_handle,
       reservation_required: a.venue.reservation_required,
       orders: a.orders,
       est_cost_ghs: a.cost,
@@ -202,6 +203,7 @@ export function assembleItinerary(
       image_url: s.venue.image_url,
       images: picturesOf(s.venue, s.event),
       google_maps_url: s.venue.google_maps_url,
+      instagram_handle: s.venue.instagram_handle,
       reservation_required: s.venue.reservation_required,
       alternates,
     };

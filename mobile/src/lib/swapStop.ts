@@ -43,6 +43,7 @@ export function swapStopLocally(
       area: stop.area,
       image_url: stop.image_url,
       images: stop.images,
+      instagram_handle: stop.instagram_handle ?? null,
       google_maps_url: stop.google_maps_url ?? null,
       reservation_required: stop.reservation_required ?? false,
       orders: stop.orders,
@@ -61,6 +62,7 @@ export function swapStopLocally(
     // Falls back to the single hero for a plan saved before galleries existed,
     // so an old itinerary swaps to one picture rather than to none.
     images: next.images ?? (next.image_url ? [next.image_url] : []),
+    instagram_handle: next.instagram_handle ?? null,
     google_maps_url: next.google_maps_url,
     reservation_required: next.reservation_required,
     reservation_requested: false,

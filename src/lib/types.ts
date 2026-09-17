@@ -353,6 +353,12 @@ export interface ItineraryStop {
    */
   images?: string[];
   google_maps_url?: string | null;
+  /**
+   * The venue's Instagram, as recorded. Null means nobody has found one, which
+   * is not the same as the venue not having one, and the card says so by
+   * showing the action greyed rather than by hiding it.
+   */
+  instagram_handle?: string | null;
   reservation_required?: boolean;
   reservation_requested?: boolean; // set client-side once a request is sent
   /**
@@ -386,6 +392,8 @@ export interface StopAlternate {
   image_url: string | null;
   /** Carried for the same reason as image_url: a swap changes the pictures. */
   images?: string[];
+  /** Likewise: a swap changes whose Instagram the card points at. */
+  instagram_handle?: string | null;
   google_maps_url: string | null;
   reservation_required: boolean;
   orders: ItineraryOrder[];

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SmartImage } from "./SmartImage";
-import { ghs, time12 } from "@/lib/format";
+import { ghs, instagramUrl, time12 } from "@/lib/format";
 import type { ItineraryOrder, ItineraryStop, MenuItem } from "@/lib/types";
 
 /*
@@ -167,6 +167,11 @@ export function StopCard({
       : [];
   const at = Math.min(shown, Math.max(0, pictures.length - 1));
 
+  /* Handles are stored as "@name" and occasionally as a pasted profile URL,
+     so the link is derived rather than concatenated, and a handle that does
+     not parse gives null and greys the mark out. */
+  const instagram = instagramUrl(stop.instagram_handle);
+
   const body = (
     <div className={`px-[18px] pb-[18px] pt-4 ${desktopRow ? "flex-1" : ""}`}>
       <div className="flex items-start justify-between gap-2.5">
@@ -324,8 +329,7 @@ export function StopCard({
 
       <div className="why mt-3">{stop.why_this_fits}</div>
 
-      {(stop.reservation_required || stop.google_maps_url) && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-mutedbrown">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-mutedbrown">
           {stop.reservation_required && (
             <span className="rounded-md bg-sand px-2 py-0.5 font-semibold text-cocoa">
               Book ahead
@@ -356,8 +360,34 @@ export function StopCard({
               Open in Maps →
             </a>
           )}
+
+          {/*
+            Greyed rather than hidden when there is no handle on file. Only
+            twenty-nine of a hundred and eighty-five venues have one, so hiding
+            it would say nothing about the gap and would make the row a
+            different shape on almost every card.
+          */}
+          {instagram ? (
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${stop.name} on Instagram`}
+              title={`${stop.name} on Instagram`}
+              className="text-flame transition-colors hover:text-flame-dark"
+            >
+              <InstagramMark />
+            </a>
+          ) : (
+            <span
+              aria-label="No Instagram recorded for this venue"
+              title="No Instagram recorded for this venue"
+              className="cursor-default text-line"
+            >
+              <InstagramMark />
+            </span>
+          )}
         </div>
-      )}
     </div>
   );
 
@@ -421,5 +451,33 @@ export function StopCard({
       </div>
       {body}
     </div>
+  );
+}
+
+/**
+ * The Instagram mark.
+ *
+ * Inline rather than an icon font or an image, so it takes currentColor and
+ * greys out with the element around it, which is the whole point of showing it
+ * when there is no handle to open.
+ */
+function InstagramMark() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5.5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
   );
 }

@@ -8,7 +8,7 @@ import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { ghs, time12 } from "../../lib/format";
+import { ghs, instagramUrl, time12 } from "../../lib/format";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -64,6 +64,15 @@ export function StopCard({
     });
     onOrdersChange(next);
   }
+
+  /*
+   * Handles are stored as "@name" and occasionally as a pasted profile URL, so
+   * the link is derived rather than concatenated. A handle that does not parse
+   * gives null, and the action greys out, which is the right answer: an action
+   * that opens a page which does not exist is worse than one that is plainly
+   * unavailable.
+   */
+  const instagram = instagramUrl(stop.instagram_handle);
 
   function openMaps() {
     const url =
@@ -263,6 +272,21 @@ export function StopCard({
             />
           ) : null}
           <StopAction icon="map" label="Map" onPress={openMaps} />
+          {/*
+            Always here, greyed when there is nothing to open.
+            
+            Only twenty-nine of a hundred and eighty-five venues have a handle
+            on file, so hiding it would make the action bar a different length
+            on most cards, and would say nothing at all about the gap. Greyed
+            says "nobody has found one for this place", which is true, and is
+            the same thing every other unknown in this catalogue admits to.
+          */}
+          <StopAction
+            glyph={(color) => <InstagramGlyph color={color} />}
+            label="Instagram"
+            disabled={!instagram}
+            onPress={() => instagram && void Linking.openURL(instagram)}
+          />
           {canReserve ? (
             <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
           ) : null}
@@ -311,22 +335,38 @@ export function StopCard({
 
 function StopAction({
   icon,
+  glyph,
   label,
   onPress,
   busy,
+  disabled,
 }: {
-  icon: Parameters<typeof Symbol>[0]["name"];
+  icon?: Parameters<typeof Symbol>[0]["name"];
+  /** For the one mark SF Symbols does not carry. Given the resolved colour. */
+  glyph?: (color: string) => React.ReactNode;
   label: string;
   onPress: () => void;
   busy?: boolean;
+  /*
+   * Present but unusable, rather than absent.
+   *
+   * A row of actions that changes length from stop to stop is a row you have
+   * to re-read at every card, and a venue with no Instagram is a fact worth
+   * showing: it is the difference between "we have not recorded one" and
+   * "this app does not do that", which is the same distinction every other
+   * unknown in this catalogue is careful about.
+   */
+  disabled?: boolean;
 }) {
   const c = useTheme();
+  const tint = disabled ? c.textTertiary : c.accent;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      disabled={busy}
+      accessibilityState={{ disabled: Boolean(disabled || busy) }}
+      disabled={busy || disabled}
       onPress={() => {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress();
@@ -339,13 +379,66 @@ function StopAction({
         height: 32,
         borderRadius: radius.pill,
         backgroundColor: c.backgroundSelected,
-        opacity: pressed ? 0.6 : busy ? 0.5 : 1,
+        opacity: pressed ? 0.6 : busy ? 0.5 : disabled ? 0.45 : 1,
       })}
     >
-      {busy ? <ActivityIndicator size="small" color={c.accent} /> : <Symbol name={icon} size={13} weight="semibold" />}
-      <Text variant="footnote" weight="600" style={{ color: c.accent }}>
+      {busy ? (
+        <ActivityIndicator size="small" color={c.accent} />
+      ) : glyph ? (
+        glyph(tint)
+      ) : icon ? (
+        <Symbol name={icon} size={13} weight="semibold" color={tint} />
+      ) : null}
+      <Text variant="footnote" weight="600" style={{ color: tint }}>
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * The Instagram mark, drawn.
+ *
+ * SF Symbols carries no third-party logos and the app ships no icon font, so
+ * the alternatives were a bundled PNG that cannot take the theme's colour or
+ * three nested Views that can. A rounded square, a circle and a dot is the
+ * whole mark, and at thirteen points it is read by shape rather than by
+ * detail.
+ */
+function InstagramGlyph({ color }: { color: string }) {
+  const SIZE = 14;
+  return (
+    <View
+      style={{
+        width: SIZE,
+        height: SIZE,
+        borderRadius: 4.5,
+        borderWidth: 1.5,
+        borderColor: color,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          borderWidth: 1.5,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          top: 1.5,
+          right: 1.5,
+          width: 1.8,
+          height: 1.8,
+          borderRadius: 1,
+          backgroundColor: color,
+        }}
+      />
+    </View>
   );
 }

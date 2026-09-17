@@ -33,6 +33,31 @@ export function addMins12(t: string, mins: number): string {
   return time12(`${hh}:${String(mm).padStart(2, "0")}`);
 }
 
+/**
+ * A venue's Instagram handle as a link, or null when there is nothing to link.
+ *
+ * Handles reach the catalogue three ways: "@name" is what every row currently
+ * holds, "name" is what somebody types when they leave the @ off, and a whole
+ * profile URL is what happens when the field is filled by pasting. All three
+ * reduce to the username.
+ *
+ * Validated rather than trusted, because the alternative to returning null is
+ * an action on the card that opens a page which does not exist. A handle that
+ * does not look like a handle is treated as one nobody has recorded, which is
+ * how every other unfilled field in this catalogue behaves.
+ */
+export function instagramUrl(handle: string | null | undefined): string | null {
+  if (!handle) return null;
+  const name = handle
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/^@/, "")
+    .replace(/[/?#].*$/, "")
+    .trim();
+  if (!/^[A-Za-z0-9._]{1,30}$/.test(name)) return null;
+  return `https://instagram.com/${name}`;
+}
+
 export function randomSlug(): string {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
   let s = "";

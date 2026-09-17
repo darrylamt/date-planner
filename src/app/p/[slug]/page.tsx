@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { SmartImage } from "@/components/SmartImage";
 import { createServiceClient } from "@/lib/supabase/server";
-import { longDate, time12 } from "@/lib/format";
+import { instagramUrl, longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME, occasionBackdrop, partyLabel } from "@/lib/planConstants";
 import { occasionCard } from "@/lib/occasionCard";
 import type { SavedPlan } from "@/lib/types";
@@ -163,6 +163,24 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
                   <div className="text-[14px] text-mutedbrown">
                     {stop.area}, {stop.what_to_do || stop.label.toLowerCase()}
                   </div>
+                  {/*
+                    The one link worth having here. Somebody opening a plan
+                    they did not make wants to see what the place looks like,
+                    and this page carries no menu, no map and now no prices.
+                    Omitted rather than greyed: this is the guest's copy, and a
+                    dead icon is a gap in our catalogue that means nothing to
+                    them.
+                  */}
+                  {instagramUrl(stop.instagram_handle) ? (
+                    <a
+                      href={instagramUrl(stop.instagram_handle)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1.5 inline-block text-[13px] font-semibold text-flame hover:underline"
+                    >
+                      See it on Instagram →
+                    </a>
+                  ) : null}
                 </div>
               </div>
               {i < itinerary.stops.length - 1 && (
