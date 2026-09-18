@@ -64,78 +64,67 @@ export default function Home() {
     >
       <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.five }}>
         {/*
-          The concierge, top right.
+          The concierge, as a bar rather than a button in the corner.
           *
-          * Not a tab: it answers a question rather than being somewhere you
-          * go, and a fifth destination would have made the bar a list. Top
-          * right is where a phone puts the thing you reach for while already
-          * looking at something else.
+          * It was a 64pt circle pinned to the right, which left most of a row
+          * empty above the first line of the screen: a band of nothing across
+          * two thirds of the width, which read as a layout waiting for
+          * something rather than as space.
           *
-          * Sparkles because that is what this means now. Any other glyph has
-          * to be learned; this one is already read as "ask the model" before
-          * the label is.
+          * A bar uses the whole width it was already taking and can say what
+          * it does. A circle with a glyph in it has to be recognised; a bar
+          * with words in it is read.
+          *
+          * Still not a tab. It answers a question rather than being somewhere
+          * you go, and a fifth destination would have turned the bar into a
+          * list.
         */}
-        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Ask adurobot"
-            onPress={() => router.push("/chat")}
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ask adurobot"
+          onPress={() => router.push("/chat")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          {/*
+            Four colours, one border.
+            *
+            * expo-linear-gradient is not a dependency and adding one would
+            * mean a native build, which cannot ship over the air: every phone
+            * already carrying this app would keep its old binary and never
+            * see it. A rectangle has four border edges that can each take
+            * their own colour, so unlike the circle this needed no second
+            * rotated copy to fake it, and the corners blend the pairs for
+            * free.
+          */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: Spacing.two,
+              height: 48,
+              paddingHorizontal: Spacing.three,
+              borderRadius: Radius.pill,
+              borderWidth: 2,
+              borderTopColor: "#7C5CFF",
+              borderRightColor: "#FF5CA8",
+              borderBottomColor: "#FFB020",
+              borderLeftColor: "#33D6C7",
+              backgroundColor: c.backgroundElement,
+            }}
           >
             {/*
-              A four-colour ring, drawn rather than imported.
-
-              expo-linear-gradient is not a dependency and adding one would
-              mean a native build, which cannot ship over the air: every phone
-              already carrying this app would keep its old binary and never see
-              it. Two bordered circles, each colouring two of its four sides
-              and the second rotated half a turn, give the same read for
-              nothing.
+              Sparkles because that is what this means now. Any other glyph
+              has to be learned; this one is already read as "ask the model".
             */}
-            <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center" }}>
-              <View
-                style={{
-                  position: "absolute",
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  borderWidth: 3,
-                  borderColor: "transparent",
-                  borderTopColor: "#7C5CFF",
-                  borderRightColor: "#FF5CA8",
-                }}
-              />
-              <View
-                style={{
-                  position: "absolute",
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  borderWidth: 3,
-                  borderColor: "transparent",
-                  borderTopColor: "#33D6C7",
-                  borderRightColor: "#FFB020",
-                  transform: [{ rotate: "180deg" }],
-                }}
-              />
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: c.backgroundElement,
-                }}
-              >
-                <Symbol name="sparkles" size={26} color={c.accent} />
-              </View>
-            </View>
-          </Pressable>
-        </View>
+            <Symbol name="sparkles" size={19} color={c.accent} />
+            <Text variant="subheadline" weight="600" style={{ flex: 1 }}>
+              Ask adurobot
+            </Text>
+            <Symbol name="chevron.right" size={13} color={c.textTertiary} />
+          </View>
+        </Pressable>
 
-        <Text variant="display" style={{ marginTop: Spacing.two }}>
+        <Text variant="display" style={{ marginTop: Spacing.four }}>
           {/*
             Not "a date". The catalogue plans birthdays, friends out, solo
             days and graduations, and the word on the first screen decides what
