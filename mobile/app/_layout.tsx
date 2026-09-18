@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,6 +16,10 @@ import { Figtree_700Bold } from "@expo-google-fonts/figtree/700Bold";
 import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
+import {
+  configureNotificationHandler,
+  subscribeToNotificationTaps,
+} from "../src/lib/push";
 
 // Hold the splash until the face is ready, so the first frame is not set in a
 // fallback font and then reflowed.
@@ -54,6 +58,22 @@ function RootShell() {
     // never leave someone staring at a splash screen forever.
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
+
+  /*
+   * How a reminder behaves, and where tapping one goes.
+   *
+   * Set at the root because both are global: without a handler a notification
+   * arriving while the app is open does nothing at all, which reads as one
+   * that failed rather than one politely suppressed, and a tap has to be able
+   * to open a plan from any screen.
+   *
+   * Nothing here asks for permission. That happens once, on saving a plan for
+   * a future date, where the question explains itself. See src/lib/push.ts.
+   */
+  useEffect(() => {
+    configureNotificationHandler();
+    return subscribeToNotificationTaps((url) => router.push(url as never));
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 

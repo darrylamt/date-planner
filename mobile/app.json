@@ -28,7 +28,10 @@
             ]
           }
         ],
-        "NSPhotoLibraryUsageDescription": "aduro uses this to set your profile picture. Photos stay on your device unless you pick one."
+        "NSPhotoLibraryUsageDescription": "aduro uses this to set your profile picture. Photos stay on your device unless you pick one.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       },
       "runtimeVersion": {
         "policy": "appVersion"
@@ -154,6 +157,13 @@
             }
           }
         ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E4572E",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "experiments": {

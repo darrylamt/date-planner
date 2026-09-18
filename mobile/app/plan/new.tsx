@@ -31,6 +31,7 @@ import {
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { isDriving } from "../../src/lib/budget";
+import { registerForPush } from "../../src/lib/push";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
@@ -236,6 +237,26 @@ export default function PlanNew() {
       const slug = await savePlan(inputs, phase.itinerary);
       setShareSlug(slug);
       void saveDraft({ shareSlug: slug });
+
+      /*
+       * Ask about reminders here, and nowhere else.
+       *
+       * iOS lets an app ask exactly once. Asked on first launch, before
+       * anybody has a plan, most people decline a question they have no
+       * reason to answer yet and the refusal is final until they go looking
+       * in Settings. Asked here, they have just saved an evening for a future
+       * date and a reminder the night before is obviously for them.
+       *
+       * Only for a plan that has not happened yet: offering to remind somebody
+       * about tonight, or about last Tuesday, is the prompt arriving when it
+       * cannot be useful, which is how a permission gets spent.
+       *
+       * Not awaited. The plan is saved either way and a permission dialog must
+       * not sit between somebody and the slug they asked for.
+       */
+      const today = new Date().toISOString().slice(0, 10);
+      if (inputs.date > today) void registerForPush();
+
       return slug;
     } catch (e) {
       if (e instanceof SignInRequiredError) {
