@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
 import { Toast } from "@/components/Toast";
@@ -25,6 +25,26 @@ const BANDS = ["budget", "mid", "premium"] as const;
 const VIBES = [...VENUE_VIBE_TAGS];
 const BEST_FOR = ["first_date", "anniversary", "date_night", "friend_outing", "casual_hangout"];
 const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "activity", "other"];
+
+/** Plural, for a heading over a group. */
+const CATEGORY_LABEL: Record<MenuCategory, string> = {
+  starter: "Starters",
+  main: "Mains",
+  dessert: "Desserts",
+  drink: "Drinks",
+  activity: "Things to do",
+  other: "Extras",
+};
+
+/** Singular, so the button reads "Add a drink" rather than "Add drinks". */
+const CATEGORY_ONE: Record<MenuCategory, string> = {
+  starter: "a starter",
+  main: "a main",
+  dessert: "a dessert",
+  drink: "a drink",
+  activity: "an activity",
+  other: "an extra",
+};
 
 type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean };
 
@@ -162,14 +182,23 @@ export function VenueForm({
   const toggle = (list: string[], val: string) =>
     list.includes(val) ? list.filter((x) => x !== val) : [...list, val];
 
-  function addItem() {
+  /**
+   * A blank line, in the course it was added under.
+   *
+   * The category comes from the button that was pressed now that the menu is
+   * grouped, which is the whole point of grouping it: pressing "add" beside
+   * Drinks and then having to set a dropdown to Drinks is the form asking you
+   * to repeat yourself. Falls back to the venue's own shape when nothing is
+   * named, because an activity venue is almost never adding a starter.
+   */
+  function addItem(category?: MenuCategory) {
     setItems((cur) => [
       ...cur,
       {
         _tmpId: `new-${Date.now()}-${cur.length}`,
         name: "",
-        // An activity venue is almost never adding a starter.
-        category: v.type === "activity" || v.type === "outdoor" ? "activity" : "main",
+        category:
+          category ?? (v.type === "activity" || v.type === "outdoor" ? "activity" : "main"),
         price_ghs: 0,
         covers_people: 1,
       },
@@ -578,11 +607,48 @@ export function VenueForm({
 
   const field = "flex flex-col";
 
+  /*
+   * Everything not marked for deletion, which is what the menu shows.
+   *
+   * Not called `live`: save() has its own `live` that also drops rows with a
+   * blank name, and two things with one name meaning nearly but not quite the
+   * same set is how somebody later reads the wrong one.
+   */
+  const shown = items.filter((i) => !i._deleted);
+
   return (
     <div className="max-w-[760px]">
-      <h1 className="font-display text-[24px] font-bold">
-        {venue ? `Edit, ${venue.name}` : "Add venue"}
-      </h1>
+      {/*
+        Save at the top, and stuck there.
+        *
+        * It used to sit under the menu table. The Honeysuckle has 182 items
+        * and Casa1715 has 311, so changing a phone number meant scrolling past
+        * three hundred rows to reach the button that saves it, and scrolling
+        * back if you wanted to check anything.
+        *
+        * Sticky rather than merely moved, because a form this tall has no
+        * single right place for it: wherever you are in it is where you want
+        * the button. The header rides along so you can still see which venue
+        * you are editing from the bottom of its own menu.
+      */}
+      <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-cream/95 px-1 py-3 backdrop-blur">
+        <h1 className="font-display text-[20px] font-bold">
+          {venue ? `Edit, ${venue.name}` : "Add venue"}
+        </h1>
+        <div className="flex gap-2">
+          <button className="btn btnsm px-7" onClick={save} disabled={busy || !v.name.trim()}>
+            {busy ? "Saving…" : "Save venue"}
+          </button>
+          {venue && (
+            <button className="btn2 btnsm !text-staletext" onClick={remove} disabled={busy}>
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Errors belong with the button that produced them. */}
+      {error && <div className="why mt-3 not-italic text-staletext">{error}</div>}
 
       {venue ? (
         <p className="mt-3 text-[13px] text-mutedbrown">
@@ -1218,220 +1284,81 @@ export function VenueForm({
         </table>
       </div>
 
-      {/* Menu items */}
-      <div className="mt-8 flex items-center justify-between">
+      {/* Menu items, by course */}
+      <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-[18px] font-bold">Menu items</h2>
-        <button className="btn2 btnsm" onClick={addItem}>
-          + Add item
-        </button>
+        <span className="text-[13px] text-mutedbrown">
+          {shown.length} item{shown.length === 1 ? "" : "s"}
+        </span>
       </div>
-      <div className="mt-3 overflow-x-auto">
-        <table className="tbl w-full">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Category</th>
-              <th>Price (GHS)</th>
-              <th className="whitespace-nowrap">Covers</th>
-              <th>Notes</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.filter((i) => !i._deleted).map((item) => (
-              <tr key={item._tmpId}>
-                <td>
-                  <input
-                    className="inp h-[38px]"
-                    value={item.name ?? ""}
-                    onChange={(e) =>
-                      setItems((cur) =>
-                        cur.map((x) => (x._tmpId === item._tmpId ? { ...x, name: e.target.value } : x))
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    className="inp h-[38px] w-[110px]"
-                    value={item.category ?? "other"}
-                    onChange={(e) =>
-                      setItems((cur) =>
-                        cur.map((x) =>
-                          x._tmpId === item._tmpId
-                            ? { ...x, category: e.target.value as MenuCategory }
-                            : x
-                        )
-                      )
-                    }
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+      {/*
+        Grouped rather than one long list.
+        *
+        * A flat table is fine at a dozen rows and unusable at three hundred:
+        * finding the one drink to delete meant reading past every plate of
+        * food, and adding one meant a new row at the very bottom followed by
+        * setting a dropdown to say where it actually belonged.
+        *
+        * Every course is shown even when empty, because an empty course is
+        * the one you are most likely to be adding to, and hiding it would
+        * leave nowhere to press.
+      */}
+      <p className="mt-1 text-[13px] text-mutedbrown">
+        Add straight into a course, or change the Course box on a row to move it.
+      </p>
+
+      {CATEGORIES.map((cat) => {
+        const rows = shown.filter((i) => (i.category ?? "other") === cat);
+        return (
+          <div key={cat} className="mt-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-1.5">
+              <h3 className="text-[15px] font-bold">
+                {CATEGORY_LABEL[cat]}{" "}
+                <span className="font-normal text-mutedbrown">
+                  {rows.length || "none yet"}
+                </span>
+              </h3>
+              <button className="btn2 btnsm" onClick={() => addItem(cat)}>
+                + Add {CATEGORY_ONE[cat]}
+              </button>
+            </div>
+
+            {rows.length > 0 && (
+              <div className="mt-2 overflow-x-auto">
+                <table className="tbl w-full">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Course</th>
+                      <th>Price (GHS)</th>
+                      <th className="whitespace-nowrap">Covers</th>
+                      <th>Notes</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((item) => (
+                      <Fragment key={item._tmpId}>
+                        <MenuRow item={item} setItems={setItems} />
+                        {/*
+                          The rest of what an activity line needs, directly
+                          under the line it belongs to rather than in a block
+                          at the end of the menu. A plate of jollof has no
+                          minimum number of players, so putting these on every
+                          row would bury six blank boxes under every dish.
+                        */}
+                        {item.category === "activity" && (
+                          <ActivityDetail item={item} setItems={setItems} />
+                        )}
+                      </Fragment>
                     ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className="pinp"
-                    type="number"
-                    value={item.price_ghs ?? 0}
-                    onChange={(e) =>
-                      setItems((cur) =>
-                        cur.map((x) =>
-                          x._tmpId === item._tmpId ? { ...x, price_ghs: Number(e.target.value) } : x
-                        )
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  {/*
-                    How many people this one price covers. A plate of food is
-                    1; a foosball table sold as a table with two people at it
-                    is 2, and billing that per head charges a couple double.
-                  */}
-                  <input
-                    className="pinp !w-[64px]"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={item.covers_people ?? 1}
-                    onChange={(e) =>
-                      setItems((cur) =>
-                        cur.map((x) =>
-                          x._tmpId === item._tmpId
-                            ? { ...x, covers_people: Math.max(1, Number(e.target.value) || 1) }
-                            : x
-                        )
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    className="inp h-[38px]"
-                    value={item.notes ?? ""}
-                    onChange={(e) =>
-                      setItems((cur) =>
-                        cur.map((x) => (x._tmpId === item._tmpId ? { ...x, notes: e.target.value } : x))
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  <button
-                    className="font-semibold text-staletext hover:underline"
-                    onClick={() =>
-                      setItems((cur) =>
-                        cur.map((x) => (x._tmpId === item._tmpId ? { ...x, _deleted: true } : x))
-                      )
-                    }
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {/*
-              The rest of what an activity line needs, on its own row and only
-              for activities. A menu does not have a minimum number of players
-              and a bowling lane does, so putting these on every row would bury
-              six blank boxes under every plate of jollof.
-            */}
-            {items
-              .filter((i) => !i._deleted && i.category === "activity")
-              .map((item) => (
-                <tr key={`${item._tmpId}-detail`} className="bg-cream/40">
-                  <td colSpan={6}>
-                    <div className="flex flex-wrap items-end gap-3 px-1 py-1">
-                      <span className="text-[12.5px] font-semibold text-mutedbrown">
-                        {item.name || "This activity"}:
-                      </span>
-                      <ActivityNumber
-                        label="Min players"
-                        value={item.min_players}
-                        onChange={(n) =>
-                          setItems((cur) =>
-                            cur.map((x) =>
-                              x._tmpId === item._tmpId ? { ...x, min_players: n } : x
-                            )
-                          )
-                        }
-                      />
-                      <ActivityNumber
-                        label="Max players"
-                        value={item.max_players}
-                        onChange={(n) =>
-                          setItems((cur) =>
-                            cur.map((x) =>
-                              x._tmpId === item._tmpId ? { ...x, max_players: n } : x
-                            )
-                          )
-                        }
-                      />
-                      <ActivityNumber
-                        label="Minutes"
-                        value={item.duration_minutes}
-                        onChange={(n) =>
-                          setItems((cur) =>
-                            cur.map((x) =>
-                              x._tmpId === item._tmpId ? { ...x, duration_minutes: n } : x
-                            )
-                          )
-                        }
-                      />
-                      <ActivityNumber
-                        label="Min age"
-                        value={item.min_age}
-                        onChange={(n) =>
-                          setItems((cur) =>
-                            cur.map((x) =>
-                              x._tmpId === item._tmpId ? { ...x, min_age: n } : x
-                            )
-                          )
-                        }
-                      />
-                      <label className="flex flex-1 flex-col">
-                        <span className="text-[11.5px] font-semibold text-mutedbrown">
-                          Must bring
-                        </span>
-                        <input
-                          className="inp h-[34px] min-w-[180px] text-[13px]"
-                          value={item.requires_gear ?? ""}
-                          placeholder="Socks and bowling shoes"
-                          onChange={(e) =>
-                            setItems((cur) =>
-                              cur.map((x) =>
-                                x._tmpId === item._tmpId
-                                  ? { ...x, requires_gear: e.target.value }
-                                  : x
-                              )
-                            )
-                          }
-                        />
-                      </label>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-
-      {error && <div className="why mt-4 not-italic text-staletext">{error}</div>}
-
-      <div className="mt-6 flex gap-3">
-        <button className="btn btnsm px-8" onClick={save} disabled={busy || !v.name.trim()}>
-          {busy ? "Saving…" : "Save venue"}
-        </button>
-        {venue && (
-          <button className="btn2 btnsm !text-staletext" onClick={remove} disabled={busy}>
-            Delete
-          </button>
-        )}
-      </div>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {toast && <Toast message={toast} />}
     </div>
@@ -1466,5 +1393,138 @@ function ActivityNumber({
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
       />
     </label>
+  );
+}
+
+/** What the two row components below need to write back into the list. */
+type SetItems = React.Dispatch<React.SetStateAction<EditableItem[]>>;
+
+/**
+ * One line of a menu.
+ *
+ * Lifted out of the table when the menu was grouped by course. The same row
+ * renders under six headings now, and six copies of it would be six places to
+ * forget a field: covers_people was added once and would have had to be added
+ * six times.
+ */
+function MenuRow({ item, setItems }: { item: EditableItem; setItems: SetItems }) {
+  /** Every edit on this row is the same shape: change me, leave the rest. */
+  const patch = (fields: Partial<EditableItem>) =>
+    setItems((cur) => cur.map((x) => (x._tmpId === item._tmpId ? { ...x, ...fields } : x)));
+
+  return (
+    <tr>
+      <td>
+        <input
+          className="inp h-[38px]"
+          value={item.name ?? ""}
+          onChange={(e) => patch({ name: e.target.value })}
+        />
+      </td>
+      <td>
+        {/*
+          Kept on the row even though the group already says which course this
+          is: it is how an item moves between them, and a menu where the only
+          way to recategorise a dish is to delete it and retype it is a menu
+          nobody corrects.
+        */}
+        <select
+          className="inp h-[38px] w-[110px]"
+          value={item.category ?? "other"}
+          onChange={(e) => patch({ category: e.target.value as MenuCategory })}
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td>
+        <input
+          className="pinp"
+          type="number"
+          value={item.price_ghs ?? 0}
+          onChange={(e) => patch({ price_ghs: Number(e.target.value) })}
+        />
+      </td>
+      <td>
+        {/*
+          How many people this one price covers. A plate of food is 1; a
+          foosball table sold as a table with two people at it is 2, and
+          billing that per head charges a couple double.
+        */}
+        <input
+          className="pinp !w-[64px]"
+          type="number"
+          min={1}
+          max={50}
+          value={item.covers_people ?? 1}
+          onChange={(e) => patch({ covers_people: Math.max(1, Number(e.target.value) || 1) })}
+        />
+      </td>
+      <td>
+        <input
+          className="inp h-[38px]"
+          value={item.notes ?? ""}
+          onChange={(e) => patch({ notes: e.target.value })}
+        />
+      </td>
+      <td>
+        <button
+          className="font-semibold text-staletext hover:underline"
+          onClick={() => patch({ _deleted: true })}
+        >
+          Remove
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+/** The extra fields only an activity line has, under the line itself. */
+function ActivityDetail({ item, setItems }: { item: EditableItem; setItems: SetItems }) {
+  const patch = (fields: Partial<EditableItem>) =>
+    setItems((cur) => cur.map((x) => (x._tmpId === item._tmpId ? { ...x, ...fields } : x)));
+
+  return (
+    <tr className="bg-cream/40">
+      <td colSpan={6}>
+        <div className="flex flex-wrap items-end gap-3 px-1 py-1">
+          <span className="text-[12.5px] font-semibold text-mutedbrown">
+            {item.name || "This activity"}:
+          </span>
+          <ActivityNumber
+            label="Min players"
+            value={item.min_players}
+            onChange={(n) => patch({ min_players: n })}
+          />
+          <ActivityNumber
+            label="Max players"
+            value={item.max_players}
+            onChange={(n) => patch({ max_players: n })}
+          />
+          <ActivityNumber
+            label="Minutes"
+            value={item.duration_minutes}
+            onChange={(n) => patch({ duration_minutes: n })}
+          />
+          <ActivityNumber
+            label="Min age"
+            value={item.min_age}
+            onChange={(n) => patch({ min_age: n })}
+          />
+          <label className="flex flex-1 flex-col">
+            <span className="text-[11.5px] font-semibold text-mutedbrown">Must bring</span>
+            <input
+              className="inp h-[34px] min-w-[180px] text-[13px]"
+              value={item.requires_gear ?? ""}
+              placeholder="Socks and bowling shoes"
+              onChange={(e) => patch({ requires_gear: e.target.value })}
+            />
+          </label>
+        </div>
+      </td>
+    </tr>
   );
 }
