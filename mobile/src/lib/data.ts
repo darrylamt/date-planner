@@ -118,6 +118,52 @@ export async function listPlans(): Promise<SavedPlan[]> {
  * Separate from savePlan because the note is usually written after the fact,
  * at the moment of sending it to someone, rather than while planning.
  */
+/**
+ * One saved plan, by the slug its share link uses.
+ *
+ * Read on the user's own session, so RLS decides: "plans: own read" matches
+ * auth.uid() to user_id, and a slug belonging to somebody else comes back
+ * empty rather than readable. The shared web page reads the same row through
+ * the service role, which is why that one works signed out and this does not.
+ */
+export async function fetchPlan(slug: string): Promise<SavedPlan | null> {
+  const { data, error } = await supabase
+    .from("plans")
+    .select(
+      "id, user_id, share_slug, inputs, itinerary, total_budget_ghs, estimated_total_ghs, planner_note, created_at"
+    )
+    .eq("share_slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as SavedPlan | null) ?? null;
+}
+
+/**
+ * Write back an itinerary that was changed after it was saved.
+ *
+ * Changing an order on a saved plan used to be a change that lived until the
+ * screen closed. Needed migration 0039: plans had read, insert and delete
+ * policies and no update policy at all, so every write was refused by RLS and
+ * reported as a success, because PostgREST calls an update that matched no
+ * rows a success.
+ */
+export async function updateSavedItinerary(
+  slug: string,
+  itinerary: Itinerary
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("plans")
+    .update({
+      itinerary,
+      // Kept in step with the itinerary it describes. The saved list shows
+      // this figure, so leaving it behind makes the list disagree with the
+      // plan it is listing.
+      estimated_total_ghs: Math.round(Number(itinerary.est_total_ghs)),
+    })
+    .eq("share_slug", slug);
+  return !error;
+}
+
 export async function setPlannerNote(slug: string, note: string): Promise<boolean> {
   const trimmed = note.trim().slice(0, 400);
   const { error } = await supabase
@@ -165,4 +211,80 @@ export async function createReservation(input: {
   });
 
   if (error) throw error;
+}
+
+/**
+ * A venue on the home screen's featured shelf.
+ *
+ * Flattened from the join, because the row is one card and a caller that has
+ * to reach through `venues.areas.name` to render a subtitle is a caller that
+ * will forget the null check on the day a venue has no area.
+ */
+export interface FeaturedVenue {
+  id: string;
+  venue_id: string;
+  headline: string | null;
+  is_paid: boolean;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  instagram_handle: string | null;
+  area: string | null;
+}
+
+/**
+ * What is featured today.
+ *
+ * Today rather than "this week": a run can start on a Thursday because that is
+ * when the venue's event is, and asking for a calendar week would miss it. The
+ * window is filtered in the query so the phone is never sent rows it would
+ * throw away.
+ *
+ * Deliberately not read by the planner. A stop is chosen on fit alone, and the
+ * moment a venue can buy its way into an itinerary the itinerary stops being
+ * an answer.
+ */
+export async function fetchFeatured(): Promise<FeaturedVenue[]> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("featured_venues")
+    .select(
+      "id, venue_id, headline, is_paid, sort, venues(name, description, image_url, instagram_handle, is_active, areas(name))"
+    )
+    .lte("starts_on", today)
+    .gte("ends_on", today)
+    .order("sort");
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => {
+      const v = row.venues as
+        | {
+            name: string;
+            description: string | null;
+            image_url: string | null;
+            instagram_handle: string | null;
+            is_active: boolean;
+            areas: { name: string } | null;
+          }
+        | null;
+      if (!v) return null;
+      // A venue that has hidden itself, or been deactivated, must not keep
+      // appearing on the home screen because a run was booked before it did.
+      if (v.is_active === false) return null;
+      return {
+        id: row.id as string,
+        venue_id: row.venue_id as string,
+        headline: (row.headline as string | null) ?? null,
+        is_paid: Boolean(row.is_paid),
+        name: v.name,
+        description: v.description,
+        image_url: v.image_url,
+        instagram_handle: v.instagram_handle,
+        area: v.areas?.name ?? null,
+      };
+    })
+    .filter((r): r is FeaturedVenue => r !== null);
 }

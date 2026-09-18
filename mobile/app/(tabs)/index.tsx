@@ -17,6 +17,7 @@ import { useOccasionHue, useTheme } from "../../src/lib/useTheme";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
+import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { startNewPlan } from "../../src/lib/startPlan";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
@@ -260,6 +261,13 @@ export default function Home() {
           </Pressable>
         </>
       ) : null}
+
+      {/*
+        Above the occasions, below anything in progress. Somebody with a plan
+        already on the go is here to finish it; somebody who has not started is
+        the person a recommendation is for.
+      */}
+      <FeaturedRow />
 
       {/* Occasions */}
       <SectionHeading title="Occasions" />

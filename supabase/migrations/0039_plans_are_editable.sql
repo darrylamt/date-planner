@@ -1,0 +1,26 @@
+-- A saved plan could be read, made and deleted, but never changed.
+--
+-- 0001 gave plans three policies: own read, own insert, own delete. There has
+-- never been an update policy, so every UPDATE against the table has been
+-- refused by RLS since the first day.
+--
+-- Refused silently, which is why nobody noticed. PostgREST reports an update
+-- that matched no rows as a success with no error, and setPlannerNote reads
+-- exactly that:
+--
+--     const { error } = await supabase.from("plans").update({ planner_note })
+--     return !error;
+--
+-- So the app has been telling people their note was attached and then sharing
+-- a card without it. Fourteen plans exist and not one carries a note, which is
+-- what you would expect either way, but the missing policy explains it without
+-- needing anybody to have tried.
+--
+-- The same gap is why a saved plan has never been openable. Editing an order
+-- on one, or attaching a note before sending it, both need this.
+--
+-- Owner only, and the row's owner cannot be changed: the `with check` clause
+-- is evaluated against the row as it will be after the update, so a plan
+-- cannot be handed to somebody else by writing a different user_id into it.
+create policy "plans: own update" on public.plans
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

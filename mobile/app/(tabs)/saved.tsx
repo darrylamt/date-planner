@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
+import { draftFromPlan } from "../../src/lib/repeatPlan";
 import { Symbol } from "../../src/components/Symbol";
 import { Mascot, SpeechBubble } from "../../src/components/Mascot";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
@@ -96,41 +97,9 @@ export default function Plans() {
     );
   }
 
-  /**
-   * Start a new plan from an old one.
-   *
-   * The date is deliberately dropped rather than carried: repeating last
-   * month's evening on last month's date is not what anybody means, and an
-   * old date silently sitting in the form is the kind of thing somebody only
-   * notices after the plan comes back empty because everywhere was shut.
-   */
+  /** Same answers, a new date. Shared with the plan viewer's "edit". */
   async function repeat(plan: SavedPlan) {
-    const { saveDraft } = await import("../../src/lib/draft");
-    const { stepsFor } = await import("../../src/lib/planConstants");
-    const { inputs } = plan;
-
-    /*
-     * Tomorrow, not the original date.
-     *
-     * Carrying the old one over means repeating last month's evening on last
-     * month's date, which nobody means, and a stale date sitting in a filled
-     * form is only noticed after the plan comes back empty because everywhere
-     * was shut. Tomorrow is a real answer they can change in one tap.
-     */
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Open on the date question rather than at the start: every other answer
-    // is already theirs, and this is the one that has to change.
-    const steps = stepsFor(inputs.occasion, false);
-    const whenAt = Math.max(0, steps.indexOf("when"));
-
-    await saveDraft({
-      inputs: { ...inputs, date: tomorrow.toISOString().slice(0, 10) },
-      itinerary: null,
-      shareSlug: null,
-      step: whenAt,
-    });
+    await draftFromPlan(plan);
     router.push("/plan/new");
   }
 
@@ -163,10 +132,19 @@ export default function Plans() {
 
       {plans.map((plan) => (
         <Group key={plan.id} header={longDate(plan.inputs.date)}>
+          {/*
+            The plan itself, and the reason this row exists.
+            
+            It has never been tappable: you could repeat an evening, share it
+            or delete it, and never look at it, so the only way back to a plan
+            you had already built was to build it again.
+          */}
           <Row
             title={plan.itinerary.title}
             subtitle={plan.itinerary.summary_route}
             value={ghs(Number(plan.estimated_total_ghs))}
+            chevron
+            onPress={() => router.push(`/plan/${plan.share_slug}`)}
           />
           {/*
             Same places, another day.
