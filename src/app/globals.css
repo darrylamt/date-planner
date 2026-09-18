@@ -305,7 +305,26 @@ input[type="range"].budget-slider::-moz-range-thumb {
 .admin .text-staletext { color: var(--a-warn) !important; }
 .admin .text-line { color: var(--a-line) !important; }
 
-.admin .bg-cream { background-color: var(--a-surface) !important; }
+/*
+ * Every shade of cream, not just the solid one.
+ *
+ * `cream` is #1A0D14: the consumer app is a dark theme, and this admin is a
+ * light one laid over the same Tailwind palette. Overriding `.bg-cream` alone
+ * missed `bg-cream/60` and friends, because Tailwind emits an opacity variant
+ * as its own class, so seventeen surfaces across the admin and the venue
+ * portal fell through to dark plum at 60 percent over a pale grey page. The
+ * result read as a muddy brown card with grey text on it: the stat tiles on
+ * the dashboard and the sticky save bar on a venue were both unreadable.
+ *
+ * Matched on the attribute so a new shade cannot reintroduce it. The tint that
+ * the opacity was there to provide comes from --a-sunken instead, which is an
+ * actual light colour rather than a dark one worn thin.
+ */
+.admin [class*="bg-cream"] { background-color: var(--a-surface) !important; }
+.admin [class*="bg-cream/4"],
+.admin [class*="bg-cream/5"],
+.admin [class*="bg-cream/6"] { background-color: var(--a-sunken) !important; }
+.admin [class*="bg-sand"] { background-color: var(--a-sunken) !important; }
 .admin .bg-flame { background-color: var(--a-accent) !important; }
 .admin .bg-staletext { background-color: var(--a-warn) !important; }
 

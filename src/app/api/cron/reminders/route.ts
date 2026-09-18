@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { reminderFor } from "@/lib/reminderCopy";
 import type { SavedPlan } from "@/lib/types";
 
 /**
@@ -110,11 +111,16 @@ export async function GET(req: Request) {
     if (claimError) continue;
 
     claimed.push(plan.id);
-    const body = describe(plan);
+    /*
+     * Worded from the plan's own shape, and seeded on the plan so the same
+     * evening always reads the same way while two different people do not get
+     * an identical sentence. See reminderCopy.ts.
+     */
+    const { title, body } = reminderFor(plan.inputs, plan.itinerary, plan.id);
     for (const token of tokens) {
       messages.push({
         to: token,
-        title: "Tomorrow evening",
+        title,
         body,
         // Opens the plan itself rather than the app's front door.
         data: { url: `/plan/${plan.share_slug}`, slug: plan.share_slug },
@@ -169,23 +175,4 @@ export async function GET(req: Request) {
     sent,
     failed: failures.length,
   });
-}
-
-/**
- * The evening in one line.
- *
- * Two names and a time, because a notification is read at a glance on a lock
- * screen and the plan itself is one tap away. Listing five stops would make it
- * a paragraph nobody finishes.
- */
-function describe(plan: SavedPlan): string {
-  const stops = plan.itinerary.stops ?? [];
-  if (!stops.length) return "Your plan is tomorrow.";
-
-  const first = stops[0];
-  const opening = `${first.name} at ${first.arrival_time}`;
-
-  if (stops.length === 1) return `${opening}. Tap for the details.`;
-  if (stops.length === 2) return `${opening}, then ${stops[1].name}.`;
-  return `${opening}, then ${stops[1].name} and ${stops.length - 2} more.`;
 }

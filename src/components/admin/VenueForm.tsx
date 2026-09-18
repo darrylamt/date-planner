@@ -631,7 +631,7 @@ export function VenueForm({
         * the button. The header rides along so you can still see which venue
         * you are editing from the bottom of its own menu.
       */}
-      <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-cream/95 px-1 py-3 backdrop-blur">
+      <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-cream px-1 py-3">
         <h1 className="font-display text-[20px] font-bold">
           {venue ? `Edit, ${venue.name}` : "Add venue"}
         </h1>

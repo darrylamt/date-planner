@@ -203,7 +203,7 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           subtitle={
             driving
               ? `Everything for ${partyLabel(inputs.partySize)}. You are driving, so none of it goes on fares.`
-              : `Everything for ${partyLabel(inputs.partySize)}, food and Uber included.`
+              : `Everything for ${partyLabel(inputs.partySize)}, food and rides included.`
           }
         />
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
@@ -236,11 +236,11 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           footer={
             driving
               ? "No fares in the total, so all of it goes on food, drinks and things to do."
-              : "We price an Uber between each stop and keep it inside your budget."
+              : "We price a ride between each stop and keep it inside your budget."
           }
         >
           <Row
-            title="We'll Uber it"
+            title="We'll Uber or Bolt it"
             subtitle="Fares come out of the budget"
             selected={!driving}
             disabled={forced}

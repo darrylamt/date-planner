@@ -37,7 +37,7 @@ const SLIDES: Slide[] = [
     occasion: "date_night",
     says: "Real menus. Real prices.",
     title: "Know what it costs before you go.",
-    body: "Every price comes from the venue's own menu, and we add up the Uber between stops too. Set a budget and the plan stays inside it.",
+    body: "Every price comes from the venue's own menu, and we add up the Uber or Bolt between stops too. Set a budget and the plan stays inside it.",
   },
   {
     occasion: "friend_outing",
