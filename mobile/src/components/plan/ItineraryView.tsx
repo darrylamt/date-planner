@@ -460,7 +460,7 @@ export function ItineraryView({
           style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}
         >
           {driving
-            ? "Prices can change. Nothing here is a taxi fare."
+            ? "Prices can change. No Uber fares in this total."
             : "Prices can change. Transport is an estimate."}
         </Text>
       </ScrollView>
