@@ -300,13 +300,29 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
           onChange={(hours) => update({ hours })}
         />
 
+      </>
+    );
+  }
+
+  if (step === "stops") {
+    return (
+      <>
         {/*
-          Asked, not inferred. Four hours is a long dinner for one person and
-          four stops for another, and until now the clock decided that on
-          their behalf. "Up to you" keeps the old inference, so the default
-          still costs nobody a decision.
+          Asked, not inferred, and now on its own screen.
+
+          Four hours is a long dinner for one person and four stops for
+          another, and the clock used to decide that on their behalf. It was
+          the third question on the timing step, under two wheels, which is
+          where an answer goes to be scrolled past: somebody who missed it got
+          the inference and never knew they had been asked.
+
+          "Up to you" keeps that inference as an explicit choice, so the
+          default still costs nobody a decision.
         */}
-        <GroupLabel>How many places?</GroupLabel>
+        <StepHeading
+          title="How many places?"
+          subtitle="Dinner and one more, or a proper crawl. We will fit them to the time you have."
+        />
         <WheelPicker
           options={STOP_OPTIONS.map((o) => ({ value: o.stops, label: o.label }))}
           value={inputs.stops ?? 0}

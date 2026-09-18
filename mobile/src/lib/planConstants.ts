@@ -217,7 +217,8 @@ export type StepId =
   | "area"
   | "budget"
   | "when"
-  | "timing";
+  | "timing"
+  | "stops";
 
 export interface OccasionExtra {
   /** The screen's question. */
@@ -356,7 +357,16 @@ export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] 
   if (!occasionPreset) steps.push("occasion");
   if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
   if (OCCASION_EXTRA[occasion]) steps.push("extra");
-  steps.push("details", "vibe", "shape", "area", "budget", "when", "timing");
+  /*
+   * "How many places" is its own screen, at the end.
+   *
+   * It was the third question on the timing step, under the start time and the
+   * duration, which put the one answer that decides the shape of the evening
+   * below two that decide only its edges, on a screen already carrying two
+   * wheels. Somebody who scrolled past it got the inference instead of their
+   * own answer and never knew they had been asked.
+   */
+  steps.push("details", "vibe", "shape", "area", "budget", "when", "timing", "stops");
   return steps;
 }
 

@@ -251,41 +251,95 @@ export function ItineraryView({
   }
 
   /** Writes each stop to the phone's calendar as its own timed event. */
+  /**
+   * Put every stop in the phone's calendar.
+   *
+   * ── why finding the calendar is the hard part ───────────────────────────
+   * iOS 17 split calendar permission in two. An app can be granted write-only
+   * access, which is enough to add an event and not enough to list calendars,
+   * and getDefaultCalendarAsync reads before it writes. On a phone that
+   * granted write-only it throws, the old catch reported "could not add to
+   * your calendar", and there was nothing anywhere saying which of a dozen
+   * things had gone wrong.
+   *
+   * So: ask for full access, fall back to enumerating and picking something
+   * modifiable, and if even that fails say what the phone actually said rather
+   * than a sentence that fits every failure equally badly.
+   */
   async function handleAddToCalendar() {
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
+    const { status, canAskAgain } = await Calendar.requestCalendarPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Calendar access needed",
-        "Allow calendar access in Settings to add your plan."
+        canAskAgain
+          ? "aduro needs permission to add your plan to your calendar."
+          : "Turn on Calendars for aduro in Settings, then try again.",
+        [
+          { text: "Not now", style: "cancel" },
+          ...(canAskAgain
+            ? []
+            : [{ text: "Open Settings", onPress: () => void Linking.openSettings() }]),
+        ]
       );
       return;
     }
 
     try {
-      const defaultCal = await Calendar.getDefaultCalendarAsync();
-      if (!defaultCal?.id) {
-        setToast("No writable calendar found on this device.");
+      /*
+       * The default calendar where there is one, otherwise the first that will
+       * actually accept an event. A phone with only subscribed calendars, and
+       * one granted write-only access, both land here rather than failing.
+       */
+      let calendarId: string | null = null;
+      try {
+        calendarId = (await Calendar.getDefaultCalendarAsync())?.id ?? null;
+      } catch {
+        calendarId = null;
+      }
+
+      if (!calendarId) {
+        const all = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+        calendarId = all.find((cal) => cal.allowsModifications)?.id ?? null;
+      }
+
+      if (!calendarId) {
+        setToast("No calendar on this phone will accept new events.");
         return;
       }
 
+      /*
+       * Counted rather than assumed. A stop whose time cannot be parsed is
+       * skipped, and silently skipping all of them while reporting success is
+       * how somebody turns up to an empty calendar on the night.
+       */
+      let added = 0;
       for (const stop of itinerary.stops) {
         const start = parseStopStart(inputs.date, stop.arrival_time);
         if (!start) continue;
         const end = new Date(start.getTime() + stop.duration_mins * 60_000);
 
-        await Calendar.createEventAsync(defaultCal.id, {
+        await Calendar.createEventAsync(calendarId, {
           title: `${stop.label}: ${stop.name}`,
           startDate: start,
           endDate: end,
           location: `${stop.name}, ${stop.area}, Accra`,
           notes: stop.why_this_fits,
         });
+        added += 1;
+      }
+
+      if (!added) {
+        setToast("Could not read the times on this plan.");
+        return;
       }
 
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setToast("Added to your calendar");
-    } catch {
-      setToast("Could not add to your calendar.");
+      setToast(added === 1 ? "Added to your calendar" : `${added} stops added to your calendar`);
+    } catch (e) {
+      // The phone's own words. A generic sentence here fits every failure
+      // equally badly and tells nobody what to do next.
+      const said = (e as Error)?.message?.trim();
+      setToast(said ? `Calendar said: ${said}` : "Could not add to your calendar.");
     }
   }
 
