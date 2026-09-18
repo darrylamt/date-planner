@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { SmartImage } from "@/components/SmartImage";
 import { AuthErrorNotice } from "@/components/AuthErrorNotice";
+import { ReturnToApp } from "@/components/ReturnToApp";
 
 /**
  * Landing page, mobile-first at 390px per the design's "home / hero" frame,
@@ -53,6 +54,13 @@ export default function LandingPage() {
           allow-listed, which lands failed auth links here rather than on
           /login. Explain it instead of showing a blank marketing page. */}
       <div className="px-6 pt-[22px]">
+        {/*
+          A sign-in that landed here rather than in the app, rescued. See
+          ReturnToApp: Supabase falls back to the Site URL when a redirect is
+          not allow-listed, so a Google sign-in from the phone arrives on this
+          page with a live session and no way to use it.
+        */}
+        <ReturnToApp />
         <AuthErrorNotice />
       </div>
 
