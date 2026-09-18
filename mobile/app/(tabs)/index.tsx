@@ -18,6 +18,7 @@ import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
+import { SectionHeading } from "../../src/components/home/SectionHeading";
 import { startNewPlan } from "../../src/lib/startPlan";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
@@ -361,20 +362,6 @@ function OccasionCard({
   );
 }
 
-function SectionHeading({ title }: { title: string }) {
-  return (
-    <Text
-      variant="title2"
-      style={{
-        paddingHorizontal: GUTTER,
-        marginTop: Spacing.section,
-        marginBottom: Spacing.three,
-      }}
-    >
-      {title}
-    </Text>
-  );
-}
 
 function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (

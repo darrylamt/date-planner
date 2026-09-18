@@ -3,7 +3,8 @@ import { Linking, Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
-import { GUTTER, Spacing, radius, space } from "../../theme";
+import { GUTTER, radius, space } from "../../theme";
+import { SectionHeading } from "./SectionHeading";
 import { useTheme } from "../../lib/useTheme";
 import { instagramUrl } from "../../lib/format";
 import { fetchFeatured, type FeaturedVenue } from "../../lib/data";
@@ -41,14 +42,7 @@ export function FeaturedRow() {
 
   return (
     <>
-      <Text
-        variant="eyebrow"
-        tone="secondary"
-        uppercase
-        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section, marginBottom: Spacing.two }}
-      >
-        Featured this week
-      </Text>
+      <SectionHeading title="Featured this week" />
 
       <ScrollView
         horizontal
