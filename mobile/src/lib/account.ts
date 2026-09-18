@@ -53,6 +53,13 @@ export interface Profile {
   displayName: string;
   avatarUrl: string | null;
   email: string;
+  /**
+   * Day and month, or neither. There is deliberately no year: this exists to
+   * pick a morning to say happy birthday, and a full date of birth is an
+   * identity document's worth of information that nothing here would use.
+   */
+  birthDay: number | null;
+  birthMonth: number | null;
 }
 
 /** A name to show when none has been set. Never the whole email address. */
@@ -72,7 +79,7 @@ export async function fetchProfile(): Promise<Profile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("display_name, avatar_url, email")
+    .select("display_name, avatar_url, email, birth_day, birth_month")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -81,7 +88,47 @@ export async function fetchProfile(): Promise<Profile | null> {
     displayName: data?.display_name?.trim() || nameFromEmail(email),
     avatarUrl: data?.avatar_url ?? null,
     email,
+    /*
+     * Day and month, never a year. This exists to pick a morning to say happy
+     * birthday, and a full date of birth is more than that needs.
+     */
+    birthDay: (data as { birth_day?: number | null } | null)?.birth_day ?? null,
+    birthMonth: (data as { birth_month?: number | null } | null)?.birth_month ?? null,
   };
+}
+
+/**
+ * Set or clear the birthday.
+ *
+ * Both halves together, because the table will not accept half a birthday: a
+ * day with no month is not a date and would otherwise sit there looking like
+ * one. Passing null for either clears both.
+ *
+ * .select() for the same reason updateDisplayName does it. An update matching
+ * no policy is not an error in Postgres, it writes nothing and reports
+ * success, which is how the display name silently failed for the life of that
+ * feature. Asking for the changed rows back turns a no-op into a visible one.
+ */
+export async function updateBirthday(
+  day: number | null,
+  month: number | null
+): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const clearing = day == null || month == null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      birth_day: clearing ? null : day,
+      birth_month: clearing ? null : month,
+    })
+    .eq("id", user.id)
+    .select("id");
+
+  return !error && (data?.length ?? 0) > 0;
 }
 
 export async function updateDisplayName(name: string): Promise<boolean> {

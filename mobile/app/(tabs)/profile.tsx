@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
+import { BirthdayRow } from "../../src/components/profile/BirthdayRow";
 import { Symbol } from "../../src/components/Symbol";
 import { Toast } from "../../src/components/Toast";
 import { GUTTER, TAB_BAR, radius, space, type as typeScale } from "../../src/theme";
@@ -363,6 +364,23 @@ export default function Profile() {
           </View>
         </View>
       )}
+
+      {/*
+        Only for somebody signed in: a birthday is stored against an account,
+        and offering the field to a signed-out visitor would be offering
+        somewhere to type that goes nowhere.
+      */}
+      {session ? (
+        <Group header="About you">
+          <BirthdayRow
+            day={profile?.birthDay ?? null}
+            month={profile?.birthMonth ?? null}
+            onSaved={(birthDay, birthMonth) =>
+              setProfile((p) => (p ? { ...p, birthDay, birthMonth } : p))
+            }
+          />
+        </Group>
+      ) : null}
 
       <Group header="Appearance">
         <Row
