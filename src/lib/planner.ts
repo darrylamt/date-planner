@@ -927,7 +927,18 @@ export function planItinerary(
     venue: Venue,
     role: Role,
     slotStart: number,
-    opts: { ignoreHours?: boolean } = {}
+    opts: {
+      ignoreHours?: boolean;
+      /**
+       * What the door costs per person, when this slot is an event's.
+       *
+       * Passed in rather than found here, because a dated event belongs to one
+       * slot and this function is asked about every slot. Null means no event;
+       * zero means somebody recorded that entry is free, which is a price and
+       * not the absence of one.
+       */
+      ticket?: number | null;
+    } = {}
   ): Option[] => {
     const roleTypes = ROLE_TYPES[role];
     const out: Option[] = [];
@@ -982,17 +993,44 @@ export function planItinerary(
      * budget that breaks at the door. Only counted when the fixture overlaps,
      * because a band starting after they leave costs them nothing.
      */
-    const cover = fixtures.reduce((sum, f) => sum + Number(f.cover_ghs ?? 0), 0);
-    const coverLine: ItineraryOrder[] =
-      cover > 0
-        ? [
-            {
-              item: `${fixtures.map((f) => f.title).join(" and ")} — entry`,
-              qty: inputs.partySize,
-              price_ghs: Math.round(cover * inputs.partySize),
-            },
-          ]
-        : [];
+    const covers = fixtures.filter((f) => f.cover_ghs != null);
+    const fixtureCover = covers.reduce((sum, f) => sum + Number(f.cover_ghs), 0);
+    const ticket = opts.ticket ?? null;
+
+    const door = fixtureCover + (ticket ?? 0);
+    const doorTotal = Math.round(door * inputs.partySize);
+    /*
+     * Whether anybody has actually written the door price down.
+     *
+     * Kept apart from the figure itself, because zero and unknown are
+     * different answers and only one of them is a price. A fixture with a null
+     * cover is a fixture somebody recorded without saying what it costs, and
+     * reading that as free is how a rooftop bar ends up in a plan at nothing.
+     */
+    const doorKnown = covers.length > 0 || ticket != null;
+
+    const doorLabel = fixtures.length
+      ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
+      : "Entry";
+    /*
+     * A free door is still worth a line.
+     *
+     * Somebody recorded that it costs nothing to get in, and a stop showing
+     * GHS 0 with no line under it reads as a price we failed to find rather
+     * than as one we have. This is the same distinction the rest of the
+     * catalogue keeps between free and unknown, said on the card.
+     */
+    const doorLine: ItineraryOrder[] = doorKnown
+      ? [
+          {
+            item: doorTotal > 0 ? doorLabel : `${doorLabel}, free`,
+            qty: inputs.partySize,
+            price_ghs: doorTotal,
+          },
+        ]
+      : [];
+
+    const priced: Option[] = [];
 
     for (const tier of [2, 1, 0] as const) {
       const planned = planOrders(
@@ -1004,12 +1042,14 @@ export function planItinerary(
         slotStart
       );
       if (!planned) continue;
-      if (planned.cost <= 0 && !venue.is_free) continue;
-      out.push({
+      // Nothing to order and nothing to pay at the door is a free stop, and
+      // only a venue recorded as free may be one.
+      if (planned.cost <= 0 && doorTotal <= 0 && !venue.is_free) continue;
+      priced.push({
         venue,
         tier,
-        orders: [...planned.orders, ...coverLine],
-        cost: planned.cost + Math.round(cover * inputs.partySize),
+        orders: [...planned.orders, ...doorLine],
+        cost: planned.cost + doorTotal,
         fixtures,
         // Within a focus every venue is allowed, so nudge the slot towards
         // its own role to keep the evening varied rather than three of the
@@ -1017,6 +1057,32 @@ export function planItinerary(
         score: score + (roleTypes.includes(venue.type) ? 2 : 0),
       });
     }
+
+    /*
+     * Nothing to order, but we know what it costs to walk in.
+     *
+     * Plenty of places have no menu we hold and do not need one: you pay at
+     * the door and that is the evening. planOrders returns null for every one
+     * of them, because it is looking for something to eat, and until now that
+     * null withheld the venue entirely, so a club with a ticketed night could
+     * be entered in the admin and still never appear in a plan.
+     *
+     * Emitted at the lowest tier on purpose. It is a real stop with a real
+     * price, and it is also the plainest version of one, so the walk-down
+     * should reach for it before it starts stripping courses off a dinner.
+     */
+    if (!priced.length && doorKnown) {
+      priced.push({
+        venue,
+        tier: 0,
+        orders: doorLine,
+        cost: doorTotal,
+        fixtures,
+        score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+      });
+    }
+
+    out.push(...priced);
     return out;
   };
 
@@ -1114,31 +1180,25 @@ export function planItinerary(
         pin.venue,
         roles[pinnedIndex],
         nominalStart(roles, pinnedIndex),
-        // An event is the statement that the place is open and worth being at
-        // that night. Opening hours on file are the ordinary week.
-        { ignoreHours: true }
+        {
+          // An event is the statement that the place is open and worth being
+          // at that night. Opening hours on file are the ordinary week.
+          ignoreHours: true,
+          /*
+           * The door price goes down with the request rather than being added
+           * to the answer. It is what makes a venue with no menu plannable at
+           * all: handed in here, a ticketed night is a price like any other
+           * and the stop can be built from it. Bolted on afterwards, there was
+           * nothing to bolt it to, because planOrders had already returned
+           * null and the venue had no options to amend.
+           *
+           * Null rather than zero when nothing is recorded: zero is somebody
+           * saying entry is free, which is a price.
+           */
+          ticket: pin.event.cost_ghs == null ? null : Number(pin.event.cost_ghs),
+        }
       );
       if (!built.length) return null;
-
-      /*
-       * A cover charge is spent as surely as the food is, so it goes in as a
-       * line of the order rather than beside it. Left out, the walk-down below
-       * would fit an evening to the budget and the door would put it over.
-       */
-      const cover = Number(pin.event.cost_ghs ?? 0);
-      if (cover > 0) {
-        for (const option of built) {
-          option.orders = [
-            ...option.orders,
-            {
-              item: `${pin.event.title} — entry`,
-              qty: inputs.partySize,
-              price_ghs: cover * inputs.partySize,
-            },
-          ];
-          option.cost += cover * inputs.partySize;
-        }
-      }
 
       slots[pinnedIndex] = built.sort((a, b) => b.tier - a.tier || a.cost - b.cost);
     }

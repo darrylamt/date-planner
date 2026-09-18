@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { focusVenueTypes } from "./planner";
+import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
@@ -72,6 +73,59 @@ export async function fetchCandidates(
     .eq("event_date", inputs.date);
 
   /*
+   * Started here for the same reason, and it is a stronger one.
+   *
+   * A venue with a door charge and no menu is priced: you know exactly what
+   * the evening costs there. The unpriced filter below withholds it anyway
+   * unless it can see the charge, so the fixtures have to be in hand before
+   * that filter runs rather than after the shortlist is already settled.
+   *
+   * The whole table, not a slice of it. venue_schedules holds one row per
+   * venue per weekly fixture and is tiny; narrowing it would need the
+   * shortlist, which is the thing this is being used to decide.
+   */
+  const schedulesPromise = supabase
+    .from("venue_schedules")
+    .select("*")
+    .eq("is_active", true);
+
+  const [eventsRes, schedulesRes] = await Promise.all([eventsPromise, schedulesPromise]);
+
+  let events = (eventsRes.data ?? []) as EventRow[];
+  if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
+    events = events.filter((e) => inputs.areaIds.includes(e.area_id));
+  }
+  const allSchedules = (schedulesRes.data ?? []) as VenueSchedule[];
+
+  /*
+   * Venues priced by the door rather than by a menu.
+   *
+   * An event centre with a ticketed conference, a hotel with a talk on, a club
+   * that takes fifty cedis to get in: none of them need a menu on file, and
+   * none of them is an unpriced venue. We know precisely what being there
+   * costs, which is the only thing the unpriced filter is actually asking.
+   *
+   * A recorded figure, not merely an event. Null means nobody wrote a price
+   * down, which is the same "we do not know" the rest of this catalogue is
+   * careful about, and reading it as free is how a rooftop bar ends up in a
+   * plan at nothing. Zero is different and is a price: somebody recorded that
+   * it is free to get in.
+   *
+   * For fixtures the weekday has to match. A Thursday karaoke night prices a
+   * Thursday and says nothing about the Monday somebody is planning.
+   */
+  const weekday = weekdayOf(inputs.date);
+  const pricedByDoor = new Set<string>();
+  for (const e of events) {
+    if (e.venue_id && e.cost_ghs != null) pricedByDoor.add(e.venue_id);
+  }
+  for (const f of allSchedules) {
+    if (f.cover_ghs != null && (weekday === null || f.weekday === weekday)) {
+      pricedByDoor.add(f.venue_id);
+    }
+  }
+
+  /*
    * Named columns, not "*". Since migration 0014 the venue grant has been an
    * explicit list, and Postgres refuses SELECT * outright when any one column
    * is ungranted rather than returning the rest. See venueColumns.ts.
@@ -85,11 +139,27 @@ export async function fetchCandidates(
      * on band alone made a free park recorded as "mid" invisible to exactly
      * the plan that needs it, the one with no money.
      */
+    /*
+     * Three ways to be affordable, not one.
+     *
+     * The band is a guess at what a place costs per head, which is the right
+     * filter for a restaurant and the wrong one for a door charge: a free talk
+     * at a hotel filed as premium is affordable on any budget, and the band
+     * would have hidden it from exactly the plans that could take it. Whether
+     * the evening actually fits is settled later, by the real figures.
+     */
+    const doorIds = [...pricedByDoor];
+    const affordable = [
+      `price_band.in.(${bands.join(",")})`,
+      "is_free.is.true",
+      ...(doorIds.length ? [`id.in.(${doorIds.join(",")})`] : []),
+    ].join(",");
+
     let q = supabase
       .from("venues")
       .select(`${columns.join(",")},areas(name)`)
       .eq("is_active", true)
-      .or(`price_band.in.(${bands.join(",")}),is_free.is.true`);
+      .or(affordable);
 
     if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
       q = q.in("area_id", inputs.areaIds);
@@ -185,6 +255,12 @@ export async function fetchCandidates(
       // A venue flagged free has a known price of nothing, which is the
       // opposite of a venue whose price we simply do not have.
       if (v.is_free === true) return true;
+      /*
+       * Charged at the door. Some places have no menu we hold and do not need
+       * one: the ticket or the cover is the price of being there, and the
+       * planner prices the stop from it.
+       */
+      if (pricedByDoor.has(v.id)) return true;
       /*
        * Nobody has put a number to this one at all. Still withheld, because
        * an estimate is a claim and "unknown" is the absence of one.
@@ -283,12 +359,6 @@ export async function fetchCandidates(
     picked = [...picked, ...extra];
   }
 
-  const eventsRes = await eventsPromise;
-  let events = (eventsRes.data ?? []) as EventRow[];
-  if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
-    events = events.filter((e) => inputs.areaIds.includes(e.area_id));
-  }
-
   /*
    * A venue with something on that night joins the shortlist outright.
    *
@@ -298,10 +368,10 @@ export async function fetchCandidates(
    * declined to use and an event it was never shown.
    *
    * Only venues that already passed the filters above are added. An event at a
-   * place that is inactive, unpriced, the wrong size for the party or outside
-   * the budget's price band is an event this plan cannot honestly include, and
-   * forcing it in would put a stop with no price into a budget that is
-   * supposed to mean something.
+   * place that is inactive, the wrong size for the party or outside the
+   * budget's price band is an event this plan cannot honestly include. Having
+   * no menu is no longer one of those reasons: a ticketed event is itself a
+   * price, and the filter above now counts it as one.
    */
   const alreadyPicked = new Set(picked.map((v) => v.id));
   const eventVenueIds = new Set(
@@ -313,19 +383,14 @@ export async function fetchCandidates(
   ];
 
   /*
-   * Fixtures for the shortlist, not for the catalogue.
+   * Fixtures for the shortlist, narrowed from the set already in hand.
    *
    * Keyed on the venue's own id rather than the menu owner's: a branch shares
    * a menu with Osu but has its own Thursday, and treating a fixture the way
    * prices are treated would put Osu's karaoke in the East Legon plan.
    */
-  const { data: scheduleRows } = await supabase
-    .from("venue_schedules")
-    .select("*")
-    .eq("is_active", true)
-    .in("venue_id", picked.map((v) => v.id));
-
-  const schedules = (scheduleRows ?? []) as VenueSchedule[];
+  const shortlisted = new Set(picked.map((v) => v.id));
+  const schedules = allSchedules.filter((f) => shortlisted.has(f.venue_id));
 
   /*
    * Both lists: the one a branch borrows and the one it keeps itself.
