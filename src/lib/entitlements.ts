@@ -16,11 +16,17 @@ import { createServiceClient } from "./supabase/server";
 /**
  * Five, once, ever.
  *
- * Enough to see what the thing does; small enough that a thousand people who
- * never convert costs tens of dollars rather than hundreds. A monthly free
- * allowance would be a monthly bill for exactly the users who will not pay.
+ * Monthly rather than for life, which 0042 changed and which is the more
+ * important half of the decision. A lifetime five is spent on the first
+ * evening somebody plans and the concierge is a closed door ever after; nobody
+ * subscribes to something they have not touched in a month. A monthly five is
+ * a reason to come back and a reason to run out.
+ *
+ * The cost argument survives the change. Five messages a month at roughly half
+ * a US cent each is about three cents a year per account that never pays,
+ * which is cheaper than them never returning.
  */
-export const FREE_LIFETIME_MESSAGES = 5;
+export const FREE_MONTHLY_MESSAGES = 5;
 
 /**
  * Fair use for a subscriber, not a target.
@@ -70,34 +76,31 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
     return {
       tier: "free",
       used: 0,
-      allowance: FREE_LIFETIME_MESSAGES,
-      remaining: FREE_LIFETIME_MESSAGES,
+      allowance: FREE_MONTHLY_MESSAGES,
+      remaining: FREE_MONTHLY_MESSAGES,
     };
   }
 
-  if (isPro(row)) {
-    const { data: usage } = await admin
-      .from("chat_usage")
-      .select("messages_used")
-      .eq("user_id", userId)
-      .eq("period_start", currentPeriodStart())
-      .maybeSingle();
+  /*
+   * One counter for both tiers since 0042. The month is the same month for
+   * everybody: UTC is the local calendar in Accra, so there is no question of
+   * whose midnight resets the count.
+   */
+  const { data: usage } = await admin
+    .from("chat_usage")
+    .select("messages_used")
+    .eq("user_id", userId)
+    .eq("period_start", currentPeriodStart())
+    .maybeSingle();
 
-    const used = Number(usage?.messages_used ?? 0);
-    return {
-      tier: "pro",
-      used,
-      allowance: PRO_MONTHLY_MESSAGES,
-      remaining: Math.max(0, PRO_MONTHLY_MESSAGES - used),
-    };
-  }
+  const used = Number(usage?.messages_used ?? 0);
+  const allowance = isPro(row) ? PRO_MONTHLY_MESSAGES : FREE_MONTHLY_MESSAGES;
 
-  const used = Number(row.lifetime_messages_used ?? 0);
   return {
-    tier: "free",
+    tier: isPro(row) ? "pro" : "free",
     used,
-    allowance: FREE_LIFETIME_MESSAGES,
-    remaining: Math.max(0, FREE_LIFETIME_MESSAGES - used),
+    allowance,
+    remaining: Math.max(0, allowance - used),
   };
 }
 
@@ -123,7 +126,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
 
   const { data, error } = await admin.rpc("consume_chat_message", {
     p_user_id: userId,
-    p_free_lifetime: FREE_LIFETIME_MESSAGES,
+    p_free_monthly: FREE_MONTHLY_MESSAGES,
     p_pro_monthly: PRO_MONTHLY_MESSAGES,
   });
 
@@ -141,7 +144,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
       allowed: false,
       tier: "free",
       used: 0,
-      allowance: FREE_LIFETIME_MESSAGES,
+      allowance: FREE_MONTHLY_MESSAGES,
       remaining: 0,
     };
   }
@@ -158,7 +161,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
       allowed: false,
       tier: "free",
       used: 0,
-      allowance: FREE_LIFETIME_MESSAGES,
+      allowance: FREE_MONTHLY_MESSAGES,
       remaining: 0,
     };
   }

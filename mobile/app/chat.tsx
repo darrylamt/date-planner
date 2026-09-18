@@ -19,6 +19,7 @@ import { useTheme } from "../src/lib/useTheme";
 import { useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
+import { Paywall } from "../src/components/chat/Paywall";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -280,7 +281,21 @@ export default function ChatScreen() {
           </Pressable>
         )}
 
-        {paywalled && <Paywall tier={allowance?.tier ?? "free"} />}
+        {paywalled && (
+          <Paywall
+            tier={allowance?.tier ?? "free"}
+            /*
+             * Re-read rather than assume. The purchase told RevenueCat, which
+             * tells Apple, which calls our webhook, which writes the row the
+             * server actually gates on. Unlocking the screen locally would be
+             * a paywall a rooted phone can talk its way past.
+             */
+            onPurchased={() => {
+              setPaywalled(false);
+              void fetchAllowance().then(setAllowance);
+            }}
+          />
+        )}
       </ScrollView>
 
       <Composer
@@ -512,36 +527,6 @@ function Composer({
             : "No free messages left"}
         </Text>
       )}
-    </View>
-  );
-}
-
-/**
- * Shown when the allowance runs out. Says what it is rather than selling:
- * there is nothing to buy yet, and pretending otherwise would be worse than
- * saying so.
- */
-function Paywall({ tier }: { tier: "free" | "pro" }) {
-  const c = useTheme();
-  return (
-    <View
-      style={{
-        marginTop: space.lg,
-        padding: space.lg,
-        borderRadius: radius.card,
-        backgroundColor: c.backgroundElement,
-        borderWidth: HAIRLINE,
-        borderColor: c.border,
-      }}
-    >
-      <Text variant="headline" style={{ marginBottom: space.xs }}>
-        {tier === "pro" ? "That is this month's allowance" : "That was your last free message"}
-      </Text>
-      <Text variant="footnote" tone="secondary">
-        {tier === "pro"
-          ? "Your messages reset at the start of next month. Planning a date from the questionnaire is unaffected."
-          : "Planning a date from the questionnaire stays free and unlimited. A subscription for unlimited chat is coming."}
-      </Text>
     </View>
   );
 }

@@ -202,29 +202,49 @@ export async function fetchAllowance(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
-    .from("entitlements")
-    .select("tier, lifetime_messages_used")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  /*
+   * The month everybody is in. UTC is the local calendar in Accra, so this is
+   * the same string the server's date_trunc produces and there is no question
+   * of whose midnight resets the count.
+   */
+  const period = new Date();
+  period.setUTCDate(1);
+  const periodStart = period.toISOString().slice(0, 10);
 
-  const row = data as { tier: "free" | "pro"; lifetime_messages_used: number } | null;
+  const [{ data }, { data: usage }] = await Promise.all([
+    supabase.from("entitlements").select("tier").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("chat_usage")
+      .select("messages_used")
+      .eq("user_id", user.id)
+      .eq("period_start", periodStart)
+      .maybeSingle(),
+  ]);
 
-  // No row means they have never chatted, which is a full free tier rather
+  const row = data as { tier: "free" | "pro" } | null;
+  const used = Number((usage as { messages_used?: number } | null)?.messages_used ?? 0);
+
+  // No row means they have never chatted, which is a full free month rather
   // than no allowance: the row is created on the first spend.
-  if (!row) return { tier: "free", remaining: FREE_LIFETIME, allowance: FREE_LIFETIME };
+  if (!row) return { tier: "free", remaining: FREE_MONTHLY, allowance: FREE_MONTHLY };
+
+  /*
+   * Pro is shown as unlimited rather than as a number. The fair-use cap is
+   * real and the server enforces it, but counting down from 150 in front of
+   * somebody who has paid turns a generous limit into a meter they watch.
+   */
   if (row.tier === "pro") return { tier: "pro", remaining: Infinity, allowance: Infinity };
 
   return {
     tier: "free",
-    remaining: Math.max(0, FREE_LIFETIME - Number(row.lifetime_messages_used ?? 0)),
-    allowance: FREE_LIFETIME,
+    remaining: Math.max(0, FREE_MONTHLY - used),
+    allowance: FREE_MONTHLY,
   };
 }
 
 /**
- * Mirrors FREE_LIFETIME_MESSAGES on the server, and is only ever used to draw
+ * Mirrors FREE_MONTHLY_MESSAGES on the server, and is only ever used to draw
  * the footer. The server decides what may actually be spent; if these two ever
  * disagree, the server is right and this is cosmetic.
  */
-const FREE_LIFETIME = 5;
+const FREE_MONTHLY = 5;
