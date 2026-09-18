@@ -7,6 +7,8 @@ import { searchMenuItems } from "./searchMenuItems";
 import { checkOpeningHours } from "./checkOpeningHours";
 import { estimateBudget } from "./estimateBudget";
 import { buildPlan, planFrom } from "./buildPlan";
+import { listPastOutings } from "./pastOutings";
+import { requestReservation } from "./requestReservation";
 
 /**
  * The tools, in a fixed order.
@@ -24,6 +26,8 @@ export const CHAT_TOOLS: ChatTool<never>[] = [
   estimateBudget,
   // Added at the end, not sorted in: the order is part of the cached prefix.
   buildPlan,
+  listPastOutings,
+  requestReservation,
 ] as unknown as ChatTool<never>[];
 
 const BY_NAME = new Map<string, ChatTool<never>>(CHAT_TOOLS.map((t) => [t.name, t]));

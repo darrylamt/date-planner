@@ -20,10 +20,19 @@
  * start a password reset it can complete, so the only way to recover one is to
  * ask an admin to reissue it. That is the correct amount of ceremony for a
  * credential that can change what a restaurant charges.
+ *
+ * `.invalid` rather than a real-looking domain. RFC 2606 reserves it precisely
+ * so it can never be registered by anybody, which makes the dead end permanent
+ * instead of conditional on us owning a name we do not own yet. A plausible
+ * domain someone else buys later is a domain that could start receiving our
+ * venues' addresses.
+ *
+ * This is baked into every account's email, so changing it strands every login
+ * already issued. Settled while none existed.
  */
-export const VENUE_EMAIL_DOMAIN = "venues.aduro.app";
+export const VENUE_EMAIL_DOMAIN = "venues.aduro.invalid";
 
-/** "kwame" → "kwame@venues.aduro.app". Lowercased, because logins are typed. */
+/** "kwame" → "kwame@venues.aduro.invalid". Lowercased, because logins are typed. */
 export function emailForUsername(username: string): string {
   return `${username.trim().toLowerCase()}@${VENUE_EMAIL_DOMAIN}`;
 }

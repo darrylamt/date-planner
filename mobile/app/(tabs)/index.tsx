@@ -101,7 +101,7 @@ export default function Home() {
               flexDirection: "row",
               alignItems: "center",
               gap: Spacing.two,
-              height: 48,
+              height: 54,
               paddingHorizontal: Spacing.three,
               borderRadius: Radius.pill,
               borderWidth: 2,
@@ -116,11 +116,11 @@ export default function Home() {
               Sparkles because that is what this means now. Any other glyph
               has to be learned; this one is already read as "ask the model".
             */}
-            <Symbol name="sparkles" size={19} color={c.accent} />
-            <Text variant="subheadline" weight="600" style={{ flex: 1 }}>
+            <Symbol name="sparkles" size={21} color={c.accent} />
+            <Text variant="headline" weight="600" style={{ flex: 1 }}>
               Ask adurobot
             </Text>
-            <Symbol name="chevron.right" size={13} color={c.textTertiary} />
+            <Symbol name="chevron.right" size={14} color={c.textTertiary} />
           </View>
         </Pressable>
 
