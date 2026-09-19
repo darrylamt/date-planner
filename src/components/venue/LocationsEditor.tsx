@@ -169,9 +169,10 @@ export function LocationsEditor({
                 </select>
                 {/*
                   Stated plainly, because it is the one answer they cannot
-                  change later: migration 0046 grants area_id on insert and
-                  withholds it on update, so a location cannot quietly move
-                  into a busier district after the fact.
+                  change later: 0046 grants area_id on insert and withholds it
+                  on update, and 0047 is what actually enforces that -- the
+                  grant alone never did, because authenticated holds
+                  table-level UPDATE on venues.
                 */}
                 <span className="mt-1.5 text-[12px] text-mutedbrown">
                   Decides which evenings it can appear in. Ask us if you need it moved.

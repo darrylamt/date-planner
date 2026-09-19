@@ -141,29 +141,90 @@ async function main() {
       .maybeSingle();
     ok("the number is public straight away", seen?.contact_phone === "+233 55 000 0000", seen?.contact_phone ?? "null");
 
-    // ── 7. The thing a planner must NOT be able to do ──────────────────────
-    const { data: moved, error: mErr } = await as
+  // ── 7. The columns 0038 and 0046 say are withheld ──────────────────────
+  //
+  // Read back through the service role every time, because PostgREST returns
+  // a matched row whether or not anything changed: an update that wrote
+  // nothing and an update that was refused look identical from the client.
+  // The first version of this test compared area_id against the value it
+  // already held, and passed a hole wide enough to move a venue through.
+  const { data: otherArea } = await admin
+    .from("areas")
+    .select("id")
+    .neq("id", area.id)
+    .limit(1)
+    .single();
+
+  const withheld: [string, unknown][] = [
+    ["area_id", otherArea.id],
+    ["price_band", "premium"],
+    ["is_free", true],
+    ["aesthetics", 5],
+    ["phone_status", "approved"],
+    ["phone_pending", "+233 00 000 0000"],
+  ];
+
+  for (const [col, value] of withheld) {
+    await as.from("venues").update({ [col]: value }).eq("id", venueId);
+    const { data: back } = await admin.from("venues").select(col).eq("id", venueId).single();
+    const wrote =
+      JSON.stringify((back as Record<string, unknown> | null)?.[col]) === JSON.stringify(value);
+    ok(`planner cannot write venues.${col}`, !wrote, wrote ? "WROTE IT" : "unchanged");
+  }
+
+  // A column they are meant to have, as a control: if this fails the
+  // enforcement in 0047 has gone too far and the portal saves nothing.
+  await as.from("venues").update({ description: "smoke test wrote this" }).eq("id", venueId);
+  const { data: descBack } = await admin
+    .from("venues")
+    .select("description")
+    .eq("id", venueId)
+    .single();
+  ok(
+    "planner can still write venues.description",
+    descBack?.description === "smoke test wrote this",
+    descBack?.description ?? "null"
+  );
+
+  // ── 7b. The escalation that made the column list urgent ────────────────
+  //
+  // manages_menu_of() grants write access to venue v's menu to whoever runs a
+  // venue whose menu_shared_from points at v. Right for a branch and its
+  // owner. If a portal account can set menu_shared_from itself it picks the
+  // target, and the chain ends in writing rows into somebody else's menu.
+  const { data: menuRows } = await admin.from("menu_items").select("venue_id").limit(400);
+  const tally = new Map<string, number>();
+  for (const r of (menuRows ?? []) as { venue_id: string }[]) {
+    tally.set(r.venue_id, (tally.get(r.venue_id) ?? 0) + 1);
+  }
+  const victim = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  if (victim) {
+    await as.from("venues").update({ menu_shared_from: victim }).eq("id", venueId);
+    const { data: shareBack } = await admin
       .from("venues")
-      .update({ area_id: area.id })
+      .select("menu_shared_from")
       .eq("id", venueId)
-      .select("id");
+      .single();
     ok(
-      "planner cannot move a location between areas",
-      Boolean(mErr) || (moved ?? []).length === 0,
-      mErr?.message ?? `${(moved ?? []).length} rows updated`
+      "planner cannot point menu_shared_from at another venue",
+      shareBack?.menu_shared_from !== victim,
+      shareBack?.menu_shared_from === victim ? "POINTED AT IT" : "unchanged"
     );
 
-    const { data: other } = await admin.from("venues").select("id").neq("id", venueId).limit(1).single();
-    const { data: hijack, error: hErr } = await as
-      .from("venues")
-      .update({ description: "hijacked" })
-      .eq("id", other.id)
+    const { data: intruded } = await as
+      .from("menu_items")
+      .insert({ venue_id: victim, name: "zz-test intrusion", price_ghs: 1, category: "other" })
       .select("id");
     ok(
-      "planner cannot edit a venue they did not make",
-      Boolean(hErr) || (hijack ?? []).length === 0,
-      hErr?.message ?? `${(hijack ?? []).length} rows updated`
+      "planner cannot write another venue's menu",
+      (intruded ?? []).length === 0,
+      (intruded ?? []).length ? "WROTE A ROW" : "refused"
     );
+    for (const row of intruded ?? []) {
+      await admin.from("menu_items").delete().eq("id", (row as { id: string }).id);
+    }
+  }
 
     // ── 8. A signed-in app user is not a planner ───────────────────────────
     const plain = createClient(url, anon, { auth: { persistSession: false } });
@@ -198,7 +259,8 @@ async function main() {
       await admin.from("event_planners").delete().eq("user_id", userId);
       await admin.auth.admin.deleteUser(userId);
     }
-    const leftoverV = await admin.from("venues").select("id").ilike("name", "ZZ Test%");
+    await admin.from("menu_items").delete().ilike("name", "zz-test%");
+  const leftoverV = await admin.from("venues").select("id").ilike("name", "ZZ Test%");
     const leftoverP = await admin.from("event_planners").select("user_id").ilike("username", "zz-test-%");
     ok(
       "cleaned up after itself",

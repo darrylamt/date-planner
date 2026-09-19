@@ -18,6 +18,7 @@
     "chat:ask": "tsx scripts/chat-smoke.ts",
     "grant": "tsx scripts/grant-pro.ts",
     "planner:smoke": "tsx scripts/planner-smoke.ts",
+    "contrast": "node scripts/contrast-audit.mjs",
     "paywall": "tsx scripts/paywall-preview.ts"
   },
   "dependencies": {

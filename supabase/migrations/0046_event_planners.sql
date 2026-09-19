@@ -143,6 +143,13 @@ create policy "venues: planner insert" on public.venues
  * venue appears in and a location that quietly relocates into a busier
  * district is the first thing anybody would try.
  *
+ * That last sentence was not true when this migration shipped. Leaving a
+ * column out of a grant does not withhold it: `authenticated` already held
+ * table-level UPDATE on venues from Supabase's defaults, so every column
+ * 0038 and this file describe as withheld was writable by any portal
+ * account. Migration 0047 enforces the list in a trigger and is what makes
+ * the paragraph above accurate. Do not rely on this grant alone.
+ *
  * Withheld on insert as well as update, and why:
  *   price_band        the budget bands; ours to set from what it costs
  *   price_source      says how much to trust a price, not a self-assessment
