@@ -34,3 +34,4 @@ next-env.d.ts
 .vercel
 venues-to-research.csv
 venues-to-research-instagram.csv
+venues-to-verify.txt
