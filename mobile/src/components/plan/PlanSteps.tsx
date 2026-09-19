@@ -4,7 +4,6 @@ import { Text } from "../Text";
 import { Group, Row } from "../List";
 import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
-import { Button } from "../Button";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
 import { WheelPicker } from "../WheelPicker";
@@ -209,20 +208,17 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
         <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
 
         {/*
-          A button rather than coloured text. This was a tinted line under the
-          slider that did not look like a control, and it only set the number:
-          somebody who wanted a free day still had to find Continue afterwards.
+          Only the consequence, never a second way to reach it.
+
+          There was a "Set my budget to zero" button here, sitting directly
+          under the slider's own "Spending nothing" link, which does the same
+          thing. Two controls for one answer reads as two different answers,
+          and the reasonable question is what the difference is. There is none,
+          so only the slider's link survives.
         */}
         {inputs.budget === 0 ? (
           <Note>Free places only, and we have assumed you are driving.</Note>
-        ) : (
-          <Button
-            title="Set my budget to zero"
-            kind="plain"
-            size="medium"
-            onPress={() => update({ budget: 0 })}
-          />
-        )}
+        ) : null}
 
         {/*
           Asked here rather than on its own screen, because it is a question

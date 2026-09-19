@@ -295,50 +295,112 @@ input[type="range"].budget-slider::-moz-range-thumb {
   color: var(--a-text);
 }
 
-/* Utilities the admin inherited from the app's palette. */
-.admin .text-mutedbrown { color: var(--a-muted) !important; }
-.admin .text-cocoa { color: var(--a-text-2) !important; }
-.admin .text-ink { color: var(--a-text) !important; }
-.admin .text-blush { color: #ffffff !important; }
-.admin .text-flame { color: var(--a-accent) !important; }
-.admin .text-flame-dark { color: var(--a-accent-dark) !important; }
-.admin .text-staletext { color: var(--a-warn) !important; }
-.admin .text-line { color: var(--a-line) !important; }
-
 /*
- * Every shade of cream, not just the solid one.
+ * The app's palette, rewritten for a light screen.
  *
- * `cream` is #1A0D14: the consumer app is a dark theme, and this admin is a
- * light one laid over the same Tailwind palette. Overriding `.bg-cream` alone
- * missed `bg-cream/60` and friends, because Tailwind emits an opacity variant
- * as its own class, so seventeen surfaces across the admin and the venue
- * portal fell through to dark plum at 60 percent over a pale grey page. The
- * result read as a muddy brown card with grey text on it: the stat tiles on
- * the dashboard and the sticky save bar on a venue were both unreadable.
+ * -- why this is a list and not two rules --------------------------------
+ * Every surface token in this palette is dark. cream is #1A0D14, shell is
+ * #26131D, and sand, parchment, whybg, avoidbg and track are all in the same
+ * range, because the consumer app is a dark theme. The admin is a light one
+ * laid over the same Tailwind build, so every one of them has to be answered
+ * or it paints a near-black panel on a pale grey page. Overriding `bg-cream`
+ * alone is what left `bg-shell` dark in seven places.
  *
- * Matched on the attribute so a new shade cannot reintroduce it. The tint that
- * the opacity was there to provide comes from --a-sunken instead, which is an
- * actual light colour rather than a dark one worn thin.
+ * -- why each token gets two selectors -----------------------------------
+ * Tailwind emits an opacity variant as a class of its own, so `bg-cream/60`
+ * does not match `.bg-cream` -- that is how the dashboard tiles and the
+ * sticky save bar stayed unreadable after `.bg-cream` had been "fixed". A
+ * substring match catches those, but it also catches `hover:text-flame`, and
+ * there are 27 of those: matching them would turn every hover state on in
+ * every state, permanently.
+ *
+ * So each token is matched at a word boundary instead -- at the start of the
+ * attribute, or after a space. `bg-cream/60` matches, `hover:bg-cream` does
+ * not, because the character before it is a colon.
+ *
+ * -- the ordering below is load-bearing ----------------------------------
+ * `bg-stale` is a prefix of `bg-staletext`, and `text-flame` of
+ * `text-flame-dark`. Same specificity, so the narrower rule has to come
+ * second to win. Moving these lines changes what they do.
  */
-.admin [class*="bg-cream"] { background-color: var(--a-surface) !important; }
-.admin [class*="bg-cream/4"],
-.admin [class*="bg-cream/5"],
-.admin [class*="bg-cream/6"] { background-color: var(--a-sunken) !important; }
-.admin [class*="bg-sand"] { background-color: var(--a-sunken) !important; }
-.admin .bg-flame { background-color: var(--a-accent) !important; }
-.admin .bg-staletext { background-color: var(--a-warn) !important; }
 
-.admin .border-line { border-color: var(--a-line) !important; }
-.admin .border-flame { border-color: var(--a-accent) !important; }
-.admin .border-staletext { border-color: var(--a-warn) !important; }
-.admin .border-mutedbrown { border-color: var(--a-line) !important; }
+/* Text. */
+.admin [class^="text-mutedbrown"],
+.admin [class*=" text-mutedbrown"] { color: var(--a-muted) !important; }
+.admin [class^="text-cocoa"],
+.admin [class*=" text-cocoa"] { color: var(--a-text-2) !important; }
+.admin [class^="text-ink"],
+.admin [class*=" text-ink"] { color: var(--a-text) !important; }
+.admin [class^="text-blush"],
+.admin [class*=" text-blush"] { color: #ffffff !important; }
+.admin [class^="text-line"],
+.admin [class*=" text-line"],
+.admin [class^="text-linesoft"],
+.admin [class*=" text-linesoft"] { color: var(--a-line) !important; }
+.admin [class^="text-flame"],
+.admin [class*=" text-flame"] { color: var(--a-accent) !important; }
+/* After text-flame, which is a prefix of it. */
+.admin [class^="text-flame-dark"],
+.admin [class*=" text-flame-dark"] { color: var(--a-accent-dark) !important; }
+.admin [class^="text-staletext"],
+.admin [class*=" text-staletext"],
+.admin [class^="text-amber"],
+.admin [class*=" text-amber"] { color: var(--a-warn) !important; }
 
-/* The sidebar keeps its dark ground, in this palette's neutrals. */
-.admin .bg-lagoon,
-.admin .bg-lagoon-mid,
-.admin .bg-lagoon-soft { background-color: var(--a-nav) !important; }
-.admin .text-lagoon-soft,
-.admin .text-lagoon-faint { color: var(--a-nav-muted) !important; }
+/* Surfaces that should read as the page's own card. */
+.admin [class^="bg-cream"],
+.admin [class*=" bg-cream"],
+.admin [class^="bg-shell"],
+.admin [class*=" bg-shell"],
+.admin [class^="bg-parchment"],
+.admin [class*=" bg-parchment"] { background-color: var(--a-surface) !important; }
+
+/* Surfaces that were a tint, and stay one -- from a light colour now,
+   rather than a dark one worn thin over a pale page. */
+.admin [class^="bg-cream/4"],
+.admin [class*=" bg-cream/4"],
+.admin [class^="bg-cream/5"],
+.admin [class*=" bg-cream/5"],
+.admin [class^="bg-cream/6"],
+.admin [class*=" bg-cream/6"],
+.admin [class^="bg-sand"],
+.admin [class*=" bg-sand"],
+.admin [class^="bg-whybg"],
+.admin [class*=" bg-whybg"],
+.admin [class^="bg-avoidbg"],
+.admin [class*=" bg-avoidbg"],
+.admin [class^="bg-track"],
+.admin [class*=" bg-track"],
+.admin [class^="bg-stale"],
+.admin [class*=" bg-stale"] { background-color: var(--a-sunken) !important; }
+
+/* After bg-stale, which is a prefix of it: this one is a badge, not a tint. */
+.admin [class^="bg-staletext"],
+.admin [class*=" bg-staletext"] { background-color: var(--a-warn) !important; }
+.admin [class^="bg-flame"],
+.admin [class*=" bg-flame"] { background-color: var(--a-accent) !important; }
+
+/* Borders. */
+.admin [class^="border-line"],
+.admin [class*=" border-line"],
+.admin [class^="border-linesoft"],
+.admin [class*=" border-linesoft"],
+.admin [class^="border-chipborder"],
+.admin [class*=" border-chipborder"],
+.admin [class^="border-mutedbrown"],
+.admin [class*=" border-mutedbrown"] { border-color: var(--a-line) !important; }
+.admin [class^="border-flame"],
+.admin [class*=" border-flame"] { border-color: var(--a-accent) !important; }
+.admin [class^="border-staletext"],
+.admin [class*=" border-staletext"] { border-color: var(--a-warn) !important; }
+
+/* The sidebar keeps its dark ground, in this palette's neutrals. The
+   boundary match catches bg-lagoon-mid/50, which the class match missed. */
+.admin [class^="bg-lagoon"],
+.admin [class*=" bg-lagoon"] { background-color: var(--a-nav) !important; }
+.admin [class^="text-lagoon"],
+.admin [class*=" text-lagoon"] { color: var(--a-nav-muted) !important; }
+
 
 /* Surfaces. */
 .admin .card {
@@ -399,6 +461,16 @@ input[type="range"].budget-slider::-moz-range-thumb {
 }
 .admin .btn2:hover { background: var(--a-sunken) !important; }
 .admin .btnsm { height: 34px; padding: 0 12px; font-size: 13.5px; }
+
+/*
+ * A destructive button says so.
+ *
+ * `!text-staletext` on a .btn2 loses to `.admin .btn2`, which is one class
+ * more specific, so every Remove button in the admin renders in ordinary body
+ * colour and reads as one more neutral action next to Save. Matched here at
+ * the same specificity as the rule that was beating it.
+ */
+.admin .btn2[class*="!text-staletext"] { color: var(--a-warn) !important; }
 
 /* Tables: denser, lighter rules, and a header that survives a long scroll. */
 .admin .tbl { background: var(--a-surface); }
