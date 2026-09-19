@@ -20,6 +20,7 @@
     "planner:smoke": "tsx scripts/planner-smoke.ts",
     "contrast": "node scripts/contrast-audit.mjs",
     "research:list": "tsx scripts/research-list.ts",
+    "research:check": "tsx scripts/research-check.ts",
     "paywall": "tsx scripts/paywall-preview.ts"
   },
   "dependencies": {

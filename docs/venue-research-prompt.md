@@ -11,8 +11,11 @@ admin's **Import CSV → Fill in venues** mode takes directly.
 2. Paste the prompt, then **20–30 names at a time**. More than that and models
    start padding the tail of the list with plausible-sounding filler, which is
    the one failure this whole exercise cannot absorb.
-3. Paste the CSV it returns into `/admin/import` → **Fill in venues** → Dry run.
-4. Read the dry-run report. Then Import.
+3. Save what it returns as a `.csv` and run `npm run research:check -- that.csv`.
+   It checks the names against the catalogue, catches tags outside the
+   vocabulary, and flags a cuisine that nearly duplicates one already in use.
+4. Fix what it reports, then paste into `/admin/import` → **Fill in venues** →
+   Dry run → Import.
 
 Empty cells are left alone, never written as blanks, so a partial answer is
 safe and re-running on the same venue later only adds.
@@ -76,6 +79,11 @@ RULES
    this list is silently dropped and the venue ends up with fewer tags than if
    you had picked carefully.
 
+   vibe_tags and best_for are DIFFERENT lists for DIFFERENT columns. Words
+   like date_night, first_date, friend_outing, casual_hangout and anniversary
+   belong in best_for and are not vibe tags. Putting one in this column loses
+   it.
+
 6. best_for — semicolon-separated, ONLY from this exact list:
 
    date_night, first_date, friend_outing, casual_hangout, anniversary
@@ -85,9 +93,19 @@ RULES
    first_date. Blank if unsure.
 
 7. cuisines — semicolon-separated, lowercase, only for places that serve food,
-   and only where you found the actual cuisine. Examples: ghanaian, italian,
-   chinese, indian, lebanese, japanese, continental, fast food, seafood,
-   pizza, grill. Blank for bars, activities and anywhere you are not sure.
+   and only where you found the actual cuisine.
+
+   PREFER these words, which the directory already uses. Reuse beats
+   precision here: "afro-caribbean" next to an existing "caribbean" splits one
+   kitchen into two that nothing can match across.
+
+   continental, ghanaian, local, grill, bakery, italian, japanese, korean,
+   chinese, asian, mexican, peruvian, caribbean, jamaican, nigerian, coffee,
+   afro-soul
+
+   Use a word outside that list only when none of them is honest — "lebanese"
+   and "indian" are fine if that is genuinely what it serves. Blank for bars,
+   activities and anywhere you are not sure.
 
 8. dress_code — only if the venue actually states one. Short: "Smart casual",
    "No slippers", "Smart". Blank if not stated anywhere. Most venues have no
@@ -97,9 +115,18 @@ RULES
    found the real account and it is clearly this venue. Do not guess from the
    name. Blank if unsure. A wrong handle sends people to a stranger.
 
-10. CSV mechanics: wrap any field containing a comma in double quotes. Never
+10. RETURN A ROW FOR EVERY NAME I GIVE YOU, in the order I gave them, with
+    no names added and none left out. A venue you found nothing about still
+    gets a row: its name and blanks. Silently dropping a name is worse than a
+    blank row, because nothing downstream can tell the difference between
+    "researched, found nothing" and "never looked at".
+
+    Count your rows against my list before you answer. If I give you twenty
+    names, return twenty rows.
+
+11. CSV mechanics: wrap any field containing a comma in double quotes. Never
     put a comma inside vibe_tags, best_for or cuisines — those use semicolons.
-    One row per venue, in the order I listed them.
+    Emit all seven fields on every row, including the trailing empty ones.
 
 Before you answer, re-read rule 1. Most rows should have some blank cells, and
 some rows will be entirely blank apart from the name. That is the expected
@@ -109,6 +136,22 @@ Here are the venues:
 ````
 
 ---
+
+## What the first batch of twenty actually did
+
+Worth knowing, because it calibrates what "good" looks like:
+
+- **All 19 names matched exactly.** The failure I expected most did not
+  happen, including one with an accent.
+- **5 of 19 came back blank.** This is the result to want. A model that
+  returns twenty full rows for twenty obscure Accra venues is writing fiction.
+- **One name was silently dropped** — twenty asked, nineteen returned. Rule 10
+  now exists for this, and `research:check` cannot catch it because the
+  missing row leaves no trace. Count the rows yourself.
+- **Two rows put `friend_outing` in `vibe_tags`.** Both would have imported
+  with the tag dropped. Rule 5 now spells out that the two lists are separate.
+- **`afro-caribbean` where the catalogue already says `caribbean`.** Rule 7
+  now gives the existing vocabulary to reuse.
 
 ## What to watch for in the dry run
 
