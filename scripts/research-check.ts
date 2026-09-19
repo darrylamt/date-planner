@@ -164,7 +164,20 @@ async function main() {
     const bf = list("best_for");
     const strayBf = bf.filter((t) => !BEST_FOR.includes(t));
     if (strayBf.length) {
-      problems.push(`Row ${n} "${name}": best_for has ${strayBf.map((t) => `"${t}"`).join(", ")}. Dropped.`);
+      /*
+       * Every value in best_for being wrong, on a row that is also short, is
+       * not a vocabulary mistake -- it is a column that was never emitted, so
+       * everything after it slid one place left. Said explicitly because the
+       * fix is to realign the row, and the automatic correction elsewhere
+       * would otherwise move one tag across and drop the rest as rubbish.
+       */
+      const shifted = bf.length === strayBf.length && r.length < HEADER.length;
+      problems.push(
+        `Row ${n} "${name}": best_for has ${strayBf.map((t) => `"${t}"`).join(", ")}. ` +
+          (shifted
+            ? "None of them are best_for values and the row is short — a column was skipped and everything after it shifted left. Realign this row by hand."
+            : "Dropped.")
+      );
     }
 
     for (const c of list("cuisines")) {
