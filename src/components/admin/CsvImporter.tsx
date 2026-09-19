@@ -26,7 +26,7 @@ export function CsvImporter({
 }) {
   const router = useRouter();
   const supabase = createClient();
-  const [mode, setMode] = useState<"venues" | "menu_items">("venues");
+  const [mode, setMode] = useState<"venues" | "menu_items" | "enrich">("venues");
   const [report, setReport] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -106,6 +106,89 @@ export function CsvImporter({
         }
       }
       return written;
+    }
+
+    /*
+     * Filling in what a venue already has a row for.
+     *
+     * The venues mode inserts, which is right for a new place and wrong for
+     * the job this was actually wanted for: taking a description, a set of
+     * vibe tags and a dress code for 190 venues that already exist and
+     * putting them on the rows that already exist. Run through the insert
+     * path that is 190 duplicates.
+     *
+     * So: match by name, update only the columns the file actually carries,
+     * and never blank a populated field with an empty cell. A research pass
+     * that found nothing about a venue should leave it exactly as it was, and
+     * a spreadsheet full of empty columns is the normal shape of that.
+     */
+    if (mode === "enrich") {
+      const byName = new Map(
+        venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
+      );
+
+      /** Only the columns a research pass is allowed to touch. */
+      const TEXT = ["description", "dress_code", "instagram_handle", "google_maps_url"] as const;
+      const LIST = ["vibe_tags", "best_for", "cuisines"] as const;
+
+      const updates: { row: number; id: string; values: Record<string, unknown> }[] = [];
+      let unmatched = 0;
+
+      for (const [i, r] of rows.entries()) {
+        const id = byName.get((r.name ?? "").trim().toLowerCase());
+        if (!id) {
+          if ((r.name ?? "").trim()) {
+            log.push(`Row ${i + 2}: no venue called "${r.name}"`);
+            unmatched += 1;
+          }
+          continue;
+        }
+
+        const values: Record<string, unknown> = {};
+        for (const key of TEXT) {
+          const raw = (r[key] ?? "").trim();
+          if (raw) values[key] = raw;
+        }
+        for (const key of LIST) {
+          const parts = (r[key] ?? "")
+            .split(/[;|,]/)
+            .map((x) => x.trim().toLowerCase())
+            .filter(Boolean);
+          if (parts.length) values[key] = parts;
+        }
+        /*
+         * aesthetics is ours, not the researcher's, and price_band decides
+         * which budgets a venue appears in. Both stay out of this on purpose:
+         * a model guessing at either would quietly re-rank the catalogue.
+         */
+        if (!Object.keys(values).length) continue;
+        updates.push({ row: i + 2, id, values });
+      }
+
+      log.unshift(
+        `${updates.length} venues to fill in, ${unmatched} names not recognised, ` +
+          `${rows.length - updates.length - unmatched} rows with nothing new.`
+      );
+
+      if (dryRun) {
+        setReport(log);
+        setBusy(false);
+        return;
+      }
+
+      for (const u of updates) {
+        // One at a time, because each row sets a different set of columns.
+        const { error } = await supabase.from("venues").update(u.values).eq("id", u.id);
+        if (error) log.push(`Row ${u.row}: ${error.message}`);
+        else ok += 1;
+      }
+
+      log.push(`Filled in ${ok} venues.`);
+      setRaw("");
+      setReport(log);
+      setBusy(false);
+      router.refresh();
+      return;
     }
 
     if (mode === "venues") {
@@ -346,11 +429,31 @@ export function CsvImporter({
         >
           Menu items
         </button>
+        <button
+          className={`chip ${mode === "enrich" ? "chip-on" : ""}`}
+          onClick={() => setMode("enrich")}
+        >
+          Fill in venues
+        </button>
       </div>
 
       <div className="card mt-4 p-5">
         <div className="text-[14px] leading-relaxed text-cocoa">
-          {mode === "venues" ? (
+          {mode === "enrich" ? (
+            <>
+              <b>Headers:</b>{" "}
+              <code className="font-mono text-[12.5px]">
+                name,description,vibe_tags,best_for,cuisines,dress_code,instagram_handle,google_maps_url
+              </code>
+              <br />
+              <span className="text-mutedbrown">
+                Matches venues by exact name and updates only the columns you include. An empty
+                cell is left alone, never written as blank, so a research pass that found nothing
+                about a venue changes nothing. Price band and aesthetics are deliberately not
+                accepted here.
+              </span>
+            </>
+          ) : mode === "venues" ? (
             <>
               <b>Headers:</b>{" "}
               <code className="font-mono text-[12.5px]">

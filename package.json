@@ -19,6 +19,7 @@
     "grant": "tsx scripts/grant-pro.ts",
     "planner:smoke": "tsx scripts/planner-smoke.ts",
     "contrast": "node scripts/contrast-audit.mjs",
+    "research:list": "tsx scripts/research-list.ts",
     "paywall": "tsx scripts/paywall-preview.ts"
   },
   "dependencies": {
