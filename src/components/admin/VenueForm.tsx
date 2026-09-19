@@ -111,6 +111,8 @@ export function VenueForm({
     reservation_required: venue?.reservation_required ?? false,
     instagram_handle: venue?.instagram_handle ?? "",
     phone: venue?.phone ?? "",
+    whatsapp_phone: venue?.whatsapp_phone ?? "",
+    booking_url: venue?.booking_url ?? "",
     google_maps_url: venue?.google_maps_url ?? "",
     image_url: venue?.image_url ?? "",
     gallery_urls: venue?.gallery_urls ?? [],
@@ -275,6 +277,13 @@ export function VenueForm({
           .map((x: string) => x.trim().toLowerCase())
           .filter(Boolean),
         aesthetics: v.aesthetics,
+        /*
+         * Null rather than "". Both columns are read as "is there one", and
+         * an empty string is a value: it would make Reserve believe there is
+         * a booking page and open about:blank.
+         */
+        whatsapp_phone: v.whatsapp_phone.trim() || null,
+        booking_url: v.booking_url.trim() || null,
         /*
          * Empty means this venue owns its menu. Null rather than "" because
          * the column is a uuid reference and an empty string is not one.
@@ -1033,6 +1042,46 @@ export function VenueForm({
             dialled under our name. Leaving it untouched changes nothing, and
             emptying it does not withdraw a live number, that is the{" "}
             <b className="text-ink">Withdraw</b> button on Phone review.
+          </div>
+        </div>
+        {/*
+          The other two ways to book, which until now only a venue could set.
+          Both were added for the Reserve button and then left editable
+          nowhere an admin could reach, so both sat at nought across the whole
+          catalogue while the button they feed fell through to a phone call.
+        */}
+        <div className={field}>
+          <span className="flbl">WhatsApp, for bookings</span>
+          <input
+            className="inp"
+            placeholder="Empty if they do not take WhatsApp bookings"
+            value={v.whatsapp_phone}
+            onChange={(e) => setV({ ...v, whatsapp_phone: e.target.value })}
+          />
+          <div className="mt-1 text-[12.5px] text-mutedbrown">
+            {/*
+              No approval queue on this one, and the reason is worth knowing:
+              the queue exists because `phone` is dialled under our name from
+              a reservation signed "sent via aduro". A WhatsApp number is the
+              same promise, so only put one here you would stand behind.
+            */}
+            Used live, with no approval step. A booking sent to an account
+            that does not exist fails without telling anybody, so leave it
+            empty unless you know they answer WhatsApp.
+          </div>
+        </div>
+        <div className={field}>
+          <span className="flbl">Booking page</span>
+          <input
+            className="inp"
+            placeholder="https://..."
+            value={v.booking_url}
+            onChange={(e) => setV({ ...v, booking_url: e.target.value })}
+          />
+          <div className="mt-1 text-[12.5px] text-mutedbrown">
+            Outranks both numbers on the Reserve button. A venue running a
+            booking system needs the booking in that system, not in somebody's
+            WhatsApp.
           </div>
         </div>
         <div className={field}>

@@ -34,6 +34,19 @@ export interface Venue {
   reservation_required: boolean;
   instagram_handle: string | null;
   phone: string | null;
+  /**
+   * The number that takes bookings by message, where they take them that way.
+   *
+   * Null means ring them instead, and is the common case: most Ghanaian
+   * mobiles are not WhatsApp business accounts, and a booking sent to one
+   * that is not fails without telling anybody.
+   */
+  whatsapp_phone?: string | null;
+  /**
+   * Where they take bookings online. Outranks both numbers on Reserve,
+   * because a venue running a booking system needs the booking in it.
+   */
+  booking_url?: string | null;
   google_maps_url: string | null;
   image_url: string | null;
   /**

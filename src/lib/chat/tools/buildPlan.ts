@@ -25,12 +25,33 @@ import type { ChatTool, ToolContext } from "./types";
  * assistant is already writing, so paying for a second call to produce words
  * it is about to restate would be spending twice for one paragraph.
  */
+/*
+ * What an unanswered question is worth.
+ *
+ * Every one of these was required, so a vague opener -- "plan me something in
+ * Osu on Saturday" -- could not reach the planner at all and the only move
+ * left was a form: how many, how long, from when, how much. That is a message
+ * each way before anything exists, and the person may not come back.
+ *
+ * The figures are the medians of the fifteen plans actually built through the
+ * questionnaire, not a guess at what is reasonable: GHS 800, two people, four
+ * hours, starting at seven. A plan on those is wrong in a way one sentence
+ * fixes, and the itinerary shows its own total, so being wrong is visible
+ * immediately rather than discovered at the till.
+ */
+const DEFAULTS = {
+  start_time: "19:00",
+  hours: 4,
+  party_size: 2,
+  budget_ghs: 800,
+} as const;
+
 const argsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  start_time: z.string().regex(/^\d{1,2}:\d{2}$/),
-  hours: z.number().min(1).max(12),
-  party_size: z.number().int().min(1).max(20),
-  budget_ghs: z.number().positive().max(100000),
+  start_time: z.string().regex(/^\d{1,2}:\d{2}$/).optional(),
+  hours: z.number().min(1).max(12).optional(),
+  party_size: z.number().int().min(1).max(20).optional(),
+  budget_ghs: z.number().positive().max(100000).optional(),
   areas: z.array(z.string()).max(6).optional(),
   vibes: z.array(z.string()).max(4).optional(),
   stops: z.number().int().min(2).max(5).optional(),
@@ -80,20 +101,26 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
   description:
     "Build a real, costed itinerary from the catalogue: venues, what to order, " +
     "prices and travel between them. Use when somebody wants an evening planned " +
-    "rather than a question answered. Needs the date, start time, length, party " +
-    "size and budget; ask for all of those at once if they are missing. The app " +
-    "shows the plan itself, so describe it in a sentence or two and do not list " +
-    "every stop back.",
+    "rather than a question answered. Only the date is needed. Start time, " +
+    "length, party size and budget all fall back to what most people choose " +
+    "(19:00, four hours, two people, GHS 800), so build the plan and say which " +
+    "of those you assumed rather than asking first. Pass anything they actually " +
+    "told you. The app shows the plan itself, so describe it in a sentence or " +
+    "two and do not list every stop back.",
   parameters: {
     type: "object",
     properties: {
       date: { type: "string", description: "ISO date, yyyy-mm-dd." },
-      start_time: { type: "string", description: "24h time HH:MM." },
-      hours: { type: "number", description: "How long the outing should run." },
-      party_size: { type: "integer", description: "How many people, including them." },
+      start_time: { type: "string", description: "24h time HH:MM. Defaults to 19:00." },
+      hours: { type: "number", description: "How long the outing should run. Defaults to 4." },
+      party_size: {
+        type: "integer",
+        description: "How many people, including them. Defaults to 2.",
+      },
       budget_ghs: {
         type: "number",
-        description: "Total for the whole party, in cedis. The plan spends up to it.",
+        description:
+          "Total for the whole party, in cedis. The plan spends up to it. Defaults to 800.",
       },
       areas: {
         type: "array",
@@ -135,7 +162,8 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
           "Anything they said about who it is for, in their own words. Used for the card's wording, never to filter.",
       },
     },
-    required: ["date", "start_time", "hours", "party_size", "budget_ghs"],
+    // The date alone. Everything else has a default worth more than a question.
+    required: ["date"],
     additionalProperties: false,
   },
   parse: (raw) => argsSchema.parse(raw),
@@ -203,6 +231,20 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
      */
     const digest = {
       built: true as const,
+      /*
+       * What was filled in for them, in the words the reply should use.
+       *
+       * Without this the model cannot tell a budget they gave from one it was
+       * handed, so it either says nothing -- and somebody discovers the plan
+       * assumed GHS 800 when they had 300 -- or hedges about every field on
+       * every plan. Naming only what was actually assumed costs one clause.
+       */
+      assumed: [
+        args.party_size == null ? `${DEFAULTS.party_size} people` : null,
+        args.budget_ghs == null ? `a GHS ${DEFAULTS.budget_ghs} budget` : null,
+        args.start_time == null ? `a ${DEFAULTS.start_time} start` : null,
+        args.hours == null ? `${DEFAULTS.hours} hours` : null,
+      ].filter(Boolean),
       spends_ghs: itinerary.est_total_ghs,
       budget_ghs: inputs.budget,
       stops: itinerary.stops.map((s) => ({
@@ -266,12 +308,14 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas): PlanInputs {
     // Only when they named nowhere. With areas resolved, this must be false or
     // fetchCandidates skips the area filter it was just given ids for.
     surpriseMe: areas.ids.length === 0,
-    partySize: args.party_size,
+    // The defaults land here rather than in the schema, so the result also
+    // carries what was assumed and the reply can say so.
+    partySize: args.party_size ?? DEFAULTS.party_size,
     companions: [],
-    budget: args.budget_ghs,
+    budget: args.budget_ghs ?? DEFAULTS.budget_ghs,
     date: args.date,
-    startTime: args.start_time,
-    hours: args.hours,
+    startTime: args.start_time ?? DEFAULTS.start_time,
+    hours: args.hours ?? DEFAULTS.hours,
     stops: args.stops,
     vibes: args.vibes ?? [],
     focus: args.focus ?? "everything",
