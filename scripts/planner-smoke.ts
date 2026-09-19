@@ -226,7 +226,48 @@ async function main() {
     }
   }
 
-    // ── 8. A signed-in app user is not a planner ───────────────────────────
+    // ── 7c. The other side of 0047: an admin must still get through ────────
+  //
+  // The enforcement in 0047 constrains portal accounts and waves admins past
+  // on is_admin(). If that check ever breaks, the admin forms stop saving
+  // price bands and aesthetics and say nothing about it -- PostgREST reports
+  // an update that changed nothing as a success, which is how planner_note
+  // and display_name each failed silently for the life of a feature.
+  //
+  // So the permission test has a counterpart: prove the gate still opens.
+  const adminEmail = `zz-test-admin-${stamp}@example.com`;
+  const { data: adminUser } = await admin.auth.admin.createUser({
+    email: adminEmail,
+    password,
+    email_confirm: true,
+  });
+  let adminOk = false;
+  let adminDetail = "could not create the test admin";
+  if (adminUser?.user) {
+    await admin.from("profiles").update({ is_admin: true }).eq("id", adminUser.user.id);
+    const asAdmin = createClient(url, anon, { auth: { persistSession: false } });
+    const { error: signInErr } = await asAdmin.auth.signInWithPassword({
+      email: adminEmail,
+      password,
+    });
+    if (signInErr) {
+      adminDetail = signInErr.message;
+    } else {
+      // price_band is withheld from a venue and is the admin's to set.
+      await asAdmin.from("venues").update({ price_band: "premium" }).eq("id", venueId);
+      const { data: band } = await admin
+        .from("venues")
+        .select("price_band")
+        .eq("id", venueId)
+        .single();
+      adminOk = band?.price_band === "premium";
+      adminDetail = band?.price_band ?? "null";
+    }
+    await admin.auth.admin.deleteUser(adminUser.user.id);
+  }
+  ok("an admin can still write a withheld column", adminOk, adminDetail);
+
+  // ── 8. A signed-in app user is not a planner ───────────────────────────
     const plain = createClient(url, anon, { auth: { persistSession: false } });
     const plainEmail = `zz-test-user-${stamp}@example.com`;
     const { data: pu } = await admin.auth.admin.createUser({
