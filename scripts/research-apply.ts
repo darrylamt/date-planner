@@ -40,6 +40,16 @@ const CUISINE_ALIASES: Record<string, string> = {
   "afro caribbean": "caribbean",
   "west african": "local",
   "african": "local",
+  "asian-fusion": "asian",
+  "asian fusion": "asian",
+  // What a menu in Accra means by "international" is what this catalogue has
+  // called continental in 35 other places. Two words for one thing is two
+  // kitchens the planner cannot match across.
+  international: "continental",
+  western: "continental",
+  european: "continental",
+  // A dish, not a cuisine, and the cuisine it implies is already in use.
+  sushi: "japanese",
 };
 
 function parseLine(line: string): string[] {
