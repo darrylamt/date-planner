@@ -208,6 +208,13 @@ export function minutesOfDay(time: string): number | null {
 export interface CompactVenue {
   id: string;
   name: string;
+  /**
+   * The description's first sentence, where there is one.
+   *
+   * Null means nobody has written one, which the model should treat as an
+   * unknown rather than as a dull venue.
+   */
+  blurb: string | null;
   area: string;
   type: Venue["type"];
   price: PriceNote;
@@ -231,6 +238,17 @@ export function compactVenue(
   const row: CompactVenue = {
     id: v.id,
     name: v.name,
+    /*
+     * One sentence, not the whole description.
+     *
+     * The concierge chooses between eight of these at once and was doing it
+     * on a name, a price and three vibe words, so 184 descriptions written
+     * for exactly this decision were invisible unless it drilled into a venue
+     * one at a time. The first sentence is where a description says what the
+     * place is; the rest is usually what it serves, which the menu sample
+     * already covers.
+     */
+    blurb: firstSentence(v.description),
     area: v.areas?.name ?? "",
     type: v.type,
     price: describePrice(v, menu),
@@ -244,4 +262,20 @@ export function compactVenue(
   }
   if (opts.ownerName) row.menu_from = opts.ownerName;
   return row;
+}
+
+
+/**
+ * The first sentence of a description, capped.
+ *
+ * Capped as well as cut, because a description written as one long sentence
+ * would otherwise arrive whole and this runs eight times per search against a
+ * model that is paid by the token.
+ */
+function firstSentence(text: string | null | undefined): string | null {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  const end = t.search(/[.!?](\s|$)/);
+  const one = end === -1 ? t : t.slice(0, end + 1);
+  return one.length > 150 ? one.slice(0, 147).trimEnd() + "\u2026" : one;
 }

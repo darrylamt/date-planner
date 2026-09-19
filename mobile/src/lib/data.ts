@@ -18,6 +18,44 @@ export async function fetchAreas(): Promise<Area[]> {
   return (data ?? []) as Area[];
 }
 
+/**
+ * The kitchens this catalogue actually has, commonest first.
+ *
+ * Derived rather than listed, because a hardcoded menu of cuisines is a
+ * promise the catalogue has to keep: offering Thai to somebody when no venue
+ * serves it produces an evening that ignores the one thing they asked for,
+ * and they have no way to tell that from the planner being bad at its job.
+ *
+ * Cheap enough to do on the questionnaire's behalf -- one column over 194
+ * rows -- and it stays right on its own as the catalogue grows.
+ */
+export async function fetchCuisines(): Promise<{ id: string; label: string }[]> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select("cuisines")
+    .eq("is_active", true);
+  if (error) return [];
+
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as { cuisines: string[] | null }[]) {
+    for (const c of row.cuisines ?? []) {
+      const key = c.trim().toLowerCase();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+
+  /*
+   * Two venues minimum. One venue is not a choice -- picking it either lands
+   * you there or, on the night it is closed, silently does nothing, and the
+   * second outcome is indistinguishable from the question being ignored.
+   */
+  return [...counts.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([id]) => ({ id, label: id.replace(/\b\w/g, (ch) => ch.toUpperCase()) }));
+}
+
 export async function fetchVenueContact(venueId: string): Promise<{
   phone: string | null;
   /**

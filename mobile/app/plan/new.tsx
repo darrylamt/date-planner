@@ -20,7 +20,7 @@ import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
 import { OccasionThemeProvider, useTheme } from "../../src/lib/useTheme";
 import { generatePlan } from "../../src/lib/api";
-import { SignInRequiredError, fetchAreas, savePlan } from "../../src/lib/data";
+import { SignInRequiredError, fetchAreas, fetchCuisines, savePlan } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import {
   OCCASION_IDS,
@@ -134,6 +134,7 @@ export default function PlanNew() {
   const [phase, setPhase] = useState<Phase>({ name: "steps", step: 0 });
   const [areas, setAreas] = useState<Area[]>([]);
   const [areasFailed, setAreasFailed] = useState(false);
+  const [cuisines, setCuisines] = useState<{ id: string; label: string }[]>([]);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -183,6 +184,16 @@ export default function PlanNew() {
     fetchAreas()
       .then((rows) => active && setAreas(rows))
       .catch(() => active && setAreasFailed(true));
+
+    /*
+     * Not fatal if it fails. Areas decide where a plan can go and their
+     * absence stops the questionnaire; the cuisine chips are an optional
+     * refinement, so a failure here hides them and everything else carries
+     * on. Silent for the same reason: there is nothing the person could do.
+     */
+    fetchCuisines()
+      .then((rows) => active && setCuisines(rows))
+      .catch(() => undefined);
 
     return () => {
       active = false;
@@ -452,7 +463,13 @@ export default function PlanNew() {
           </View>
         ) : (
           <>
-            <PlanSteps step={stepId} inputs={inputs} areas={areas} update={update} />
+            <PlanSteps
+              step={stepId}
+              inputs={inputs}
+              areas={areas}
+              cuisines={cuisines}
+              update={update}
+            />
             <StepMascot step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />
           </>
         )}

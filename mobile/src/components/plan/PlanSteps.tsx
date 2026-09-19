@@ -89,6 +89,8 @@ export interface StepProps {
   step: StepId;
   inputs: PlanInputs;
   areas: Area[];
+  /** Kitchens the catalogue actually holds. Empty until they load. */
+  cuisines?: { id: string; label: string }[];
   update: (patch: Partial<PlanInputs>) => void;
 }
 
@@ -121,7 +123,7 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PlanSteps({ step, inputs, areas, update }: StepProps) {
+export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepProps) {
   const solo = inputs.partySize <= 1;
   const pair = inputs.partySize === 2;
   const pronoun = pronounForGender(inputs.partner.gender);
@@ -368,6 +370,42 @@ export function PlanSteps({ step, inputs, areas, update }: StepProps) {
                 />
               ))}
             </Group>
+
+            {/*
+              The specific answer, under the coarse one rather than instead of
+              it. Most people can say "local or continental" and stop; the
+              person who wants Korean has been unable to say so at all, and it
+              is the most useful thing they could have told us -- it decides
+              which venues rank and which half of a mixed menu gets ordered
+              from. Optional, and skipping it means no preference rather than
+              no opinion.
+
+              Drawn from the catalogue, so nothing is offered that nothing
+              serves.
+            */}
+            {cuisines.length ? (
+              <>
+                <GroupLabel>Anything particular?</GroupLabel>
+                <ChipRow>
+                  {cuisines.map((c) => {
+                    const on = (inputs.cuisines ?? []).includes(c.id);
+                    return (
+                      <Chip
+                        key={c.id}
+                        label={c.label}
+                        selected={on}
+                        onPress={() => {
+                          const cur = inputs.cuisines ?? [];
+                          update({
+                            cuisines: on ? cur.filter((x) => x !== c.id) : [...cur, c.id],
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </ChipRow>
+              </>
+            ) : null}
           </>
         ) : null}
 

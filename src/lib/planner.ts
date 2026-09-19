@@ -1,4 +1,5 @@
 import type { Candidates } from "./matching";
+import { dishMatchesCuisine } from "./cuisineDishes";
 import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
@@ -306,11 +307,28 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number 
    * shares an adjective.
    */
   const cuisine = cuisineFit(v, inputs.cuisine) === true && inputs.cuisine !== "either" ? 4 : 0;
+  /*
+   * Naming a kitchen outranks everything else here.
+   *
+   * Somebody who asks for Korean has said the most specific thing the
+   * questionnaire allows, and a place that actually serves it should beat one
+   * that merely shares a mood -- six, so it clears two vibe tags. Still a
+   * score and not a filter: on a night when nothing Korean is open, a good
+   * evening somewhere else beats no evening at all.
+   *
+   * Absent cuisines score nothing rather than counting against, because 80 of
+   * 194 venues have none recorded and an unrecorded kitchen is unknown, not
+   * wrong.
+   */
+  const named = inputs.cuisines ?? [];
+  const specific =
+    named.length && (v.cuisines ?? []).some((c) => named.includes(c.toLowerCase())) ? 6 : 0;
   return (
     overlap * 3 +
     occasion * 2 +
     inArea +
     cuisine +
+    specific +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion)
   );
@@ -409,7 +427,12 @@ function planOrders(
   tier: OrderTier,
   durationMins: number,
   /** Minutes past midnight the party is expected to arrive. */
-  slotStartMinute: number
+  slotStartMinute: number,
+  /**
+   * Kitchens the party asked for, if any. Used to choose which half of a
+   * mixed menu to order from; never to refuse a venue.
+   */
+  wantedCuisines: string[] = []
 ): OrderPlan | null {
   /*
    * Venues that charge for a thing rather than for a person.
@@ -524,8 +547,30 @@ function planOrders(
    * With only one dish on the list, this is exactly the old behaviour.
    */
   const orderFrom = (category: string, people: number): OrderLine[] => {
-    const items = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
-    if (!items.length || people < 1) return [];
+    const all = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    if (!all.length || people < 1) return [];
+
+    /*
+     * Order from the half of the menu they asked for.
+     *
+     * A venue carrying four cuisines is still one menu, and choosing on price
+     * alone meant asking for Italian at Kula Bistro and being handed a
+     * burger: the right venue, the wrong half of its list. So when somebody
+     * named a kitchen, dishes that read as belonging to it come first.
+     *
+     * A preference and never a filter. Where nothing matches -- an ambiguous
+     * menu, a cuisine this has no words for -- the whole list comes back and
+     * the pick is what it always was. Refusing to feed somebody because their
+     * dish names are unusual would be a worse answer than a generic order.
+     *
+     * The price window below is applied after this, so a cheap plan stays
+     * cheap within the cuisine rather than reaching for its priciest dish.
+     */
+    const wanted = wantedCuisines;
+    const onTheme = wanted.length
+      ? all.filter((m) => dishMatchesCuisine(m.name, m.notes, wanted))
+      : [];
+    const items = onTheme.length ? onTheme : all;
 
     // At most four distinct dishes: enough to read as a table rather than a
     // canteen queue, few enough that the total stays predictable.
@@ -1043,7 +1088,8 @@ export function planItinerary(
         inputs.partySize,
         tier,
         ROLE_MINUTES[role],
-        slotStart
+        slotStart,
+        inputs.cuisines ?? []
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and

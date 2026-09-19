@@ -1,7 +1,8 @@
 /**
  * The venues worth researching, as a CSV to paste names from.
  *
- *   npm run research:list
+ *   npm run research:list                 # missing description / tags / best_for
+ *   npm run research:list -- --instagram  # missing an Instagram handle
  *
  * Writes venues-to-research.csv in the project root: every active venue
  * missing a description, vibe tags or best_for, with its area for context and
@@ -57,16 +58,29 @@ async function main() {
   const bare = (v: unknown) =>
     !v || (Array.isArray(v) ? v.length === 0 : !String(v).trim());
 
+  /*
+   * Two worklists, because they are two different jobs.
+   *
+   * The default chases what a venue is like, which a model can usually
+   * paraphrase from a listing. --instagram chases an account, which it either
+   * finds or does not. Mixing them wastes a batch: a venue with a description
+   * and no handle is finished for one job and untouched for the other.
+   */
+  const wantInstagram = process.argv.includes("--instagram");
+
   const rows = ((data ?? []) as unknown as Row[])
     .map((v) => {
-      const missing = [
-        bare(v.description) ? "description" : null,
-        bare(v.vibe_tags) ? "vibe_tags" : null,
-        bare(v.best_for) ? "best_for" : null,
-      ].filter(Boolean) as string[];
+      const missing = wantInstagram
+        ? bare(v.instagram_handle)
+          ? ["instagram_handle"]
+          : []
+        : ([
+            bare(v.description) ? "description" : null,
+            bare(v.vibe_tags) ? "vibe_tags" : null,
+            bare(v.best_for) ? "best_for" : null,
+          ].filter(Boolean) as string[]);
       return { name: v.name, area: v.areas?.name ?? "", missing };
     })
-    // A venue with all three is where a research pass pays for itself.
     .filter((r) => r.missing.length)
     .sort((a, b) => b.missing.length - a.missing.length || a.name.localeCompare(b.name));
 
@@ -75,13 +89,22 @@ async function main() {
     .concat(rows.map((r) => `${q(r.name)},${q(r.area)},${q(r.missing.join(" "))}`))
     .join("\n");
 
-  const out = path.join(process.cwd(), "venues-to-research.csv");
+  const out = path.join(
+    process.cwd(),
+    wantInstagram ? "venues-to-research-instagram.csv" : "venues-to-research.csv"
+  );
   fs.writeFileSync(out, csv + "\n", "utf8");
 
-  const all3 = rows.filter((r) => r.missing.length === 3).length;
-  console.log(`${rows.length} venues need something (${all3} need all three).`);
-  console.log(`Wrote ${out}`);
-  console.log("Paste 20-30 names at a time into the prompt in docs/venue-research-prompt.md.");
+  if (wantInstagram) {
+    console.log(`${rows.length} venues have no Instagram handle.`);
+    console.log(`Wrote ${out}`);
+    console.log("Paste 15-20 names at a time into docs/instagram-research-prompt.md.");
+  } else {
+    const all3 = rows.filter((r) => r.missing.length === 3).length;
+    console.log(`${rows.length} venues need something (${all3} need all three).`);
+    console.log(`Wrote ${out}`);
+    console.log("Paste 20-30 names at a time into docs/venue-research-prompt.md.");
+  }
 }
 
 void main();

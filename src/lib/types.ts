@@ -305,6 +305,18 @@ export interface PlanInputs {
   vibes: string[];
   focus: PlanFocus;
   cuisine: PlanCuisine;
+  /**
+   * Specific kitchens, when somebody named one.
+   *
+   * Separate from `cuisine`, which is the coarse local / continental / either
+   * question and stays because it is the one most people can answer. This is
+   * for the person who wants Korean: it narrows which venues are considered
+   * and, more usefully, which half of a mixed menu gets ordered from.
+   *
+   * Empty or absent means no preference, which is not the same as "any is
+   * equally good" -- it means nobody was asked.
+   */
+  cuisines?: string[];
   formality: Formality;
   /** Undefined behaves as "either", so a plan made before this still loads. */
   alcohol?: AlcoholChoice;
