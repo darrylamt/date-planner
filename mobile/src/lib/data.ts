@@ -29,12 +29,20 @@ export async function fetchVenueContact(venueId: string): Promise<{
    * is the worst way for a table to go unbooked.
    */
   whatsapp_phone: string | null;
+  /**
+   * Where they actually take bookings, when they take them online.
+   *
+   * Preferred over both numbers, because it is the channel the venue chose
+   * for itself: a place with a booking system does not want a WhatsApp
+   * message about a table it cannot see in that system.
+   */
+  booking_url: string | null;
   instagram_handle: string | null;
   reservation_required: boolean;
 } | null> {
   const { data } = await supabase
     .from("venues")
-    .select("phone, whatsapp_phone, instagram_handle, reservation_required")
+    .select("phone, whatsapp_phone, booking_url, instagram_handle, reservation_required")
     .eq("id", venueId)
     .maybeSingle();
   return data ?? null;

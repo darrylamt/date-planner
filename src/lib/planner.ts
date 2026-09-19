@@ -548,6 +548,8 @@ function planOrders(
       item: item.name,
       qty,
       price_ghs: Math.round(Number(item.price_ghs) * qty),
+      // The menu's own words, for the names that need them.
+      note: item.notes ?? null,
     }));
   };
 
@@ -616,7 +618,9 @@ function planOrders(
     if (anything) {
       const price = Math.round(Number(anything.price_ghs) * partySize);
       return {
-        orders: [{ item: anything.name, qty: partySize, price_ghs: price }],
+        orders: [
+          { item: anything.name, qty: partySize, price_ghs: price, note: anything.notes ?? null },
+        ],
         cost: price,
       };
     }
@@ -1431,6 +1435,8 @@ export function planItinerary(
                 start_time: onTonight.start_time,
                 image_url: onTonight.image_url ?? null,
                 contact_phone: onTonight.contact_phone ?? null,
+                booking_url: onTonight.booking_url ?? null,
+                reservation_required: onTonight.reservation_required ?? false,
               }
             : null,
           // Calling a restaurant "SOMETHING TO DO" because the activity slot

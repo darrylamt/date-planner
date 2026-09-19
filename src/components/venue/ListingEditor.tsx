@@ -12,6 +12,7 @@ export interface ListingRow {
   description: string | null;
   phone: string | null;
   whatsapp_phone: string | null;
+  booking_url: string | null;
   instagram_handle: string | null;
   image_url: string | null;
   gallery_urls: string[] | null;
@@ -54,6 +55,7 @@ export function ListingEditor({ row }: { row: ListingRow }) {
         description: v.description?.trim() || null,
         phone: v.phone?.trim() || null,
         whatsapp_phone: v.whatsapp_phone?.trim() || null,
+        booking_url: v.booking_url?.trim() || null,
         instagram_handle: v.instagram_handle?.trim() || null,
         image_url: v.image_url || null,
         gallery_urls: (v.gallery_urls ?? []).map((u) => u.trim()).filter(Boolean),
@@ -141,6 +143,24 @@ export function ListingEditor({ row }: { row: ListingRow }) {
             />
             <span className="mt-1 text-[12.5px] text-mutedbrown">
               Empty means we ask people to ring you instead of messaging.
+            </span>
+          </label>
+
+          <label className="flex flex-col">
+            <span className="flbl">Booking page</span>
+            <input
+              className="inp"
+              value={v.booking_url ?? ""}
+              placeholder="https://..."
+              onChange={(e) => set("booking_url", e.target.value)}
+            />
+            {/*
+              Said plainly because it changes what the Reserve button does,
+              and a venue running a booking system needs the booking to land
+              in that system rather than in somebody's WhatsApp.
+            */}
+            <span className="mt-1 text-[12.5px] text-mutedbrown">
+              If you have one, we send people straight here instead of messaging or ringing you.
             </span>
           </label>
 

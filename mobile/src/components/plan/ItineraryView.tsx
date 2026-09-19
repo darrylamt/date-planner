@@ -151,8 +151,24 @@ export function ItineraryView({
       const digits = (n: string | null | undefined) => n?.replace(/\D/g, "") || null;
       const whatsapp = digits(contact?.whatsapp_phone);
       const callable = digits(contact?.phone);
+      /*
+       * The event's own link first, then the venue's.
+       *
+       * A ticketed night at a restaurant is not booked through the
+       * restaurant, and sending somebody to the venue's table-booking page
+       * for a festival is sending them to the wrong place confidently.
+       */
+      const booking = stop.event?.booking_url?.trim() || contact?.booking_url?.trim() || null;
 
-      if (whatsapp) {
+      if (booking) {
+        /*
+         * Ahead of both numbers, because a venue that runs a booking system
+         * wants the booking in it. A WhatsApp message about a table that
+         * system cannot see is how a place ends up double-booked.
+         */
+        await Linking.openURL(booking);
+        setToast("Opening their booking page.");
+      } else if (whatsapp) {
         const msg =
           `Hello ${stop.name}! I would like to reserve a table for two on ` +
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
@@ -240,11 +256,21 @@ export function ItineraryView({
     await waitForModalToClose();
 
     const url = `${WEB_URL}/p/${slug}`;
+    const said = `Our plan for ${longDate(inputs.date)}`;
     try {
-      await Share.share({
-        message: `Our plan for ${longDate(inputs.date)}, ${url}`,
-        url,
-      });
+      /*
+       * The link goes in exactly one of these, and which one depends on the
+       * platform.
+       *
+       * iOS treats `message` and `url` as two separate items and hands both to
+       * whatever you picked, so a message with the link already in it arrives
+       * in WhatsApp as the sentence followed by the same link again. Android
+       * ignores `url` entirely, so leaving it out there would send a sentence
+       * with nothing to tap.
+       */
+      await Share.share(
+        Platform.OS === "ios" ? { message: said, url } : { message: `${said}, ${url}` }
+      );
     } catch {
       setToast("Could not open the share sheet.");
     }

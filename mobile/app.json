@@ -13,6 +13,7 @@
       "infoPlist": {
         "NSCalendarsUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
         "NSCalendarsWriteOnlyAccessUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsFullAccessUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
           "whatsapp",

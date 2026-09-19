@@ -80,6 +80,7 @@ export function VenueForm({
   venue,
   menuItems,
   schedules,
+  menuOwners = [],
 }: {
   areas: Area[];
   /** Areas with a centre derived from the venues already in them. */
@@ -88,6 +89,11 @@ export function VenueForm({
   menuItems: MenuItem[];
   /** Weekly fixtures: karaoke on Thursdays, a band on Fridays. */
   schedules: VenueSchedule[];
+  /**
+   * Venues this one could borrow a menu from: active, and not borrowing one
+   * themselves. Empty on a form that was rendered before this existed.
+   */
+  menuOwners?: { id: string; name: string; area: string }[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -109,6 +115,16 @@ export function VenueForm({
     image_url: venue?.image_url ?? "",
     gallery_urls: venue?.gallery_urls ?? [],
     is_active: venue?.is_active ?? true,
+    /*
+     * Which venue this one borrows its menu from, or "" for none.
+     *
+     * The column has existed since 0024 and five Honeysuckle branches already
+     * use it, but nothing in the admin could ever set it: it was written once
+     * by a migration and has been unreachable since, so every branch added
+     * afterwards got its own duplicate copy of the same menu or no menu at
+     * all.
+     */
+    menu_shared_from: venue?.menu_shared_from ?? "",
     is_free: venue?.is_free ?? false,
     cuisines: (venue?.cuisines ?? []).join(", "),
     // Three-valued in the database and three-valued here: "" is nobody has
@@ -259,6 +275,11 @@ export function VenueForm({
           .map((x: string) => x.trim().toLowerCase())
           .filter(Boolean),
         aesthetics: v.aesthetics,
+        /*
+         * Empty means this venue owns its menu. Null rather than "" because
+         * the column is a uuid reference and an empty string is not one.
+         */
+        menu_shared_from: v.menu_shared_from || null,
         /*
          * The only dietary claim in this catalogue with a person behind it, so
          * it is only ever written from this form and never from a menu. Blank
@@ -1284,8 +1305,61 @@ export function VenueForm({
         </table>
       </div>
 
-      {/* Menu items, by course */}
-      <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2">
+      {/* ── Branches: one menu, held once ── */}
+      <div className="mt-8">
+        <h2 className="font-display text-[18px] font-bold">Menu</h2>
+        <label className="mt-3 flex max-w-[520px] flex-col">
+          <span className="flbl">Where this menu comes from</span>
+          <select
+            className="inp"
+            value={v.menu_shared_from}
+            onChange={(e) => setV({ ...v, menu_shared_from: e.target.value })}
+          >
+            <option value="">This venue has its own menu</option>
+            {menuOwners.map((o) => (
+              <option key={o.id} value={o.id}>
+                Same menu as {o.name}
+                {o.area ? ` — ${o.area}` : ""}
+              </option>
+            ))}
+          </select>
+          {/*
+            The answer to "how do I import a branch's menu", which is: you do
+            not. You import it once on the venue that owns it, and every
+            branch pointing here shows it. Importing onto each branch is what
+            this field exists to stop, and it is how The Honeysuckle ended up
+            with one 182-item list and four empty ones.
+          */}
+          <span className="mt-1.5 text-[12px] text-mutedbrown">
+            Branches share one list. Set this, then add or import the items on the venue that
+            owns them — every branch pointing at it shows the same menu.
+          </span>
+        </label>
+      </div>
+
+      {v.menu_shared_from ? (
+        /*
+         * No editor at all when the menu lives elsewhere.
+         *
+         * The rows below are this venue's own menu_items, and a borrowing
+         * branch has none, so the table would show empty and invite somebody
+         * to fill it in — which is exactly the duplicate this field prevents.
+         * A link to the owner is the only useful thing on this screen.
+         */
+        <div className="why mt-4 not-italic">
+          This menu is held on{" "}
+          <a
+            className="font-semibold underline"
+            href={`/admin/venues/${v.menu_shared_from}`}
+          >
+            {menuOwners.find((o) => o.id === v.menu_shared_from)?.name ?? "another venue"}
+          </a>
+          . Edit it there and the change reaches every branch. Anything added here would be a
+          second copy that only this branch can see.
+        </div>
+      ) : (
+      <>
+      <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-[18px] font-bold">Menu items</h2>
         <span className="text-[13px] text-mutedbrown">
           {shown.length} item{shown.length === 1 ? "" : "s"}
@@ -1359,6 +1433,8 @@ export function VenueForm({
           </div>
         );
       })}
+      </>
+      )}
 
       {toast && <Toast message={toast} />}
     </div>

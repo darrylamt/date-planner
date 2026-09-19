@@ -21,6 +21,9 @@ const EMPTY = {
   source_url: "",
   image_url: "",
   contact_phone: "",
+  vibe_tags: "",
+  reservation_required: false,
+  booking_url: "",
 };
 
 export function EventsManager({
@@ -62,6 +65,9 @@ export function EventsManager({
       source_url: e.source_url ?? "",
       image_url: e.image_url ?? "",
       contact_phone: e.contact_phone ?? "",
+      vibe_tags: (e.vibe_tags ?? []).join(", "),
+      reservation_required: e.reservation_required ?? false,
+      booking_url: e.booking_url ?? "",
     });
   }
 
@@ -89,6 +95,19 @@ export function EventsManager({
        * it to sit in and no listing for it to leak onto.
        */
       contact_phone: form.contact_phone.trim() || null,
+      /*
+       * The event's own tags, not the venue's.
+       *
+       * A warehouse is not "loud" on a Tuesday and is on the night of the
+       * rave. Empty is left empty rather than copied from the venue, so the
+       * planner can tell "nobody said" from "the same as usual".
+       */
+      vibe_tags: form.vibe_tags
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean),
+      reservation_required: form.reservation_required,
+      booking_url: form.booking_url.trim() || null,
     };
     const q = editingId
       ? supabase.from("events").update(payload).eq("id", editingId)
@@ -188,6 +207,42 @@ export function EventsManager({
         <div>
           <span className="flbl">Source URL</span>
           <input className="inp h-[42px]" value={form.source_url} onChange={(e) => setForm({ ...form, source_url: e.target.value })} />
+        </div>
+        <div>
+          <span className="flbl">Vibe tags</span>
+          <input
+            className="inp h-[42px]"
+            placeholder="loud, outdoor, live band"
+            value={form.vibe_tags}
+            onChange={(e) => setForm({ ...form, vibe_tags: e.target.value })}
+          />
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            Commas. What this night is like, not what the place usually is.
+          </span>
+        </div>
+        <div>
+          <span className="flbl">Booking page</span>
+          <input
+            className="inp h-[42px]"
+            placeholder="https://..."
+            value={form.booking_url}
+            onChange={(e) => setForm({ ...form, booking_url: e.target.value })}
+          />
+          {/* Ahead of the venue's own link and both its numbers: a ticketed
+              night at a restaurant is not booked through the restaurant. */}
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            Used instead of the venue&apos;s, for this night only.
+          </span>
+        </div>
+        <div className="flex items-end">
+          <label className="flex items-center gap-2 pb-2 text-[14px]">
+            <input
+              type="checkbox"
+              checked={form.reservation_required}
+              onChange={(e) => setForm({ ...form, reservation_required: e.target.checked })}
+            />
+            Needs booking
+          </label>
         </div>
         <div>
           <span className="flbl">Who to call about it</span>

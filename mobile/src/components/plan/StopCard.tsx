@@ -47,7 +47,17 @@ export function StopCard({
    * venue_type existed carries none, and simply keeps the old actions.
    */
   const isActivityVenue = stop.venue_type === "activity" || stop.venue_type === "outdoor";
-  const canReserve = stop.reservation_required && !stop.reservation_requested;
+  /*
+   * Either the place needs booking, or tonight does.
+   *
+   * These are different facts and only one used to be asked. A restaurant
+   * that takes walk-ins all year still sells tickets for the night it puts a
+   * band on, and until the event could say so the plan sent people to a door
+   * that was already full.
+   */
+  const canReserve =
+    (stop.reservation_required || stop.event?.reservation_required === true) &&
+    !stop.reservation_requested;
 
   /** Quantity stepper. Dropping to zero removes the line entirely. */
   function changeQty(at: number, delta: number) {
@@ -79,6 +89,13 @@ export function StopCard({
    * will not open a URL containing any of it.
    */
   const organiser = stop.event?.contact_phone?.replace(/[^\d+]/g, "") || null;
+  /*
+   * Which order line is showing its note, by index.
+   *
+   * One at a time and closed by default: the note is an answer to "what is
+   * that", and a card that volunteers every answer at once is a menu again.
+   */
+  const [openNote, setOpenNote] = useState<number | null>(null);
 
   function openMaps() {
     const url =
@@ -177,8 +194,8 @@ export function StopCard({
             }}
           >
             {stop.orders.map((o, i) => (
+              <View key={`${o.item}-${i}`}>
               <View
-                key={`${o.item}-${i}`}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -186,9 +203,38 @@ export function StopCard({
                   paddingVertical: 6,
                 }}
               >
-                <Text variant="subheadline" style={{ flex: 1 }} numberOfLines={2}>
-                  {o.item}
-                </Text>
+                {/*
+                  Tappable only where there is a note, and it says so with the
+                  glyph rather than by being tried. Kitchens name dishes for
+                  regulars -- "Chairman", "Jollof Special" -- and the note is
+                  the only place the plan can say what one actually is.
+                */}
+                {o.note ? (
+                  <Pressable
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      setOpenNote(openNote === i ? null : i);
+                    }}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`What is ${o.item}`}
+                    accessibilityState={{ expanded: openNote === i }}
+                    style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 5 }}
+                  >
+                    <Text variant="subheadline" numberOfLines={2} style={{ flexShrink: 1 }}>
+                      {o.item}
+                    </Text>
+                    <Symbol
+                      name={openNote === i ? "chevron.up.circle" : "info.circle"}
+                      size={14}
+                      color={c.textTertiary}
+                    />
+                  </Pressable>
+                ) : (
+                  <Text variant="subheadline" style={{ flex: 1 }} numberOfLines={2}>
+                    {o.item}
+                  </Text>
+                )}
 
                 {editable ? (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
@@ -219,6 +265,22 @@ export function StopCard({
                 <Text variant="subheadline" tabular style={{ minWidth: 74, textAlign: "right" }}>
                   {ghs(o.price_ghs)}
                 </Text>
+              </View>
+
+              {/*
+                The menu's own words, indented under the name they explain and
+                never presented as ours. A kitchen that writes "served with
+                two sides" is making a promise; we are only repeating it.
+              */}
+              {openNote === i && o.note ? (
+                <Text
+                  variant="footnote"
+                  tone="secondary"
+                  style={{ paddingBottom: 8, paddingRight: 90 }}
+                >
+                  {o.note}
+                </Text>
+              ) : null}
               </View>
             ))}
           </View>

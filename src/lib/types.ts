@@ -215,6 +215,16 @@ export interface EventRow {
    * 0046 has no such column.
    */
   contact_phone?: string | null;
+  /**
+   * What this night is like, as distinct from what the venue usually is. A
+   * warehouse is not "loud" on a Tuesday and is on the night of the rave.
+   * Empty falls back to the venue's own tags rather than to nothing.
+   */
+  vibe_tags?: string[];
+  /** Whether this night needs booking, whatever the venue normally does. */
+  reservation_required?: boolean;
+  /** Where this night is booked, if not through the venue. */
+  booking_url?: string | null;
   is_active: boolean;
 }
 
@@ -321,6 +331,19 @@ export interface ItineraryOrder {
   item: string;
   qty: number;
   price_ghs: number; // total for qty, from real menu_items
+  /**
+   * What the menu says about the dish, quoted, where it says anything.
+   *
+   * Kitchens name things for regulars, not for strangers: "Jollof Special",
+   * "Chairman", "Mr Nice". The note is the only place a plan can say what
+   * that actually is, and until now it was dropped when the order was built
+   * -- the information existed one table away and never reached the person
+   * deciding whether to go.
+   *
+   * Optional, because a plan saved before this existed has none. Absent and
+   * empty mean the same thing here: nobody wrote one down.
+   */
+  note?: string | null;
 }
 
 export type Occasion =
@@ -399,6 +422,14 @@ export interface ItineraryStop {
      * app says which is which rather than offering two identical buttons.
      */
     contact_phone?: string | null;
+    /** Where this night is booked, when it is booked somewhere of its own. */
+    booking_url?: string | null;
+    /**
+     * Whether this night needs booking, as distinct from whether the venue
+     * usually does. A restaurant that takes walk-ins still sells tickets for
+     * the one night a year it puts a band on.
+     */
+    reservation_required?: boolean;
   } | null;
   /**
    * What the venue does every week that is on while you are here, already

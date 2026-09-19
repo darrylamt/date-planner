@@ -23,7 +23,7 @@ export default async function VenueListingPage({
   const { data } = await supabase
     .from("venues")
     .select(
-      "id, name, description, phone, whatsapp_phone, instagram_handle, image_url, gallery_urls, cuisines, dress_code, reservation_required, is_active, vibe_tags, min_party_size, max_party_size"
+      "id, name, description, phone, whatsapp_phone, booking_url, instagram_handle, image_url, gallery_urls, cuisines, dress_code, reservation_required, is_active, vibe_tags, min_party_size, max_party_size"
     )
     .eq("id", venue.id)
     .maybeSingle();
