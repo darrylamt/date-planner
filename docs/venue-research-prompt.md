@@ -145,9 +145,10 @@ Worth knowing, because it calibrates what "good" looks like:
   happen, including one with an accent.
 - **5 of 19 came back blank.** This is the result to want. A model that
   returns twenty full rows for twenty obscure Accra venues is writing fiction.
-- **One name was silently dropped** — twenty asked, nineteen returned. Rule 10
-  now exists for this, and `research:check` cannot catch it because the
-  missing row leaves no trace. Count the rows yourself.
+- **Nothing was dropped.** Nineteen asked, nineteen returned. Rule 10 below is
+  a precaution rather than a fix for something observed: a missing row leaves
+  no trace in the file, so `research:check` cannot catch one and only counting
+  against what you sent will.
 - **Two rows put `friend_outing` in `vibe_tags`.** Both would have imported
   with the tag dropped. Rule 5 now spells out that the two lists are separate.
 - **`afro-caribbean` where the catalogue already says `caribbean`.** Rule 7

@@ -1,0 +1,187 @@
+/**
+ * Apply a research CSV to the catalogue.
+ *
+ *   npm run research:apply -- batch.csv          # shows what it would do
+ *   npm run research:apply -- batch.csv --write  # does it
+ *
+ * The same rules as the admin's "Fill in venues" mode, from a terminal, so a
+ * batch can be checked and applied in one place rather than pasted into a
+ * browser.
+ *
+ * ── what it will not do ─────────────────────────────────────────────────
+ * Never blanks a field. An empty cell means the research found nothing, which
+ * is different from finding that a venue has no description, and the second
+ * is not a claim this process is entitled to make. So a value is only ever
+ * written over nothing, and re-running a batch later only adds.
+ *
+ * price_band and aesthetics are not accepted from a file at all. Those decide
+ * which budgets a venue appears in and how it ranks against its neighbours.
+ *
+ * ── the two corrections it makes ────────────────────────────────────────
+ * A best_for value found in vibe_tags is moved to the column it belongs in
+ * rather than dropped, because "friend_outing" in the wrong cell is a model
+ * confusing two lists and not a model being wrong about the venue. Anything
+ * else outside the vocabulary is dropped and reported.
+ */
+import fs from "fs";
+import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+const VIBES = [
+  "casual", "calm", "chill", "fun", "lively", "romantic", "foodie", "upscale",
+  "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
+];
+const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
+const HEADER = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
+
+/** Spellings that would split one kitchen in two. Extend as they turn up. */
+const CUISINE_ALIASES: Record<string, string> = {
+  "afro-caribbean": "caribbean",
+  "afro caribbean": "caribbean",
+  "west african": "local",
+  "african": "local",
+};
+
+function parseLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false;
+      } else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ",") { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+async function main() {
+  const file = process.argv[2];
+  const write = process.argv.includes("--write");
+  if (!file) {
+    console.error("Usage: npm run research:apply -- batch.csv [--write]");
+    process.exit(1);
+  }
+
+  const env: Record<string, string> = {};
+  for (const line of fs.readFileSync(path.join(process.cwd(), ".env.local"), "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m) env[m[1]] = m[2].trim();
+  }
+  const db = createClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE,
+    { auth: { persistSession: false } }
+  );
+
+  type V = {
+    id: string; name: string; description: string | null;
+    vibe_tags: string[] | null; best_for: string[] | null;
+    cuisines: string[] | null; cuisine: string | null;
+    dress_code: string | null; instagram_handle: string | null;
+  };
+  const { data } = await db
+    .from("venues")
+    .select("id, name, description, vibe_tags, best_for, cuisines, cuisine, dress_code, instagram_handle")
+    .eq("is_active", true);
+  const venues = (data ?? []) as unknown as V[];
+  const byName = new Map(venues.map((v) => [v.name.trim().toLowerCase(), v]));
+
+  const lines = fs.readFileSync(path.resolve(file), "utf8").split(/\r?\n/).filter((l) => l.trim());
+  const rows = lines.slice(1).map(parseLine);
+
+  const planned: { name: string; id: string; values: Record<string, unknown>; why: string[] }[] = [];
+  const skipped: string[] = [];
+
+  for (const [i, r] of rows.entries()) {
+    const n = i + 2;
+    const name = (r[0] ?? "").trim();
+    if (!name) continue;
+
+    const v = byName.get(name.toLowerCase());
+    if (!v) { skipped.push(`Row ${n} "${name}": no venue with this name`); continue; }
+
+    const get = (k: string) => (r[HEADER.indexOf(k)] ?? "").trim();
+    const list = (k: string) =>
+      get(k).split(/[;|]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+
+    const values: Record<string, unknown> = {};
+    const why: string[] = [];
+
+    // Text fields, only over nothing.
+    for (const k of ["description", "dress_code", "instagram_handle"] as const) {
+      const raw = get(k);
+      if (!raw) continue;
+      const existing = (v[k] ?? "").toString().trim();
+      if (existing) { why.push(`${k} already set, left alone`); continue; }
+      values[k] = raw;
+    }
+
+    // Tags, with the one correction worth making.
+    const rawVibes = list("vibe_tags");
+    const rawBest = list("best_for");
+    const misfiled = rawVibes.filter((t) => BEST_FOR.includes(t));
+    const vibes = rawVibes.filter((t) => VIBES.includes(t));
+    const dropped = rawVibes.filter((t) => !VIBES.includes(t) && !BEST_FOR.includes(t));
+    if (misfiled.length) why.push(`moved ${misfiled.join(", ")} from vibe_tags to best_for`);
+    if (dropped.length) why.push(`dropped unknown tag ${dropped.join(", ")}`);
+
+    const best = [...new Set([...rawBest, ...misfiled])].filter((t) => BEST_FOR.includes(t));
+    const badBest = rawBest.filter((t) => !BEST_FOR.includes(t));
+    if (badBest.length) why.push(`dropped unknown best_for ${badBest.join(", ")}`);
+
+    if (vibes.length && !(v.vibe_tags ?? []).length) values.vibe_tags = vibes;
+    else if (vibes.length) why.push("vibe_tags already set, left alone");
+    if (best.length && !(v.best_for ?? []).length) values.best_for = best;
+    else if (best.length) why.push("best_for already set, left alone");
+
+    const cuisines = list("cuisines").map((c) => {
+      const mapped = CUISINE_ALIASES[c];
+      if (mapped) why.push(`cuisine "${c}" -> "${mapped}"`);
+      return mapped ?? c;
+    });
+    if (cuisines.length && !(v.cuisines ?? []).length) values.cuisines = [...new Set(cuisines)];
+    else if (cuisines.length) why.push("cuisines already set, left alone");
+
+    if (!Object.keys(values).length) { skipped.push(`Row ${n} "${name}": nothing new`); continue; }
+    planned.push({ name: v.name, id: v.id, values, why });
+  }
+
+  console.log(`\n${planned.length} venues to update, ${skipped.length} rows with nothing to do.\n`);
+  for (const p of planned) {
+    console.log(`  ${p.name}`);
+    for (const [k, val] of Object.entries(p.values))
+      console.log(`     ${k}: ${Array.isArray(val) ? val.join("; ") : String(val).slice(0, 84)}`);
+    for (const w of p.why) console.log(`     · ${w}`);
+  }
+  if (skipped.length) {
+    console.log("\nNothing to do:");
+    for (const s of skipped) console.log("  - " + s);
+  }
+
+  if (!write) {
+    console.log("\nDry run. Re-run with --write to apply.");
+    return;
+  }
+
+  let ok = 0;
+  for (const p of planned) {
+    const { data: back, error } = await db
+      .from("venues")
+      .update(p.values)
+      .eq("id", p.id)
+      .select("id");
+    // .select() because an update matching nothing is a success in PostgREST.
+    if (error) console.log(`  FAILED ${p.name}: ${error.message}`);
+    else if (!back?.length) console.log(`  FAILED ${p.name}: matched no row`);
+    else ok += 1;
+  }
+  console.log(`\nUpdated ${ok} of ${planned.length}.`);
+}
+
+void main();

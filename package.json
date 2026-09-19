@@ -21,6 +21,7 @@
     "contrast": "node scripts/contrast-audit.mjs",
     "research:list": "tsx scripts/research-list.ts",
     "research:check": "tsx scripts/research-check.ts",
+    "research:apply": "tsx scripts/research-apply.ts",
     "paywall": "tsx scripts/paywall-preview.ts"
   },
   "dependencies": {
