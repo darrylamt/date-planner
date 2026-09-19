@@ -26,6 +26,7 @@
 import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
+import { instagramProfileTwice } from "./instagram";
 
 const VIBES = [
   "casual", "calm", "chill", "fun", "lively", "romantic", "foodie", "upscale",
@@ -144,6 +145,12 @@ async function main() {
     const n = i + 2;
     const name = (r[0] ?? "").trim();
     if (!name) continue;
+    /*
+     * A repeated header row, from two batches pasted together. Skipped rather
+     * than reported: it is not a venue called "name" and not a mistake worth
+     * a line of output.
+     */
+    if (name.toLowerCase() === "name") continue;
 
     const v = byName.get(name.toLowerCase());
     if (!v) { skipped.push(`Row ${n} "${name}": no venue with this name`); continue; }
@@ -206,6 +213,27 @@ async function main() {
     });
     if (cuisines.length && !(v.cuisines ?? []).length) values.cuisines = [...new Set(cuisines)];
     else if (cuisines.length) why.push("cuisines already set, left alone");
+
+    /*
+     * The handle has to exist, and this is the step that writes, so this is
+     * where it has to be asked.
+     *
+     * research-check asks the same question, but a check somebody can skip is
+     * not a guarantee. Two handles in one batch were real-looking, correctly
+     * cited and pointed at nothing, and only Instagram could say so.
+     */
+    if (typeof values.instagram_handle === "string") {
+      const found = await instagramProfileTwice(values.instagram_handle);
+      if (found.exists === false) {
+        why.push(`handle ${values.instagram_handle} does not exist on Instagram, skipped`);
+        delete values.instagram_handle;
+      } else if (found.exists === null) {
+        why.push(`handle ${values.instagram_handle} could not be verified, skipped`);
+        delete values.instagram_handle;
+      } else {
+        why.push(`handle is "${found.displayName}"`);
+      }
+    }
 
     if (!Object.keys(values).length) { skipped.push(`Row ${n} "${name}": nothing new`); continue; }
     planned.push({ name: v.name, id: v.id, values, why });

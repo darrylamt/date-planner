@@ -13,10 +13,7 @@
 import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
-import { execFile as execFileCb } from "child_process";
-import { promisify } from "util";
-
-const execFile = promisify(execFileCb);
+import { instagramProfileTwice } from "./instagram";
 
 const VIBES = [
   "casual", "calm", "chill", "fun", "lively", "romantic", "foodie", "upscale",
@@ -49,68 +46,6 @@ function plainUrl(raw: string): string {
   const md = raw.match(/\]\((https?:[^)]+)\)\s*$/);
   if (md) return md[1].trim();
   return raw.replace(/^\[|\]$/g, "").trim();
-}
-
-/**
- * Does this Instagram account exist, and whose is it?
- *
- * Instagram answers 200 for every handle, real or not, so the status code
- * says nothing -- a handle invented on the spot returns 200 exactly like a
- * real one. The page title is what differs: a real profile titles itself
- * "Display Name (@handle) • Instagram photos and videos", and one that does
- * not exist is titled just "Instagram".
- *
- * That gives two things the CSV could never give on its own: whether the
- * account is real, and what it calls itself, which is the only way to catch a
- * handle that exists and belongs to a different business.
- *
- * Fails soft. A blocked or slow request is unknown, not wrong.
- */
-async function instagramProfile(
-  handle: string
-): Promise<{ exists: boolean | null; displayName?: string }> {
-  try {
-    /*
-     * curl rather than fetch, and not by preference.
-     *
-     * Node's own fetch gets the logged-out app shell for every handle -- a
-     * 627KB page titled "Instagram", identical whether the account is real or
-     * invented on the spot -- so a checker built on it reports that every
-     * handle in the batch is fake. The first version of this did exactly
-     * that, to 23 good rows.
-     *
-     * The user agent below is short on purpose and must stay that way. A
-     * string containing a Chrome version gets the same app shell; without it
-     * Instagram serves the server-rendered profile, whose <title> carries the
-     * account's display name. Adding "Chrome/120" to look more like a browser
-     * silently breaks this back to condemning everything.
-     */
-    const { stdout } = await execFile(
-      "curl",
-      [
-        "-s",
-        "--max-time",
-        "20",
-        "-A",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        `https://www.instagram.com/${handle}/`,
-      ],
-      { maxBuffer: 20 * 1024 * 1024 }
-    );
-    const title = stdout.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "";
-    const decoded = title
-      .replace(/&#064;/g, "@")
-      .replace(/&amp;/g, "&")
-      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
-      .trim();
-    if (!decoded) return { exists: null };
-    if (decoded.toLowerCase() === "instagram") return { exists: false };
-    const nameOnly = decoded.split("(")[0].trim();
-    return { exists: true, displayName: nameOnly || decoded };
-  } catch {
-    // No curl, no network, or a timeout. Unknown, never "fake".
-    return { exists: null };
-  }
 }
 
 /** Minimal CSV reader: quoted fields, doubled quotes, no embedded newlines. */
@@ -207,6 +142,12 @@ async function main() {
     const n = i + 2;
     const name = (r[0] ?? "").trim();
     if (!name) return;
+    /*
+     * A repeated header row, from two batches pasted together. Skipped rather
+     * than reported: it is not a venue called "name" and not a mistake worth
+     * a line of output.
+     */
+    if (name.toLowerCase() === "name") return;
 
     /*
      * A short row is only dangerous if it could have shifted a value into the
@@ -351,14 +292,15 @@ async function main() {
    */
   const handleRows = rows
     .map((r, i) => ({ n: i + 2, name: (r[0] ?? "").trim(), handle: (r[HEADER.indexOf("instagram_handle")] ?? "").trim() }))
-    .filter((x) => x.handle);
+    // A repeated header, from two batches pasted together, is not a venue.
+    .filter((x) => x.handle && x.name.toLowerCase() !== "name");
 
   const liveNotes: string[] = [];
   if (handleRows.length) {
     console.log(`Checking ${handleRows.length} handles against Instagram…`);
     for (const h of handleRows) {
       const bare2 = h.handle.replace(/^@/, "");
-      const found = await instagramProfile(bare2);
+      const found = await instagramProfileTwice(bare2);
       if (found.exists === false) {
         problems.push(`Row ${h.n} "${h.name}": @${bare2} does not exist on Instagram.`);
       } else if (found.exists === null) {
