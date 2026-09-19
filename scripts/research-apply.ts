@@ -32,7 +32,19 @@ const VIBES = [
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
 ];
 const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
-const KNOWN = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
+/*
+ * evidence_url is read and never written.
+ *
+ * A handle is the one field where being wrong sends a real person to a
+ * stranger's account, so the prompt asks for the profile link beside it and
+ * the check confirms the two agree. It is not a venue column and never
+ * reaches the database -- it exists so a claim can be audited before it is
+ * believed.
+ */
+const KNOWN = [
+  "name", "description", "vibe_tags", "best_for", "cuisines", "dress_code",
+  "instagram_handle", "evidence_url",
+];
 
 /** Spellings that would split one kitchen in two. Extend as they turn up. */
 const CUISINE_ALIASES: Record<string, string> = {
@@ -149,6 +161,20 @@ async function main() {
       if (!raw) continue;
       const existing = (v[k] ?? "").toString().trim();
       if (existing) { why.push(`${k} already set, left alone`); continue; }
+      /*
+       * A handle only goes in with a link that backs it, and only when that
+       * link is the handle's own profile. Everything else here is a
+       * description somebody can disagree with; this one sends a person
+       * somewhere, and the wrong one sends them to a stranger.
+       */
+      if (k === "instagram_handle") {
+        const ev = get("evidence_url");
+        const tail = ev.toLowerCase().replace(/\/+$/, "").split("/").pop() ?? "";
+        if (!ev || !ev.toLowerCase().includes("instagram.com") || tail !== raw.replace(/^@/, "").toLowerCase()) {
+          why.push(`handle "${raw}" skipped: no matching evidence_url`);
+          continue;
+        }
+      }
       values[k] = raw;
     }
 

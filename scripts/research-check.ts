@@ -19,7 +19,19 @@ const VIBES = [
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
 ];
 const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
-const KNOWN = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
+/*
+ * evidence_url is read and never written.
+ *
+ * A handle is the one field where being wrong sends a real person to a
+ * stranger's account, so the prompt asks for the profile link beside it and
+ * the check confirms the two agree. It is not a venue column and never
+ * reaches the database -- it exists so a claim can be audited before it is
+ * believed.
+ */
+const KNOWN = [
+  "name", "description", "vibe_tags", "best_for", "cuisines", "dress_code",
+  "instagram_handle", "evidence_url",
+];
 
 /** Minimal CSV reader: quoted fields, doubled quotes, no embedded newlines. */
 function parseLine(line: string): string[] {
@@ -205,6 +217,29 @@ async function main() {
 
     const ig = get("instagram_handle");
     if (ig && !ig.startsWith("@")) problems.push(`Row ${n} "${name}": instagram_handle "${ig}" has no @.`);
+
+    /*
+     * The handle has to match the link offered as proof of it. A model that
+     * finds a real Accra restaurant account and then writes a slightly
+     * different handle beside it has produced something worse than a blank:
+     * a claim with a citation that does not support it.
+     */
+    const ev = get("evidence_url");
+    if (ig && !ev) {
+      problems.push(`Row ${n} "${name}": handle "${ig}" with no evidence_url. Unverifiable.`);
+    } else if (ig && ev) {
+      const handle = ig.replace(/^@/, "").toLowerCase();
+      const inUrl = ev.toLowerCase().replace(/\/+$/, "").split("/").pop() ?? "";
+      if (!ev.toLowerCase().includes("instagram.com")) {
+        problems.push(`Row ${n} "${name}": evidence_url "${ev}" is not an instagram.com link.`);
+      } else if (inUrl !== handle) {
+        problems.push(
+          `Row ${n} "${name}": handle "${ig}" does not match its evidence_url (".../${inUrl}").`
+        );
+      }
+    } else if (!ig && ev) {
+      notes.push(`Row ${n} "${name}": evidence_url given with no handle. Ignored.`);
+    }
 
     /*
      * A dress code that is a handle or a link is the same skipped-column bug
