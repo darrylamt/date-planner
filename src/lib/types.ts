@@ -201,6 +201,20 @@ export interface EventRow {
    * running against a database without migration 0036 has no such column.
    */
   image_url?: string | null;
+  /**
+   * Whoever is running this event, in their own words.
+   *
+   * Not a venue phone and never treated as one. The approval queue in
+   * migrations 0013, 0014 and 0028 exists because every number in it was read
+   * off somebody else's Instagram and might be wrong; this one was typed by
+   * the organiser about their own event, so there is nothing to verify and
+   * nothing to queue behind. Null means nobody gave one, which is not the
+   * same as the venue having no number.
+   *
+   * Optional, because a build running against a database without migration
+   * 0046 has no such column.
+   */
+  contact_phone?: string | null;
   is_active: boolean;
 }
 
@@ -375,6 +389,16 @@ export interface ItineraryStop {
     start_time: string | null;
     /** The poster, when there is one. Leads the stop's pictures. */
     image_url?: string | null;
+    /**
+     * Who to call about the event itself, where the organiser gave a number.
+     *
+     * Kept on the event and not merged into the venue's, because they are
+     * different promises. The venue's number is checked and reaches the venue
+     * for as long as it exists; this one reaches whoever is running one night
+     * and is meaningless the morning after. A stop can carry both, and the
+     * app says which is which rather than offering two identical buttons.
+     */
+    contact_phone?: string | null;
   } | null;
   /**
    * What the venue does every week that is on while you are here, already

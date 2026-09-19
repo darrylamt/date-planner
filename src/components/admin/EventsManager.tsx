@@ -20,6 +20,7 @@ const EMPTY = {
   category: "live_music",
   source_url: "",
   image_url: "",
+  contact_phone: "",
 };
 
 export function EventsManager({
@@ -60,6 +61,7 @@ export function EventsManager({
       category: e.category,
       source_url: e.source_url ?? "",
       image_url: e.image_url ?? "",
+      contact_phone: e.contact_phone ?? "",
     });
   }
 
@@ -76,6 +78,17 @@ export function EventsManager({
       category: form.category,
       source_url: form.source_url || null,
       image_url: form.image_url.trim() || null,
+      /*
+       * Written live, not into the approval queue.
+       *
+       * venues.phone earns its queue: migrations 0013, 0014 and 0028 exist
+       * because those numbers were read off Instagram and Google Maps, and a
+       * wrong one sends somebody to a stranger with a message signed "sent
+       * via aduro". A number attached to a single event is given by whoever
+       * is running it, and expires with the event, so there is no queue for
+       * it to sit in and no listing for it to leak onto.
+       */
+      contact_phone: form.contact_phone.trim() || null,
     };
     const q = editingId
       ? supabase.from("events").update(payload).eq("id", editingId)
@@ -157,12 +170,39 @@ export function EventsManager({
           <input type="time" className="inp h-[42px]" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
         </div>
         <div>
-          <span className="flbl">Ticket (GHS, blank = free)</span>
-          <input type="number" className="inp h-[42px] font-mono" value={form.cost_ghs} onChange={(e) => setForm({ ...form, cost_ghs: e.target.value })} />
+          <span className="flbl">Ticket (GHS)</span>
+          <input
+            type="number"
+            className="inp h-[42px] font-mono"
+            placeholder="0 if free"
+            value={form.cost_ghs}
+            onChange={(e) => setForm({ ...form, cost_ghs: e.target.value })}
+          />
+          {/* This said "blank = free" and blank has never meant free: it
+              writes null, and matching.ts reads null as unpriced, which
+              withholds a menu-less venue from the shortfall entirely. */}
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            0 is free. Blank is unknown, and keeps the venue out of budgeted plans.
+          </span>
         </div>
         <div>
           <span className="flbl">Source URL</span>
           <input className="inp h-[42px]" value={form.source_url} onChange={(e) => setForm({ ...form, source_url: e.target.value })} />
+        </div>
+        <div>
+          <span className="flbl">Who to call about it</span>
+          <input
+            className="inp h-[42px] font-mono"
+            inputMode="tel"
+            placeholder="+233 ..."
+            value={form.contact_phone}
+            onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
+          />
+          {/* Every other phone field in this admin writes to a queue. This
+              one does not, and there is no way to tell by looking. */}
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            Live immediately, no approval. This event only.
+          </span>
         </div>
         {/*
           The poster. An event is the one stop where the venue's usual

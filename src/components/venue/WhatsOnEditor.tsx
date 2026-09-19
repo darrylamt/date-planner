@@ -75,6 +75,7 @@ export function WhatsOnEditor({
   const [eCost, setECost] = useState("");
   const [eCategory, setECategory] = useState("live_music");
   const [eImage, setEImage] = useState("");
+  const [ePhone, setEPhone] = useState("");
 
   async function addWeekly() {
     if (!wTitle.trim()) return say("Give it a name.");
@@ -124,6 +125,17 @@ export function WhatsOnEditor({
         cost_ghs: eCost.trim() === "" ? null : Number(eCost),
         category: eCategory,
         image_url: eImage.trim() || null,
+        /*
+         * Straight in, with no approval step.
+         *
+         * Every other number in this database queues behind an admin,
+         * because every other number was read off somebody else's Instagram
+         * and might belong to somebody else entirely. This one is the
+         * organiser's own, about their own event. There is nothing to
+         * verify, and for a one-night event a queue means the poster goes up
+         * with no way to reach anybody about it.
+         */
+        contact_phone: ePhone.trim() || null,
       })
       .select("*")
       .single();
@@ -135,6 +147,7 @@ export function WhatsOnEditor({
     setEDate("");
     setECost("");
     setEImage("");
+    setEPhone("");
     say("Added");
   }
 
@@ -315,9 +328,21 @@ export function WhatsOnEditor({
               min={0}
               className="inp font-mono"
               value={eCost}
-              placeholder="free"
+              placeholder="0 if free"
               onChange={(e) => setECost(e.target.value)}
             />
+            {/*
+              The placeholder used to say "free", and it was wrong in the way
+              that costs you the booking. Blank writes null, and null means
+              nobody knows -- matching.ts only treats an event as priced when
+              the figure is a real number, so a place with no menu and a blank
+              entry price is withheld from every evening it could have been
+              in. A free event has to say 0 to be free.
+            */}
+            <span className="mt-1.5 text-[12px] text-mutedbrown">
+              Type 0 for free. Left blank we do not know the price, and we
+              leave you out of plans with a budget rather than guess.
+            </span>
           </label>
           <label className="flex flex-col">
             <span className="flbl">Kind</span>
@@ -335,7 +360,7 @@ export function WhatsOnEditor({
           </label>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 grid gap-4 md:grid-cols-[1fr_280px] md:items-start">
           {/* The poster is the whole reason an event stop looks different from
               an ordinary one: it leads the pictures, ahead of the venue's. */}
           <ImageField
@@ -345,6 +370,22 @@ export function WhatsOnEditor({
             folder="events"
             hint="Shown first, ahead of your usual pictures"
           />
+          <label className="flex flex-col">
+            <span className="flbl">Who to call about it</span>
+            <input
+              className="inp font-mono"
+              value={ePhone}
+              placeholder="+233 ..."
+              inputMode="tel"
+              onChange={(e) => setEPhone(e.target.value)}
+            />
+            {/* Said plainly, because every other number in this portal
+                behaves differently and a venue has no way to know why. */}
+            <span className="mt-1.5 text-[12px] text-mutedbrown">
+              Goes live straight away. It is shown on this event only, and
+              does not change the number on your listing.
+            </span>
+          </label>
         </div>
 
         <div className="mt-4 flex justify-end">

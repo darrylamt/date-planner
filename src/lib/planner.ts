@@ -1430,6 +1430,7 @@ export function planItinerary(
                 title: onTonight.title,
                 start_time: onTonight.start_time,
                 image_url: onTonight.image_url ?? null,
+                contact_phone: onTonight.contact_phone ?? null,
               }
             : null,
           // Calling a restaurant "SOMETHING TO DO" because the activity slot

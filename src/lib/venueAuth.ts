@@ -32,6 +32,16 @@ export interface VenueSession {
   userId: string;
   /** Every venue this login runs. A group with branches has several. */
   venues: { id: string; name: string; area: string | null }[];
+  /**
+   * Set when this login belongs to an event planner rather than a venue.
+   *
+   * The difference the portal has to care about is not what they can edit --
+   * migration 0046 routes a planner through the same venue_users rows, so
+   * every policy written in 0038 applies unchanged -- but that a planner can
+   * arrive owning nothing. A restaurant with no venue is a bug; a planner
+   * with no location is their first day.
+   */
+  planner: { username: string; displayName: string } | null;
 }
 
 /**
@@ -49,10 +59,29 @@ export async function requireVenueUser(): Promise<VenueSession> {
 
   if (!user) redirect("/venue/login");
 
-  const { data } = await supabase
-    .from("venue_users")
-    .select("venue_id, venues(id, name, areas(name))")
-    .eq("user_id", user.id);
+  const [{ data }, { data: plannerRow }] = await Promise.all([
+    supabase
+      .from("venue_users")
+      .select("venue_id, venues(id, name, areas(name))")
+      .eq("user_id", user.id),
+    /*
+     * Its own query rather than a join, because the two are unrelated: a
+     * planner's row says who they are, and venue_users says what they have
+     * made so far. A planner on day one has the first and none of the second.
+     */
+    supabase
+      .from("event_planners")
+      .select("username, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const planner = plannerRow
+    ? {
+        username: (plannerRow as { username: string }).username,
+        displayName: (plannerRow as { display_name: string }).display_name,
+      }
+    : null;
 
   const venues = (data ?? [])
     .map((row: { venues: unknown }) => row.venues as { id: string; name: string; areas: { name: string } | null } | null)
@@ -60,13 +89,65 @@ export async function requireVenueUser(): Promise<VenueSession> {
     .map((v) => ({ id: v.id, name: v.name, area: v.areas?.name ?? null }));
 
   /*
-   * Signed in, but running nothing. That is an app user who reached the portal
-   * rather than an error, so it says so plainly instead of offering a login
-   * form they would fill in with the same account.
+   * Signed in, but running nothing.
+   *
+   * For a venue account that is an app user who reached the portal rather
+   * than an error, so it says so plainly instead of offering a login form
+   * they would fill in with the same account.
+   *
+   * For a planner it is the ordinary first visit, and sending them to a page
+   * that says they are not a venue would be both wrong and the last thing
+   * they ever read here. They go to Locations, which is the one screen that
+   * works with nothing on the account yet.
    */
-  if (!venues.length) redirect("/venue/login?as=not-a-venue");
+  if (!venues.length) {
+    redirect(planner ? "/venue/locations?first=1" : "/venue/login?as=not-a-venue");
+  }
 
-  return { userId: user.id, venues };
+  return { userId: user.id, venues, planner };
+}
+
+/**
+ * The same gate, for the one page that has to survive an empty account.
+ *
+ * requireVenueUser redirects a planner with no locations to Locations, which
+ * means Locations itself cannot use it: it would redirect to itself forever.
+ */
+export async function requirePortalUser(): Promise<VenueSession> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/venue/login");
+
+  const [{ data }, { data: plannerRow }] = await Promise.all([
+    supabase
+      .from("venue_users")
+      .select("venue_id, venues(id, name, areas(name))")
+      .eq("user_id", user.id),
+    supabase
+      .from("event_planners")
+      .select("username, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const planner = plannerRow
+    ? {
+        username: (plannerRow as { username: string }).username,
+        displayName: (plannerRow as { display_name: string }).display_name,
+      }
+    : null;
+
+  const venues = (data ?? [])
+    .map((row: { venues: unknown }) => row.venues as { id: string; name: string; areas: { name: string } | null } | null)
+    .filter((v): v is { id: string; name: string; areas: { name: string } | null } => Boolean(v))
+    .map((v) => ({ id: v.id, name: v.name, area: v.areas?.name ?? null }));
+
+  if (!venues.length && !planner) redirect("/venue/login?as=not-a-venue");
+
+  return { userId: user.id, venues, planner };
 }
 
 /**

@@ -31,7 +31,7 @@ export default async function VenueListingPage({
   return (
     <>
       <Suspense>
-        <VenueNav venues={session.venues} currentVenueId={venue.id} />
+        <VenueNav venues={session.venues} currentVenueId={venue.id} planner={session.planner} />
       </Suspense>
 
       <main className="admin-main mx-auto w-full max-w-[1080px] px-5 py-7">

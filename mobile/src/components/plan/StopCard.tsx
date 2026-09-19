@@ -73,6 +73,12 @@ export function StopCard({
    * unavailable.
    */
   const instagram = instagramUrl(stop.instagram_handle);
+  /*
+   * Stripped to what tel: will dial. Organisers type a number the way it
+   * appears on the poster -- spaces, brackets, a leading 0 -- and the phone
+   * will not open a URL containing any of it.
+   */
+  const organiser = stop.event?.contact_phone?.replace(/[^\d+]/g, "") || null;
 
   function openMaps() {
     const url =
@@ -309,6 +315,23 @@ export function StopCard({
           />
           {canReserve ? (
             <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
+          ) : null}
+          {/*
+            The organiser, on an event that came with a number.
+
+            Labelled "Organiser" and not "Call", because it sits next to
+            Reserve and the two reach different people: Reserve is the venue,
+            which will still answer next month, and this is whoever is running
+            one night. Shown only where there is one, unlike Instagram above,
+            because an absent organiser's number is not a gap in our
+            catalogue to admit to -- most stops have no event at all.
+          */}
+          {organiser ? (
+            <StopAction
+              icon="person.crop.circle.badge.questionmark"
+              label="Organiser"
+              onPress={() => void Linking.openURL(`tel:${organiser}`)}
+            />
           ) : null}
           {/*
             Last, and never the most prominent thing on the card. Someone
