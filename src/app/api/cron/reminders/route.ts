@@ -23,6 +23,21 @@ import type { SavedPlan } from "@/lib/types";
  * skipped than repeated, because the failure mode of the other order is
  * somebody's phone buzzing every hour all night.
  */
+/*
+ * ── the schedule, and why it is once a day ──────────────────────────────
+ * vercel.json asks for this at 18:00 and no more often, because a Hobby
+ * account allows exactly one run per day per job. The first version asked for
+ * "0 18,19,20,21" and Vercel refused the whole deployment with
+ * cron_jobs_limits_reached -- not a failed build, a rejected API call, so
+ * there was no build log to read and no failure anywhere in the dashboard.
+ * Twelve commits piled up behind it and the site quietly served three-day-old
+ * code while every push appeared to succeed.
+ *
+ * The hour check below is what makes a single run safe. Vercel may fire a
+ * Hobby cron anywhere inside its hour, and a reminder that arrives at
+ * breakfast for tonight's plan is worse than none, so the route decides for
+ * itself whether now is a reasonable time and no-ops when it is not.
+ */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
