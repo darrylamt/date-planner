@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
-import { VenueTable } from "@/components/admin/VenueTable";
+import { VenueTable, type Queue } from "@/components/admin/VenueTable";
 import { adminCounts } from "@/lib/adminCounts";
 import { fetchAllRows } from "@/lib/fetchAll";
 
@@ -97,129 +97,67 @@ export default async function AdminVenuesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-[24px] font-bold">Venues</h1>
-          <div className="text-[14px] text-mutedbrown">
-            {rows.length} venues · {staleCount} stale ·{" "}
-            <span className={unpricedCount ? "font-semibold text-staletext" : ""}>
-              {unpricedCount} with no prices
-            </span>{" "}
-            ·{" "}
-            <span className={noHoursCount ? "font-semibold text-staletext" : ""}>
-              {noHoursCount} without opening hours
-            </span>
-          </div>
+          {/*
+            The total, and nothing else. Stale, unpriced and no-hours were
+            spelled out here, again as tiles underneath, and again as chips
+            below that: the same three numbers three times on one screen. The
+            chips are the version that can be clicked.
+          */}
+          <div className="text-[14px] text-mutedbrown">{rows.length} venues</div>
         </div>
         <Link href="/admin/venues/new" className="btn btnsm">
           Add venue
         </Link>
       </div>
-      <Triage counts={counts} />
-      <VenueTable rows={rows} />
+      <VenueTable rows={rows} queues={queues(counts)} />
     </div>
   );
 }
 
 /**
- * What needs doing, above the table.
+ * The queues that are not a filter on this table.
  *
- * Each card is a queue with work in it, and a queue with nothing waiting is
- * not shown at all, an admin page covered in zeroes trains you to ignore it.
+ * Reports, unapproved numbers and thin menus live on their own pages and
+ * cannot be expressed as a predicate over the rows here, so they travel as
+ * links rather than filters. Everything else that used to be a tile --
+ * unpriced, stale, no hours, not on Google -- is already a chip, and was
+ * being counted twice on the same screen.
+ *
+ * A queue with nothing in it is not shown. An admin page covered in zeroes
+ * trains you to stop reading it.
  */
-function Triage({ counts }: { counts: Awaited<ReturnType<typeof adminCounts>> }) {
-  const cards = [
+function queues(counts: Awaited<ReturnType<typeof adminCounts>>): Queue[] {
+  return [
+    // First, because it is the only queue where a real person is waiting.
     {
-      // First, because it is the only queue where a real person is waiting on
-      // an answer rather than a record waiting on attention.
       href: "/admin/reports",
+      label: counts.openReports === 1 ? "Report" : "Reports",
       n: counts.openReports,
-      label: counts.openReports === 1 ? "report" : "reports",
-      hint: "People told us something was wrong",
       urgent: true,
     },
     {
       href: "/admin/phones",
+      label: "Reported numbers",
       n: counts.phonesReported,
-      label: counts.phonesReported === 1 ? "reported number" : "reported numbers",
-      hint: "Someone said this number was wrong",
       urgent: true,
     },
     {
       href: "/admin/phones",
+      label: "Phone approval",
       n: counts.phonesPending,
-      label: "awaiting phone approval",
-      hint: "Not dialled until you approve it",
       urgent: true,
     },
+    /*
+     * Above the unpriced chip in importance, though it reads as milder: an
+     * unpriced venue is withheld from plans and a thin one is not. It looks
+     * complete, passes every check, and serves the same four dishes to
+     * everyone who is ever sent there.
+     */
     {
-      /*
-       * Above the unpriced queue, because an unpriced venue is withheld and a
-       * thin one is not: it looks complete, passes every check, and serves the
-       * same four dishes to everyone who is ever sent there.
-       */
       href: "/admin/menus",
+      label: "Thin menus",
       n: counts.thinMenus,
-      label: "with too little menu",
-      hint: "Everyone who eats there gets the same few dishes",
       urgent: true,
     },
-    {
-      href: "/admin/unpriced",
-      n: counts.unpriced,
-      label: "unpriced",
-      hint: "Withheld from plans until priced",
-      urgent: true,
-    },
-    {
-      href: "/admin/prices",
-      n: counts.staleMenus,
-      label: "stale menus",
-      hint: "Not touched in 90 days",
-      urgent: false,
-    },
-    {
-      href: "/admin?filter=no-hours",
-      n: counts.noHours,
-      label: "without opening hours",
-      hint: "Nothing stops a plan sending someone on a closed day",
-      urgent: true,
-    },
-    {
-      href: "/admin?filter=unlinked",
-      n: counts.unlinked,
-      label: "not linked to Google",
-      hint: "Nothing will notice if these close",
-      urgent: false,
-    },
-  ].filter((c) => c.n > 0);
-
-  if (!cards.length) {
-    return (
-      <p className="mt-5 rounded-bar border border-line bg-cream/60 p-4 text-[14px] text-mutedbrown">
-        Nothing needs attention, every venue is priced, verified and its number approved.
-      </p>
-    );
-  }
-
-  return (
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {cards.map((c, i) => (
-        <Link
-          key={i}
-          href={c.href}
-          className="rounded-bar border border-line bg-cream/60 p-4 transition hover:border-mutedbrown"
-        >
-          <div className="flex items-baseline gap-2">
-            <span
-              className={`font-display text-[24px] font-bold tabular-nums ${
-                c.urgent ? "text-staletext" : ""
-              }`}
-            >
-              {c.n}
-            </span>
-            <span className="text-[14px]">{c.label}</span>
-          </div>
-          <div className="mt-1 text-[12px] text-mutedbrown">{c.hint}</div>
-        </Link>
-      ))}
-    </div>
-  );
+  ].filter((q) => q.n > 0);
 }

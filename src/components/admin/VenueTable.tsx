@@ -54,7 +54,15 @@ const FILTERS = [
   { id: "inactive", label: "Inactive", test: (r: Row) => !r.is_active },
 ] as const;
 
-export function VenueTable({ rows }: { rows: Row[] }) {
+export interface Queue {
+  href: string;
+  label: string;
+  n: number;
+  /** Somebody is waiting on this one, or a venue is being withheld. */
+  urgent: boolean;
+}
+
+export function VenueTable({ rows, queues = [] }: { rows: Row[]; queues?: Queue[] }) {
   const params = useSearchParams();
   const active = params.get("filter") ?? "all";
   const current = FILTERS.find((f) => f.id === active) ?? FILTERS[0];
@@ -91,6 +99,42 @@ export function VenueTable({ rows }: { rows: Row[] }) {
             </Link>
           );
         })}
+
+        {/*
+          The queues that are not filters, in the same row and the same shape.
+
+          They used to be a grid of tiles above this, each with a number, a
+          label and a sentence underneath. Four of the seven counted exactly
+          what a chip here already counts, so the same figure appeared twice
+          on one screen in two different designs, and the explanatory sentence
+          was the least readable text in the admin.
+
+          These four have nowhere else to go: a report, an unapproved number
+          and a thin menu are queues on other pages, not ways of filtering
+          this table. So they keep a destination and lose the tile.
+        */}
+        {queues.length ? (
+          <>
+            <span aria-hidden className="mx-1 h-5 w-px bg-line" />
+            {queues.map((q) => (
+              <Link
+                key={q.href}
+                href={q.href}
+                className="rounded-full border border-line px-3 py-1.5 text-[13px] font-semibold text-cocoa transition-colors hover:border-flame hover:text-flame"
+              >
+                {q.label}
+                {/*
+                  Urgent colours the number rather than the whole chip. A row
+                  of chips that are each shouting reads as one flat alarm, and
+                  the thing that actually differs between them is the count.
+                */}
+                <span className={`ml-1.5 ${q.urgent ? "font-bold text-staletext" : "text-mutedbrown"}`}>
+                  {q.n}
+                </span>
+              </Link>
+            ))}
+          </>
+        ) : null}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
