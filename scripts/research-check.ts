@@ -206,6 +206,20 @@ async function main() {
     const ig = get("instagram_handle");
     if (ig && !ig.startsWith("@")) problems.push(`Row ${n} "${name}": instagram_handle "${ig}" has no @.`);
 
+    /*
+     * A dress code that is a handle or a link is the same skipped-column bug
+     * one place further right, and the quiet one: nothing validates a dress
+     * code, so "@kulabistro.accra" would have imported as this venue's dress
+     * code and the handle would have been lost without a word.
+     */
+    const dc = get("dress_code");
+    if (dc && (dc.startsWith("@") || /^https?:/i.test(dc) || dc.includes("instagram.com"))) {
+      problems.push(
+        `Row ${n} "${name}": dress_code is "${dc}", which is a handle or a link. ` +
+          `The dress_code column was skipped and the handle shifted into it. Realign this row.`
+      );
+    }
+
     const anything = KNOWN.slice(1).some((k) => get(k));
     if (anything) usable += 1;
     else blank += 1;
