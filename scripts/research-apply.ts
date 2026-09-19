@@ -168,7 +168,10 @@ async function main() {
        * somewhere, and the wrong one sends them to a stranger.
        */
       if (k === "instagram_handle") {
-        const ev = get("evidence_url");
+        // Chat interfaces auto-link, so a bare URL often arrives as
+        // `[url](url)`. That is a rendering artifact, not bad data.
+        const evRaw = get("evidence_url");
+        const ev = (evRaw.match(/\]\((https?:[^)]+)\)\s*$/)?.[1] ?? evRaw.replace(/^\[|\]$/g, "")).trim();
         const tail = ev.toLowerCase().replace(/\/+$/, "").split("/").pop() ?? "";
         if (!ev || !ev.toLowerCase().includes("instagram.com") || tail !== raw.replace(/^@/, "").toLowerCase()) {
           why.push(`handle "${raw}" skipped: no matching evidence_url`);

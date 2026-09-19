@@ -84,10 +84,38 @@ Here are the venues:
 
 ---
 
+## The check that actually matters
+
+`research:check` fetches every handle from Instagram and prints what each
+account calls itself:
+
+```
+Row 4 "805 Restaurant": @805_airport_accra is "805 Restaurant Airport"
+Row 15 "Asaase Kitchen - Dome": @asaasekitchen is "Asaase Kitchen"
+```
+
+Read that list. It is the only thing that catches a handle which exists and
+belongs to somebody else, and it takes fifteen seconds. A handle that does not
+exist is reported as a problem and blocked; a handle whose display name has
+nothing to do with the venue is reported as fine, and only you can see that it
+is not.
+
+Two things about this check are load-bearing and easy to break:
+
+- It shells out to `curl`, because Node's own fetch gets the logged-out app
+  shell for every handle -- a page titled "Instagram", identical for a real
+  account and an invented one. Built on fetch, the check condemns every row.
+- The user agent is deliberately short. A string containing a Chrome version
+  gets that same app shell; without it Instagram serves the server-rendered
+  profile whose title carries the display name. Making the UA look "more like
+  a browser" silently breaks it.
+
 ## What to expect
 
-The description batches ran at roughly 60–90% filled. Expect much less here —
-somewhere under half is a good result, and the blanks are not failures.
+The description batches ran at roughly 60–90% filled. The first real batch of
+these came back 23 of 29, every handle real and every display name matching
+its venue, which is better than expected — but do not read that as licence to
+skip the display-name list.
 
 The check will reject, before anything is written:
 - a handle with no `evidence_url`
