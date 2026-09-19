@@ -19,7 +19,7 @@ const VIBES = [
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
 ];
 const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
-const HEADER = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
+const KNOWN = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
 
 /** Minimal CSV reader: quoted fields, doubled quotes, no embedded newlines. */
 function parseLine(line: string): string[] {
@@ -88,9 +88,25 @@ async function main() {
   const problems: string[] = [];
   const notes: string[] = [];
 
-  if (head.join(",") !== HEADER.join(",")) {
-    problems.push(`Header is "${head.join(",")}"\n     expected "${HEADER.join(",")}"`);
+/*
+ * The header the file actually has, not the one this script would prefer.
+ *
+ * A research pass is often narrower than the full form -- a round that only
+ * chases descriptions comes back as `name,description`, and demanding all
+ * seven columns would reject a perfectly good batch. So: `name` must be
+ * first, every other column must be one this understands, and anything not
+ * present is simply not written.
+ */
+  const HEADER = head;
+  if (head[0] !== "name") {
+    problems.push(`First column is "${head[0]}", expected "name".`);
   }
+  const unknown = head.filter((h) => !KNOWN.includes(h));
+  if (unknown.length) {
+    problems.push(`Unknown columns ignored: ${unknown.join(", ")}. Known: ${KNOWN.join(", ")}.`);
+  }
+  const covered = KNOWN.filter((k) => head.includes(k) && k !== "name");
+  console.log(`Columns in this file: ${covered.join(", ") || "none besides name"}`);
 
   let usable = 0;
   let blank = 0;
@@ -109,10 +125,10 @@ async function main() {
      */
     if (r.length !== HEADER.length) {
       const tail = r.slice(1).filter((x) => x.trim());
-      const harmless = r.length < HEADER.length && tail.length <= r.length - 1;
+      const harmless = tail.length <= Math.max(0, HEADER.length - 1);
       const msg =
-        `Row ${n} "${name}": ${r.length} fields, expected ${HEADER.length}` +
-        (harmless ? " (trailing empties omitted, nothing lost)" : " — values may be in the wrong columns");
+        `Row ${n} "${name}": ${r.length} fields, header has ${HEADER.length}` +
+        (harmless ? " (trailing empties, nothing lost)" : " — values may be in the wrong columns");
       if (harmless) notes.push(msg);
       else problems.push(msg);
     }
@@ -177,7 +193,7 @@ async function main() {
     const ig = get("instagram_handle");
     if (ig && !ig.startsWith("@")) problems.push(`Row ${n} "${name}": instagram_handle "${ig}" has no @.`);
 
-    const anything = HEADER.slice(1).some((k) => get(k));
+    const anything = KNOWN.slice(1).some((k) => get(k));
     if (anything) usable += 1;
     else blank += 1;
   });

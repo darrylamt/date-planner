@@ -32,7 +32,7 @@ const VIBES = [
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
 ];
 const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
-const HEADER = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
+const KNOWN = ["name", "description", "vibe_tags", "best_for", "cuisines", "dress_code", "instagram_handle"];
 
 /** Spellings that would split one kitchen in two. Extend as they turn up. */
 const CUISINE_ALIASES: Record<string, string> = {
@@ -103,7 +103,27 @@ async function main() {
   const byName = new Map(venues.map((v) => [v.name.trim().toLowerCase(), v]));
 
   const lines = fs.readFileSync(path.resolve(file), "utf8").split(/\r?\n/).filter((l) => l.trim());
+/*
+ * The header the file actually has, not the one this script would prefer.
+ *
+ * A research pass is often narrower than the full form -- a round that only
+ * chases descriptions comes back as `name,description`, and demanding all
+ * seven columns would reject a perfectly good batch. So: `name` must be
+ * first, every other column must be one this understands, and anything not
+ * present is simply not written.
+ */
+  const HEADER = parseLine(lines[0]).map((h) => h.trim());
+  if (HEADER[0] !== "name") {
+    console.error(`First column is "${HEADER[0]}", expected "name". Nothing applied.`);
+    process.exit(1);
+  }
   const rows = lines.slice(1).map(parseLine);
+  console.log(
+    `Columns: ${HEADER.filter((h) => h !== "name").join(", ") || "none besides name"}` +
+      (HEADER.some((h) => !KNOWN.includes(h))
+        ? `  (ignoring ${HEADER.filter((h) => !KNOWN.includes(h)).join(", ")})`
+        : "")
+  );
 
   const planned: { name: string; id: string; values: Record<string, unknown>; why: string[] }[] = [];
   const skipped: string[] = [];
