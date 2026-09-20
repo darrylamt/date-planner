@@ -16,7 +16,15 @@ export const planInputsSchema = z.object({
   hours: z.number().min(1).max(12),
   // Optional: a plan built before this was asked carries no value, and the
   // planner falls back to reading it off the duration.
-  stops: z.number().int().min(2).max(5).optional(),
+  /*
+   * One, because one is now an answer.
+   *
+   * The floor was two here as well as in the planner, and this is the copy
+   * that decides whether a request is even heard: a business meeting posting
+   * stops: 1 was refused as invalid input before any of the planner's own
+   * floors were reached.
+   */
+  stops: z.number().int().min(1).max(5).optional(),
   alcohol: z.enum(["either", "none"]).optional(),
   vibes: z.array(z.string()).min(1).max(3),
   // Defaulted rather than required: a plan posted by an older build of the
@@ -34,6 +42,15 @@ export const planInputsSchema = z.object({
     "graduation",
     "celebration",
     "solo_day",
+    /*
+     * Kept in step with the Occasion union by hand, and this is the copy that
+     * bites: an occasion missing here is rejected at the door with "Invalid
+     * plan inputs", however well the planner would have handled it. Both of
+     * these were added to the type, the constants, the themes, the mascots and
+     * the planner, and would still have failed on every request.
+     */
+    "business_meeting",
+    "family_day",
   ]),
   occasionDetail: z.record(z.string().max(300)).default({}),
   partner: z.object({

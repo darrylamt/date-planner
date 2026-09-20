@@ -17,7 +17,8 @@ import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import { fetchCandidates } from "../src/lib/matching";
 import { planItinerary } from "../src/lib/planner";
-import { defaultInputs } from "../src/lib/planConstants";
+import { defaultInputs, OCCASION_IDS } from "../src/lib/planConstants";
+import { planInputsSchema } from "../src/lib/schemas";
 import type { PlanInputs } from "../src/lib/types";
 
 const envPath = path.join(process.cwd(), ".env.local");
@@ -46,6 +47,32 @@ async function build(inputs: PlanInputs) {
 }
 
 async function main() {
+  /*
+   * The door, before the planner.
+   *
+   * planInputsSchema is a second, hand-kept copy of what an occasion may be,
+   * and it is the one that decides whether a request is heard at all. Both
+   * pathways were added to the type, the constants, the themes, the mascots
+   * and the planner and still failed every request, because this list had not
+   * heard of them -- and the first version of this smoke test called the
+   * planner directly, so it passed while the route returned 400.
+   */
+  console.log("\nTHE API SCHEMA -- every pathway the app offers must be accepted");
+  for (const occasion of OCCASION_IDS) {
+    const body = {
+      ...defaultInputs(),
+      occasion,
+      vibes: ["Calm"],
+      stops: occasion === "business_meeting" ? 1 : 2,
+    };
+    const parsed = planInputsSchema.safeParse(body);
+    check(
+      `${occasion} is valid input`,
+      parsed.success,
+      parsed.success ? "" : JSON.stringify(parsed.error.issues[0]?.path)
+    );
+  }
+
   console.log("\nBUSINESS MEETING -- one place, the kind asked for");
   for (const setting of ["cafe", "lounge", "restaurant"]) {
     const inputs: PlanInputs = {
