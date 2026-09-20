@@ -138,6 +138,70 @@ export function toolCallsOf(blocks: ChatBlock[]): Extract<ChatBlock, { type: "to
 }
 
 /**
+ * Drop anything in a stored history the provider will refuse.
+ *
+ * A tool_use has to be answered by a tool_result in the very next turn, a
+ * tool_result has to answer a tool_use in the one before, and the first turn
+ * has to be the user's. A history that breaks any of those comes back as a
+ * 400, which the app can only report as the conversation being unusable.
+ *
+ * 0051 fixed the cause -- turns were stored with one shared timestamp and read
+ * back in arbitrary order -- but two things still produce an unanswered
+ * tool_use: rows written before that migration, and a run that dies between
+ * the model asking for a tool and the result being written. Neither is worth
+ * losing a conversation over. Dropping the unmatched block costs the model the
+ * memory of one lookup it can redo; refusing costs the whole thread.
+ */
+export function sanitizeHistory(all: ChatTurn[]): ChatTurn[] {
+  /*
+   * Find the opening before anything else.
+   *
+   * A history has to start on something the person actually said, which means
+   * a user turn carrying no tool_result -- the turns holding tool results are
+   * user-role too, and starting on one orphans it. Trimming the front after
+   * the orphan pass rather than before was a bug of exactly that shape: it
+   * removed a leading assistant turn and promoted the tool_result answering
+   * it, which had been perfectly valid a moment earlier.
+   */
+  const opens = all.findIndex(
+    (t) => t.role === "user" && !t.content.some((b) => b.type === "tool_result")
+  );
+  const turns = opens <= 0 ? all : all.slice(opens);
+
+  const offered = turns.map(
+    (t) =>
+      new Set(
+        t.content
+          .filter((b): b is Extract<ChatBlock, { type: "tool_use" }> => b.type === "tool_use")
+          .map((b) => b.id)
+      )
+  );
+  const answered = turns.map(
+    (t) =>
+      new Set(
+        t.content
+          .filter((b): b is Extract<ChatBlock, { type: "tool_result" }> => b.type === "tool_result")
+          .map((b) => b.tool_use_id)
+      )
+  );
+
+  const kept = turns
+    .map((turn, i) => ({
+      ...turn,
+      content: turn.content.filter((b) => {
+        if (b.type === "tool_use") return answered[i + 1]?.has(b.id) ?? false;
+        if (b.type === "tool_result") return offered[i - 1]?.has(b.tool_use_id) ?? false;
+        return true;
+      }),
+    }))
+    // A turn whose only content was an orphan is now empty, and an empty turn
+    // is itself a 400.
+    .filter((turn) => turn.content.length > 0);
+
+  return kept;
+}
+
+/**
  * Drop the oldest turns, and hollow out tool results that are no longer being
  * discussed.
  *
@@ -146,9 +210,14 @@ export function toolCallsOf(blocks: ChatBlock[]): Extract<ChatBlock, { type: "to
  * four turns later, when its conclusions are already in the prose. Replacing
  * the body with a stub keeps the tool_use and tool_result pairing intact,
  * which every provider requires, while removing what it cost to carry.
+ *
+ * The sanitise runs after the slice, not before. Keeping the last twenty turns
+ * can cut between an assistant turn asking for a tool and the turn answering
+ * it, which leaves the same orphan at the window's edge that a bad write
+ * leaves in the middle.
  */
 export function trimHistory(turns: ChatTurn[], keep = MAX_HISTORY_TURNS): ChatTurn[] {
-  const recent = turns.slice(-keep);
+  const recent = sanitizeHistory(turns.slice(-keep));
   const liveFrom = Math.max(0, recent.length - 4);
 
   return recent.map((turn, i) =>

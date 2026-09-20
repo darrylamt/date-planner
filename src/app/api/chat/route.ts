@@ -199,11 +199,19 @@ async function loadHistory(
   admin: ReturnType<typeof createServiceClient>,
   conversationId: string
 ): Promise<ChatTurn[]> {
+  /*
+   * Ordered by seq, not created_at.
+   *
+   * A whole exchange is written in one insert and every row takes the same
+   * now(), so created_at could not separate the assistant turn from the
+   * tool_result turn answering it. Tied sort keys come back in whatever order
+   * the scan produced, and a shuffled replay is a 400.
+   */
   const { data } = await admin
     .from("messages")
     .select("role,content")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .order("seq", { ascending: true });
 
   return ((data ?? []) as { role: "user" | "assistant"; content: ChatTurn["content"] }[]).map((m) => ({
     role: m.role,
