@@ -58,19 +58,49 @@ async function main() {
 
   const period = currentPeriodStart();
 
+  /**
+   * Write it, and prove it was written.
+   *
+   * Both halves of this script wrote values their check constraints refuse --
+   * status 'none', which is not one of active/in_grace/expired/cancelled, and
+   * source 'admin', which is not one of apple/play/stripe/grant -- and neither
+   * looked at the error. So it printed that an account was behind the paywall
+   * while the account stayed exactly as it was. It was used to clear a
+   * reviewer's subscription before an App Store submission, reported success,
+   * and changed nothing.
+   */
+  async function write(table: string, row: Record<string, unknown>, onConflict: string) {
+    const { data, error } = await admin
+      .from(table)
+      .upsert(row, { onConflict })
+      .select("*");
+    if (error) {
+      console.error(`Could not write ${table}:`, error.message);
+      process.exit(1);
+    }
+    if (!data?.length) {
+      console.error(`Wrote nothing to ${table}. PostgREST calls that a success; it is not.`);
+      process.exit(1);
+    }
+  }
+
   if (command === "on") {
-    await admin
-      .from("entitlements")
-      .upsert(
-        { user_id: user.id, tier: "free", status: "none", expires_at: null },
-        { onConflict: "user_id" }
-      );
-    await admin
-      .from("chat_usage")
-      .upsert(
-        { user_id: user.id, period_start: period, messages_used: FREE_MONTHLY_MESSAGES },
-        { onConflict: "user_id,period_start" }
-      );
+    /*
+     * status stays 'active' and source goes to null, which is exactly the row
+     * a never-subscribed account has: consume_chat_message creates it with the
+     * column defaults on somebody's first message. tier 'free' is what the
+     * gate reads, and isPro refuses on that alone.
+     */
+    await write(
+      "entitlements",
+      { user_id: user.id, tier: "free", status: "active", source: null, expires_at: null },
+      "user_id"
+    );
+    await write(
+      "chat_usage",
+      { user_id: user.id, period_start: period, messages_used: FREE_MONTHLY_MESSAGES },
+      "user_id,period_start"
+    );
 
     console.log(`${email} is now on the free tier with ${period}'s ${FREE_MONTHLY_MESSAGES} spent.`);
     console.log("Open the chat and send one message: the paywall is the reply.");
@@ -78,19 +108,20 @@ async function main() {
     return;
   }
 
-  await admin
-    .from("entitlements")
-    .upsert(
-      { user_id: user.id, tier: "pro", status: "active", source: "admin", expires_at: null },
-      { onConflict: "user_id" }
-    );
+  // 'grant' is the constraint's word for a person deciding. 'admin' is not a
+  // value this column accepts, and writing it silently left accounts free.
+  await write(
+    "entitlements",
+    { user_id: user.id, tier: "pro", status: "active", source: "grant", expires_at: null },
+    "user_id"
+  );
   // Cleared rather than left at the cap, so pro is not immediately against its
   // own fair-use limit for the rest of the month.
-  await admin
-    .from("chat_usage")
-    .upsert({ user_id: user.id, period_start: period, messages_used: 0 }, {
-      onConflict: "user_id,period_start",
-    });
+  await write(
+    "chat_usage",
+    { user_id: user.id, period_start: period, messages_used: 0 },
+    "user_id,period_start"
+  );
 
   console.log(`${email} is pro again, and this month's count is cleared.`);
 }
