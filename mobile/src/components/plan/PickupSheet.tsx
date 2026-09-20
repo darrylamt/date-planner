@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -384,6 +392,21 @@ export function PickupSheet({
                   {product.vendor.area ? `, ${product.vendor.area}` : ""} ·{" "}
                   {leadTimeLabel(product.vendor.lead_time_hours)}
                 </Text>
+
+                {/*
+                  How to actually reach them.
+
+                  This is the one part of a plan aduro does not arrange:
+                  flowers get ordered and a cake gets asked for, usually a day
+                  ahead. Adding it to the plan and stopping there left
+                  somebody holding a price and a name with nothing to do next.
+
+                  WhatsApp only where the vendor says they take it. Opening
+                  wa.me with whatever is in `phone` assumes a Ghanaian mobile
+                  is a WhatsApp account, and a cake order that vanishes into
+                  an account nobody reads is worse than a phone call.
+                */}
+                <VendorContact vendor={product.vendor} />
               </View>
 
               <Button
@@ -400,5 +423,71 @@ export function PickupSheet({
         </ScrollView>
       </View>
     </Modal>
+  );
+}
+
+/**
+ * Call, message or look them up, whichever they actually offer.
+ *
+ * Nothing is shown for a channel the vendor has not given, rather than a
+ * greyed button: a florist with no Instagram is not a gap in this catalogue
+ * the way a venue without one is, and three dead buttons under every cake
+ * reads as a broken screen.
+ */
+function VendorContact({ vendor }: { vendor: GiftVendor }) {
+  const c = useTheme();
+  const digits = (n: string | null | undefined) => n?.replace(/[^\d+]/g, "") || null;
+  const callable = digits(vendor.phone);
+  const whatsapp = vendor.whatsapp_phone?.replace(/\D/g, "") || null;
+  const handle = vendor.instagram_handle?.replace(/^@/, "").trim() || null;
+
+  if (!callable && !whatsapp && !handle) return null;
+
+  const link = (
+    label: string,
+    icon: React.ComponentProps<typeof Symbol>["name"],
+    onPress: () => void
+  ) => (
+    <Pressable
+      key={label}
+      onPress={() => {
+        void Haptics.selectionAsync();
+        onPress();
+      }}
+      hitSlop={6}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Symbol name={icon} size={13} color={c.accent} />
+      <Text variant="caption1" weight="600" style={{ color: c.accent }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.lg, marginTop: space.sm }}>
+      {whatsapp
+        ? link("WhatsApp", "message.fill", () =>
+            Linking.openURL(
+              `https://wa.me/${whatsapp}?text=${encodeURIComponent(
+                `Hello ${vendor.name}, I would like to order. Sent via aduro.`
+              )}`
+            )
+          )
+        : null}
+      {callable ? link("Call", "phone.fill", () => Linking.openURL(`tel:${callable}`)) : null}
+      {handle
+        ? link("Instagram", "camera.fill", () =>
+            Linking.openURL(`https://instagram.com/${handle}`)
+          )
+        : null}
+    </View>
   );
 }

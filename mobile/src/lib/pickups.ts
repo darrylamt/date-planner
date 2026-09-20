@@ -38,6 +38,20 @@ export interface GiftVendor {
   address: string | null;
   lead_time_hours: number;
   google_maps_url: string | null;
+  /**
+   * How to reach them, because this is the one part of a plan aduro cannot
+   * arrange. Flowers get ordered and a cake gets asked for, usually a day
+   * ahead, and a vendor with a price and no phone number is a dead end.
+   */
+  phone: string | null;
+  /**
+   * Null means ring them, and is the common case. Opening wa.me with
+   * whatever is in `phone` assumes a Ghanaian mobile is a WhatsApp account
+   * and mostly it is not, so the vendor says which they take. Same reason
+   * venues.whatsapp_phone is separate.
+   */
+  whatsapp_phone: string | null;
+  instagram_handle: string | null;
   products: GiftProduct[];
 }
 

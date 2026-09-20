@@ -10,7 +10,22 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import * as Calendar from "expo-calendar";
+/*
+ * The legacy entry point, deliberately.
+ *
+ * expo-calendar 57 deprecated the functional API and made the deprecation
+ * throw rather than warn: requestCalendarPermissionsAsync imported from
+ * "expo-calendar" raises "Method ... is deprecated" and the permission
+ * dialog never appears. Three builds were spent looking for the cause in the
+ * Info.plist and in iOS 17's permission split, because the message the user
+ * saw was our own "could not add to your calendar" and it fitted that story
+ * perfectly.
+ *
+ * "expo-calendar/legacy" is the same functions, supported, and keeps this
+ * file unchanged. Migrating to the object-oriented API in ./next is the
+ * eventual move, but not on the build before an App Store submission.
+ */
+import * as Calendar from "expo-calendar/legacy";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
 import { Button, ActionBar } from "../Button";

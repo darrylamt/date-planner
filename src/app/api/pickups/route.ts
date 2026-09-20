@@ -45,7 +45,8 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("gift_vendors")
     .select(
-      "id, name, kind, address, lead_time_hours, google_maps_url, areas(name), " +
+      "id, name, kind, address, lead_time_hours, google_maps_url, " +
+        "phone, whatsapp_phone, instagram_handle, areas(name), " +
         "gift_products(id, vendor_id, name, description, image_url, sort_order, is_active, " +
         "gift_variants(id, label, price_ghs, magnitude, sort_order, is_active))"
     )
@@ -67,6 +68,9 @@ export async function GET(req: Request) {
       address: v.address,
       lead_time_hours: v.lead_time_hours,
       google_maps_url: v.google_maps_url,
+      phone: v.phone ?? null,
+      whatsapp_phone: v.whatsapp_phone ?? null,
+      instagram_handle: v.instagram_handle ?? null,
       products: (v.gift_products ?? [])
         .filter((p: any) => p.is_active)
         .sort((a: any, b: any) => a.sort_order - b.sort_order)
