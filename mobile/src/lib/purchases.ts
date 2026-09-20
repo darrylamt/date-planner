@@ -21,8 +21,16 @@ const Purchases = nativeOptional<typeof import("react-native-purchases")>(() =>
   require("react-native-purchases")
 );
 
-/** The entitlement identifier configured in RevenueCat. Not the product id. */
-const ENTITLEMENT = "pro";
+/**
+ * The entitlement identifier configured in RevenueCat. Not the product id.
+ *
+ * It has to match the dashboard exactly. This read "pro" while RevenueCat had
+ * "aduro_pro", which is the quietest possible failure: the purchase goes
+ * through, Apple takes the money, the webhook writes the entitlement row, and
+ * the app looks for a key that is not in the customer info and shows the
+ * paywall again to somebody who has just paid.
+ */
+const ENTITLEMENT = "aduro_pro";
 
 /**
  * Public, and safe to ship in the bundle.
