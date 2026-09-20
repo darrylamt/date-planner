@@ -50,6 +50,20 @@ const FILTERS = [
   { id: "no-hours", label: "No hours", test: (r: Row) => !r.hoursKnown },
   { id: "unlinked", label: "Not on Google", test: (r: Row) => !r.linked },
   { id: "unpriced", label: "Unpriced", test: (r: Row) => r.is_active && r.pricedBy === "nothing" },
+  /*
+   * Priced by a figure somebody typed, with no menu behind it.
+   *
+   * Its own chip because it is the one price in the catalogue nothing checks.
+   * A menu price came off a menu and goes stale visibly -- the Stale chip
+   * counts the days. A typical-spend figure was a judgement on the day it was
+   * entered and then never looked at again, and it is what the planner spends
+   * against for every one of these venues. This is the list to re-read.
+   */
+  {
+    id: "typical-spend",
+    label: "Typical spend",
+    test: (r: Row) => r.is_active && r.pricedBy === "figure",
+  },
   { id: "stale", label: "Stale menu", test: (r: Row) => r.isStale },
   { id: "inactive", label: "Inactive", test: (r: Row) => !r.is_active },
 ] as const;
@@ -185,7 +199,19 @@ export function VenueTable({ rows, queues = [] }: { rows: Row[]; queues?: Queue[
                 <td className="hidden md:table-cell">{r.area}</td>
                 <td className="hidden capitalize lg:table-cell">{r.type}</td>
                 <td className="hidden lg:table-cell">{r.items}</td>
-                <td className="hidden font-mono md:table-cell">{ghs(r.avgForTwo)}</td>
+                {/*
+                  Per person when that is what the row is priced by, for two
+                  otherwise. Halving a menu total would be a different claim
+                  from the one the menu makes, but a typical-spend venue holds
+                  a per-person figure and doubling it to display it, on the
+                  screen for auditing per-person figures, hides the number
+                  being audited.
+                */}
+                <td className="hidden font-mono md:table-cell">
+                  {r.pricedBy === "figure"
+                    ? `${ghs(Math.round(r.avgForTwo / 2))} pp`
+                    : ghs(r.avgForTwo)}
+                </td>
                 <td className="hidden lg:table-cell">
                   {r.staleDays === null
                     ? r.pricedBy === "figure"
