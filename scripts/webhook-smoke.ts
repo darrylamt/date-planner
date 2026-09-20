@@ -86,7 +86,13 @@ async function main() {
       .maybeSingle();
     ok("entitlement written as pro", after?.tier === "pro", `tier=${after?.tier ?? "no row"}`);
     ok("marked active", after?.status === "active", `status=${after?.status ?? "-"}`);
-    ok("source recorded as the store", after?.source === "app_store", `source=${after?.source ?? "-"}`);
+    /*
+     * "apple", not "app_store". The first version of this asserted the value
+     * the route was wrongly writing, which is the trap a test written from
+     * the code rather than from the schema always falls into: it would have
+     * gone green the moment the bug was reintroduced.
+     */
+    ok("source recorded as apple", after?.source === "apple", `source=${after?.source ?? "-"}`);
     ok("expiry carried across", Boolean(after?.expires_at), String(after?.expires_at ?? "null"));
 
     // ── the cancellation ─────────────────────────────────────────────────
