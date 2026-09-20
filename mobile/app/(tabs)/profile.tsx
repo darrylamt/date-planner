@@ -25,6 +25,8 @@ import { useAuth, signOut } from "../../src/lib/useAuth";
 import { useAppearance } from "../../src/lib/appearance";
 import { AppIconPicker, appIconsAvailable } from "../../src/components/AppIconPicker";
 import { IssueSheet } from "../../src/components/IssueSheet";
+import { ProSheet } from "../../src/components/profile/ProSheet";
+import { fetchAllowance } from "../../src/lib/chat";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 import { resetOnboarding } from "../../src/lib/onboarding";
 import {
@@ -89,6 +91,8 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
+  const [proOpen, setProOpen] = useState(false);
+  const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -99,9 +103,11 @@ export default function Profile() {
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
+        void fetchAllowance().then((a) => active && setAllowance(a));
       } else {
         setPlanCount(null);
         setProfile(null);
+        setAllowance(null);
       }
       return () => {
         active = false;
@@ -384,6 +390,39 @@ export default function Profile() {
         </Group>
       ) : null}
 
+      {/*
+        The only way to choose to subscribe.
+
+        The paywall used to have one door -- send five messages, be refused --
+        which meant somebody who simply wanted to pay could not, and a reviewer
+        signed in on an account that already had Pro could never reach the
+        purchase at all. Shown signed-out too, because the answer to "what does
+        this cost" should not require an account first.
+      */}
+      <Group header="Subscription">
+        <Row
+          icon="sparkles"
+          title="aduro Pro"
+          subtitle={
+            !session
+              ? "Unlimited chat with the assistant"
+              : allowance?.tier === "pro"
+                ? "Subscribed"
+                : allowance
+                  ? `Free · ${allowance.remaining} of ${allowance.allowance} messages left this month`
+                  : "Free"
+          }
+          chevron
+          onPress={() => {
+            if (!session) {
+              router.push("/login");
+              return;
+            }
+            setProOpen(true);
+          }}
+        />
+      </Group>
+
       <Group header="Appearance">
         <Row
           icon="moon"
@@ -565,6 +604,22 @@ export default function Profile() {
         visible={iconPickerOpen}
         onClose={() => setIconPickerOpen(false)}
         onChanged={setToast}
+      />
+
+      <ProSheet
+        visible={proOpen}
+        onClose={() => setProOpen(false)}
+        tier={allowance?.tier ?? "free"}
+        /*
+         * Re-read rather than assume. The purchase tells RevenueCat, which
+         * tells our webhook, which writes the row the server gates on.
+         * Flipping the label locally would be a subscription the app
+         * believes in and the server does not.
+         */
+        onPurchased={() => {
+          void fetchAllowance().then(setAllowance);
+          setToast("Welcome to aduro Pro.");
+        }}
       />
 
       <IssueSheet
