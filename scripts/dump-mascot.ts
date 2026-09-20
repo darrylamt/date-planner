@@ -1,4 +1,17 @@
-/** Dump a mascot as a character grid, so a new one can be drawn on its bones. */
+/**
+ * Print a mascot as a character grid.
+ *
+ *   npx tsx scripts/dump-mascot.ts solo_day friend_outing
+ *
+ * How the two newest mascots were drawn, and how the next one should be. The
+ * originals were made by hand and their construction is only visible by
+ * reading the pixels back: a shared head, a shared pair of legs, and seven
+ * rows of torso that are all a costume actually is. Copy a grid out of here,
+ * change the torso, and paste it into build-mascots.ts.
+ *
+ * A "?" in the output is a colour the palette below does not name, which means
+ * build-mascots.ts cannot reproduce that sprite until the colour is added.
+ */
 import sharp from "sharp";
 import path from "path";
 
