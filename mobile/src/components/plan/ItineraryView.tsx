@@ -293,13 +293,33 @@ export function ItineraryView({
    * than a sentence that fits every failure equally badly.
    */
   async function handleAddToCalendar() {
-    const { status, canAskAgain } = await Calendar.requestCalendarPermissionsAsync();
+    /*
+     * Every failure below says which one it was.
+     *
+     * This has been "fixed" twice from a guess -- first by hardening the
+     * JavaScript, then by adding the Info.plist key iOS 17 needs -- and it
+     * has failed twice more, because "could not add to your calendar" fits
+     * eight different causes equally well and names none of them. A message
+     * that cannot distinguish a denied permission from a phone with no
+     * writable calendar is a message that costs a round trip every time.
+     */
+    let status: string;
+    let canAskAgain: boolean;
+    try {
+      const perm = await Calendar.requestCalendarPermissionsAsync();
+      status = perm.status;
+      canAskAgain = perm.canAskAgain;
+    } catch (e) {
+      setToast(`Calendar permission failed: ${(e as Error)?.message ?? "unknown"}`);
+      return;
+    }
+
     if (status !== "granted") {
       Alert.alert(
         "Calendar access needed",
-        canAskAgain
+        (canAskAgain
           ? "aduro needs permission to add your plan to your calendar."
-          : "Turn on Calendars for aduro in Settings, then try again.",
+          : "Turn on Calendars for aduro in Settings, then try again.") + `\n\n(status: ${status})`,
         [
           { text: "Not now", style: "cancel" },
           ...(canAskAgain
@@ -317,19 +337,27 @@ export function ItineraryView({
        * one granted write-only access, both land here rather than failing.
        */
       let calendarId: string | null = null;
+      let why = "";
       try {
         calendarId = (await Calendar.getDefaultCalendarAsync())?.id ?? null;
-      } catch {
-        calendarId = null;
+        if (!calendarId) why = "no default calendar";
+      } catch (e) {
+        why = `default lookup threw: ${(e as Error)?.message ?? "unknown"}`;
       }
 
       if (!calendarId) {
-        const all = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-        calendarId = all.find((cal) => cal.allowsModifications)?.id ?? null;
+        try {
+          const all = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+          const writable = all.filter((cal) => cal.allowsModifications);
+          calendarId = writable[0]?.id ?? null;
+          if (!calendarId) why = `${all.length} calendars, none writable`;
+        } catch (e) {
+          why = `${why}; listing threw: ${(e as Error)?.message ?? "unknown"}`;
+        }
       }
 
       if (!calendarId) {
-        setToast("No calendar on this phone will accept new events.");
+        setToast(`No calendar accepted the event (${why}).`);
         return;
       }
 
@@ -355,7 +383,8 @@ export function ItineraryView({
       }
 
       if (!added) {
-        setToast("Could not read the times on this plan.");
+        const sample = itinerary.stops[0]?.arrival_time ?? "(no stops)";
+        setToast(`Could not read the times on this plan (first was "${sample}").`);
         return;
       }
 
