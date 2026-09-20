@@ -25,6 +25,7 @@ import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import {
   OCCASION_IDS,
   clampParty,
+  defaultStopsFor,
   defaultInputs,
   stepsFor,
 } from "../../src/lib/planConstants";
@@ -160,6 +161,8 @@ export default function PlanNew() {
                 occasion: seeded,
                 // Enter at a legal size: friends starts at three, solo at one.
                 partySize: clampParty(seeded, base.partySize),
+                // And at a sensible shape: a meeting is one place.
+                stops: defaultStopsFor(seeded),
               }
             : base;
         if (active) {
@@ -208,6 +211,16 @@ export default function PlanNew() {
         next.companions = next.companions.slice(0, Math.max(0, next.partySize - 1));
         // Answers to the previous pathway's question do not belong to this one.
         next.occasionDetail = {};
+        /*
+         * A meeting is one place until somebody says otherwise.
+         *
+         * The stops question still gets asked and can still be changed; this
+         * only moves the default off "up to you", which for this pathway would
+         * infer a three-stop evening out of the clock and walk a client from a
+         * cafe to a bar. Leaving the pathway puts the default back, so a plan
+         * that started as a meeting does not quietly stay one stop long.
+         */
+        next.stops = defaultStopsFor(patch.occasion);
       }
       void saveDraft({ inputs: next });
       return next;

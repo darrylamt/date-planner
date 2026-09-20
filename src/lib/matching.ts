@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
-import { focusVenueTypes } from "./planner";
+import { focusVenueTypes, meetingVenueTypes } from "./planner";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -322,6 +322,16 @@ export async function fetchCandidates(
    */
   if (loungeFloor(inputs.vibes) > 0 && !focusTypes.includes("lounge")) {
     focusTypes.push("lounge");
+  }
+
+  /*
+   * A business meeting names the kind of place outright, which is a stronger
+   * statement than a vibe and gets the same reservation. Without it the one
+   * stop a meeting has falls back to whatever the shortlist happened to hold,
+   * and asking for a cafe returned a restaurant.
+   */
+  for (const t of meetingVenueTypes(inputs)) {
+    if (!focusTypes.includes(t)) focusTypes.push(t);
   }
 
   if (focusTypes.length) {

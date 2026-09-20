@@ -54,6 +54,16 @@ const SPRITES: Record<Occasion, { idle: number; bounce: number; blink: number }>
     bounce: require("../../assets/mascots/solo_day_bounce.png"),
     blink: require("../../assets/mascots/solo_day_blink.png"),
   },
+  business_meeting: {
+    idle: require("../../assets/mascots/business_meeting.png"),
+    bounce: require("../../assets/mascots/business_meeting_bounce.png"),
+    blink: require("../../assets/mascots/business_meeting_blink.png"),
+  },
+  family_day: {
+    idle: require("../../assets/mascots/family_day.png"),
+    bounce: require("../../assets/mascots/family_day_bounce.png"),
+    blink: require("../../assets/mascots/family_day_blink.png"),
+  },
 };
 
 /**

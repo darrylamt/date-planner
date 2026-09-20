@@ -51,6 +51,21 @@ const LINES: Record<Occasion, string[]> = {
     "Finding places that are good solo…",
     "Counter seats and somewhere to just be.",
   ],
+  /*
+   * Neither of these is an evening out, so neither gets excited at you. A
+   * meeting is work and a family day is logistics, and a mascot enthusing
+   * about romance over either reads as the app not listening.
+   */
+  business_meeting: [
+    "One place, and somewhere you can actually talk.",
+    "Checking what stays quiet at this hour…",
+    "No music you have to shout over.",
+  ],
+  family_day: [
+    "Something to do first, food after.",
+    "Looking for somewhere nobody minds noise…",
+    "Close enough together that nobody melts down in traffic.",
+  ],
 };
 
 export function loadingLines(inputs: PlanInputs): string[] {
@@ -78,4 +93,6 @@ export const OCCASION_GREETING: Record<Occasion, string> = {
   celebration: "Something to celebrate. Let us hear it.",
   friend_outing: "Friends out. Good food, no candles.",
   solo_day: "A day to yourself. Let us make it a good one.",
+  business_meeting: "A meeting. One place, quiet enough to talk.",
+  family_day: "A family day. Let us keep everyone happy.",
 };

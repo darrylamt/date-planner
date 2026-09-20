@@ -608,18 +608,51 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
       <>
         <StepHeading title={extra.title} subtitle={extra.subtitle} />
         <View style={{ paddingHorizontal: GUTTER }}>
-          {extra.fields.map((f) => (
-            <Field
-              key={f.key}
-              label={f.label}
-              placeholder={f.placeholder}
-              multiline={f.multiline}
-              value={inputs.occasionDetail[f.key] ?? ""}
-              onChangeText={(v) =>
-                update({ occasionDetail: { ...inputs.occasionDetail, [f.key]: v } })
-              }
-            />
-          ))}
+          {extra.fields.map((f) =>
+            /*
+             * A row of options where the question has a fixed set of answers.
+             *
+             * The kind of place a meeting wants is one of three things, and
+             * the planner matches on the value rather than on prose, so this
+             * cannot be a box to type in. Falling back to the first option
+             * means somebody who taps straight past still gets a cafe.
+             */
+            f.choices ? (
+              <View key={f.key} style={{ marginBottom: Spacing.four }}>
+                <Text variant="footnote" tone="secondary" style={{ marginBottom: Spacing.two }}>
+                  {f.label}
+                </Text>
+                <Group>
+                  {f.choices.map((choice) => (
+                    <Row
+                      key={choice.value}
+                      title={choice.label}
+                      subtitle={choice.sub}
+                      selected={
+                        (inputs.occasionDetail[f.key] ?? f.choices![0].value) === choice.value
+                      }
+                      onPress={() =>
+                        update({
+                          occasionDetail: { ...inputs.occasionDetail, [f.key]: choice.value },
+                        })
+                      }
+                    />
+                  ))}
+                </Group>
+              </View>
+            ) : (
+              <Field
+                key={f.key}
+                label={f.label}
+                placeholder={f.placeholder}
+                multiline={f.multiline}
+                value={inputs.occasionDetail[f.key] ?? ""}
+                onChangeText={(v) =>
+                  update({ occasionDetail: { ...inputs.occasionDetail, [f.key]: v } })
+                }
+              />
+            )
+          )}
         </View>
       </>
     );

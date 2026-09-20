@@ -85,6 +85,14 @@ export const GIFTS_FOR_OCCASION: Record<Occasion, GiftKind[]> = {
   celebration: ["cake", "flowers"],
   friend_outing: ["cake"],
   solo_day: [],
+  /*
+   * Neither offers a gift, for opposite reasons. Arriving at a business
+   * meeting with flowers is a misread of the meeting. A family day is not an
+   * occasion at all, it is a Saturday, and a cake with nothing to celebrate is
+   * the app inventing a reason to spend money.
+   */
+  business_meeting: [],
+  family_day: [],
 };
 
 export function giftsForOccasion(occasion: Occasion): GiftKind[] {

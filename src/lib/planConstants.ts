@@ -33,6 +33,16 @@ export const VIBES = [
  */
 export const STOP_OPTIONS: { label: string; stops: number }[] = [
   { label: "Up to you", stops: 0 },
+  /*
+   * One place is a real answer, and it used to be unsayable.
+   *
+   * The floor was two everywhere: this list, the inference, and the loop that
+   * walks the count down until a plan fits. That was right while every pathway
+   * was an evening out, and wrong the moment a business meeting existed --
+   * nobody takes a client to a second venue, and an itinerary that moves them
+   * on after an hour has misunderstood the entire occasion.
+   */
+  { label: "Just 1 place", stops: 1 },
   { label: "2 places", stops: 2 },
   { label: "3 places", stops: 3 },
   { label: "4 places", stops: 4 },
@@ -115,6 +125,12 @@ export const OCCASIONS: { id: Occasion; title: string; sub: string }[] = [
   { id: "celebration", title: "Celebration", sub: "A promotion, a win, good news" },
   { id: "friend_outing", title: "Friends", sub: "Good food, good company, no candles" },
   { id: "solo_day", title: "Solo day", sub: "A day out on your own terms" },
+  {
+    id: "business_meeting",
+    title: "Business meeting",
+    sub: "One place, quiet enough to talk and stay a while",
+  },
+  { id: "family_day", title: "Family day", sub: "Something to do, and somewhere to eat after" },
 ];
 
 export const OCCASION_IDS = OCCASIONS.map((o) => o.id);
@@ -219,7 +235,22 @@ export interface OccasionExtra {
   /** The screen's question. */
   title: string;
   subtitle: string;
-  fields: { key: string; label: string; placeholder: string; multiline?: boolean }[];
+  fields: {
+    key: string;
+    label: string;
+    placeholder: string;
+    multiline?: boolean;
+    /**
+     * Offered as a row of options instead of a box to type in.
+     *
+     * Added for the kind of place a meeting should be held in, which is a
+     * question with three real answers and no fourth. Typing "cafe" into a
+     * free field would leave the planner matching a string, and matching a
+     * string is how "coffee shop" became no answer at all. The first option
+     * is the default and is chosen for anybody who does not touch it.
+     */
+    choices?: { value: string; label: string; sub?: string }[];
+  }[];
 }
 
 /**
@@ -290,6 +321,51 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
         key: "intent",
         label: "What you are after",
         placeholder: "somewhere quiet to read, try something new, treat myself…",
+      },
+    ],
+  },
+  business_meeting: {
+    title: "Where should this happen?",
+    subtitle: "One place, and we will find the version of it that lets you talk.",
+    fields: [
+      {
+        key: "setting",
+        label: "Kind of place",
+        placeholder: "",
+        choices: [
+          { value: "cafe", label: "A cafe", sub: "Coffee, daylight, easy to leave" },
+          { value: "lounge", label: "A lounge", sub: "Softer, later, a drink in hand" },
+          { value: "restaurant", label: "Over a meal", sub: "When an hour is not enough" },
+        ],
+      },
+      {
+        key: "purpose",
+        label: "What it is about (optional)",
+        placeholder: "a pitch, a catch-up, signing something…",
+      },
+    ],
+  },
+  family_day: {
+    title: "Who is coming?",
+    subtitle: "Ages help more than anything else here.",
+    fields: [
+      {
+        /*
+         * Asked because the catalogue cannot answer it.
+         *
+         * Not one venue records whether it suits children -- there is no
+         * field for it and no tag in use. So rather than infer from a name
+         * and be confidently wrong about a place with a bar and no high
+         * chairs, the ages are asked and passed to whoever writes the plan.
+         */
+        key: "ages",
+        label: "Ages of the children",
+        placeholder: "e.g. 4 and 9, or teenagers",
+      },
+      {
+        key: "must",
+        label: "Anything that has to happen (optional)",
+        placeholder: "the beach, somewhere to run around, back by six…",
       },
     ],
   },
@@ -392,7 +468,31 @@ export const PARTY_RULES: Record<Occasion, PartyRule> = {
   birthday: { min: 1, max: 20 },
   graduation: { min: 1, max: 20 },
   celebration: { min: 1, max: 20 },
+  /*
+   * Both of these are asked, and neither is fixed.
+   *
+   * A meeting starts at two because a meeting with yourself is a solo day, and
+   * stops at eight because past that nobody is booking a table by tapping a
+   * phone. A family is at least two and realistically not twenty, and the
+   * number matters more here than anywhere else: it is the difference between
+   * a table and a table nobody has.
+   */
+  business_meeting: { min: 2, max: 8, note: "A meeting starts at two." },
+  family_day: { min: 2, max: 12, note: "Everyone coming, children included." },
 };
+
+/**
+ * How many places a pathway starts out assuming.
+ *
+ * Zero means "up to you", which lets the planner read the shape off the clock
+ * and the vibe, and is right for every occasion that is an evening out. A
+ * business meeting is the exception: inferring three stops from four hours
+ * would walk a client from a cafe to a bar to somewhere else, which is not a
+ * meeting, it is a night out with a colleague.
+ */
+export function defaultStopsFor(occasion: Occasion): number {
+  return occasion === "business_meeting" ? 1 : 0;
+}
 
 /** Party sizes offered for an occasion. Empty when the size is fixed. */
 export function partySizeOptions(occasion: Occasion): number[] {
@@ -451,6 +551,15 @@ export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
   friend_outing: { accent: "#376B4A", accentDark: "#8CC79D", page: "#F4FAF6", pageDark: "#08120B" },
   // Slate, quiet and self-contained.
   solo_day: { accent: "#3D5A73", accentDark: "#9CBBD6", page: "#F5F8FA", pageDark: "#080D12" },
+  // Navy, the only one that is not trying to be warm. It is not a night out.
+  business_meeting: {
+    accent: "#2C3E50",
+    accentDark: "#93B4CF",
+    page: "#F6F8FA",
+    pageDark: "#080C10",
+  },
+  // Sun on sand, which is where most of these end up.
+  family_day: { accent: "#A15C0E", accentDark: "#F0B860", page: "#FFF9F0", pageDark: "#140E06" },
 };
 
 /**
@@ -474,6 +583,9 @@ const OCCASION_GLYPHS: Record<Occasion, string[]> = {
   first_date: ["✦", "♥", "✦"],
   friend_outing: ["✦", "☻", "✦"],
   solo_day: ["✦", "☾", "✦"],
+  // No hearts and no confetti. This one is work.
+  business_meeting: ["✦", "◦", "✦"],
+  family_day: ["☀", "✦", "☻"],
 };
 
 /**

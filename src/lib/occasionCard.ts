@@ -106,6 +106,30 @@ export function occasionCard(inputs: PlanInputs): OccasionCard {
       closing: "Yours, entirely.",
       motif: "◈",
     },
+    /*
+     * The two that are not being celebrated.
+     *
+     * Every card above is warm at somebody, which is right for an anniversary
+     * and wrong for a meeting: "an evening already worked out" read over a
+     * pitch at nine in the morning is the app misreading the room. These stay
+     * plain, and say what was actually arranged.
+     */
+    business_meeting: {
+      eyebrow: size === 2 ? "A MEETING FOR TWO" : `A MEETING FOR ${size}`,
+      invitation: detail.purpose
+        ? `${sentence(detail.purpose)}. One place, quiet enough to hear each other.`
+        : "One place, quiet enough to hear each other, and no rush to move on.",
+      closing: "Times and the address are below. Nothing else to arrange.",
+      motif: "◦",
+    },
+    family_day: {
+      eyebrow: "A DAY OUT",
+      invitation: detail.must
+        ? `${sentence(detail.must)}, and somewhere to eat when everyone has had enough.`
+        : "Something to do first, and somewhere to eat when everyone has had enough.",
+      closing: `Worked out for ${partyWord(size)}, with the travel already counted.`,
+      motif: "☀",
+    },
   };
 
   return cards[inputs.occasion] ?? cards.date_night;

@@ -379,7 +379,17 @@ export type Occasion =
   | "birthday"
   | "graduation"
   | "celebration"
-  | "solo_day";
+  | "solo_day"
+  /**
+   * The two that are not a night out.
+   *
+   * Every occasion above is an evening with somebody you like. These are a
+   * morning coffee that decides something, and a Saturday with children in
+   * tow, and they want opposite things from the same catalogue: one quiet
+   * place that will let you sit for an hour, or somewhere nobody minds noise.
+   */
+  | "business_meeting"
+  | "family_day";
 
 export interface ItineraryStop {
   venue_id: string;

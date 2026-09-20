@@ -78,12 +78,53 @@ const ROLE_LABEL: Record<Role, string> = {
  * A plan beginning at 10am is not a shorter version of one beginning at 7pm,
  * so the sequence is chosen from the clock rather than scaled.
  */
+/**
+ * The kind of place a business meeting asked to be held in.
+ *
+ * A pathway that offers "a cafe, a lounge, or over a meal" and then hands the
+ * planner nothing has offered a decoration. This is the one occasion where the
+ * venue's kind is stated outright rather than inferred from a vibe, so it
+ * overrides the hour: a meeting at eight in the evening in a cafe is a cafe,
+ * not the lounge the clock would otherwise reach for.
+ */
+const MEETING_ROLES: Record<string, Role> = {
+  cafe: "cafe",
+  lounge: "lounge",
+  restaurant: "meal",
+};
+
+export function meetingRole(inputs: Pick<PlanInputs, "occasion" | "occasionDetail">): Role | null {
+  if (inputs.occasion !== "business_meeting") return null;
+  return MEETING_ROLES[inputs.occasionDetail?.setting ?? "cafe"] ?? "cafe";
+}
+
+/**
+ * The venue types a meeting's chosen setting needs in the shortlist.
+ *
+ * Candidate selection has to reserve these for exactly the reason focus does.
+ * Scoring by vibe alone fills the list with restaurants -- there are 117 of
+ * them and 23 cafes -- so a meeting asked to be held in a cafe came back with
+ * two cafes shortlisted, neither of them the best option, and the single stop
+ * fell back to a restaurant. Asking for a cafe and being sent to a restaurant
+ * is the choice not meaning anything.
+ */
+export function meetingVenueTypes(
+  inputs: Pick<PlanInputs, "occasion" | "occasionDetail">
+): VenueType[] {
+  const role = meetingRole(inputs);
+  return role ? ROLE_TYPES[role] : [];
+}
+
 function roleSequence(
   startHour: number,
   stopCount: number,
   focus: PlanFocus,
-  vibes: string[] = []
+  vibes: string[] = [],
+  /** Set when the occasion names the kind of place itself. Beats everything. */
+  forced: Role | null = null
 ): Role[] {
+  if (forced) return Array.from({ length: stopCount }, () => forced);
+
   /*
    * A narrowed focus overrides the time of day entirely. Someone asking for
    * drinks wants a second bar, not dinner at the sensible hour for it, and
@@ -177,7 +218,7 @@ export function stopCountFor(
    * says two places has told us the shape of their evening, and deriving four
    * from the clock instead is the app overruling them with arithmetic.
    */
-  if (stops && stops >= 2) return stops;
+  if (stops && stops >= 1) return stops;
 
   /*
    * A crawl is the shape where more stops is the point. Three bars is a night
@@ -1196,7 +1237,13 @@ export function planItinerary(
     stopCount: number,
     pin: Anchor | null
   ): PlannedItinerary | null => {
-    const roles = roleSequence(startHour, stopCount, inputs.focus, inputs.vibes);
+    const roles = roleSequence(
+      startHour,
+      stopCount,
+      inputs.focus,
+      inputs.vibes,
+      meetingRole(inputs)
+    );
     const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
 
     /*
@@ -1267,7 +1314,16 @@ export function planItinerary(
       used.add(pick.venue.id);
       chosen[i] = pick;
     }
-    if (chosen.length < 2) return null;
+    /*
+     * An outing is at least two places, unless one was what was asked for.
+     *
+     * chosen is sized from the slots, so this was never a check that the slots
+     * had filled -- the loop above already returns on the first one that
+     * cannot -- it was a floor, and the third of three. A business meeting is
+     * the one pathway where a single venue is the whole plan, so the floor
+     * gives way to a stated answer and holds everywhere else.
+     */
+    if (chosen.length < (inputs.stops === 1 ? 1 : 2)) return null;
 
     const totalOf = (picks: Option[]) => {
       const stops = toStops(picks);
@@ -1514,11 +1570,20 @@ export function planItinerary(
     }
   };
 
+  /*
+   * The floor is one when one is what was asked for.
+   *
+   * Everywhere else it stays two, because a two-stop evening walking down to a
+   * single venue is how a budget failure used to become a plan that looked
+   * deliberate. Only an explicit "just one place" opens the floor, and then it
+   * is not a fallback, it is the request.
+   */
+  const floor = inputs.stops === 1 ? 1 : 2;
   const wanted = Math.min(
     stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops),
-    Math.max(2, candidates.venues.length)
+    Math.max(floor, candidates.venues.length)
   );
-  for (let count = wanted; count >= 2; count--) {
+  for (let count = wanted; count >= floor; count--) {
     const plan = attempt(count, anchor);
     if (plan) return plan;
   }
@@ -1530,7 +1595,7 @@ export function planItinerary(
    * try again without the pin rather than report that nothing fits.
    */
   if (anchor) {
-    for (let count = wanted; count >= 2; count--) {
+    for (let count = wanted; count >= floor; count--) {
       const plan = attempt(count, null);
       if (plan) return plan;
     }

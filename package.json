@@ -24,7 +24,9 @@
     "research:apply": "tsx scripts/research-apply.ts",
     "verify:list": "tsx scripts/verify-list.ts",
     "webhook:smoke": "tsx scripts/webhook-smoke.ts",
-    "paywall": "tsx scripts/paywall-preview.ts"
+    "paywall": "tsx scripts/paywall-preview.ts",
+    "mascots": "tsx scripts/build-mascots.ts",
+    "pathway:smoke": "tsx scripts/pathway-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
