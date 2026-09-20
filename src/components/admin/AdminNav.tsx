@@ -39,6 +39,7 @@ const GROUPS: {
     label: "Needs work",
     links: [
       { href: "/admin/reports", label: "Reports", badge: "openReports", urgent: true },
+      { href: "/admin/issues", label: "Problem reports", badge: "openIssues", urgent: true },
       { href: "/admin/phones", label: "Phone review", badge: "phonesPending", urgent: true },
       { href: "/admin/unpriced", label: "Unpriced venues", badge: "unpriced", urgent: true },
       { href: "/admin/menus", label: "Thin menus", badge: "thinMenus", urgent: true },

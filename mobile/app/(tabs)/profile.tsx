@@ -24,6 +24,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { useAuth, signOut } from "../../src/lib/useAuth";
 import { useAppearance } from "../../src/lib/appearance";
 import { AppIconPicker, appIconsAvailable } from "../../src/components/AppIconPicker";
+import { IssueSheet } from "../../src/components/IssueSheet";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
 import { resetOnboarding } from "../../src/lib/onboarding";
 import {
@@ -87,6 +88,7 @@ export default function Profile() {
   const [nameDraft, setNameDraft] = useState("");
   const [uploading, setUploading] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [issueOpen, setIssueOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -448,6 +450,20 @@ export default function Profile() {
       </Group>
 
       <Group header="Support">
+        {/*
+          Above Contact us, and separate from it.
+
+          A mailto lands in an inbox, needs a mail app configured, and arrives
+          with none of what the app knew at the time. This lands in a queue
+          with the screen, the build and the error attached. The mail row
+          stays for everything that is a question rather than a fault.
+        */}
+        <Row
+          icon="exclamationmark.bubble"
+          title="Report a problem"
+          chevron
+          onPress={() => setIssueOpen(true)}
+        />
         <Row
           icon="envelope"
           title="Contact us"
@@ -549,6 +565,13 @@ export default function Profile() {
         visible={iconPickerOpen}
         onClose={() => setIconPickerOpen(false)}
         onChanged={setToast}
+      />
+
+      <IssueSheet
+        visible={issueOpen}
+        onClose={() => setIssueOpen(false)}
+        onDone={setToast}
+        context={{ screen: "profile" }}
       />
 
       <Toast message={toast} onDone={() => setToast(null)} />

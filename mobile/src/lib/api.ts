@@ -83,6 +83,42 @@ export async function reportVenue(input: {
   }
 }
 
+/** Which part of aduro went wrong, in the reporter's terms. */
+export type IssueArea = "chat" | "plan" | "account" | "payment" | "other";
+
+/**
+ * Tell us aduro is broken, as opposed to a venue being wrong.
+ *
+ * Forgiving in the same way reportVenue is, and for a sharper reason: this is
+ * most often tapped by somebody who has just been stopped by a failure, so an
+ * error on top of an error is the one response guaranteed to lose the report.
+ * The caller shows the same thanks either way.
+ */
+export async function reportIssue(input: {
+  area: IssueArea;
+  message: string;
+  context?: {
+    conversationId?: string;
+    planId?: string;
+    lastError?: string;
+    screen?: string;
+    platform?: string;
+    appVersion?: string;
+    buildNumber?: string;
+  };
+}): Promise<{ ok: boolean }> {
+  try {
+    const { getDeviceId } = await import("./deviceId");
+    const res = await postJson<{ ok: boolean }>("/api/issues", {
+      ...input,
+      deviceId: await getDeviceId(),
+    });
+    return { ok: Boolean(res.ok) };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /**
  * What can be picked up on the way to this plan.
  *

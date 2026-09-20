@@ -20,6 +20,8 @@ import { useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import { Paywall } from "../src/components/chat/Paywall";
+import { IssueSheet } from "../src/components/IssueSheet";
+import { Toast } from "../src/components/Toast";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -64,6 +66,19 @@ export default function ChatScreen() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [paywalled, setPaywalled] = useState(false);
+  /*
+   * The last thing that went wrong, and whether they have been offered the
+   * chance to say so.
+   *
+   * Errors here arrive as ordinary assistant bubbles, which reads well and
+   * leaves nothing to act on: the message that said a conversation had
+   * confused the assistant was, for months, the end of the line. Holding on
+   * to it means the report carries the exact sentence and the conversation
+   * it came from, rather than "chat is broken".
+   */
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   /*
    * Set when a turn actually built something. Kept on the screen rather than
    * in the bubble, because the plan is a thing you go and look at, not a
@@ -156,6 +171,8 @@ export default function ChatScreen() {
     setBubbles((b) => [...b, { role: "user", text: message }]);
     setBusy(true);
     setPlan(null);
+    // Whatever went wrong last time is no longer what is on screen.
+    setLastError(null);
     setStatus("Thinking");
     toBottom();
 
@@ -197,6 +214,7 @@ export default function ChatScreen() {
           push(ev.text);
         } else if (ev.type === "error") {
           push(ev.message);
+          setLastError(ev.message);
         }
       }
     } catch (e) {
@@ -208,6 +226,7 @@ export default function ChatScreen() {
         setBubbles((b) => b.filter((_, i) => i !== b.length - 1));
       } else {
         push("We could not reach the assistant. Check your connection and try again.");
+        setLastError((e as Error)?.message ?? "could not reach the assistant");
       }
     } finally {
       setBusy(false);
@@ -326,6 +345,39 @@ export default function ChatScreen() {
           </Pressable>
         )}
 
+        {/*
+          Offered only after something has actually failed.
+
+          A permanent "report a problem" in a chat thread invites noise and
+          reads as an app that expects to break. Appearing on the back of an
+          error asks the one person who can describe it, at the one moment
+          they can, and carries the sentence they just read with it.
+        */}
+        {lastError && !busy && !paywalled && (
+          <Pressable
+            onPress={() => {
+              void Haptics.selectionAsync();
+              setIssueOpen(true);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              alignSelf: "flex-start",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.xs,
+              marginTop: space.xs,
+              marginBottom: space.md,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Symbol name="exclamationmark.bubble" size={14} color={c.textSecondary} />
+            <Text variant="footnote" tone="secondary">
+              Tell us what went wrong
+            </Text>
+          </Pressable>
+        )}
+
         {paywalled && (
           <Paywall
             tier={allowance?.tier ?? "free"}
@@ -351,6 +403,20 @@ export default function ChatScreen() {
         disabled={paywalled}
         remaining={allowance?.tier === "free" ? allowance.remaining : null}
       />
+
+      <IssueSheet
+        visible={issueOpen}
+        onClose={() => setIssueOpen(false)}
+        onDone={setToast}
+        area="chat"
+        context={{
+          conversationId,
+          lastError: lastError ?? undefined,
+          screen: "chat",
+        }}
+      />
+
+      <Toast message={toast} onDone={() => setToast(null)} />
     </KeyboardAvoidingView>
   );
 }

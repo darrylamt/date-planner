@@ -30,6 +30,14 @@ export interface AdminCounts {
   /** Open reports from people who were actually there. */
   openReports: number;
   /**
+   * Open reports about aduro itself rather than a venue.
+   *
+   * Separate from openReports because they are answered by different work:
+   * one is a catalogue edit, the other is a bug. Chat told paying users they
+   * were out of messages for an unknown stretch and nothing counted it.
+   */
+  openIssues: number;
+  /**
    * Restaurants and cafes the planner cannot order a proper meal from.
    *
    * The Buka has four dishes on file and all four are vegetarian, so every
@@ -70,6 +78,13 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
    */
   const { data: reports } = await supabase
     .from("venue_reports")
+    .select("id")
+    .eq("status", "open");
+
+  // Same tolerance, newer table: 0052. Unrun, this is null and the queue
+  // reads zero rather than taking the dashboard down.
+  const { data: issues } = await supabase
+    .from("issue_reports")
     .select("id")
     .eq("status", "open");
 
@@ -122,6 +137,7 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     ).length,
     unlinked: active.filter((v: any) => !v.google_place_id).length,
     openReports: (reports ?? []).length,
+    openIssues: (issues ?? []).length,
     /*
      * Five is the point at which a spread of four dishes stops being the whole
      * menu. Below it, every group that eats there is served the same handful
