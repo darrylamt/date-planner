@@ -224,16 +224,28 @@ export async function fetchAllowance(): Promise<{
   const row = data as { tier: "free" | "pro" } | null;
   const used = Number((usage as { messages_used?: number } | null)?.messages_used ?? 0);
 
-  // No row means they have never chatted, which is a full free month rather
-  // than no allowance: the row is created on the first spend.
-  if (!row) return { tier: "free", remaining: FREE_MONTHLY, allowance: FREE_MONTHLY };
+  /*
+   * No entitlements row means free, not unused.
+   *
+   * This used to return a full allowance whenever that row was absent, on the
+   * reasoning that somebody with no row had never chatted. The row it was
+   * reasoning about is chat_usage; the row it was testing is entitlements,
+   * and those are unrelated -- only 2 of 23 accounts have ever had an
+   * entitlements row, so almost every free user was shown "5 messages left"
+   * however many they had spent, until the server refused the next one.
+   *
+   * Cosmetic rather than exploitable: consume_chat_message on the server is
+   * what actually gates, and it counts properly. But a footer that says five
+   * and a send that says none is the app calling the server a liar.
+   */
+  const tier = row?.tier ?? "free";
 
   /*
    * Pro is shown as unlimited rather than as a number. The fair-use cap is
    * real and the server enforces it, but counting down from 150 in front of
    * somebody who has paid turns a generous limit into a meter they watch.
    */
-  if (row.tier === "pro") return { tier: "pro", remaining: Infinity, allowance: Infinity };
+  if (tier === "pro") return { tier: "pro", remaining: Infinity, allowance: Infinity };
 
   return {
     tier: "free",
