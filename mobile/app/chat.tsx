@@ -102,6 +102,51 @@ export default function ChatScreen() {
     };
   }, [user, authLoading]);
 
+  /**
+   * Wait for the entitlement to arrive, rather than assuming it already has.
+   *
+   * StoreKit returns the moment Apple takes the money, but the row the server
+   * gates on is written by a webhook: Apple tells RevenueCat, RevenueCat calls
+   * us, we write it. That is seconds, sometimes more. Refetching once on the
+   * spot reads the state from before the purchase, so the screen unlocked and
+   * the very next message hit the paywall again -- and it only came right
+   * after closing and reopening the chat, by which time the webhook had
+   * landed.
+   *
+   * So this asks repeatedly until the answer changes. Thirty seconds of
+   * patience, then an honest sentence: the purchase is not lost, it just has
+   * not reached us yet, and the next thing they send will work.
+   */
+  async function waitForPro() {
+    // The same line the assistant uses while thinking, so the wait looks like
+    // the app working rather than the app hanging.
+    setStatus("Unlocking");
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const next = await fetchAllowance();
+      if (next) setAllowance(next);
+      if (next?.tier === "pro") {
+        setStatus(null);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    setStatus(null);
+    /*
+     * Its own bubble rather than the streaming `push`, which belongs to a
+     * send that is not happening. Said as a delay and not a failure, because
+     * that is what it is: the money has gone, the grant is in flight, and the
+     * next message will work.
+     */
+    setBubbles((b) => [
+      ...b,
+      {
+        role: "assistant",
+        text: "Your subscription is being confirmed by the App Store. That usually takes a few seconds — send that again in a moment.",
+      },
+    ]);
+    toBottom();
+  }
+
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
@@ -292,7 +337,7 @@ export default function ChatScreen() {
              */
             onPurchased={() => {
               setPaywalled(false);
-              void fetchAllowance().then(setAllowance);
+              void waitForPro();
             }}
           />
         )}
