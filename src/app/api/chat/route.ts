@@ -49,6 +49,21 @@ export async function POST(req: Request) {
 
   // Before the model, always.
   const spend = await consumeMessage(userId);
+
+  /*
+   * A meter that did not answer is not a paywall.
+   *
+   * Both still refuse, because letting everybody through when the counter
+   * breaks is how one bad night becomes the month's bill. But 402 tells the
+   * app to sell a subscription, and selling one to somebody who already pays
+   * reads as the product losing track of what they bought. 503 says the
+   * honest thing, and it is the difference between a bug that is visible in
+   * an hour and one that survived a release.
+   */
+  if (!spend.allowed && spend.reason === "unavailable") {
+    return json({ error: "meter_unavailable" }, 503);
+  }
+
   if (!spend.allowed) {
     return json(
       {

@@ -107,6 +107,20 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
 export interface Spend extends Entitlement {
   /** False means the caller is out; show the paywall and call nothing. */
   allowed: boolean;
+  /**
+   * Why it was refused, when it was.
+   *
+   * "spent" is a real answer from the meter: this account has used what it
+   * has. "unavailable" means the meter never answered and the refusal is a
+   * guess made on the safe side.
+   *
+   * These were the same value until a renamed argument made every call fail
+   * and every user, paid ones included, got told they were out of messages
+   * for the month. A refusal that cannot say which of the two it is turns a
+   * broken meter into a convincing paywall, and the only outward sign is the
+   * bill not arriving.
+   */
+  reason?: "spent" | "unavailable";
 }
 
 /**
@@ -142,6 +156,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
     console.error("chat meter unreachable", error);
     return {
       allowed: false,
+      reason: "unavailable",
       tier: "free",
       used: 0,
       allowance: FREE_MONTHLY_MESSAGES,
@@ -159,6 +174,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
     console.error("chat meter returned no row", { userId });
     return {
       allowed: false,
+      reason: "unavailable",
       tier: "free",
       used: 0,
       allowance: FREE_MONTHLY_MESSAGES,
@@ -168,6 +184,7 @@ export async function consumeMessage(userId: string): Promise<Spend> {
 
   return {
     allowed: Boolean(result.allowed),
+    reason: "spent",
     tier: result.tier,
     used: Number(result.used),
     allowance: Number(result.allowance),
