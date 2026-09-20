@@ -23,6 +23,7 @@
     "research:check": "tsx scripts/research-check.ts",
     "research:apply": "tsx scripts/research-apply.ts",
     "verify:list": "tsx scripts/verify-list.ts",
+    "webhook:smoke": "tsx scripts/webhook-smoke.ts",
     "paywall": "tsx scripts/paywall-preview.ts"
   },
   "dependencies": {

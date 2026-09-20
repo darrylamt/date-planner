@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     patch = {
       tier: "pro",
       status: "active",
-      source: event.store === "APP_STORE" ? "app_store" : (event.store ?? "revenuecat"),
+      source: sourceFor(event.store),
       expires_at: event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : null,
       rc_app_user_id: userId,
     };
@@ -136,4 +136,38 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true, type, userId });
+}
+
+/**
+ * RevenueCat's word for the store, in this schema's vocabulary.
+ *
+ * ── the bug this exists to prevent ──────────────────────────────────────
+ * This wrote "app_store", and entitlements_source_check allows only
+ * 'apple', 'stripe' and 'grant'. Every real purchase would have been
+ * rejected by the constraint, returned 500, and been retried by RevenueCat
+ * for days while the buyer stared at the paywall they had just paid to
+ * remove. The revoke path wrote no source at all, so expiries worked
+ * perfectly and the failure looked like nothing at all until somebody
+ * actually bought something.
+ *
+ * ── why an unknown store writes null ────────────────────────────────────
+ * Null, never a guess. `source` is nullable and only says where a purchase
+ * came from; the constraint would reject an unrecognised string and take the
+ * entire grant down with it. Losing the label is a reconciliation
+ * inconvenience. Losing the grant is somebody who paid and cannot use what
+ * they bought, which is the one outcome this endpoint exists to prevent.
+ */
+function sourceFor(store: string | undefined): string | null {
+  switch (store) {
+    case "APP_STORE":
+    case "MAC_APP_STORE":
+      return "apple";
+    case "PLAY_STORE":
+      return "play";
+    case "STRIPE":
+    case "RC_BILLING":
+      return "stripe";
+    default:
+      return null;
+  }
 }
