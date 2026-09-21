@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 const UPDATED = "10 September 2026";
-const CONTACT = "amoateydarryl4@gmail.com";
+const CONTACT = "planbyaduro@gmail.com";
 
 /**
  * Privacy policy.
@@ -28,48 +28,51 @@ export default function PrivacyPage() {
 
       <Section title="What we collect">
         <p>
-          <strong>If you never sign in:</strong> nothing that identifies you. The answers
-          you give while planning stay on your device. We do not have an account for you.
+          <strong>If you never sign in:</strong> nothing that identifies you.
+          The answers you give while planning stay on your device. We do not
+          have an account for you.
         </p>
         <p>
-          <strong>If you sign in:</strong> your email address, and the plans you choose to
-          save.
+          <strong>If you sign in:</strong> your email address, and the plans you
+          choose to save.
         </p>
         <p>
-          <strong>When you book or report:</strong> a reservation request records the venue,
-          date and party size. A report records which venue and what you said was wrong.
+          <strong>When you book or report:</strong> a reservation request
+          records the venue, date and party size. A report records which venue
+          and what you said was wrong.
         </p>
       </Section>
 
       <Section title="What we do not collect">
         <p>
-          No location tracking, no advertising identifiers, no contacts, no photos. We do
-          not sell anything to anyone, because there is nothing to sell.
+          No location tracking, no advertising identifiers, no contacts, no
+          photos. We do not sell anything to anyone, because there is nothing to
+          sell.
         </p>
       </Section>
 
       <Section title="Who else sees it">
         <p>
-          The preferences you type are sent to Anthropic&apos;s API, which helps produce
-          your plan and does not use them to train models. Venue facts come from Google
-          Places. Data is stored with Supabase. Nobody else.
+          The preferences you type are sent to Anthropic&apos;s API, which helps
+          produce your plan and does not use them to train models. Venue facts
+          come from Google Places. Data is stored with Supabase. Nobody else.
         </p>
         <p>
-          A plan you share is readable by anyone with the link. That is the point of a
-          share link, so only send it to people you mean to.
+          A plan you share is readable by anyone with the link. That is the
+          point of a share link, so only send it to people you mean to.
         </p>
       </Section>
 
       <Section title="Deleting your account">
         <p>
           Open the app, go to <strong>You</strong>, and choose{" "}
-          <strong>Delete account</strong>. Your account and saved plans are removed
-          immediately. Reports you filed about venues stay, with your name detached, because
-          a closed venue is still closed.
+          <strong>Delete account</strong>. Your account and saved plans are
+          removed immediately. Reports you filed about venues stay, with your
+          name detached, because a closed venue is still closed.
         </p>
         <p>
-          If you cannot get into the app, email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>{" "}
-          and we will do it for you.
+          If you cannot get into the app, email{" "}
+          <a href={`mailto:${CONTACT}`}>{CONTACT}</a> and we will do it for you.
         </p>
       </Section>
 
@@ -92,11 +95,19 @@ export default function PrivacyPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mt-8">
       <h2 className="font-display text-[18px] font-bold">{title}</h2>
-      <div className="mt-2 space-y-3 text-[15px] leading-relaxed text-cocoa">{children}</div>
+      <div className="mt-2 space-y-3 text-[15px] leading-relaxed text-cocoa">
+        {children}
+      </div>
     </section>
   );
 }
