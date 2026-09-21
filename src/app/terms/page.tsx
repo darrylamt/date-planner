@@ -6,7 +6,7 @@ export const metadata = {
   description: "The short version of what aduro promises and what it does not.",
 };
 
-const UPDATED = "10 September 2026";
+const UPDATED = "21 September 2026";
 const CONTACT = "amoateydarryl4@gmail.com";
 
 /** Terms of use. Linked from the App Store listing and from Profile. */
@@ -56,6 +56,74 @@ export default function TermsPage() {
         <p>
           Keep your sign-in details to yourself. You can delete your account at any time
           from <strong>You</strong> in the app.
+        </p>
+      </Section>
+
+      {/*
+        The subscription section Apple's guideline 3.1.2 asks for.
+
+        Its checklist is specific: the title, the length, the price, that
+        payment is charged to the Apple ID at confirmation, that it renews
+        unless auto-renew is turned off 24 hours before the period ends, and
+        where to cancel. A terms page that a paywall links to and that never
+        mentions the subscription is a fair question for a reviewer, and it was
+        the reason this page was rejected before a human ever opened the app.
+      */}
+      <Section title="aduro Pro">
+        <p>
+          Planning is free and stays free. The questionnaire, the plans it builds, saving
+          and sharing them cost nothing and are not part of any subscription.
+        </p>
+        <p>
+          <strong>aduro Pro</strong> is an auto-renewable subscription that adds the
+          assistant: the chat that plans with you and answers questions about the
+          catalogue. It runs for <strong>one month</strong> and renews monthly.
+        </p>
+        <p>
+          {/*
+            No figure here, deliberately.
+
+            The App Store sets the price per region and it moves -- ours changed twice
+            in a week. A number typed onto this page would be wrong for most of the
+            world and stale for the rest, so the paywall shows the store&apos;s own price
+            in your currency before you buy, and that is the price.
+          */}
+          The price is shown on the paywall in your own currency before you buy. We do not
+          quote it here, because the App Store sets it per region and changes it.
+        </p>
+        <p>
+          Pro includes 150 assistant messages a month, which is a fair-use limit rather
+          than a charge: nobody is billed for going over it, the assistant simply waits
+          until the month turns. Free accounts get five a month on the same terms.
+        </p>
+      </Section>
+
+      <Section title="Billing, renewal and cancelling">
+        <p>
+          Payment is charged to your Apple ID when you confirm the purchase. The
+          subscription renews automatically unless auto-renew is turned off at least
+          <strong> 24 hours before the end of the current period</strong>, and your account
+          is charged for the renewal within the 24 hours before that period ends.
+        </p>
+        <p>
+          You can manage the subscription or turn off auto-renew in your Apple ID settings,
+          under <strong>Settings, your name, Subscriptions</strong>. There is a link
+          straight to it from <strong>aduro Pro</strong> in the app.
+        </p>
+        <p>
+          Cancelling stops the next charge. It does not refund the period you are already
+          in, and Pro keeps working until that period ends.
+        </p>
+        <p>
+          {/*
+            Worth saying plainly. Deleting an account inside an app does not touch
+            the subscription, which lives with Apple, and somebody who assumes it
+            does will be charged again next month and be right to be annoyed.
+          */}
+          Refunds are handled by Apple rather than by us, through
+          reportaproblem.apple.com. Deleting your aduro account does not cancel the
+          subscription, because the subscription is held by Apple and not by us. Cancel it
+          first, then delete the account.
         </p>
       </Section>
 
