@@ -5,7 +5,6 @@ import { Fragment, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
 import { Toast } from "@/components/Toast";
-import { VenueResearch } from "@/components/admin/VenueResearch";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
 import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places";
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
@@ -13,7 +12,7 @@ import { HoursEditor } from "./HoursEditor";
 import { ImageField, ImageListField } from "./ImageField";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
-import type { VenueDraft } from "@/lib/research";
+import type { VenueDraft } from "@/lib/catalog";
 import type { Area, MenuCategory, MenuItem, Venue, VenueSchedule } from "@/lib/types";
 
 const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] as const;
@@ -694,7 +693,6 @@ export function VenueForm({
           linkedPlaceId={v.google_place_id || null}
           onApply={applyPlace}
         />
-        <VenueResearch initialName={v.name} onApply={applyDraft} />
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">

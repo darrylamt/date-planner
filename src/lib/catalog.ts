@@ -460,3 +460,58 @@ export function normaliseCategory(
   }
   return null;
 }
+
+/* ── the venue draft ──────────────────────────────────────────────────────
+ *
+ * Rescued from research.ts when that file was retired.
+ *
+ * The shape itself was never about the model: it is what the admin venue form
+ * binds to and what a CSV import fills, and it outlived the Opus 5 call that
+ * used to produce it. Kept here because this module is deliberately free of
+ * the Anthropic SDK, which is what lets browser code import it at all.
+ */
+/*
+ * Wider than BEST_FOR above, and deliberately its own list.
+ *
+ * It carries casual_hangout, which 89 venues in the catalogue actually hold
+ * and the shorter list does not. They were separate lists before this file
+ * absorbed the draft schema and they stay separate: widening the exported one
+ * would quietly change what every other caller accepts as valid.
+ */
+const DRAFT_BEST_FOR = [
+  "first_date",
+  "anniversary",
+  "date_night",
+  "friend_outing",
+  "casual_hangout",
+] as const;
+
+export const venueDraftSchema = z.object({
+  found: z.boolean(),
+  canonical_name: z.string().nullable().default(null),
+  type: z.enum(VENUE_TYPES).nullable().default(null),
+  area_name: z.string().nullable().default(null),
+  address: z.string().nullable().default(null),
+  description: z.string().default(""),
+  price_band: z.enum(["budget", "mid", "premium"]).nullable().default(null),
+  /** Only when a source states actual prices. Prose signals go in price_signal. */
+  avg_cost_per_person_ghs: z.number().min(0).default(0),
+  price_signal: z.string().nullable().default(null),
+  is_free: z.boolean().default(false),
+  vibe_tags: z.array(z.enum(VENUE_VIBE_TAGS)).default([]),
+  best_for: z.array(z.enum(DRAFT_BEST_FOR)).default([]),
+  reservation_required: z.boolean().default(false),
+  dress_code: z.string().nullable().default(null),
+  phone: z.string().nullable().default(null),
+  instagram_handle: z.string().nullable().default(null),
+  google_maps_url: z.string().nullable().default(null),
+  website: z.string().nullable().default(null),
+  lat: z.number().nullable().default(null),
+  lng: z.number().nullable().default(null),
+  confidence: z.number().min(0).max(1).default(0),
+  /** Anything the admin should check before saving. */
+  warnings: z.array(z.string()).default([]),
+  sources: z.array(z.object({ title: z.string(), url: z.string() })).default([]),
+});
+
+export type VenueDraft = z.infer<typeof venueDraftSchema>;
