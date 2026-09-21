@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { recordUsage } from "@/lib/aiUsage";
 import { createServiceClient } from "@/lib/supabase/server";
 import { consumeMessage } from "@/lib/entitlements";
 import { buildToolContext, todayInAccra } from "@/lib/chat/tools";
@@ -234,6 +235,28 @@ async function persist(
   turns: ChatTurn[],
   usage: ModelUsage[]
 ): Promise<void> {
+  /*
+   * The same numbers, in the two places that each answer a different question.
+   *
+   * messages.usage keeps them beside the turn they belong to, which is what
+   * makes "what did this conversation cost" answerable. ai_usage keeps them
+   * beside every other call site, which is what makes "where did the month go"
+   * answerable -- and that was the question nobody could answer, because chat
+   * was the only caller writing anything down and it wrote somewhere the other
+   * callers did not.
+   *
+   * Not awaited, for the reason every other recordUsage call is not awaited:
+   * an answer already streamed to somebody must not fail on a spend log.
+   */
+  for (const u of usage) {
+    void recordUsage("chat", u.model, {
+      input_tokens: u.input,
+      output_tokens: u.output,
+      cache_read_input_tokens: u.cacheRead,
+      cache_creation_input_tokens: u.cacheWrite,
+    } as never);
+  }
+
   let spent = 0;
   const rows = turns.map((turn) => ({
     conversation_id: conversationId,
