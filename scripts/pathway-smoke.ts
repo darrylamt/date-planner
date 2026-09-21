@@ -17,7 +17,7 @@ import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import { fetchCandidates } from "../src/lib/matching";
 import { planItinerary } from "../src/lib/planner";
-import { defaultInputs, OCCASION_IDS } from "../src/lib/planConstants";
+import { defaultInputs, defaultStopsFor, OCCASION_IDS } from "../src/lib/planConstants";
 import { planInputsSchema } from "../src/lib/schemas";
 import type { PlanInputs } from "../src/lib/types";
 
@@ -63,7 +63,16 @@ async function main() {
       ...defaultInputs(),
       occasion,
       vibes: ["Calm"],
-      stops: occasion === "business_meeting" ? 1 : 2,
+      /*
+       * What the app actually sends, not a value chosen to pass.
+       *
+       * This line read `occasion === "business_meeting" ? 1 : 2` and so tested
+       * a number the questionnaire never produces. The real default is
+       * defaultStopsFor, which returns 0 for "up to you" -- and 0 was refused
+       * by the schema, so every pathway but the meeting failed in production
+       * while this test stayed green.
+       */
+      stops: defaultStopsFor(occasion),
     };
     const parsed = planInputsSchema.safeParse(body);
     check(

@@ -17,14 +17,20 @@ export const planInputsSchema = z.object({
   // Optional: a plan built before this was asked carries no value, and the
   // planner falls back to reading it off the duration.
   /*
-   * One, because one is now an answer.
+   * Zero and one are both answers, and the floor was wrong for both.
    *
-   * The floor was two here as well as in the planner, and this is the copy
-   * that decides whether a request is even heard: a business meeting posting
-   * stops: 1 was refused as invalid input before any of the planner's own
-   * floors were reached.
+   * One is a business meeting. Zero is "up to you" -- it is what STOP_OPTIONS
+   * has always carried for that choice, so the questionnaire could always
+   * produce it, and this schema has always refused it. It went unnoticed while
+   * the field was usually absent; defaultStopsFor then started writing the 0
+   * out explicitly on every occasion change, which turned a latent bug into
+   * every plan failing with "Invalid plan inputs".
+   *
+   * The planner already reads it correctly: 0 is falsy, so stopCountFor falls
+   * through to inferring from the hours, which is exactly what "up to you"
+   * means.
    */
-  stops: z.number().int().min(1).max(5).optional(),
+  stops: z.number().int().min(0).max(5).optional(),
   alcohol: z.enum(["either", "none"]).optional(),
   vibes: z.array(z.string()).min(1).max(3),
   // Defaulted rather than required: a plan posted by an older build of the
