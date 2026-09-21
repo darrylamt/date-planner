@@ -135,6 +135,78 @@ async function main() {
   const p = PRICES["claude-sonnet-5"] ?? FALLBACK;
   const ifAllCached = ((input * p.in * 0.1) / 1_000_000) - (input * p.in) / 1_000_000;
   console.log(`   ceiling if every uncached input token had been a cache read: ${usd(-ifAllCached)} saved`);
+
+  await everythingElse(cost);
+}
+
+/**
+ * The other call sites, from 0053.
+ *
+ * Chat was never the expensive one; it was only the one that wrote anything
+ * down. Reported beside it so the comparison is on the same screen, because
+ * the mistake this whole exercise came from was reading one call site's
+ * numbers as though they were the bill.
+ */
+async function everythingElse(chatCost: number) {
+  const { data, error } = await admin
+    .from("ai_usage")
+    .select("call_site, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, ok, duration_ms");
+
+  if (error) {
+    console.log("\nOTHER CALL SITES");
+    console.log("   ai_usage is not there yet -- run migration 0053.");
+    return;
+  }
+
+  const rows = (data ?? []) as {
+    call_site: string;
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_write_tokens: number;
+    ok: boolean;
+    duration_ms: number | null;
+  }[];
+
+  if (!rows.length) {
+    console.log("\nOTHER CALL SITES");
+    console.log("   nothing logged yet. Generate a plan, or research a venue, and run this again.");
+    return;
+  }
+
+  const bySite = new Map<string, { calls: number; cost: number; read: number; prompt: number; fails: number }>();
+  let total = 0;
+
+  for (const r of rows) {
+    const price = PRICES[r.model] ?? FALLBACK;
+    const c =
+      (r.input_tokens * price.in +
+        r.cache_read_tokens * price.in * 0.1 +
+        r.cache_write_tokens * price.in * 1.25 +
+        r.output_tokens * price.out) /
+      1_000_000;
+    total += c;
+    const cur = bySite.get(r.call_site) ?? { calls: 0, cost: 0, read: 0, prompt: 0, fails: 0 };
+    cur.calls += 1;
+    cur.cost += c;
+    cur.read += r.cache_read_tokens;
+    cur.prompt += r.input_tokens + r.cache_read_tokens + r.cache_write_tokens;
+    if (!r.ok) cur.fails += 1;
+    bySite.set(r.call_site, cur);
+  }
+
+  console.log("\nOTHER CALL SITES");
+  console.log("   site        calls     cost    cache%   failed");
+  for (const [site, v] of [...bySite].sort((a, b) => b[1].cost - a[1].cost)) {
+    const hit = v.prompt ? ((v.read / v.prompt) * 100).toFixed(0) : "0";
+    console.log(
+      `   ${site.padEnd(11)} ${String(v.calls).padStart(5)}  ${usd(v.cost).padStart(8)}  ${(hit + "%").padStart(6)}   ${v.fails}`
+    );
+  }
+  console.log(`   ${"chat".padEnd(11)} ${"".padStart(5)}  ${usd(chatCost).padStart(8)}  (from messages.usage)`);
+  console.log(`\n   everything logged: ${usd(total + chatCost)}`);
+  console.log("   Compare against the console's monthly figure. A large gap is a call site still not logging.");
 }
 
 main().catch((e) => {

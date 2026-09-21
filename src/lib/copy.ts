@@ -4,6 +4,7 @@ import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
 import { clockFromMinutes, type PlannedItinerary } from "./planner";
 import { ghs, longDate } from "./format";
 import { aboutName, pronounForGender, pronounSet } from "./pronouns";
+import { recordUsage } from "./aiUsage";
 import type { PlanInputs } from "./types";
 
 /**
@@ -144,6 +145,8 @@ export async function writePlanCopy(
   inputs: PlanInputs,
   plan: PlannedItinerary
 ): Promise<CopyResult | CopyFailure> {
+  const startedAt = Date.now();
+
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
@@ -172,6 +175,13 @@ export async function writePlanCopy(
       ],
       messages: [{ role: "user", content: buildUserMessage(inputs, plan) }],
     });
+
+    /*
+     * Not awaited, on purpose. This runs on the path that builds somebody's
+     * evening, and a spend log that can delay or fail a plan is worse than no
+     * spend log at all.
+     */
+    void recordUsage("copy", MODEL, response.usage, { ms: Date.now() - startedAt });
 
     if (response.stop_reason === "refusal") {
       return { ok: false, error: "The model declined to write this plan." };

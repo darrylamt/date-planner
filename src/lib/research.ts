@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { recordUsage, recordFailure } from "./aiUsage";
 import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
 import { VENUE_VIBE_TAGS } from "./catalog";
@@ -21,7 +22,20 @@ import { VENUE_VIBE_TAGS } from "./catalog";
  *
  * Everything here is a draft. Nothing is written until an admin saves it.
  */
-const MODEL = "claude-opus-5";
+/*
+ * Opus 5, and the reason is worth stating because it is the most expensive
+ * choice in the project.
+ *
+ * $5/$25 per MTok against Sonnet 5's $2/$10, so this call is two and a half
+ * times the price of the assistant's. It stays because research is the model deciding what is true about a real place, and because a
+ * wrong row here is not a wrong sentence -- it is a venue in the catalogue
+ * that somebody is sent to.
+ *
+ * Overridable so the tradeoff can be measured rather than argued about: set
+ * RESEARCH_MODEL=claude-sonnet-5, run a batch, and compare against ai_usage
+ * and the rows it produced. Do not change the default without doing that.
+ */
+const MODEL = process.env.RESEARCH_MODEL ?? "claude-opus-5";
 
 export const VENUE_TYPES = [
   "restaurant",
@@ -173,6 +187,7 @@ export async function researchVenue(
 
   let response: Anthropic.Message;
   let guard = 0;
+  const startedAt = Date.now();
 
   try {
     do {
@@ -189,9 +204,16 @@ export async function researchVenue(
       if (response.stop_reason === "pause_turn") {
         messages.push({ role: "assistant", content: response.content });
       }
+      /*
+       * Logged per pass, not per venue. A paused turn is a second billed
+       * request, and a web search that takes four passes costs four times
+       * what a report counting venues would suggest.
+       */
+      void recordUsage("research", MODEL, response.usage, { ms: Date.now() - startedAt });
       guard++;
     } while (response.stop_reason === "pause_turn" && guard < 4);
   } catch (e) {
+    recordFailure("research", MODEL, Date.now() - startedAt);
     console.error("venue research failed", e);
     if (e instanceof Anthropic.RateLimitError) {
       return { ok: false, error: "Rate limited, try again shortly." };

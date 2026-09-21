@@ -1,3 +1,4 @@
+import { recordUsage, recordFailure } from "./aiUsage";
 import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, parseModelJson, textFromResponse } from "./anthropic";
 import { ingestResultSchema, type IngestResult } from "./catalog";
@@ -22,7 +23,20 @@ export type { IngestedItem, IngestResult } from "./catalog";
  * a real person's budget, so a hallucinated price is worse than a missing one.
  * Anything unreadable goes to `warnings` rather than being filled in.
  */
-const MODEL = "claude-opus-5";
+/*
+ * Opus 5, and the reason is worth stating because it is the most expensive
+ * choice in the project.
+ *
+ * $5/$25 per MTok against Sonnet 5's $2/$10, so this call is two and a half
+ * times the price of the assistant's. It stays because misreading a price off a photograph puts a wrong number in front of somebody paying it, and because a
+ * wrong row here is not a wrong sentence -- it is a venue in the catalogue
+ * that somebody is sent to.
+ *
+ * Overridable so the tradeoff can be measured rather than argued about: set
+ * INGEST_MODEL=claude-sonnet-5, run a batch, and compare against ai_usage
+ * and the rows it produced. Do not change the default without doing that.
+ */
+const MODEL = process.env.INGEST_MODEL ?? "claude-opus-5";
 
 export interface IngestImage {
   /** image/jpeg | image/png | image/webp | image/gif */
@@ -184,6 +198,7 @@ export async function ingestMenu(
 
   let response: Anthropic.Message;
   let guard = 0;
+  const startedAt = Date.now();
 
   try {
     do {
@@ -208,11 +223,18 @@ export async function ingestMenu(
       if (response.stop_reason === "pause_turn") {
         messages.push({ role: "assistant", content: response.content });
       }
+      /*
+       * Per pass, and the images are in it. A menu photograph is the largest
+       * thing this project sends anywhere, so a report that counted ingests
+       * rather than passes would understate the most expensive call site.
+       */
+      void recordUsage("ingest", MODEL, response.usage, { ms: Date.now() - startedAt });
       guard++;
       // Each pause_turn is another full round trip. A site that blocks the
       // fetcher will pause every time, so the ceiling is low deliberately.
     } while (response.stop_reason === "pause_turn" && guard < 2);
   } catch (e) {
+    recordFailure("ingest", MODEL, Date.now() - startedAt);
     console.error("ingest call failed", e);
     if (e instanceof Anthropic.RateLimitError) {
       return { ok: false, error: "Rate limited, try again shortly." };
