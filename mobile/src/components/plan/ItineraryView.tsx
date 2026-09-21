@@ -37,6 +37,7 @@ import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, longDate } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
+import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planMailto } from "../../lib/planEmail";
 import { swapStopLocally } from "../../lib/swapStop";
@@ -126,10 +127,38 @@ export function ItineraryView({
   }
 
   /**
-   * Log the request (our system of record), then hand off to the venue's
-   * WhatsApp with the message pre-written.
+   * Ask before booking anything.
+   *
+   * Reserve is the one action on this screen that reaches outside the app and
+   * cannot be taken back: it writes a reservation request, and then opens the
+   * venue's booking page, or a WhatsApp message already addressed to them, or
+   * dials the phone. It sat next to Directions and Menu, which are both free
+   * to tap and wander back from, at the size of a thumb.
+   *
+   * The confirmation names the venue, the day and the time, because "are you
+   * sure" on its own asks somebody to remember what they tapped.
    */
-  async function handleReserve(index: number) {
+  function handleReserve(index: number) {
+    if (reservingIndex !== null) return;
+    const stop = itinerary.stops[index];
+
+    Alert.alert(
+      "Request a table?",
+      `${stop.name}, ${longDate(inputs.date)} at ${stop.arrival_time}, for ${partyLabel(
+        inputs.partySize
+      )}.\n\nWe will log it and hand you over to them to confirm.`,
+      [
+        { text: "Not yet", style: "cancel" },
+        { text: "Request", onPress: () => void reserveNow(index) },
+      ]
+    );
+  }
+
+  /**
+   * Log the request (our system of record), then hand off to the venue's
+   * booking page, WhatsApp or phone with the message pre-written.
+   */
+  async function reserveNow(index: number) {
     if (reservingIndex !== null) return;
     const stop = itinerary.stops[index];
     setReservingIndex(index);
@@ -141,7 +170,15 @@ export function ItineraryView({
           venueId: stop.venue_id,
           venueName: stop.name,
           planSlug: shareSlug,
-          partySize: 2,
+          /*
+           * The size they actually asked for.
+           *
+           * This was hardcoded to two, which was true while every pathway was
+           * an evening for a couple. A family day of six and a meeting of four
+           * both now reach this, and a request for a table for two is a table
+           * nobody has when they arrive.
+           */
+          partySize: inputs.partySize,
           date: inputs.date,
           arrivalTime: stop.arrival_time,
           guestName: inputs.partner.name,
@@ -185,7 +222,8 @@ export function ItineraryView({
         setToast("Opening their booking page.");
       } else if (whatsapp) {
         const msg =
-          `Hello ${stop.name}! I would like to reserve a table for two on ` +
+          `Hello ${stop.name}! I would like to reserve a table for ` +
+          `${partyLabel(inputs.partySize)} on ` +
           `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
           `Please confirm availability., sent via aduro`;
         await Linking.openURL(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`);

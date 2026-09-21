@@ -7,9 +7,10 @@ import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Segmented } from "../src/components/Segmented";
-import { FloatingMascots } from "../src/components/FloatingMascots";
+import { Image } from "expo-image";
+import { Symbol } from "../src/components/Symbol";
 import { BrandMark } from "../src/components/BrandMark";
-import { GUTTER, radius, space } from "../src/theme";
+import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import {
   MIN_PASSWORD,
@@ -31,11 +32,19 @@ type Mode = "signin" | "signup";
 /**
  * Sign in.
  *
- * Two halves: the cast of mascots drifting above, and a rounded sheet below
- * carrying everything you can actually press. The old screen opened on a
- * segmented control and two empty text boxes, which is what a form looks like,
- * not what an evening out looks like, and almost nobody was going to type an
- * address anyway when Apple and Google are right there.
+ * One column on a flat page: a sentence, a character, and a stack of
+ * full-width pills, each the same shape so no one of them reads as the
+ * default. It replaced a drifting cast of mascots over a raised sheet, which
+ * was two competing surfaces on a screen with one job.
+ *
+ * Every way in is a row of the same size. That is a design decision with a
+ * rule behind it -- guideline 4.8 asks that Apple's option be no less
+ * prominent than any other third-party sign-in -- and equal rows satisfy it
+ * without anybody having to argue about which button looks bigger.
+ *
+ * There is no Facebook row. The reference this was drawn from has one; we do
+ * not have the provider, and a button that cannot sign anybody in is worse
+ * than a shorter list.
  */
 export default function Login() {
   const c = useTheme();
@@ -52,7 +61,6 @@ export default function Login() {
   const [appleReady, setAppleReady] = useState(false);
   const [social, setSocial] = useState<"apple" | "google" | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
-  const [hero, setHero] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     let active = true;
@@ -157,64 +165,96 @@ export default function Login() {
   const hasProvider = appleReady || googleSignInAvailable();
   const showEmail = emailOpen || !hasProvider;
 
-  const socialButton = (
-    provider: "apple" | "google",
-    label: string,
-    glyph: React.ReactNode
-  ) => (
+  /**
+   * One row, the shape every other row is.
+   *
+   * Outlined rather than filled, so that nothing in the stack is styled as
+   * the recommended choice: the person picks the account they already have,
+   * and an app with an opinion about that is an app adding a step.
+   */
+  const Pill = ({
+    label,
+    icon,
+    onPress,
+    loading,
+    disabled,
+  }: {
+    label: string;
+    icon?: React.ReactNode;
+    onPress: () => void;
+    loading?: boolean;
+    disabled?: boolean;
+  }) => (
     <Pressable
-      onPress={() => void social_(provider)}
-      disabled={social !== null}
+      onPress={onPress}
+      disabled={disabled || loading}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={{
-        width: 54,
-        height: 54,
-        borderRadius: radius.control,
+      style={({ pressed }) => ({
+        height: 56,
+        borderRadius: 28,
+        borderWidth: HAIRLINE,
+        borderColor: c.border,
+        backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: c.backgroundElement,
-        opacity: social !== null && social !== provider ? 0.5 : 1,
-      }}
+        paddingHorizontal: space.lg,
+        marginTop: space.sm,
+        opacity: disabled ? 0.5 : 1,
+      })}
     >
-      {social === provider ? <ActivityIndicator color={c.text} /> : glyph}
+      {loading ? (
+        <ActivityIndicator color={c.text} />
+      ) : (
+        <>
+          {/*
+            The mark sits at the edge and the label stays centred on the row
+            rather than beside the mark, so three rows with marks of different
+            widths still read as one stack.
+          */}
+          {icon ? <View style={{ position: "absolute", left: space.lg }}>{icon}</View> : null}
+          <Text variant="headline" weight="600">
+            {label}
+          </Text>
+        </>
+      )}
     </Pressable>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       {/*
-        ── the cast, drifting ──
-        Gives up its space first. With the keyboard open there is not room for
-        both a hero and a form, and the form is the part being used.
-      */}
-      <View
-        style={{ flex: 1, minHeight: 96 }}
-        onLayout={(e) => setHero(e.nativeEvent.layout)}
-      >
-        <FloatingMascots width={hero.width} height={hero.height} />
-      </View>
+        Dismiss, where there is something to go back to.
 
-      {/*
-        ── the sheet ──
-        automaticallyAdjustKeyboardInsets rather than a KeyboardAvoidingView.
-        The wrapper only padded the outside of the sheet, so with the keyboard
-        up the sheet was squeezed and the password field ended up underneath
-        it with no way to scroll to it: the ScrollView was sized to its
-        content and had nothing to scroll. This insets the scrollable area by
-        the keyboard itself and brings the focused field into view, and
-        flexShrink lets the sheet actually give ground rather than being
-        clipped. Android resizes the window instead, which this handles too.
+        Sign-in is reached two ways: chosen from Profile, and arrived at
+        because something required an account. Only the first has anywhere to
+        return to, so the control is hidden rather than dead in the second.
       */}
+      {router.canGoBack() ? (
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={14}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          style={{
+            position: "absolute",
+            top: insets.top + space.sm,
+            right: GUTTER,
+            zIndex: 2,
+          }}
+        >
+          <Symbol name="xmark" size={20} color={c.textSecondary} />
+        </Pressable>
+      ) : null}
+
       <ScrollView
-        style={{ flexGrow: 0, flexShrink: 1 }}
+        style={{ flex: 1 }}
         contentContainerStyle={{
-          backgroundColor: c.backgroundSunken,
-          borderTopLeftRadius: 32,
-          borderTopRightRadius: 32,
           paddingHorizontal: GUTTER,
-          paddingTop: space.xl,
-          paddingBottom: Math.max(insets.bottom, space.lg) + space.md,
+          paddingTop: insets.top + space.xxl,
+          paddingBottom: Math.max(insets.bottom, space.lg) + space.lg,
+          flexGrow: 1,
         }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
@@ -232,14 +272,34 @@ export default function Login() {
             worth turning up for
           </Text>
         </Text>
-        <Text variant="body" tone="secondary" style={{ marginTop: space.sm }}>
-          {mode === "signin"
-            ? "Sign in to save plans, share them, and keep the calendar."
-            : "An account is only needed to save and share plans."}
-        </Text>
+
+        {/*
+          One character, not the drifting cast.
+
+          The cast was decoration behind a form. Here it is the middle of the
+          screen and the only thing between the sentence and the buttons, so a
+          crowd reads as clutter where one of them reads as a mascot. It gives
+          up its height first when the keyboard is open.
+        */}
+        <View
+          style={{
+            flexShrink: 1,
+            minHeight: 0,
+            alignItems: "center",
+            justifyContent: "center",
+            marginVertical: space.lg,
+          }}
+        >
+          <Image
+            source={require("../assets/mascots/date_night.png")}
+            style={{ width: 168, height: 168 }}
+            contentFit="contain"
+            transition={200}
+          />
+        </View>
 
         {error ? (
-          <Text variant="footnote" tone="red" style={{ marginTop: space.md }}>
+          <Text variant="footnote" tone="red" style={{ marginBottom: space.sm }}>
             {error}
           </Text>
         ) : null}
@@ -247,7 +307,7 @@ export default function Login() {
         {notice ? (
           <View
             style={{
-              marginTop: space.md,
+              marginBottom: space.sm,
               padding: space.md,
               borderRadius: radius.control,
               backgroundColor: c.accentSoft,
@@ -259,20 +319,29 @@ export default function Login() {
           </View>
         ) : null}
 
+        {/* ── the stack: email, Apple, Google, each the same 56pt pill ── */}
+        {showEmail ? null : (
+          <Pill
+            label="Continue with email address"
+            icon={<Symbol name="envelope.fill" size={18} color={c.textSecondary} />}
+            onPress={() => setEmailOpen(true)}
+          />
+        )}
+
         {/*
           ── Apple, in Apple's own button ──
 
-          Not a square with a logo in it. Apple ships this component and the
-          styles it may wear, and an icon-only variant is not among them, so a
-          custom one is a thing a reviewer can reasonably object to on a
-          screen whose entire job is to be trusted. Theirs also carries the
-          wordmark, tracks the system theme, and localises itself.
+          Not a pill of ours with their logo in it. Apple ships this component
+          and the styles it may wear, and a custom one is a thing a reviewer
+          can reasonably object to on a screen whose entire job is to be
+          trusted. Theirs also carries the wordmark, tracks the system theme
+          and localises itself.
 
-          Full width and first, which settles guideline 4.8 outright: Apple's
-          option is not merely as prominent as Google's, it is more so.
+          WHITE_OUTLINE at the same radius and height as the rest, so it sits
+          in the stack as one of the rows rather than as an exception to it.
         */}
         {appleReady && AppleAuthentication ? (
-          <View style={{ marginTop: space.xl }}>
+          <View style={{ marginTop: space.sm }}>
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={
                 mode === "signin"
@@ -282,52 +351,24 @@ export default function Login() {
               buttonStyle={
                 isDark
                   ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE
               }
-              cornerRadius={radius.control}
-              style={{ height: 54, width: "100%" }}
+              cornerRadius={28}
+              style={{ height: 56, width: "100%" }}
               onPress={() => void social_("apple")}
             />
           </View>
         ) : null}
 
-        {/* ── Google, then the way in by email ── */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: space.sm,
-            marginTop: appleReady && AppleAuthentication ? space.sm : space.xl,
-          }}
-        >
-          {googleSignInAvailable()
-            ? socialButton("google", "Continue with Google", <BrandMark provider="google" />)
-            : null}
-
-          <View style={{ flex: 1 }}>
-            <Button
-              title={
-                showEmail
-                  ? mode === "signin"
-                    ? "Sign in"
-                    : "Create account"
-                  : "Continue with email"
-              }
-              loading={busy}
-              disabled={
-                showEmail &&
-                (!email || password.length < (mode === "signup" ? MIN_PASSWORD : 1))
-              }
-              onPress={() => {
-                if (!showEmail) {
-                  setEmailOpen(true);
-                  return;
-                }
-                void submit();
-              }}
-            />
-          </View>
-        </View>
+        {googleSignInAvailable() ? (
+          <Pill
+            label="Continue with Google"
+            icon={<BrandMark provider="google" />}
+            onPress={() => void social_("google")}
+            loading={social === "google"}
+            disabled={social !== null && social !== "google"}
+          />
+        ) : null}
 
         {showEmail ? (
           <View style={{ marginTop: space.lg }}>
@@ -354,7 +395,7 @@ export default function Login() {
 
             <Field
               label="Password"
-              placeholder={mode === "signup" ? `At least ${MIN_PASSWORD} characters` : "••••••••"}
+              placeholder={mode === "signup" ? `At least ${MIN_PASSWORD} characters` : "********"}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -366,15 +407,45 @@ export default function Login() {
               onSubmitEditing={submit}
             />
 
+            <View style={{ marginTop: space.md }}>
+              <Button
+                title={mode === "signin" ? "Sign in" : "Create account"}
+                loading={busy}
+                disabled={!email || password.length < (mode === "signup" ? MIN_PASSWORD : 1)}
+                onPress={submit}
+              />
+            </View>
+
             {mode === "signin" ? (
-              <Pressable onPress={forgot} disabled={busy} style={{ marginTop: space.sm }}>
+              <Pressable onPress={forgot} disabled={busy} style={{ marginTop: space.md }}>
                 <Text variant="footnote" tone="tint" weight="600" center>
                   Forgot your password?
                 </Text>
               </Pressable>
             ) : null}
           </View>
-        ) : null}
+        ) : (
+          /*
+            The underlined way back in, for somebody who already has an account
+            and is looking for what is in it rather than for a way to make
+            another one.
+          */
+          <Pressable
+            onPress={() => {
+              setMode("signin");
+              setEmailOpen(true);
+            }}
+            style={{ marginTop: space.lg, alignSelf: "center" }}
+          >
+            <Text
+              variant="footnote"
+              tone="secondary"
+              style={{ textDecorationLine: "underline" }}
+            >
+              Find my saved plans
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
