@@ -382,3 +382,113 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
     })
     .filter((r): r is FeaturedVenue => r !== null);
 }
+
+/* ── venues, for the Venues tab ──────────────────────────────────────── */
+
+/** One row of the Venues list: enough to recognise a place and choose it. */
+export interface VenueListing {
+  id: string;
+  name: string;
+  type: string;
+  area: string | null;
+  city: string | null;
+  image_url: string | null;
+  price_band: string | null;
+  avg_cost_per_person_ghs: number | null;
+  cuisines: string[];
+  vibe_tags: string[];
+}
+
+/**
+ * Every live venue, once, filtered on the phone.
+ *
+ * Two hundred rows of a dozen short columns is smaller than one photo, and
+ * holding them all means search answers on each keystroke rather than after a
+ * round trip. Named columns, never "*": the venues grant is column by column
+ * and Postgres refuses a star outright.
+ */
+export async function listVenues(): Promise<VenueListing[]> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select(
+      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, areas(name, city)"
+    )
+    .eq("is_active", true)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map((v: Record<string, unknown>) => {
+    const area = v.areas as { name: string; city: string | null } | null;
+    return {
+      id: v.id as string,
+      name: v.name as string,
+      type: v.type as string,
+      area: area?.name ?? null,
+      city: area?.city ?? null,
+      image_url: (v.image_url as string | null) ?? null,
+      price_band: (v.price_band as string | null) ?? null,
+      avg_cost_per_person_ghs: (v.avg_cost_per_person_ghs as number | null) ?? null,
+      cuisines: (v.cuisines as string[] | null) ?? [],
+      vibe_tags: (v.vibe_tags as string[] | null) ?? [],
+    };
+  });
+}
+
+/** Everything a venue page shows. */
+export interface VenueDetail extends VenueListing {
+  description: string | null;
+  best_for: string[];
+  dress_code: string | null;
+  gallery_urls: string[];
+  instagram_handle: string | null;
+  phone: string | null;
+  booking_url: string | null;
+  google_maps_url: string | null;
+  opening_hours_text: string[] | null;
+  place_rating: number | null;
+  place_rating_count: number | null;
+  reservation_required: boolean;
+  min_party_size: number | null;
+  max_party_size: number | null;
+  has_vegetarian_options: boolean | null;
+}
+
+export async function fetchVenue(id: string): Promise<VenueDetail | null> {
+  const { data, error } = await supabase
+    .from("venues")
+    .select(
+      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, description, best_for, dress_code, gallery_urls, instagram_handle, phone, booking_url, google_maps_url, opening_hours_text, place_rating, place_rating_count, reservation_required, min_party_size, max_party_size, has_vegetarian_options, areas(name, city)"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const v = data as Record<string, unknown>;
+  const area = v.areas as { name: string; city: string | null } | null;
+  return {
+    id: v.id as string,
+    name: v.name as string,
+    type: v.type as string,
+    area: area?.name ?? null,
+    city: area?.city ?? null,
+    image_url: (v.image_url as string | null) ?? null,
+    price_band: (v.price_band as string | null) ?? null,
+    avg_cost_per_person_ghs: (v.avg_cost_per_person_ghs as number | null) ?? null,
+    cuisines: (v.cuisines as string[] | null) ?? [],
+    vibe_tags: (v.vibe_tags as string[] | null) ?? [],
+    description: (v.description as string | null) ?? null,
+    best_for: (v.best_for as string[] | null) ?? [],
+    dress_code: (v.dress_code as string | null) ?? null,
+    gallery_urls: (v.gallery_urls as string[] | null) ?? [],
+    instagram_handle: (v.instagram_handle as string | null) ?? null,
+    phone: (v.phone as string | null) ?? null,
+    booking_url: (v.booking_url as string | null) ?? null,
+    google_maps_url: (v.google_maps_url as string | null) ?? null,
+    opening_hours_text: (v.opening_hours_text as string[] | null) ?? null,
+    place_rating: (v.place_rating as number | null) ?? null,
+    place_rating_count: (v.place_rating_count as number | null) ?? null,
+    reservation_required: Boolean(v.reservation_required),
+    min_party_size: (v.min_party_size as number | null) ?? null,
+    max_party_size: (v.max_party_size as number | null) ?? null,
+    has_vegetarian_options: (v.has_vegetarian_options as boolean | null) ?? null,
+  };
+}

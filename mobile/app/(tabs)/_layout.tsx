@@ -33,9 +33,11 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
+      {/* Second, beside Home: finding a place is the thing people do between plans. */}
+      <Tabs.Screen name="venues" options={{ title: "Venues" }} />
       <Tabs.Screen name="calendar" options={{ title: "Calendar" }} />
       <Tabs.Screen name="saved" options={{ title: "Saved" }} />
-      <Tabs.Screen name="profile" options={{ title: "You" }} />
+      {/* Settings lives behind the avatar on Home, not in the bar. */}
     </Tabs>
   );
 }

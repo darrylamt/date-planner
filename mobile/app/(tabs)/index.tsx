@@ -21,6 +21,7 @@ import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
 import { Glow } from "../../src/components/home/Glow";
 import { startNewPlan } from "../../src/lib/startPlan";
+import { fetchProfile } from "../../src/lib/account";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
 
@@ -39,11 +40,24 @@ const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
 export default function Home() {
   const c = useTheme();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void loadDraft().then((d) => active && setDraft(d));
+      // On focus, so a new photo set in Settings is here when they come back.
+      void fetchProfile()
+        .then((p) =>
+          active &&
+          setMe(
+            // No email is an account-less session: nobody to show yet.
+            p?.email
+              ? { avatarUrl: p.avatarUrl, initial: (p.displayName ?? "").slice(0, 1).toUpperCase() }
+              : null
+          )
+        )
+        .catch(() => undefined);
       return () => {
         active = false;
       };
@@ -82,11 +96,21 @@ export default function Home() {
           * you go, and a fifth destination would have turned the bar into a
           * list.
         */}
+        {/*
+          The bar and "you", side by side.
+          *
+          * Settings left the tab bar to make room for Venues, and the top
+          * right corner is where people already look for themselves: it is
+          * where every other app keeps the avatar. Sharing the row also takes
+          * the bar down from the full width, which was more than a button
+          * needs.
+        */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.three }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Ask adurobot"
           onPress={() => router.push("/chat")}
-          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
         >
           <Glow>
           {/*
@@ -128,6 +152,36 @@ export default function Home() {
           </View>
           </Glow>
         </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="You and settings"
+          onPress={() => router.push("/profile")}
+          hitSlop={6}
+          style={({ pressed }) => ({
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            overflow: "hidden",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: me?.avatarUrl || me?.initial ? c.accent : c.backgroundElement,
+            borderWidth: HAIRLINE,
+            borderColor: c.border,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          {me?.avatarUrl ? (
+            <Image source={{ uri: me.avatarUrl }} style={{ width: 46, height: 46 }} contentFit="cover" />
+          ) : me?.initial ? (
+            <Text variant="headline" style={{ color: "#FFFFFF" }}>
+              {me.initial}
+            </Text>
+          ) : (
+            <Symbol name="person.fill" size={20} color={c.textSecondary} />
+          )}
+        </Pressable>
+        </View>
 
         <Text variant="display" style={{ marginTop: Spacing.four }}>
           {/*

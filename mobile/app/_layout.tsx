@@ -109,6 +109,13 @@ function RootShell() {
             }}
           />
           <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
+          {/*
+            Out of the tab bar and behind the avatar on Home. Settings is
+            somewhere people go a few times ever, and its slot now holds
+            Venues, which they use every week.
+          */}
+          <Stack.Screen name="profile" options={{ title: "Settings" }} />
+          <Stack.Screen name="venue/[id]" options={{ title: "" }} />
           {/* Full screen and gesture-locked: a half-swiped intro that lands
               back on an empty app is worse than no intro. */}
           <Stack.Screen

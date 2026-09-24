@@ -13,23 +13,23 @@ import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "../../src/components/Text";
-import { Button } from "../../src/components/Button";
-import { Group, Row } from "../../src/components/List";
-import { BirthdayRow } from "../../src/components/profile/BirthdayRow";
-import { Symbol } from "../../src/components/Symbol";
-import { Toast } from "../../src/components/Toast";
-import { GUTTER, TAB_BAR, radius, space, type as typeScale } from "../../src/theme";
-import { useTheme } from "../../src/lib/useTheme";
-import { useAuth, signOut } from "../../src/lib/useAuth";
-import { useAppearance } from "../../src/lib/appearance";
-import { AppIconPicker, appIconsAvailable } from "../../src/components/AppIconPicker";
-import { IssueSheet } from "../../src/components/IssueSheet";
-import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
-import { ProSheet } from "../../src/components/profile/ProSheet";
-import { fetchAllowance } from "../../src/lib/chat";
-import { clearDraft, loadDraft } from "../../src/lib/draft";
-import { resetOnboarding } from "../../src/lib/onboarding";
+import { Text } from "../src/components/Text";
+import { Button } from "../src/components/Button";
+import { Group, Row } from "../src/components/List";
+import { BirthdayRow } from "../src/components/profile/BirthdayRow";
+import { Symbol } from "../src/components/Symbol";
+import { Toast } from "../src/components/Toast";
+import { GUTTER, radius, space, type as typeScale } from "../src/theme";
+import { useTheme } from "../src/lib/useTheme";
+import { useAuth, signOut } from "../src/lib/useAuth";
+import { useAppearance } from "../src/lib/appearance";
+import { AppIconPicker, appIconsAvailable } from "../src/components/AppIconPicker";
+import { IssueSheet } from "../src/components/IssueSheet";
+import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
+import { ProSheet } from "../src/components/profile/ProSheet";
+import { fetchAllowance } from "../src/lib/chat";
+import { clearDraft, loadDraft } from "../src/lib/draft";
+import { resetOnboarding } from "../src/lib/onboarding";
 import {
   countSavedPlans,
   deleteAccount,
@@ -37,9 +37,9 @@ import {
   updateDisplayName,
   uploadAvatar,
   type Profile as AccountProfile,
-} from "../../src/lib/account";
+} from "../src/lib/account";
 import { Image } from "expo-image";
-import { nativeOptional } from "../../src/lib/nativeOptional";
+import { nativeOptional } from "../src/lib/nativeOptional";
 
 /*
  * Added after the build on TestFlight, so it is resolved defensively. An
@@ -240,17 +240,12 @@ export default function Profile() {
     <ScrollView
       style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + space.lg,
-        paddingBottom: TAB_BAR.clearance,
+        // Pushed from Home now, under a navigation bar that already carries
+        // the title and the way back.
+        paddingTop: space.md,
+        paddingBottom: insets.bottom + space.xxl,
       }}
     >
-      <Text
-        variant="title2"
-        center
-        style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}
-      >
-        Settings
-      </Text>
 
       {hasAccount ? (
         <>
