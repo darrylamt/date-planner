@@ -221,6 +221,11 @@ export interface EventRow {
   category: string;
   source_url: string | null;
   /**
+   * What the night is, in the organiser's words. Optional, because a build
+   * running against a database without migration 0058 has no such column.
+   */
+  description?: string | null;
+  /**
    * The event's own picture, usually a poster. Null means nobody has added
    * one, and the stop falls back to the venue's. Optional, because a build
    * running against a database without migration 0036 has no such column.
@@ -492,6 +497,8 @@ export interface ItineraryStop {
     contact_phone?: string | null;
     /** Where this night is booked, when it is booked somewhere of its own. */
     booking_url?: string | null;
+    /** What the night is, a sentence or two. Absent on plans made before 0058. */
+    description?: string | null;
     /**
      * Whether this night needs booking, as distinct from whether the venue
      * usually does. A restaurant that takes walk-ins still sells tickets for

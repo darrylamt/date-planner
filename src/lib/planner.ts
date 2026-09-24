@@ -1695,6 +1695,7 @@ export function planItinerary(
                 image_url: onTonight.image_url ?? null,
                 contact_phone: onTonight.contact_phone ?? null,
                 booking_url: onTonight.booking_url ?? null,
+                description: onTonight.description ?? null,
                 reservation_required: onTonight.reservation_required ?? false,
               }
             : null,

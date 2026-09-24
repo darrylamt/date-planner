@@ -62,9 +62,16 @@ export function Paywall({
   tier,
   onPurchased,
   accountless = false,
+  reason = "limit",
 }: {
   tier: "free" | "pro";
   onPurchased: () => void;
+  /**
+   * Why this is showing. "limit" is the chat running out; "browse" is somebody
+   * who opened Pro from their profile, who has not run out of anything and
+   * should not be told they have.
+   */
+  reason?: "limit" | "browse";
   /** Shown to somebody without an account: registering is optional. */
   accountless?: boolean;
 }) {
@@ -155,12 +162,28 @@ export function Paywall({
     <Card>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
         <Symbol name="sparkles" size={18} color={c.accent} />
-        <Text variant="headline">That was your last free message</Text>
+        <Text variant="headline" style={{ flex: 1 }}>
+          {reason === "limit"
+            ? "That was your last free message"
+            : "Never spend 30 minutes figuring out where to go again."}
+        </Text>
       </View>
 
+      {/*
+        The pitch, in the words people actually use for the problem. What Pro
+        sells is the half hour of scrolling Instagram and asking the group chat,
+        not a message count; the count follows as the fact behind it.
+      */}
+      {reason === "limit" ? (
+        <Text variant="subheadline" weight="600" style={{ marginTop: space.sm }}>
+          Never spend 30 minutes figuring out where to go again.
+        </Text>
+      ) : null}
+
       <Text variant="footnote" tone="secondary" style={{ marginTop: space.xs }}>
-        You get five a month. aduro Pro lifts that to 150, which is more than anyone has ever
-        needed in a month.
+        Tell adurobot what you want and it plans it, answers questions about any place we
+        know, and tells you what to order when you get there. Free accounts get five messages
+        a month; aduro Pro lifts that to 150.
       </Text>
 
       {/*

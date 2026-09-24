@@ -137,6 +137,25 @@ export async function fetchCandidates(
     // An event with no area recorded cannot be placed, and is kept, as before.
     events = events.filter((e) => !e.area_id || scope!.has(e.area_id));
   }
+  /*
+   * Not a night that has already started.
+   *
+   * Only today can hold one: events are fetched for the plan's own date, and
+   * a plan cannot be made for a day that is over. But at seven in the evening
+   * a gig that began at six is still "on today", and building an evening
+   * round a door that has already shut is the one thing the event exists to
+   * prevent. Accra is on GMT all year, so the server's UTC clock is its clock.
+   */
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  if (inputs.date === today) {
+    const nowMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+    events = events.filter((e) => {
+      if (!e.start_time) return true;
+      const [h, m] = e.start_time.split(":").map(Number);
+      return h * 60 + m > nowMins;
+    });
+  }
   const allSchedules = (schedulesRes.data ?? []) as VenueSchedule[];
 
   /*

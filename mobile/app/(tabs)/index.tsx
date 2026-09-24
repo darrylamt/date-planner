@@ -19,6 +19,7 @@ import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
+import { Glow } from "../../src/components/home/Glow";
 import { startNewPlan } from "../../src/lib/startPlan";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
@@ -50,7 +51,8 @@ export default function Home() {
   );
 
   const draftInputs = draft?.inputs as PlanInputs | undefined;
-  const hasDraft = Boolean(draftInputs && (draft?.itinerary || draft?.step));
+  // Once saved it is no longer in progress: it is in Saved.
+  const hasDraft = Boolean(draftInputs && !draft?.shareSlug && (draft?.itinerary || draft?.step));
   const draftDone = draft?.itinerary ? TOTAL_STEPS : Math.min(draft?.step ?? 0, TOTAL_STEPS);
   const draftPct = Math.round((draftDone / TOTAL_STEPS) * 100);
   /** First stop's photo stands in for the plan, the way a cover image would. */
@@ -86,6 +88,7 @@ export default function Home() {
           onPress={() => router.push("/chat")}
           style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         >
+          <Glow>
           {/*
             Four colours, one border.
             *
@@ -123,6 +126,7 @@ export default function Home() {
             </Text>
             <Symbol name="chevron.right" size={14} color={c.textTertiary} />
           </View>
+          </Glow>
         </Pressable>
 
         <Text variant="display" style={{ marginTop: Spacing.four }}>

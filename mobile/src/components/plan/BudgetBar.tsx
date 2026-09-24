@@ -100,6 +100,16 @@ export function BudgetBar({
           range rather than a figure.
         </Text>
       ) : null}
+
+      {/*
+        Menu prices, as the menu prints them. Plenty of Accra restaurants add
+        VAT, levies or a service charge at the bill, and we hold no record of
+        which, so the honest thing is to say it can happen rather than let a
+        total that "fits" arrive with fifteen percent on top.
+      */}
+      <Text variant="caption1" tone="tertiary">
+        Menu prices. Some places add taxes or a service charge to the bill.
+      </Text>
     </View>
   );
 }

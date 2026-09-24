@@ -55,8 +55,28 @@ export function StopCard({
    * band on, and until the event could say so the plan sent people to a door
    * that was already full.
    */
+  /*
+   * Where there is a ticket to buy, that is the action, not a table.
+   *
+   * The event's own link, shown as its own button rather than folded into
+   * Reserve: "Reserve" at a festival reads as booking dinner, and a ticket
+   * page needs no confirmation because opening it commits to nothing.
+   */
+  const tickets = stop.event?.booking_url?.trim() || null;
+  /*
+   * Every restaurant, not only the ones that insist on booking.
+   *
+   * Gated on reservation_required this showed on four restaurants out of a
+   * hundred and twenty, which read as the feature not existing. A table for
+   * a Saturday is worth asking for at most places that would also take the
+   * walk-in; the dialog behind the button offers whichever ways this one can
+   * be reached, and says so plainly when there are none.
+   */
   const canReserve =
-    (stop.reservation_required || stop.event?.reservation_required === true) &&
+    !tickets &&
+    (stop.venue_type === "restaurant" ||
+      stop.reservation_required ||
+      stop.event?.reservation_required === true) &&
     !stop.reservation_requested;
 
   /** Quantity stepper. Dropping to zero removes the line entirely. */
@@ -124,21 +144,37 @@ export function StopCard({
         {/* Label + time */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Text variant="caption1" tone="tint" weight="700" style={{ letterSpacing: 0.6 }}>
-            {stop.label.toUpperCase()}
+            {/* The label is the event's title, which is now the heading below. */}
+            {(stop.event ? "Event" : stop.label).toUpperCase()}
           </Text>
           <Text variant="caption1" tone="secondary" tabular>
             {stop.arrival_time} · {stop.duration_mins} min
           </Text>
         </View>
 
-        <Text variant="title3">{stop.name}</Text>
+        {/*
+          On an event stop the event is the heading and the venue is where it
+          is. The night is what somebody came for; the name of the building
+          it happens in was set larger than the name of the thing happening.
+        */}
+        {stop.event ? (
+          <Text variant="title2">{stop.event.title}</Text>
+        ) : (
+          <Text variant="title3">{stop.name}</Text>
+        )}
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
           <Symbol name="mappin" size={12} color={c.textSecondary} />
-          <Text variant="footnote" tone="secondary">
-            {stop.area}
+          <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+            {stop.event && stop.event.title !== stop.name ? `${stop.name} · ${stop.area}` : stop.area}
           </Text>
         </View>
+
+        {stop.event?.description ? (
+          <Text variant="subheadline" tone="secondary">
+            {stop.event.description}
+          </Text>
+        ) : null}
 
         {/*
           Why this stop is here at all. The label above is already the event's
@@ -375,6 +411,13 @@ export function StopCard({
             disabled={!instagram}
             onPress={() => instagram && void Linking.openURL(instagram)}
           />
+          {tickets ? (
+            <StopAction
+              icon="ticket"
+              label={stop.event?.reservation_required ? "Book your spot" : "Get tickets"}
+              onPress={() => void Linking.openURL(tickets)}
+            />
+          ) : null}
           {canReserve ? (
             <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
           ) : null}

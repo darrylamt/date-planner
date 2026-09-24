@@ -35,7 +35,7 @@ import { BudgetBar, Hop } from "./BudgetBar";
 import { StopCard } from "./StopCard";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { ghs, longDate } from "../../lib/format";
+import { ghs, instagramUrl, longDate } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
@@ -127,117 +127,143 @@ export function ItineraryView({
   }
 
   /**
-   * Ask before booking anything.
+   * Ask before booking anything, and offer every way they can be reached.
    *
    * Reserve is the one action on this screen that reaches outside the app and
-   * cannot be taken back: it writes a reservation request, and then opens the
-   * venue's booking page, or a WhatsApp message already addressed to them, or
-   * dials the phone. It sat next to Directions and Menu, which are both free
-   * to tap and wander back from, at the size of a thumb.
+   * cannot be taken back, so it still asks first, naming the venue, the day
+   * and the time, because "are you sure" on its own asks somebody to remember
+   * what they tapped.
    *
-   * The confirmation names the venue, the day and the time, because "are you
-   * sure" on its own asks somebody to remember what they tapped.
+   * The venue's channels are fetched before the question rather than after,
+   * so the question can be the choice: one dialog whose buttons are the ways
+   * this place actually takes bookings. It used to pick one channel on their
+   * behalf and, for a place with none on file, end at "we will follow up" --
+   * which nobody did.
+   *
+   * WhatsApp is offered on the ordinary phone number too, labelled as a try.
+   * Most of those numbers are lines somebody answers rather than WhatsApp
+   * accounts, which is why this never opened WhatsApp silently; offered as a
+   * choice beside Call, the person decides, and WhatsApp itself says so when a
+   * number is not on it.
    */
-  function handleReserve(index: number) {
-    if (reservingIndex !== null) return;
-    const stop = itinerary.stops[index];
-
-    Alert.alert(
-      "Request a table?",
-      `${stop.name}, ${longDate(inputs.date)} at ${stop.arrival_time}, for ${partyLabel(
-        inputs.partySize
-      )}.\n\nWe will log it and hand you over to them to confirm.`,
-      [
-        { text: "Not yet", style: "cancel" },
-        { text: "Request", onPress: () => void reserveNow(index) },
-      ]
-    );
-  }
-
-  /**
-   * Log the request (our system of record), then hand off to the venue's
-   * booking page, WhatsApp or phone with the message pre-written.
-   */
-  async function reserveNow(index: number) {
+  async function handleReserve(index: number) {
     if (reservingIndex !== null) return;
     const stop = itinerary.stops[index];
     setReservingIndex(index);
 
+    let contact: Awaited<ReturnType<typeof fetchVenueContact>> = null;
     try {
-      const [contact] = await Promise.all([
-        fetchVenueContact(stop.venue_id),
-        createReservation({
-          venueId: stop.venue_id,
-          venueName: stop.name,
-          planSlug: shareSlug,
-          /*
-           * The size they actually asked for.
-           *
-           * This was hardcoded to two, which was true while every pathway was
-           * an evening for a couple. A family day of six and a meeting of four
-           * both now reach this, and a request for a table for two is a table
-           * nobody has when they arrive.
-           */
-          partySize: inputs.partySize,
-          date: inputs.date,
-          arrivalTime: stop.arrival_time,
-          guestName: inputs.partner.name,
-        }),
-      ]);
+      contact = await fetchVenueContact(stop.venue_id);
+    } catch {
+      contact = null;
+    } finally {
+      setReservingIndex(null);
+    }
 
+    const when = `${longDate(inputs.date)} at ${stop.arrival_time}`;
+    const who = partyLabel(inputs.partySize);
+    const message =
+      `Hello ${stop.name}! I would like to reserve a table for ${who} on ${when}. ` +
+      `Please confirm availability. (sent via aduro)`;
+
+    /*
+     * The event's own link first, then the venue's.
+     *
+     * A ticketed night at a restaurant is not booked through the restaurant,
+     * and sending somebody to the venue's table-booking page for a festival
+     * is sending them to the wrong place confidently.
+     */
+    const booking = stop.event?.booking_url?.trim() || contact?.booking_url?.trim() || null;
+    const whatsapp = waNumber(contact?.whatsapp_phone) ?? waNumber(contact?.phone);
+    const dial = contact?.phone?.replace(/[^\d+]/g, "") || null;
+    const instagram = instagramUrl(contact?.instagram_handle ?? stop.instagram_handle);
+
+    const channels: { text: string; open: () => Promise<void>; toast: string }[] = [];
+    if (booking) {
+      channels.push({
+        text: "Booking page",
+        open: () => Linking.openURL(booking),
+        toast: "Opening their booking page.",
+      });
+    }
+    if (whatsapp) {
+      channels.push({
+        text: contact?.whatsapp_phone ? "WhatsApp" : "Try WhatsApp",
+        open: () => Linking.openURL(`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`),
+        toast: "Message written, send it and they will confirm.",
+      });
+    }
+    if (dial) {
+      channels.push({
+        text: "Call",
+        open: () => Linking.openURL(`tel:${dial}`),
+        toast: "Calling them.",
+      });
+    }
+    if (instagram) {
+      channels.push({
+        text: "Message on Instagram",
+        open: () => Linking.openURL(instagram),
+        toast: "Opening their Instagram, a DM usually gets an answer.",
+      });
+    }
+
+    if (!channels.length) {
+      const maps = stop.google_maps_url;
+      Alert.alert(
+        "No way to book this one yet",
+        `We have no booking page, number or Instagram for ${stop.name}. Most places like it take walk-ins, and the map listing sometimes has a number we do not.`,
+        [
+          { text: "OK", style: "cancel" },
+          ...(maps ? [{ text: "Open map listing", onPress: () => void Linking.openURL(maps) }] : []),
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Request a table?",
+      `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.`,
+      [
+        ...channels.map((ch) => ({ text: ch.text, onPress: () => void reserveVia(index, ch) })),
+        { text: "Not yet", style: "cancel" as const },
+      ]
+    );
+  }
+
+  /** Log the request (our system of record), then hand over to the channel they picked. */
+  async function reserveVia(index: number, channel: { open: () => Promise<void>; toast: string }) {
+    if (reservingIndex !== null) return;
+    const stop = itinerary.stops[index];
+    setReservingIndex(index);
+    try {
+      /*
+       * Logged but not waited on: a slow write must not sit between somebody
+       * and the venue they are trying to reach, and a failed one loses our
+       * note of it, not their table.
+       */
+      void createReservation({
+        venueId: stop.venue_id,
+        venueName: stop.name,
+        planSlug: shareSlug,
+        /*
+         * The size they actually asked for. This was hardcoded to two, which
+         * was true while every pathway was an evening for a couple.
+         */
+        partySize: inputs.partySize,
+        date: inputs.date,
+        arrivalTime: stop.arrival_time,
+        guestName: inputs.partner.name,
+      }).catch(() => undefined);
+
+      await channel.open();
       const stops = itinerary.stops.map((s, i) =>
         i === index ? { ...s, reservation_requested: true } : s
       );
       onItineraryChange({ ...itinerary, stops });
-
-      /*
-       * WhatsApp only where the venue says it takes WhatsApp.
-       *
-       * This used to open wa.me with whatever was in `phone`, on the
-       * assumption that a Ghanaian mobile is a WhatsApp number. Mostly it is
-       * not: most of these are lines somebody answers, and a booking sent to
-       * an account that does not exist fails without telling anybody, which is
-       * the worst way for a table to go unbooked. A venue now says which it
-       * takes, and null means ring them.
-       */
-      const digits = (n: string | null | undefined) => n?.replace(/\D/g, "") || null;
-      const whatsapp = digits(contact?.whatsapp_phone);
-      const callable = digits(contact?.phone);
-      /*
-       * The event's own link first, then the venue's.
-       *
-       * A ticketed night at a restaurant is not booked through the
-       * restaurant, and sending somebody to the venue's table-booking page
-       * for a festival is sending them to the wrong place confidently.
-       */
-      const booking = stop.event?.booking_url?.trim() || contact?.booking_url?.trim() || null;
-
-      if (booking) {
-        /*
-         * Ahead of both numbers, because a venue that runs a booking system
-         * wants the booking in it. A WhatsApp message about a table that
-         * system cannot see is how a place ends up double-booked.
-         */
-        await Linking.openURL(booking);
-        setToast("Opening their booking page.");
-      } else if (whatsapp) {
-        const msg =
-          `Hello ${stop.name}! I would like to reserve a table for ` +
-          `${partyLabel(inputs.partySize)} on ` +
-          `${longDate(inputs.date)} at ${stop.arrival_time}. ` +
-          `Please confirm availability., sent via aduro`;
-        await Linking.openURL(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`);
-        setToast("Sent, they will confirm on WhatsApp.");
-      } else if (callable) {
-        // The request is logged either way, so this is a handover rather than
-        // a fallback: they ring, and we already have the booking on file.
-        await Linking.openURL(`tel:${contact?.phone?.replace(/[^\d+]/g, "")}`);
-        setToast("They take bookings by phone, so we are calling them.");
-      } else {
-        setToast("Logged, no number on file, we will follow up.");
-      }
+      setToast(channel.toast);
     } catch {
-      setToast("Could not send that. Try again.");
+      setToast("Could not open that. Try another way.");
     } finally {
       setReservingIndex(null);
     }
@@ -698,4 +724,19 @@ function waitForModalToClose(): Promise<void> {
   return new Promise((resolve) => {
     InteractionManager.runAfterInteractions(() => setTimeout(resolve, 320));
   });
+}
+
+/**
+ * A number in the form wa.me wants: country code, digits only.
+ *
+ * Numbers are recorded the way a poster prints them, and a Ghanaian one is
+ * usually written with the leading 0 in place of 233. wa.me given 0244...
+ * opens a chat with nobody.
+ */
+function waNumber(raw: string | null | undefined): string | null {
+  const d = raw?.replace(/\D/g, "") ?? "";
+  if (!d) return null;
+  if (d.startsWith("00")) return d.slice(2);
+  if (d.startsWith("0") && d.length === 10) return `233${d.slice(1)}`;
+  return d.length >= 10 ? d : null;
 }

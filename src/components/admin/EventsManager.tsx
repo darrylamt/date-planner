@@ -12,6 +12,7 @@ const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "work
 
 const EMPTY = {
   title: "",
+  description: "",
   area_id: "",
   venue_id: "",
   event_date: "",
@@ -43,7 +44,22 @@ export function EventsManager({
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const paged = usePagedRows(events, (e, needle) => {
+  /*
+   * Over is over, whatever the switch says.
+   *
+   * The planner only ever reads the plan's own date and drops a night that
+   * has already started, so a finished event can never reach a plan. The list
+   * is where it lingered, reading "Active" about something that happened last
+   * month; it now says Past, and sits at the end.
+   */
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const nowTime = now.toISOString().slice(11, 16);
+  const isPast = (e: EventRow) =>
+    e.event_date < today || (e.event_date === today && !!e.start_time && e.start_time.slice(0, 5) <= nowTime);
+  const ordered = [...events.filter((e) => !isPast(e)), ...events.filter(isPast)];
+
+  const paged = usePagedRows(ordered, (e, needle) => {
     const area = areas.find((a) => a.id === e.area_id)?.name ?? "";
     return (
       e.title.toLowerCase().includes(needle) ||
@@ -56,6 +72,7 @@ export function EventsManager({
     setEditingId(e.id);
     setForm({
       title: e.title,
+      description: e.description ?? "",
       area_id: e.area_id,
       venue_id: e.venue_id ?? "",
       event_date: e.event_date,
@@ -76,6 +93,15 @@ export function EventsManager({
     setError(null);
     const payload = {
       title: form.title,
+      /*
+       * Sent only where the column exists or somebody wrote one. Until
+       * migration 0058 runs, naming the column fails the whole save, and an
+       * event with no description should not be what breaks the admin.
+       * Rows come from select("*"), so the key is there exactly when it is.
+       */
+      ...(form.description.trim() || events.some((e) => "description" in e)
+        ? { description: form.description.trim() || null }
+        : {}),
       area_id: form.area_id,
       venue_id: form.venue_id || null,
       event_date: form.event_date,
@@ -158,6 +184,21 @@ export function EventsManager({
               </option>
             ))}
           </select>
+        </div>
+        {/*
+          What the night is, in a sentence or two. The title says "Jazz at
+          Bistro 22"; this says who is playing and whether it is dinner with a
+          band or a band with a bar.
+        */}
+        <div className="md:col-span-3">
+          <span className="flbl">Description</span>
+          <textarea
+            className="inp min-h-[72px] py-2"
+            maxLength={400}
+            placeholder="Who is playing, what to expect, what to wear"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
         </div>
         <div>
           <span className="flbl">Area</span>
@@ -321,14 +362,14 @@ export function EventsManager({
           </thead>
           <tbody>
             {paged.pageRows.map((e) => (
-              <tr key={e.id} className={e.is_active ? "" : "opacity-50"}>
+              <tr key={e.id} className={e.is_active && !isPast(e) ? "" : "opacity-50"}>
                 <td className="font-bold">{e.title}</td>
                 <td className="font-mono">{e.event_date}</td>
                 <td>{areas.find((a) => a.id === e.area_id)?.name ?? "anywhere"}</td>
                 <td className="font-mono">{e.cost_ghs === null ? "free" : `GHS ${e.cost_ghs}`}</td>
                 <td>
-                  <span className={`badge ${e.is_active ? "b-ok" : "b-stale"}`}>
-                    {e.is_active ? "Active" : "Hidden"}
+                  <span className={`badge ${e.is_active && !isPast(e) ? "b-ok" : "b-stale"}`}>
+                    {isPast(e) ? "Past" : e.is_active ? "Active" : "Hidden"}
                   </span>
                 </td>
                 <td className="whitespace-nowrap">

@@ -158,7 +158,7 @@ export function ProSheet({
              * Terms and Privacy links, and duplicating any of that here would
              * be a second copy to keep honest.
              */
-            <Paywall tier="free" onPurchased={onPurchased} accountless={accountless} />
+            <Paywall tier="free" reason="browse" onPurchased={onPurchased} accountless={accountless} />
           )}
         </ScrollView>
       </View>

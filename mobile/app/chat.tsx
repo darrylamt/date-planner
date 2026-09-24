@@ -20,6 +20,7 @@ import { ensureSession, useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import { Paywall } from "../src/components/chat/Paywall";
+import { ChatText } from "../src/components/chat/ChatText";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { Toast } from "../src/components/Toast";
 import { AiConsentSheet } from "../src/components/AiConsentSheet";
@@ -47,12 +48,23 @@ interface Bubble {
   text: string;
 }
 
+/*
+ * The best things to ask, as the first thing on the screen.
+ *
+ * Each one is a different job, so between them they show the range: a menu
+ * question, a plan, an activity, a budget check, and standing in a
+ * restaurant not knowing what to get, which is the one people do not think
+ * to ask a planning app and is the most useful thing it does at the table.
+ * The last opener is a draft rather than a question: it goes into the
+ * composer for them to finish, because only they know where they are.
+ */
 const OPENERS = [
   "Where can I get good jollof under 100?",
   "Somewhere romantic in Osu for Saturday",
   "What can we do that isn't eating?",
   "I have 400 cedis for two. What's realistic?",
 ];
+const AT_THE_TABLE = "I'm at ";
 
 export default function ChatScreen() {
   const c = useTheme();
@@ -83,6 +95,7 @@ export default function ChatScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const [askingConsent, setAskingConsent] = useState(false);
   const consentAnswer = useRef<((allowed: boolean) => void) | null>(null);
+  const composer = useRef<TextInput | null>(null);
   /*
    * Set when a turn actually built something. Kept on the screen rather than
    * in the bubble, because the plan is a thing you go and look at, not a
@@ -327,6 +340,33 @@ export default function ChatScreen() {
                 </Text>
               </Pressable>
             ))}
+            {/*
+              Started for them rather than sent, because the one word that
+              matters is where they are. The cursor lands after "I'm at " and
+              the keyboard is already up.
+            */}
+            <Pressable
+              onPress={() => {
+                setDraft(`${AT_THE_TABLE}`);
+                setTimeout(() => composer.current?.focus(), 50);
+              }}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
+                borderRadius: radius.row,
+                paddingHorizontal: space.lg,
+                paddingVertical: space.md,
+                borderWidth: HAIRLINE,
+                borderColor: c.accent,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.sm,
+              })}
+            >
+              <Symbol name="fork.knife" size={15} color={c.accent} />
+              <Text variant="body" style={{ flex: 1 }}>
+                I&apos;m at… what should I order?
+              </Text>
+            </Pressable>
           </View>
         ) : (
           bubbles.map((b, i) => <BubbleView key={i} bubble={b} />)
@@ -422,6 +462,7 @@ export default function ChatScreen() {
       </ScrollView>
 
       <Composer
+        inputRef={composer}
         value={draft}
         onChange={setDraft}
         onSend={() => void send(draft)}
@@ -478,9 +519,14 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
         paddingVertical: space.md,
       }}
     >
-      <Text variant="body" tone={mine ? "onTint" : "label"}>
-        {bubble.text}
-      </Text>
+      {/* Their own words exactly as typed; ours with the formatting it asked for. */}
+      {mine ? (
+        <Text variant="body" tone="onTint">
+          {bubble.text}
+        </Text>
+      ) : (
+        <ChatText text={bubble.text} tone="label" />
+      )}
 
       {/*
         Under the words rather than woven through them. React Native cannot put
@@ -601,7 +647,9 @@ function Composer({
   busy,
   disabled,
   remaining,
+  inputRef,
 }: {
+  inputRef?: React.RefObject<TextInput | null>;
   value: string;
   onChange: (v: string) => void;
   onSend: () => void;
@@ -626,6 +674,7 @@ function Composer({
     >
       <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space.sm }}>
         <TextInput
+          ref={inputRef}
           value={value}
           onChangeText={onChange}
           editable={!disabled}

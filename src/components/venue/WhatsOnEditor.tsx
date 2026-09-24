@@ -70,6 +70,7 @@ export function WhatsOnEditor({
 
   // Dated
   const [eTitle, setETitle] = useState("");
+  const [eDesc, setEDesc] = useState("");
   const [eDate, setEDate] = useState("");
   const [eTime, setETime] = useState("19:00");
   const [eCost, setECost] = useState("");
@@ -118,6 +119,8 @@ export function WhatsOnEditor({
       .from("events")
       .insert({
         title: eTitle.trim(),
+        // Only when written: before migration 0058 the column does not exist.
+        ...(eDesc.trim() ? { description: eDesc.trim() } : {}),
         venue_id: venueId,
         area_id: areaId,
         event_date: eDate,
@@ -144,6 +147,7 @@ export function WhatsOnEditor({
     if (error || !data) return say(`Could not add that: ${error?.message ?? "unknown error"}`);
     setEvents((e) => [...e, data as EventRow]);
     setETitle("");
+    setEDesc("");
     setEDate("");
     setECost("");
     setEImage("");
@@ -359,6 +363,20 @@ export function WhatsOnEditor({
             </select>
           </label>
         </div>
+
+        <label className="mt-4 flex flex-col">
+          <span className="flbl">What to expect</span>
+          <textarea
+            className="inp min-h-[72px] py-2"
+            maxLength={400}
+            value={eDesc}
+            placeholder="Who is playing, what the night is like, what to wear"
+            onChange={(e) => setEDesc(e.target.value)}
+          />
+          <span className="mt-1.5 text-[12px] text-mutedbrown">
+            Shown under the event&apos;s name on the plan.
+          </span>
+        </label>
 
         <div className="mt-4 grid gap-4 md:grid-cols-[1fr_280px] md:items-start">
           {/* The poster is the whole reason an event stop looks different from

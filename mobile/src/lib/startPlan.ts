@@ -17,7 +17,9 @@ export async function startNewPlan(occasion?: PlanInputs["occasion"]): Promise<v
     : "/plan/new?fresh=1";
 
   const draft = await loadDraft();
-  const hasWork = Boolean(draft?.inputs && (draft.itinerary || draft.step));
+  // A saved plan is kept in Saved, so starting another loses nothing and
+  // warning about it only teaches people to ignore the warning.
+  const hasWork = Boolean(draft?.inputs && !draft.shareSlug && (draft.itinerary || draft.step));
 
   if (!hasWork) {
     router.push(href);
