@@ -51,6 +51,9 @@ interface RcEvent {
   expiration_at_ms?: number | null;
   entitlement_ids?: string[] | null;
   store?: string;
+  /** TRANSFER only: the ids the subscription left, and the ids it went to. */
+  transferred_from?: string[] | null;
+  transferred_to?: string[] | null;
 }
 
 export async function POST(req: Request) {
@@ -77,6 +80,14 @@ export async function POST(req: Request) {
   }
 
   const type = event.type ?? "";
+
+  /*
+   * Before the id check, because a transfer names its users in two lists and
+   * carries no app_user_id at all -- it would have been refused below as
+   * misconfigured, which is how it was being dropped.
+   */
+  if (type === "TRANSFER") return transfer(event);
+
   /*
    * app_user_id is the Supabase user id, because the app configures RevenueCat
    * with exactly that and nothing else. If it is ever not a uuid, something
@@ -170,4 +181,71 @@ function sourceFor(store: string | undefined): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * Move a subscription to the account that now holds it.
+ *
+ * This is how somebody who bought Pro without an account keeps it once they
+ * make one. App Review requires that buying not need registration (5.1.1(v)),
+ * so the purchase lands on an account-less id; when they register, the app
+ * syncs the receipt under the new id and RevenueCat sends this.
+ *
+ * Only store purchases move. A grant is a person's decision about one
+ * account, has no receipt behind it, and should not follow a device.
+ */
+async function transfer(event: RcEvent) {
+  const isId = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+  const from = (event.transferred_from ?? []).filter(isId);
+  const to = (event.transferred_to ?? []).filter(isId);
+  if (!from.length || !to.length) {
+    return NextResponse.json({ ignored: "transfer without user ids" });
+  }
+
+  const supabase = createServiceClient();
+  const { data: rows, error } = await supabase
+    .from("entitlements")
+    .select("user_id, tier, status, source, expires_at")
+    .in("user_id", from)
+    .eq("tier", "pro")
+    .in("source", ["apple", "play", "stripe"]);
+
+  if (error) {
+    console.error("revenuecat webhook: could not read the transfer source", error);
+    return NextResponse.json({ error: "Could not record that." }, { status: 500 });
+  }
+
+  // The longest-lived subscription wins if more than one account held one.
+  const held = ((rows ?? []) as { expires_at: string | null; status: string; source: string }[]).sort(
+    (a, b) => new Date(b.expires_at ?? 0).getTime() - new Date(a.expires_at ?? 0).getTime()
+  )[0];
+  if (!held) return NextResponse.json({ ok: true, type: "TRANSFER", moved: 0 });
+
+  const now = new Date().toISOString();
+  const { error: grantError } = await supabase.from("entitlements").upsert(
+    to.map((userId) => ({
+      user_id: userId,
+      tier: "pro",
+      status: held.status,
+      source: held.source,
+      expires_at: held.expires_at,
+      rc_app_user_id: userId,
+      updated_at: now,
+    })),
+    { onConflict: "user_id" }
+  );
+  if (grantError) {
+    console.error("revenuecat webhook: could not grant the transfer", grantError);
+    return NextResponse.json({ error: "Could not record that." }, { status: 500 });
+  }
+
+  // Taken off the old id only after the new one has it, so a failure halfway
+  // leaves the subscription on both rather than on neither.
+  await supabase
+    .from("entitlements")
+    .update({ tier: "free", status: "expired", expires_at: null, updated_at: now })
+    .in("user_id", from)
+    .in("source", ["apple", "play", "stripe"]);
+
+  return NextResponse.json({ ok: true, type: "TRANSFER", moved: to.length });
 }

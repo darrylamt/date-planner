@@ -1,4 +1,6 @@
 import { nativeOptional } from "./nativeOptional";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ensureSession } from "./useAuth";
 import { supabase } from "./supabase";
 
 /**
@@ -47,27 +49,75 @@ export function purchasesAvailable(): boolean {
 
 let configuredFor: string | null = null;
 
+/** Where the id of an account-less buyer is remembered across launches. */
+const ANONYMOUS_BUYER = "aduro.purchases.anonymousId";
+
 /**
  * Point RevenueCat at the Supabase user, so a purchase lands on the right row.
  *
- * The app user id is the Supabase id and nothing else. It is what the webhook
- * matches on to write entitlements, so an anonymous id or an email here would
- * orphan every purchase made before somebody signed in, and there is no
- * reliable way to reunite them afterwards.
+ * The app user id is the Supabase id and nothing else: it is what the webhook
+ * matches on. Somebody who has not registered is given an account-less
+ * Supabase id first (see ensureSession), because App Review requires that Pro
+ * can be bought without registering -- guideline 5.1.1(v) -- and a
+ * RevenueCat-generated anonymous id would be one the webhook could never
+ * match to a row.
  */
 export async function configurePurchases(): Promise<void> {
   if (!Purchases || !API_KEY) return;
+  const userId = await ensureSession();
+  if (userId) await identify(userId);
+}
 
+async function identify(userId: string): Promise<void> {
+  if (!Purchases || configuredFor === userId) return;
+  try {
+    /*
+     * configure once, logIn after. RevenueCat allows one configure per launch;
+     * a second one for a different user was silently ignored, which would have
+     * left a newly registered person's purchases landing on the id they had
+     * before they registered.
+     */
+    if (configuredFor === null) Purchases.default.configure({ apiKey: API_KEY, appUserID: userId });
+    else await Purchases.default.logIn(userId);
+    configuredFor = userId;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.is_anonymous) await AsyncStorage.setItem(ANONYMOUS_BUYER, userId).catch(() => undefined);
+  } catch {
+    // A store that will not configure is a paywall that says so, not a crash.
+  }
+}
+
+/**
+ * Bring a subscription bought without an account across to the new one.
+ *
+ * Called once somebody registers or signs in. Syncing posts the device's
+ * receipt under the new id, and RevenueCat moves the subscription from the
+ * account-less id to it and tells the webhook with a TRANSFER event. Sync
+ * rather than restore, because restore can raise an App Store sign-in prompt
+ * that nobody asked for.
+ *
+ * Only when the device really did have an account-less buyer, so signing in
+ * on a shared iPad does not quietly move somebody else's subscription.
+ */
+export async function adoptPurchases(): Promise<void> {
+  if (!Purchases || !API_KEY) return;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || configuredFor === user.id) return;
+  if (!user || user.is_anonymous) return;
 
-  try {
-    Purchases.default.configure({ apiKey: API_KEY, appUserID: user.id });
-    configuredFor = user.id;
-  } catch {
-    // A store that will not configure is a paywall that says so, not a crash.
+  const previous = await AsyncStorage.getItem(ANONYMOUS_BUYER).catch(() => null);
+  await identify(user.id);
+  if (previous && previous !== user.id) {
+    try {
+      await Purchases.default.syncPurchases();
+    } catch {
+      // Restore Purchases on the paywall does the same thing by hand.
+    }
+    await AsyncStorage.removeItem(ANONYMOUS_BUYER).catch(() => undefined);
   }
 }
 

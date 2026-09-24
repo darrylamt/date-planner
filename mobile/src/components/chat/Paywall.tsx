@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, View } from "react-native";
+import { router } from "expo-router";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { HAIRLINE, radius, space } from "../../theme";
@@ -33,12 +34,39 @@ const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
  * they actually came for is not behind it, and a paywall that lets them
  * believe otherwise sells one subscription and loses the user.
  */
+/**
+ * The sentence App Review asked for, and the way in it points to.
+ *
+ * 5.1.1(v): registration must be optional, and the app may explain that
+ * registering keeps the purchase on the person's other devices, as long as it
+ * offers a way to register at any time. That is exactly what this says.
+ */
+export function AccountlessNote() {
+  const c = useTheme();
+  return (
+    <View style={{ marginTop: space.md, alignItems: "center" }}>
+      <Text variant="footnote" tone="secondary" center>
+        No account needed to subscribe. Create one any time to keep aduro Pro on your other
+        devices.
+      </Text>
+      <Pressable onPress={() => router.push("/login")} hitSlop={8} style={{ marginTop: space.xs }}>
+        <Text variant="footnote" weight="600" style={{ color: c.accent }}>
+          Create an account
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function Paywall({
   tier,
   onPurchased,
+  accountless = false,
 }: {
   tier: "free" | "pro";
   onPurchased: () => void;
+  /** Shown to somebody without an account: registering is optional. */
+  accountless?: boolean;
 }) {
   const c = useTheme();
   const [offer, setOffer] = useState<Offer | null>(null);
@@ -223,6 +251,8 @@ export function Paywall({
           {note}
         </Text>
       ) : null}
+
+      {accountless ? <AccountlessNote /> : null}
     </Card>
   );
 }

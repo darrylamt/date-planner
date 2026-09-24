@@ -16,7 +16,7 @@ import { Text } from "../src/components/Text";
 import { Symbol } from "../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
-import { useAuth } from "../src/lib/useAuth";
+import { ensureSession, useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import { Paywall } from "../src/components/chat/Paywall";
@@ -243,7 +243,13 @@ export default function ChatScreen() {
     );
   }
 
-  if (!user) return <SignedOut onSignIn={() => router.push("/login")} />;
+  if (!user)
+    return (
+      <SignedOut
+        onSignIn={() => router.push("/login")}
+        onContinue={() => void ensureSession()}
+      />
+    );
 
   const empty = bubbles.length === 0;
 
@@ -381,6 +387,7 @@ export default function ChatScreen() {
         {paywalled && (
           <Paywall
             tier={allowance?.tier ?? "free"}
+            accountless={user?.is_anonymous === true}
             /*
              * Re-read rather than assume. The purchase told RevenueCat, which
              * tells Apple, which calls our webhook, which writes the row the
@@ -642,7 +649,16 @@ function Composer({
   );
 }
 
-function SignedOut({ onSignIn }: { onSignIn: () => void }) {
+/**
+ * The door to the assistant for somebody without a session.
+ *
+ * It used to be a wall: "Sign in to ask". App Review rejected that under
+ * 5.1.1(v), because the assistant is what Pro sells and Pro is not
+ * account-based, so registration has to be optional. Continuing makes an
+ * account-less session on the spot; signing in stays available for anybody
+ * who wants their chats and subscription on another device.
+ */
+function SignedOut({ onSignIn, onContinue }: { onSignIn: () => void; onContinue: () => void }) {
   const c = useTheme();
   return (
     <View
@@ -657,13 +673,14 @@ function SignedOut({ onSignIn }: { onSignIn: () => void }) {
     >
       <Symbol name="bubble.left.and.bubble.right.fill" size={40} color={c.textSecondary} />
       <Text variant="title3" center>
-        Sign in to ask
+        Ask adurobot
       </Text>
       <Text variant="footnote" tone="secondary" center>
-        Chat is tied to your account so we can remember what you asked and keep your free messages.
+        No account needed. Sign in if you want your chats and any subscription on your other
+        devices too.
       </Text>
       <Pressable
-        onPress={onSignIn}
+        onPress={onContinue}
         style={{
           marginTop: space.sm,
           backgroundColor: c.accent,
@@ -673,7 +690,12 @@ function SignedOut({ onSignIn }: { onSignIn: () => void }) {
         }}
       >
         <Text variant="body" tone="onTint">
-          Sign in
+          Continue without an account
+        </Text>
+      </Pressable>
+      <Pressable onPress={onSignIn} hitSlop={8}>
+        <Text variant="footnote" weight="600" style={{ color: c.accent }}>
+          Sign in instead
         </Text>
       </Pressable>
     </View>

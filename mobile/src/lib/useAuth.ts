@@ -7,6 +7,18 @@ export interface AuthState {
   session: Session | null;
   /** True until the stored session has been read from disk. */
   loading: boolean;
+  /**
+   * Signed in without an account.
+   *
+   * App Review rejected aduro under 5.1.1(v) for requiring registration to
+   * buy Pro, which is not account-based content. So somebody who wants to buy
+   * without registering is given a user id on the spot and no email, no name,
+   * nothing. The session is real -- it is what the purchase, the webhook and
+   * the chat meter all key on -- but it is not an account, and screens that
+   * show account things (the identity card, Sign out, Delete account) treat it
+   * as signed out.
+   */
+  anonymous: boolean;
 }
 
 /** Subscribes to Supabase auth so screens re-render on sign in/out. */
@@ -34,7 +46,26 @@ export function useAuth(): AuthState {
     };
   }, []);
 
-  return { session, loading };
+  return { session, loading, anonymous: session?.user?.is_anonymous === true };
+}
+
+/**
+ * A user id for somebody without an account, made when they need one.
+ *
+ * Only on the way to buying something or asking the assistant -- never at
+ * launch -- so browsing leaves no trace. Needs anonymous sign-ins turned on in
+ * the Supabase dashboard; without that this returns null and the paywall says
+ * subscriptions are unavailable rather than crashing.
+ */
+export async function ensureSession(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  if (data.session?.user) return data.session.user.id;
+  const { data: anon, error } = await supabase.auth.signInAnonymously();
+  if (error) {
+    console.warn("anonymous sign-in failed", error.message);
+    return null;
+  }
+  return anon.user?.id ?? null;
 }
 
 /** Supabase's default minimum. Checked here so the error is instant. */

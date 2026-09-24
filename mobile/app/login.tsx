@@ -12,6 +12,7 @@ import { Symbol } from "../src/components/Symbol";
 import { BrandMark } from "../src/components/BrandMark";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
+import { adoptPurchases } from "../src/lib/purchases";
 import {
   MIN_PASSWORD,
   sendPasswordReset,
@@ -92,9 +93,19 @@ export default function Login() {
     if (!result.cancelled) setError(result.error ?? "That did not work.");
   }
 
-  /* Signing in dismisses this modal; the account lives on the You tab. */
+  /*
+   * Signing in dismisses this modal; the account lives on the You tab.
+   *
+   * An account-less session does not count. Before those existed any session
+   * meant signed in, and left as it was this screen would have dismissed
+   * itself the moment an account-less buyer opened it -- so the one person
+   * App Review says must be able to register at any time never could.
+   */
   useEffect(() => {
-    if (session) router.back();
+    if (session && !session.user.is_anonymous) {
+      void adoptPurchases();
+      router.back();
+    }
   }, [session]);
 
   function switchMode(m: Mode) {

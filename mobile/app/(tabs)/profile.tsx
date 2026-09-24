@@ -64,7 +64,14 @@ const APP_STORE_ID = "6809005685";
 export default function Profile() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
+  const { session, anonymous } = useAuth();
+  /*
+   * An account, as opposed to a session. Somebody who bought Pro without
+   * registering has a session and no account, and should see Sign in here,
+   * not a nameless identity card with a Sign out button that would orphan
+   * the subscription they just paid for.
+   */
+  const hasAccount = Boolean(session) && !anonymous;
   const { preference, scheme, setPreference } = useAppearance();
 
   const [showBuild, setShowBuild] = useState(false);
@@ -236,7 +243,7 @@ export default function Profile() {
         Settings
       </Text>
 
-      {session ? (
+      {hasAccount ? (
         <>
           {/*
             The identity card, which is what a settings screen opens with on
@@ -334,7 +341,7 @@ export default function Profile() {
                   </Pressable>
                 )}
                 <Text variant="footnote" tone="secondary" numberOfLines={1}>
-                  {profile?.email ?? session.user.email ?? ""}
+                  {profile?.email ?? session?.user.email ?? ""}
                 </Text>
               </View>
 
@@ -378,7 +385,7 @@ export default function Profile() {
         and offering the field to a signed-out visitor would be offering
         somewhere to type that goes nowhere.
       */}
-      {session ? (
+      {hasAccount ? (
         <Group header="About you">
           <BirthdayRow
             day={profile?.birthDay ?? null}
@@ -404,22 +411,21 @@ export default function Profile() {
           icon="sparkles"
           title="aduro Pro"
           subtitle={
-            !session
-              ? "Unlimited chat with the assistant"
-              : allowance?.tier === "pro"
-                ? "Subscribed"
-                : allowance
-                  ? `Free · ${allowance.remaining} of ${allowance.allowance} messages left this month`
-                  : "Free"
+            allowance?.tier === "pro"
+              ? "Subscribed"
+              : hasAccount && allowance
+                ? `Free · ${allowance.remaining} of ${allowance.allowance} messages left this month`
+                : "Unlimited chat with the assistant"
           }
           chevron
-          onPress={() => {
-            if (!session) {
-              router.push("/login");
-              return;
-            }
-            setProOpen(true);
-          }}
+          /*
+           * Straight to the subscription, account or not.
+           *
+           * This sent anybody signed out to the sign-in screen first, which is
+           * the exact thing App Review rejected under 5.1.1(v): requiring
+           * registration to buy something that is not account-based.
+           */
+          onPress={() => setProOpen(true)}
         />
       </Group>
 
@@ -530,7 +536,7 @@ export default function Profile() {
         <Row icon="doc.text" title="Terms of use" chevron onPress={() => open("/terms")} />
       </Group>
 
-      {session ? (
+      {hasAccount ? (
         <>
           {/* A red row rather than a button: this is where iOS puts it, and
               it should not sit next to Sign out looking equally routine. */}
@@ -609,6 +615,7 @@ export default function Profile() {
       <ProSheet
         visible={proOpen}
         onClose={() => setProOpen(false)}
+        accountless={!hasAccount}
         tier={allowance?.tier ?? "free"}
         /*
          * Re-read rather than assume. The purchase tells RevenueCat, which

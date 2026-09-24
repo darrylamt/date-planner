@@ -68,6 +68,7 @@ async function main() {
     process.exit(1);
   }
   const userId = created.user.id;
+  let accountId: string | null = null;
 
   try {
     // ── the purchase ─────────────────────────────────────────────────────
@@ -114,9 +115,38 @@ async function main() {
       lapsed?.tier !== "pro" || lapsed?.status !== "active",
       `tier=${lapsed?.tier ?? "-"} status=${lapsed?.status ?? "-"}`
     );
+
+    // ── the transfer ─────────────────────────────────────────────────────
+    /*
+     * Somebody buys without an account, then makes one. App Review requires
+     * the first half (5.1.1(v)); this is the second. The purchase must end up
+     * on the new account and leave the old id, not be copied onto both.
+     */
+    const { data: second } = await db.auth.admin.createUser({
+      email: `zz-rc-${stamp}-b@example.com`,
+      password: `rc-${stamp}-Bb1`,
+      email_confirm: true,
+    });
+    accountId = second?.user?.id ?? null;
+    if (!accountId) {
+      ok("second user created for the transfer", false);
+    } else {
+      await post({ type: "INITIAL_PURCHASE", app_user_id: userId, store: "APP_STORE", expiration_at_ms: Date.now() + 30 * 864e5 });
+      const moved = await post({ type: "TRANSFER", transferred_from: [userId], transferred_to: [accountId], store: "APP_STORE" });
+      ok("webhook accepted the transfer", moved.status === 200, `HTTP ${moved.status} ${moved.body.slice(0, 60)}`);
+
+      const { data: rows } = await db.from("entitlements").select("user_id, tier, status").in("user_id", [userId, accountId]);
+      const on = (id: string) => (rows ?? []).find((r) => r.user_id === id);
+      ok("the new account is pro", on(accountId)?.tier === "pro", `tier=${on(accountId)?.tier ?? "no row"}`);
+      ok("the old id is not", on(userId)?.tier !== "pro", `tier=${on(userId)?.tier ?? "no row"}`);
+    }
   } finally {
     await db.from("entitlements").delete().eq("user_id", userId);
     await db.auth.admin.deleteUser(userId);
+    if (accountId) {
+      await db.from("entitlements").delete().eq("user_id", accountId);
+      await db.auth.admin.deleteUser(accountId);
+    }
     const { data: left } = await db.from("entitlements").select("user_id").eq("user_id", userId);
     ok("cleaned up", (left ?? []).length === 0);
   }

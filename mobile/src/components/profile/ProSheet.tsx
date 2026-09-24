@@ -3,7 +3,7 @@ import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
-import { Paywall } from "../chat/Paywall";
+import { AccountlessNote, Paywall } from "../chat/Paywall";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { configurePurchases, restore, purchasesAvailable } from "../../lib/purchases";
@@ -33,11 +33,14 @@ export function ProSheet({
   onClose,
   tier,
   onPurchased,
+  accountless = false,
 }: {
   visible: boolean;
   onClose: () => void;
   tier: "free" | "pro";
   onPurchased: () => void;
+  /** No account: say registering is optional, and offer it. */
+  accountless?: boolean;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -144,6 +147,9 @@ export function ProSheet({
                   {note}
                 </Text>
               ) : null}
+
+              {/* Subscribed, with no account: the one thing worth offering. */}
+              {accountless ? <AccountlessNote /> : null}
             </View>
           ) : (
             /*
@@ -152,7 +158,7 @@ export function ProSheet({
              * Terms and Privacy links, and duplicating any of that here would
              * be a second copy to keep honest.
              */
-            <Paywall tier="free" onPurchased={onPurchased} />
+            <Paywall tier="free" onPurchased={onPurchased} accountless={accountless} />
           )}
         </ScrollView>
       </View>
