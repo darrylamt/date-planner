@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { WELLNESS_TREATMENT_MIN_GHS } from "./planConstants";
 import { randomSlug } from "./format";
 import type { Area, Itinerary, MenuItem, PlanInputs, SavedPlan } from "./types";
 
@@ -15,7 +16,54 @@ export async function fetchAreas(): Promise<Area[]> {
     .select("id, name, city")
     .order("name");
   if (error) throw error;
-  return (data ?? []) as Area[];
+  const areas = (data ?? []) as Area[];
+
+  /*
+   * Only the areas something live is in.
+   *
+   * An area with nothing active in it can only produce "we could not plan
+   * that", and after the 24 Sep clean-up several did: Kumasi and Kokrobite
+   * both had every venue taken off the catalogue for want of a menu. Offering
+   * them would be offering a dead end, and a city whose areas are all empty
+   * should not appear in the city picker either.
+   *
+   * Filtering is a courtesy, so any doubt returns the whole list. That
+   * includes a result that hits PostgREST's 1,000-row cap, where the missing
+   * rows could be the only live venue in some area.
+   */
+  const { data: live, error: liveError } = await supabase
+    .from("venues")
+    .select("area_id")
+    .eq("is_active", true);
+  if (liveError || !live || live.length >= 1000) return areas;
+  const used = new Set((live as { area_id: string }[]).map((v) => v.area_id));
+  return areas.filter((a) => used.has(a.id));
+}
+
+/**
+ * The least a spa visit costs one person, or null when there is no spa to go
+ * to.
+ *
+ * Null also covers a database without 0055, where "wellness" is not a venue
+ * type yet and the query is refused: the spa option simply does not appear,
+ * which is right, because there is nothing it could book.
+ */
+export async function fetchWellnessFloor(): Promise<number | null> {
+  const { data: spas, error } = await supabase
+    .from("venues")
+    .select("id")
+    .eq("type", "wellness")
+    .eq("is_active", true);
+  if (error || !spas?.length) return null;
+  const { data: items } = await supabase
+    .from("menu_items")
+    .select("price_ghs")
+    .in("venue_id", (spas as { id: string }[]).map((s) => s.id))
+    .gte("price_ghs", WELLNESS_TREATMENT_MIN_GHS)
+    .order("price_ghs", { ascending: true })
+    .limit(1);
+  const price = Number((items as { price_ghs: number }[] | null)?.[0]?.price_ghs);
+  return Number.isFinite(price) && price > 0 ? price : null;
 }
 
 /**

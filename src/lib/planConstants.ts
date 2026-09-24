@@ -135,6 +135,34 @@ export const OCCASIONS: { id: Occasion; title: string; sub: string }[] = [
 
 export const OCCASION_IDS = OCCASIONS.map((o) => o.id);
 
+/** The city a plan is in when nobody chose one. Every plan before cities existed. */
+export const DEFAULT_CITY = "Accra";
+
+/**
+ * The cheapest line that counts as a spa visit.
+ *
+ * A spa's price list is not all treatments. Signature Spa's cheapest lines are
+ * a GHS 30 French tip and a GHS 30 gel removal, and the planner walks toward
+ * the cheap end of a list on a tight budget, so "a spa afternoon" would have
+ * been booked as a nail removal. Resense lists a couples package at GHS 0,
+ * which the planner would have read as free. Nothing below this is ordered at
+ * a wellness venue, and the budget floor the questionnaire enforces is the
+ * cheapest line at or above it.
+ */
+export const WELLNESS_TREATMENT_MIN_GHS = 100;
+
+/**
+ * Whether a plan may include a spa at all.
+ *
+ * One or two people. A spa booked for a group is a group booking, which is a
+ * phone call and a deposit rather than a plan, and a family day includes
+ * children. A business meeting is a meeting.
+ */
+export function wellnessAllowed(inputs: Pick<PlanInputs, "partySize" | "occasion">): boolean {
+  if (inputs.partySize > 2) return false;
+  return inputs.occasion !== "family_day" && inputs.occasion !== "business_meeting";
+}
+
 /** Party presets. Anything larger is typed in. */
 export const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12] as const;
 
@@ -165,6 +193,7 @@ export function defaultInputs(): PlanInputs {
   return {
     areaIds: [],
     areaNames: [],
+    city: DEFAULT_CITY,
     surpriseMe: false,
     partySize: 2,
     companions: [],

@@ -30,6 +30,8 @@ export const VENUE_TYPES = [
   "outdoor",
   "cafe",
   "dessert",
+  // Needs migration 0055 before any row can hold it.
+  "wellness",
 ] as const;
 
 export const PRICE_BANDS = ["budget", "mid", "premium"] as const;

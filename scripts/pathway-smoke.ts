@@ -84,27 +84,38 @@ async function main() {
 
   console.log("\nBUSINESS MEETING -- one place, the kind asked for");
   for (const setting of ["cafe", "lounge", "restaurant"]) {
-    const inputs: PlanInputs = {
+    const base: PlanInputs = {
       ...defaultInputs(),
       occasion: "business_meeting",
       occasionDetail: { setting },
       partySize: 3,
       stops: 1,
       hours: 2,
-      startTime: "10:00",
-      budget: 600,
+      startTime: setting === "lounge" ? "17:00" : "10:00",
       surpriseMe: true,
+      budget: 1500,
     };
-    const { plan } = await build(inputs);
+
+    // With room in the budget, the kind asked for.
+    const { plan } = await build(base);
     if (!plan) {
-      check(`${setting}: builds`, false, "no plan came back");
-      continue;
+      check(`${setting}: builds at GHS 1500`, false, "no plan came back");
+    } else {
+      check(`${setting}: exactly one stop`, plan.stops.length === 1, `got ${plan.stops.length}`);
+      const type = plan.stops[0]?.venue.type;
+      check(`${setting}: venue is a ${setting}`, type === setting, `got ${type}`);
+      console.log(`         ${plan.stops[0]?.venue.name} (${type})`);
     }
-    check(`${setting}: exactly one stop`, plan.stops.length === 1, `got ${plan.stops.length}`);
-    const type = plan.stops[0]?.venue.type;
-    const want = setting === "restaurant" ? "restaurant" : setting;
-    check(`${setting}: venue is a ${want}`, type === want, `got ${type}`);
-    console.log(`         ${plan.stops[0]?.venue.name} (${type})`);
+
+    /*
+     * Without room: the kind asked for, or nothing -- never a substitute.
+     *
+     * This used to accept whatever came back, which is how a cafe meeting at
+     * GHS 600 for three was "passing" while sitting in Treehouse Restaurant.
+     */
+    const tight = await build({ ...base, budget: 600 });
+    const t = tight.plan?.stops[0]?.venue.type;
+    check(`${setting}: at GHS 600, a ${setting} or an honest no`, !tight.plan || t === setting, `got ${t ?? "no plan"}`);
   }
 
   console.log("\nFAMILY DAY -- something to do, and it can reach the beach");
@@ -153,6 +164,63 @@ async function main() {
     check("beach: builds a plan", Boolean(plan));
     if (plan) {
       console.log(`         ${plan.stops.map((s) => s.venue.name).join(" -> ")}`);
+    }
+  }
+
+  console.log("\nCITY -- a plan stays inside one city");
+  {
+    const { data: areaRows } = await admin.from("areas").select("id,name,city");
+    const cityOf = new Map(((areaRows ?? []) as { id: string; city: string | null }[]).map((a) => [a.id, a.city || "Accra"]));
+    for (const occasion of ["date_night", "business_meeting"] as const) {
+      const inputs: PlanInputs = {
+        ...defaultInputs(),
+        occasion,
+        occasionDetail: occasion === "business_meeting" ? { setting: "restaurant" } : {},
+        stops: defaultStopsFor(occasion),
+        vibes: ["Calm"],
+        surpriseMe: true,
+        city: "Accra",
+      };
+      const { candidates, plan } = await build(inputs);
+      const outside = candidates.venues.filter((v) => cityOf.get(v.area_id) !== "Accra");
+      check(`${occasion}: no candidate outside Accra`, outside.length === 0, outside.map((v) => v.name).join(", "));
+      check(`${occasion}: still builds`, Boolean(plan));
+    }
+    const bogus = await build({ ...defaultInputs(), vibes: ["Calm"], surpriseMe: true, city: "Atlantis" });
+    check("unknown city falls back to Accra instead of failing", Boolean(bogus.plan));
+  }
+
+  console.log("\nWELLNESS -- only when asked, only for one or two, and a real treatment");
+  {
+    const { count } = await admin
+      .from("venues")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "wellness")
+      .eq("is_active", true);
+    const friends = await build({ ...defaultInputs(), occasion: "friend_outing", partySize: 4, vibes: ["Calm"], surpriseMe: true, wellness: true });
+    check("a group of four is never given a spa", !friends.candidates.venues.some((v) => v.type === "wellness"));
+
+    if (!count) {
+      console.log("   SKIP  no wellness venues yet -- run 0055, then 0056, then this again");
+    } else {
+      const duo = await build({
+        ...defaultInputs(),
+        occasion: "date_night",
+        partySize: 2,
+        hours: 4,
+        startTime: "13:00",
+        budget: 2500,
+        vibes: ["Calm"],
+        surpriseMe: true,
+        wellness: true,
+      });
+      const first = duo.plan?.stops[0];
+      check("a duo who asked gets a spa first", first?.venue.type === "wellness", `${first?.venue.name} (${first?.venue.type})`);
+      const lines = (first as unknown as { orders?: { price_ghs: number; qty: number }[] })?.orders ?? [];
+      const cheapest = Math.min(...lines.map((o) => o.price_ghs / Math.max(1, o.qty)));
+      check("and it is a treatment, not an add-on", lines.length > 0 && cheapest >= 100, `cheapest line GHS ${cheapest}`);
+      const without = await build({ ...defaultInputs(), occasion: "date_night", partySize: 2, vibes: ["Calm"], surpriseMe: true });
+      check("nobody who did not ask is given one", !without.candidates.venues.some((v) => v.type === "wellness"));
     }
   }
 

@@ -270,6 +270,8 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
 interface ResolvedAreas {
   ids: string[];
   names: string[];
+  /** The city the named areas are in. Absent means nothing was named: Accra. */
+  city?: string;
 }
 
 /**
@@ -283,21 +285,30 @@ interface ResolvedAreas {
 async function resolveAreas(ctx: ToolContext, wanted: string[]): Promise<ResolvedAreas> {
   if (!wanted.length) return { ids: [], names: [] };
 
-  const { data } = await ctx.catalog.from("areas").select("id,name");
-  const rows = (data ?? []) as { id: string; name: string }[];
+  const { data } = await ctx.catalog.from("areas").select("id,name,city");
+  const rows = (data ?? []) as { id: string; name: string; city: string | null }[];
 
   const ids: string[] = [];
   const names: string[] = [];
+  let city: string | undefined;
   for (const w of wanted.map((a) => a.trim().toLowerCase()).filter(Boolean)) {
     for (const row of rows) {
       const name = row.name.toLowerCase();
       if ((name === w || name.includes(w) || w.includes(name)) && !ids.includes(row.id)) {
+        /*
+         * The first area named decides the city, and areas from any other
+         * city are left out rather than planned across. "Osu and Kumasi" is
+         * two outings, not one with a four-hour taxi in the middle.
+         */
+        const rowCity = row.city || "Accra";
+        if (city && rowCity !== city) continue;
+        city = rowCity;
         ids.push(row.id);
         names.push(row.name);
       }
     }
   }
-  return { ids, names };
+  return { ids, names, city };
 }
 
 /** What the planner expects, from what somebody actually said. */
@@ -305,6 +316,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas): PlanInputs {
   return {
     areaIds: areas.ids,
     areaNames: areas.names,
+    city: areas.city ?? "Accra",
     // Only when they named nowhere. With areas resolved, this must be false or
     // fetchCandidates skips the area filter it was just given ids for.
     surpriseMe: areas.ids.length === 0,

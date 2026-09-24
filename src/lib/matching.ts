@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { focusVenueTypes, meetingVenueTypes } from "./planner";
+import { DEFAULT_CITY, wellnessAllowed } from "./planConstants";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -59,6 +60,46 @@ export async function fetchCandidates(
 ): Promise<Candidates> {
   const bands = allowedBands(inputs.budget);
   const wantedTags = expandVibes(inputs.vibes);
+  const wantsWellness = Boolean(inputs.wellness) && wellnessAllowed(inputs);
+
+  /*
+   * The city first, because every other filter happens inside it.
+   *
+   * areas.city has existed since the first migration and nothing read it, so
+   * when Kumasi was added it was, as far as the planner could tell, another
+   * neighbourhood of Accra: "Surprise me" drew on every area there was, and a
+   * one-stop plan has no journey to price, so nothing stood between a person
+   * in Osu and a table in Kumasi. Areas the person picked are kept only if
+   * they belong to the city, and "Surprise me" now means anywhere in it rather
+   * than anywhere at all.
+   *
+   * If the lookup itself fails the plan carries on unscoped, which is what
+   * every plan did before this existed. Taking plan generation down over a
+   * filter is the one outcome worse than the bug it fixes.
+   */
+  let scope: Set<string> | null = null;
+  {
+    const { data: allAreas, error: cityError } = await supabase.from("areas").select("id,city");
+    if (cityError) {
+      console.error("city lookup failed; planning unscoped", cityError);
+    } else {
+      const rows = (allAreas ?? []) as { id: string; city: string | null }[];
+      const areasIn = (c: string) =>
+        new Set(rows.filter((a) => (a.city || DEFAULT_CITY) === c).map((a) => a.id));
+      /*
+       * A city with no areas falls back to Accra rather than to an empty scope.
+       * An empty list becomes `area_id=in.()`, which is not a query, and would
+       * have failed every plan from a stale draft naming a city we no longer
+       * hold.
+       */
+      let inCity = areasIn(inputs.city || DEFAULT_CITY);
+      if (!inCity.size) inCity = areasIn(DEFAULT_CITY);
+      if (inCity.size) {
+        const picked = !inputs.surpriseMe ? inputs.areaIds.filter((id) => inCity.has(id)) : [];
+        scope = picked.length ? new Set(picked) : inCity;
+      }
+    }
+  }
 
   /*
    * Started here rather than beside the menu fetch below, because what is on
@@ -92,8 +133,9 @@ export async function fetchCandidates(
   const [eventsRes, schedulesRes] = await Promise.all([eventsPromise, schedulesPromise]);
 
   let events = (eventsRes.data ?? []) as EventRow[];
-  if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
-    events = events.filter((e) => inputs.areaIds.includes(e.area_id));
+  if (scope) {
+    // An event with no area recorded cannot be placed, and is kept, as before.
+    events = events.filter((e) => !e.area_id || scope!.has(e.area_id));
   }
   const allSchedules = (schedulesRes.data ?? []) as VenueSchedule[];
 
@@ -153,6 +195,13 @@ export async function fetchCandidates(
       `price_band.in.(${bands.join(",")})`,
       "is_free.is.true",
       ...(doorIds.length ? [`id.in.(${doorIds.join(",")})`] : []),
+      /*
+       * A spa is judged on its real prices, never on the band guess. Filed as
+       * premium, every spa was invisible below a GHS 850 budget, so a couple
+       * asking for a GHS 350-a-head massage got no spa and therefore no plan.
+       * The treatment floor and the budget walk decide whether it fits.
+       */
+      ...(wantsWellness ? ["type.eq.wellness"] : []),
     ].join(",");
 
     let q = supabase
@@ -161,9 +210,7 @@ export async function fetchCandidates(
       .eq("is_active", true)
       .or(affordable);
 
-    if (!inputs.surpriseMe && inputs.areaIds.length > 0) {
-      q = q.in("area_id", inputs.areaIds);
-    }
+    if (scope) q = q.in("area_id", [...scope]);
     return q;
   };
 
@@ -211,6 +258,15 @@ export async function fetchCandidates(
    * database grants, and Venue is what the planner reads.
    */
   let venues = (venuesRaw ?? []) as unknown as Venue[];
+
+  /*
+   * A spa is only ever the stop somebody asked for.
+   *
+   * Left in, a massage is just another activity to a type-blind shortlist,
+   * and a family day or a table of eight friends could be sent to one.
+   */
+  if (!wantsWellness) venues = venues.filter((v) => v.type !== "wellness");
+
   if (opts.excludeVenueIds?.length) {
     venues = venues.filter((v) => !opts.excludeVenueIds!.includes(v.id));
   }
@@ -333,6 +389,9 @@ export async function fetchCandidates(
   for (const t of meetingVenueTypes(inputs)) {
     if (!focusTypes.includes(t)) focusTypes.push(t);
   }
+
+  // Asked for, so reserved: the shortlist is mostly restaurants.
+  if (wantsWellness && !focusTypes.includes("wellness")) focusTypes.push("wellness");
 
   if (focusTypes.length) {
     const have = new Set(picked.map((v) => v.id));

@@ -59,6 +59,9 @@ export const planInputsSchema = z.object({
     "family_day",
   ]),
   occasionDetail: z.record(z.string().max(300)).default({}),
+  // Both optional, so a plan posted by an older build still validates.
+  city: z.string().max(60).optional(),
+  wellness: z.boolean().optional(),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

@@ -1,6 +1,13 @@
 /* Shared domain types for aduro. */
 
-export type VenueType = "restaurant" | "activity" | "lounge" | "outdoor" | "cafe" | "dessert";
+/**
+ * "wellness" is a spa, a massage, a facial. Its own type rather than an
+ * activity because nothing else in the catalogue could tell a deep-tissue
+ * massage from a game of bowling, and a family day or a group of eight
+ * friends could be sent to either. A wellness venue is only ever planned when
+ * somebody asks for it.
+ */
+export type VenueType = "restaurant" | "activity" | "lounge" | "outdoor" | "cafe" | "dessert" | "wellness";
 export type PriceBand = "budget" | "mid" | "premium";
 /**
  * "activity" is a line on a price list rather than a course: a go-kart, a game
@@ -335,6 +342,20 @@ export interface PlanInputs {
   alcohol?: AlcoholChoice;
   occasion: Occasion;
   /**
+   * Which city the outing happens in, and so which areas it can use.
+   *
+   * Areas always carried a city and nothing ever read it, so when Kumasi
+   * arrived it arrived as a neighbourhood of Accra: "Surprise me" could put a
+   * Kumasi restaurant beside an Osu bar. Absent means Accra, which is every
+   * plan made before this existed.
+   */
+  city?: string;
+  /**
+   * Include a spa or wellness stop. Only honoured for one or two people, and
+   * never for a family day or a business meeting.
+   */
+  wellness?: boolean;
+  /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
    * make a plan specific rather than generically correct.
@@ -549,7 +570,7 @@ export type GenerateResponse =
       message: string;
       suggestions: {
         label: string;
-        action: "widen_area" | "raise_budget" | "clear_focus";
+        action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness";
         value?: number;
       }[];
     }

@@ -20,7 +20,13 @@ import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
 import { OccasionThemeProvider, useTheme } from "../../src/lib/useTheme";
 import { generatePlan } from "../../src/lib/api";
-import { SignInRequiredError, fetchAreas, fetchCuisines, savePlan } from "../../src/lib/data";
+import {
+  SignInRequiredError,
+  fetchAreas,
+  fetchCuisines,
+  fetchWellnessFloor,
+  savePlan,
+} from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import {
   OCCASION_IDS,
@@ -28,6 +34,7 @@ import {
   defaultStopsFor,
   defaultInputs,
   stepsFor,
+  wellnessAllowed,
 } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
@@ -136,6 +143,7 @@ export default function PlanNew() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [areasFailed, setAreasFailed] = useState(false);
   const [cuisines, setCuisines] = useState<{ id: string; label: string }[]>([]);
+  const [wellnessFloor, setWellnessFloor] = useState<number | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -198,6 +206,11 @@ export default function PlanNew() {
       .then((rows) => active && setCuisines(rows))
       .catch(() => undefined);
 
+    // Optional in the same way: without it the spa row simply is not offered.
+    fetchWellnessFloor()
+      .then((floor) => active && setWellnessFloor(floor))
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
@@ -222,6 +235,12 @@ export default function PlanNew() {
          */
         next.stops = defaultStopsFor(patch.occasion);
       }
+      /*
+       * A spa belongs to one or two people. Growing the party, or moving to a
+       * family day or a meeting, takes it off rather than carrying a choice
+       * the plan is no longer allowed to honour.
+       */
+      if (next.wellness && !wellnessAllowed(next)) next.wellness = false;
       void saveDraft({ inputs: next });
       return next;
     });
@@ -392,6 +411,8 @@ export default function PlanNew() {
             void generate({ budget: s.value });
           } else if (s.action === "clear_focus") {
             void generate({ focus: "everything" });
+          } else if (s.action === "clear_wellness") {
+            void generate({ wellness: false });
           } else {
             void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
           }
@@ -446,7 +467,12 @@ export default function PlanNew() {
 
   const canContinue =
     (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0) &&
-    (stepId !== "vibe" || inputs.vibes.length > 0);
+    (stepId !== "vibe" || inputs.vibes.length > 0) &&
+    // The spa floor: the cheapest real treatment, for everybody coming.
+    (stepId !== "budget" ||
+      !inputs.wellness ||
+      wellnessFloor == null ||
+      inputs.budget >= Math.round(wellnessFloor * inputs.partySize));
 
   const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
@@ -481,6 +507,7 @@ export default function PlanNew() {
               inputs={inputs}
               areas={areas}
               cuisines={cuisines}
+              wellnessFloor={wellnessFloor}
               update={update}
             />
             <StepMascot step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />

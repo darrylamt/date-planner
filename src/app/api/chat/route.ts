@@ -90,8 +90,20 @@ export async function POST(req: Request) {
    */
   const today = todayInAccra();
   const ctx = buildToolContext(userId);
-  const { data: areas } = await ctx.catalog.from("areas").select("name").order("name");
-  const areaNames = ((areas ?? []) as { name: string }[]).map((a) => a.name);
+  /*
+   * Grouped by city, so the assistant can tell Kumasi from a neighbourhood of
+   * Accra. Before cities were read, "Kumasi" sat in this list between Kpeshie
+   * and La as though it were a short taxi away.
+   */
+  const { data: areas } = await ctx.catalog.from("areas").select("name,city").order("name");
+  const byCity = new Map<string, string[]>();
+  for (const a of (areas ?? []) as { name: string; city: string | null }[]) {
+    const c = a.city || "Accra";
+    byCity.set(c, [...(byCity.get(c) ?? []), a.name]);
+  }
+  const areaNames = [...byCity].map(([c, names]) =>
+    byCity.size > 1 ? `${c}: ${names.join(", ")}` : names.join(", ")
+  );
 
   const userContent = history.length
     ? body.message

@@ -11,6 +11,7 @@ import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
+import { wellnessAllowed } from "@/lib/planConstants";
 import type {
   GenerateResponse,
   Itinerary,
@@ -173,6 +174,44 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
         message:
           "Nothing to do with your budget. Another day or an earlier start would both work.",
         suggestions: suggestions.filter((sug) => sug.action === "widen_area"),
+      });
+    }
+
+    /*
+     * A spa that would not fit is its own answer, and it comes first.
+     *
+     * The alternative was quietly planning the evening without it, which is
+     * the app deciding the one thing somebody asked for did not matter. So say
+     * what happened and offer the evening without it as a choice.
+     */
+    if (inputs.wellness && wellnessAllowed(inputs)) {
+      return NextResponse.json({
+        status: "no_match",
+        headline: "We could not fit a spa into this one.",
+        message:
+          "Either no spa we hold is open then, or a treatment and the rest of the evening do not fit the budget together. We would rather say so than leave the spa out without telling you.",
+        suggestions: [
+          { label: "Plan it without the spa", action: "clear_wellness" },
+          ...suggestions.filter((sug) => sug.action === "raise_budget"),
+        ],
+      });
+    }
+
+    /*
+     * A meeting's one place was named, and the planner no longer substitutes
+     * another kind for it, so when none fits the answer names what was asked
+     * for. "We couldn't fill the whole evening" is the wrong sentence for a
+     * coffee.
+     */
+    if (inputs.occasion === "business_meeting") {
+      const kind = { cafe: "cafe", lounge: "lounge", restaurant: "restaurant" }[
+        inputs.occasionDetail?.setting ?? "cafe"
+      ] ?? "cafe";
+      return NextResponse.json({
+        status: "no_match",
+        headline: `No ${kind} we hold fits GHS ${inputs.budget} for ${inputs.partySize}.`,
+        message: `Either none is open then or the order for everyone runs over. We would rather say so than put the meeting somewhere that is not a ${kind}.`,
+        suggestions: suggestions.filter((sug) => sug.action === "raise_budget" || sug.action === "widen_area"),
       });
     }
 

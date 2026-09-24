@@ -22,8 +22,9 @@ const LIMIT = 8;
 const argsSchema = z.object({
   name: z.string().min(2).max(80).optional(),
   areas: z.array(z.string()).max(6).optional(),
+  city: z.string().max(60).optional(),
   types: z
-    .array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"]))
+    .array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert", "wellness"]))
     .max(6)
     .optional(),
   vibes: z.array(z.string()).max(6).optional(),
@@ -52,6 +53,11 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
         description:
           "Look a venue up by name, whole or partial. Always use this when somebody names a place: without it the search returns only the best few matches for a mood, and a venue that exists but did not rank can look like one we do not hold.",
       },
+      city: {
+        type: "string",
+        description:
+          "The city to search in. Defaults to Accra. Only set it when the person names another city, such as Kumasi.",
+      },
       areas: {
         type: "array",
         items: { type: "string" },
@@ -59,7 +65,7 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
       },
       types: {
         type: "array",
-        items: { enum: ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] },
+        items: { enum: ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert", "wellness"] },
         description: "Kinds of venue to include.",
       },
       vibes: {
@@ -166,6 +172,21 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
  */
 async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> {
   let q = ctx.catalog.from("venues").select(VENUE_SELECT).eq("is_active", true);
+
+  /*
+   * One city at a time, for the reason plans are: nothing used to read
+   * areas.city, so a question about somewhere romantic could be answered with
+   * a restaurant in Kumasi. Named areas imply their own city and are left to
+   * speak for themselves; otherwise the search stays in the one asked for.
+   */
+  if (!args.areas?.length) {
+    const { data: cityAreas } = await ctx.catalog
+      .from("areas")
+      .select("id")
+      .eq("city", args.city?.trim() || "Accra");
+    const ids = ((cityAreas ?? []) as { id: string }[]).map((a) => a.id);
+    if (ids.length) q = q.in("area_id", ids);
+  }
 
   if (args.types?.length) q = q.in("type", args.types);
 

@@ -23,6 +23,8 @@ import {
   OCCASIONS,
   PARTY_RULES,
   STOP_OPTIONS,
+  DEFAULT_CITY,
+  wellnessAllowed,
   partySizeOptions,
   VIBES,
   cap,
@@ -91,6 +93,8 @@ export interface StepProps {
   areas: Area[];
   /** Kitchens the catalogue actually holds. Empty until they load. */
   cuisines?: { id: string; label: string }[];
+  /** The cheapest spa treatment for one, or null when there is no spa to offer. */
+  wellnessFloor?: number | null;
   update: (patch: Partial<PlanInputs>) => void;
 }
 
@@ -123,7 +127,7 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepProps) {
+export function PlanSteps({ step, inputs, areas, cuisines = [], wellnessFloor = null, update }: StepProps) {
   const solo = inputs.partySize <= 1;
   const pair = inputs.partySize === 2;
   const pronoun = pronounForGender(inputs.partner.gender);
@@ -135,9 +139,39 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
   const contraction = pronoun === "they" || !pair ? "re" : "s";
 
   if (step === "area") {
+    /*
+     * The city first, and only when there is a choice to make.
+     *
+     * Areas always carried a city and nothing read it, so Kumasi arrived as a
+     * neighbourhood of Accra. The list below is only ever one city's areas,
+     * and the picker only appears once a second city has somewhere live in
+     * it, so an Accra-only catalogue looks exactly as it always did.
+     */
+    const cities = [...new Set(areas.map((a) => a.city || DEFAULT_CITY))].sort();
+    const city = cities.includes(inputs.city || DEFAULT_CITY)
+      ? inputs.city || DEFAULT_CITY
+      : (cities[0] ?? DEFAULT_CITY);
+    const inCity = areas.filter((a) => (a.city || DEFAULT_CITY) === city);
+
     return (
       <>
-        <StepHeading title="Which part of Accra?" subtitle="Pick up to two, or let us choose." />
+        <StepHeading
+          title={`Which part of ${city}?`}
+          subtitle="Pick up to two, or let us choose."
+        />
+
+        {cities.length > 1 ? (
+          <View style={{ paddingHorizontal: GUTTER, marginBottom: Spacing.three }}>
+            <Segmented
+              options={cities.map((c) => ({ value: c, label: c }))}
+              value={city}
+              onChange={(c) =>
+                // A new city means none of the areas already picked still apply.
+                update({ city: c, areaIds: [], areaNames: [] })
+              }
+            />
+          </View>
+        ) : null}
 
         {/*
           Above the list, not below it. Somebody who does not mind where they
@@ -147,7 +181,7 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
           <Row
             icon="dice.fill"
             title="Surprise me"
-            subtitle="Anywhere in the city"
+            subtitle={`Anywhere in ${city}`}
             selected={inputs.surpriseMe}
             onPress={() =>
               update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
@@ -155,7 +189,7 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
           />
         </Group>
         <Group>
-          {areas.map((a) => {
+          {inCity.map((a) => {
             const on = inputs.areaIds.includes(a.id);
             return (
               <Row
@@ -174,6 +208,7 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
                   update({
                     areaIds: ids,
                     areaNames: areas.filter((x) => ids.includes(x.id)).map((x) => x.name),
+                    city,
                     surpriseMe: false,
                   });
                 }}
@@ -220,6 +255,21 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
         */}
         {inputs.budget === 0 ? (
           <Note>Free places only, and we have assumed you are driving.</Note>
+        ) : null}
+
+        {/*
+          The spa floor, said where the number is being chosen.
+
+          The cheapest real treatment for everybody coming. Continue stays off
+          below it, because a plan built on less could only book an add-on or
+          find no spa at all, and neither is what was asked for.
+        */}
+        {inputs.wellness && wellnessFloor != null ? (
+          <Note>
+            {inputs.budget < Math.round(wellnessFloor * inputs.partySize)
+              ? `A spa stop needs at least GHS ${Math.round(wellnessFloor * inputs.partySize)} for ${partyLabel(inputs.partySize)}. Raise the budget, or take the spa off on the previous screen.`
+              : `Includes a spa stop. Treatments start at GHS ${Math.round(wellnessFloor)} a person.`}
+          </Note>
         ) : null}
 
         {/*
@@ -349,6 +399,28 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], update }: StepPr
             />
           ))}
         </Group>
+
+        {/*
+          A spa, on top of whatever the outing is made of.
+
+          Only for one or two people and never for a family day or a meeting --
+          see wellnessAllowed -- and only when a spa exists to book, so the row
+          is absent rather than broken on a catalogue without one. The price is
+          named here because it is the whole question: a treatment is rarely
+          under a few hundred cedis, and somebody on a small budget should find
+          that out now rather than at the end.
+        */}
+        {wellnessAllowed(inputs) && wellnessFloor != null ? (
+          <Group>
+            <Row
+              icon="leaf"
+              title="Add a spa or wellness stop"
+              subtitle={`Treatments from ${Math.round(wellnessFloor)} cedis a person`}
+              selected={Boolean(inputs.wellness)}
+              onPress={() => update({ wellness: !inputs.wellness })}
+            />
+          </Group>
+        ) : null}
 
         {/*
           Only when the evening involves eating. Asking someone who picked

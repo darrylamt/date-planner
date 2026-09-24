@@ -5,6 +5,7 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop } from "./transport";
 import { schedulesDuring } from "./schedules";
+import { WELLNESS_TREATMENT_MIN_GHS, wellnessAllowed } from "./planConstants";
 import type {
   EventRow,
   Formality,
@@ -35,7 +36,7 @@ import type {
  */
 
 /** What a slot in the evening is for. Roles map onto venue types. */
-type Role = "meal" | "cafe" | "activity" | "lounge" | "dessert";
+type Role = "meal" | "cafe" | "activity" | "lounge" | "dessert" | "wellness";
 
 const ROLE_TYPES: Record<Role, VenueType[]> = {
   meal: ["restaurant"],
@@ -43,6 +44,8 @@ const ROLE_TYPES: Record<Role, VenueType[]> = {
   activity: ["activity", "outdoor"],
   lounge: ["lounge"],
   dessert: ["dessert"],
+  // Never "activity": a spa is only ever the stop somebody asked for.
+  wellness: ["wellness"],
 };
 
 /** Typical time spent, before travel. */
@@ -52,6 +55,7 @@ const ROLE_MINUTES: Record<Role, number> = {
   activity: 90,
   lounge: 75,
   dessert: 45,
+  wellness: 90,
 };
 
 /** Used when a slot falls back to a venue of another type. */
@@ -62,6 +66,7 @@ const TYPE_LABEL: Record<string, string> = {
   dessert: "DESSERT",
   activity: "SOMETHING TO DO",
   outdoor: "OUTDOORS",
+  wellness: "SPA",
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -70,6 +75,7 @@ const ROLE_LABEL: Record<Role, string> = {
   activity: "SOMETHING TO DO",
   lounge: "DRINKS",
   dessert: "DESSERT",
+  wellness: "SPA",
 };
 
 /**
@@ -113,6 +119,25 @@ export function meetingVenueTypes(
 ): VenueType[] {
   const role = meetingRole(inputs);
   return role ? ROLE_TYPES[role] : [];
+}
+
+/**
+ * Put the spa first, when one was asked for.
+ *
+ * First because a treatment is the thing to be on time for and the rest of
+ * the evening can move around it, and because nobody wants to be on a massage
+ * table straight after dinner. It takes the place of the last stop rather than
+ * adding one, so a request for two places is still two places.
+ *
+ * Never for a business meeting, whose single stop is the one it named.
+ */
+function withWellness(
+  roles: Role[],
+  inputs: Pick<PlanInputs, "wellness" | "partySize" | "occasion" | "occasionDetail">
+): Role[] {
+  if (!inputs.wellness || !wellnessAllowed(inputs) || meetingRole(inputs)) return roles;
+  if (roles.includes("wellness")) return roles;
+  return ["wellness" as Role, ...roles].slice(0, Math.max(roles.length, 1));
 }
 
 function roleSequence(
@@ -533,6 +558,12 @@ function planOrders(
    * caps at two because it IS two, and a party of four simply buys two tables.
    */
   const fitsParty = (m: MenuItem): boolean => {
+    /*
+     * A treatment, not an add-on. See WELLNESS_TREATMENT_MIN_GHS: without this
+     * the budget walk-down reached Signature Spa's GHS 30 gel removal and
+     * Resense's GHS 0 couples package, and called either one a spa visit.
+     */
+    if (venue.type === "wellness" && !(Number(m.price_ghs) >= WELLNESS_TREATMENT_MIN_GHS)) return false;
     if (m.min_players != null && partySize < m.min_players) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
     if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
@@ -1212,6 +1243,19 @@ export function planItinerary(
     if (focusTypes.length) return preferred;
 
     /*
+     * Nor for a stop somebody named.
+     *
+     * A business meeting's one place was chosen as a cafe, a lounge or a meal,
+     * and a spa was asked for by name. Filling either with "whatever else was
+     * to hand" is the same wrong answer the focus rule above refuses: a cafe
+     * meeting at GHS 600 for three quietly became Treehouse Restaurant, and a
+     * spa that did not fit would have become a restaurant labelled as the spa
+     * stop, which also hid the "we could not fit a spa" answer entirely. An
+     * empty slot here is honest; the route says why.
+     */
+    if (role === "wellness" || meetingRole(inputs)) return preferred;
+
+    /*
      * Everything else, behind everything of the right type.
      *
      * The slot used to be restricted to its own kind, and that restriction
@@ -1237,12 +1281,9 @@ export function planItinerary(
     stopCount: number,
     pin: Anchor | null
   ): PlannedItinerary | null => {
-    const roles = roleSequence(
-      startHour,
-      stopCount,
-      inputs.focus,
-      inputs.vibes,
-      meetingRole(inputs)
+    const roles = withWellness(
+      roleSequence(startHour, stopCount, inputs.focus, inputs.vibes, meetingRole(inputs)),
+      inputs
     );
     const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
 
