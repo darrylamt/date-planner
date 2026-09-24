@@ -25,6 +25,7 @@ import { useAuth, signOut } from "../../src/lib/useAuth";
 import { useAppearance } from "../../src/lib/appearance";
 import { AppIconPicker, appIconsAvailable } from "../../src/components/AppIconPicker";
 import { IssueSheet } from "../../src/components/IssueSheet";
+import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
 import { ProSheet } from "../../src/components/profile/ProSheet";
 import { fetchAllowance } from "../../src/lib/chat";
 import { clearDraft, loadDraft } from "../../src/lib/draft";
@@ -98,6 +99,7 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
+  const [aiAllowed, setAiAllowed] = useState(false);
   const [proOpen, setProOpen] = useState(false);
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
@@ -107,6 +109,7 @@ export default function Profile() {
     useCallback(() => {
       let active = true;
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
+      void getAiConsent().then((v) => active && setAiAllowed(v === "granted"));
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
@@ -137,7 +140,13 @@ export default function Profile() {
   function confirmDelete() {
     Alert.alert(
       "Delete account?",
-      "Your account and saved plans go for good. This cannot be undone.",
+      /*
+       * Apple's account-deletion guidance, for apps that sell subscriptions:
+       * say that billing continues through Apple until it is cancelled.
+       * Deleting the row here stops nothing at Apple, and somebody who
+       * assumed it did would be charged again next month.
+       */
+      "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to aduro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -426,6 +435,29 @@ export default function Profile() {
            * registration to buy something that is not account-based.
            */
           onPress={() => setProOpen(true)}
+        />
+      </Group>
+
+      {/*
+        The other half of asking permission: being able to take it back.
+        Off means plans get a plain description and the assistant asks again
+        before anything is sent.
+      */}
+      <Group header="Privacy">
+        <Row
+          icon="sparkles"
+          title="Use AI (Anthropic's Claude)"
+          subtitle="For plan descriptions and the assistant. What you type is sent to Anthropic."
+          trailing={
+            <Switch
+              value={aiAllowed}
+              onValueChange={(on) => {
+                setAiAllowed(on);
+                void setAiConsent(on ? "granted" : "declined");
+              }}
+              trackColor={{ true: c.accent, false: c.backgroundSelected }}
+            />
+          }
         />
       </Group>
 

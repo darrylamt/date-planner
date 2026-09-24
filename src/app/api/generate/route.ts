@@ -247,8 +247,13 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
 
   // The plan is already valid at this point, so failing the request over prose
   // would throw away a working itinerary.
-  const written = await writePlanCopy(inputs, plan);
-  const copy = written.ok ? written.copy : fallbackCopy(inputs, plan);
+  /*
+   * Not a word of it to Anthropic without permission. The person declined
+   * sending their answers to a third-party AI (guideline 5.1.2(i)), so the
+   * description is written from the plan itself, here, with no model call.
+   */
+  const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
+  const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);
 
   return NextResponse.json({ status: "ok", itinerary: assembleItinerary(inputs, plan, copy) });
 }

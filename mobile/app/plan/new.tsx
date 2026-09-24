@@ -40,6 +40,8 @@ import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
 import { isDriving } from "../../src/lib/budget";
 import { registerForPush } from "../../src/lib/push";
+import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
+import { AiConsentSheet } from "../../src/components/AiConsentSheet";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 
@@ -144,6 +146,13 @@ export default function PlanNew() {
   const [areasFailed, setAreasFailed] = useState(false);
   const [cuisines, setCuisines] = useState<{ id: string; label: string }[]>([]);
   const [wellnessFloor, setWellnessFloor] = useState<number | null>(null);
+  /*
+   * The pending consent question, and the answer it is waiting for. A ref
+   * rather than state for the resolver, because it is a callback to finish a
+   * generate that is already under way, not something to render.
+   */
+  const [askingConsent, setAskingConsent] = useState(false);
+  const consentAnswer = useRef<((allowed: boolean) => void) | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -248,7 +257,21 @@ export default function PlanNew() {
 
   const generate = useCallback(
     async (overrides?: Partial<PlanInputs>) => {
-      const finalInputs = { ...inputs, ...overrides };
+      /*
+       * Asked once, before the first plan's answers could reach Anthropic.
+       * After that the stored answer stands until it is changed under You.
+       */
+      let consent = await getAiConsent();
+      if (consent === null) {
+        const allowed = await new Promise<boolean>((resolve) => {
+          consentAnswer.current = resolve;
+          setAskingConsent(true);
+        });
+        consent = allowed ? "granted" : "declined";
+        await setAiConsent(consent);
+      }
+
+      const finalInputs = { ...inputs, ...overrides, ai: consent === "granted" };
       if (overrides) update(overrides);
 
       setPhase({ name: "loading" });
@@ -483,6 +506,14 @@ export default function PlanNew() {
       keyboardVerticalOffset={insets.top + 44}
     >
       <ProgressRail total={totalSteps} current={stepIndex} />
+      <AiConsentSheet
+        purpose={askingConsent ? "plan" : null}
+        onAnswer={(allowed) => {
+          setAskingConsent(false);
+          consentAnswer.current?.(allowed);
+          consentAnswer.current = null;
+        }}
+      />
 
       <ScrollView
         ref={scrollRef}

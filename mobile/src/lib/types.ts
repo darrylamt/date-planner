@@ -361,6 +361,13 @@ export interface PlanInputs {
    */
   wellness?: boolean;
   /**
+   * False when the person declined sending their answers to Anthropic
+   * (guideline 5.1.2(i)). The plan is unaffected -- our own code builds it --
+   * and only its description falls back to plain text. Absent means an
+   * older build, which predates the question.
+   */
+  ai?: boolean;
+  /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
    * make a plan specific rather than generically correct.

@@ -62,6 +62,7 @@ export const planInputsSchema = z.object({
   // Both optional, so a plan posted by an older build still validates.
   city: z.string().max(60).optional(),
   wellness: z.boolean().optional(),
+  ai: z.boolean().optional(),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

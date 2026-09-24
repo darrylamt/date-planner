@@ -22,6 +22,8 @@ import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import { Paywall } from "../src/components/chat/Paywall";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { Toast } from "../src/components/Toast";
+import { AiConsentSheet } from "../src/components/AiConsentSheet";
+import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
 import {
   OutOfMessagesError,
   SignInRequiredError,
@@ -79,6 +81,8 @@ export default function ChatScreen() {
   const [lastError, setLastError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [askingConsent, setAskingConsent] = useState(false);
+  const consentAnswer = useRef<((allowed: boolean) => void) | null>(null);
   /*
    * Set when a turn actually built something. Kept on the screen rather than
    * in the bubble, because the plan is a thing you go and look at, not a
@@ -165,6 +169,21 @@ export default function ChatScreen() {
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
+
+    /*
+     * Every send until it is allowed, unlike plans. The assistant is the
+     * model, so a "no" here means the message is not sent at all, and asking
+     * again when somebody next tries to send is asking at the one moment the
+     * question means something.
+     */
+    if ((await getAiConsent()) !== "granted") {
+      const allowed = await new Promise<boolean>((resolve) => {
+        consentAnswer.current = resolve;
+        setAskingConsent(true);
+      });
+      await setAiConsent(allowed ? "granted" : "declined");
+      if (!allowed) return;
+    }
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDraft("");
@@ -424,6 +443,15 @@ export default function ChatScreen() {
       />
 
       <Toast message={toast} onDone={() => setToast(null)} />
+
+      <AiConsentSheet
+        purpose={askingConsent ? "chat" : null}
+        onAnswer={(allowed) => {
+          setAskingConsent(false);
+          consentAnswer.current?.(allowed);
+          consentAnswer.current = null;
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
