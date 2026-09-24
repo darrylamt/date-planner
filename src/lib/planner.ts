@@ -3,7 +3,7 @@ import { dishMatchesCuisine } from "./cuisineDishes";
 import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
-import { estimateHop } from "./transport";
+import { estimateHop, haversineKm } from "./transport";
 import { schedulesDuring } from "./schedules";
 import { WELLNESS_TREATMENT_MIN_GHS, wellnessAllowed } from "./planConstants";
 import type {
@@ -1208,6 +1208,38 @@ export function planItinerary(
     return out;
   };
 
+  /*
+   * Where each venue is, for the route pass in attempt().
+   *
+   * A venue's own coordinates where it has them; otherwise the middle of its
+   * area, worked out from the venues in that area that do. Plenty of the
+   * catalogue has no coordinates -- the Osu Honeysuckle among them -- and a
+   * route check that ignored them would be a route check with holes in it.
+   * Where neither exists, the same area is treated as next door and a
+   * different one as six kilometres off, which is roughly Accra's spacing.
+   */
+  const centroids = new Map<string, { lat: number; lng: number }>();
+  {
+    const sums = new Map<string, { lat: number; lng: number; n: number }>();
+    for (const v of candidates.venues) {
+      if (v.lat == null || v.lng == null) continue;
+      const s = sums.get(v.area_id) ?? { lat: 0, lng: 0, n: 0 };
+      s.lat += Number(v.lat);
+      s.lng += Number(v.lng);
+      s.n += 1;
+      sums.set(v.area_id, s);
+    }
+    for (const [id, s] of sums) centroids.set(id, { lat: s.lat / s.n, lng: s.lng / s.n });
+  }
+  const placeOf = (v: Venue) =>
+    v.lat != null && v.lng != null ? { lat: Number(v.lat), lng: Number(v.lng) } : centroids.get(v.area_id) ?? null;
+  const kmBetween = (a: Venue, b: Venue): number => {
+    const p = placeOf(a);
+    const q = placeOf(b);
+    if (p && q) return haversineKm(p, q);
+    return a.area_id === b.area_id ? 0 : 6;
+  };
+
   const optionsFor = (role: Role, slotStart: number): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
@@ -1507,6 +1539,90 @@ export function planItinerary(
       const up = move as { index: number; option: Option; gain: number; extra: number } | null;
       if (!up) break;
       chosen[up.index] = up.option;
+    }
+
+    /*
+     * Tighten the route.
+     *
+     * Every slot above picks its own best venue with no idea where the stop
+     * before it was, and the budget walk compares venues on their own prices,
+     * never on the rides they create. So four individually sensible choices
+     * came out as Labone, then East Legon, then Cantonments -- next door to
+     * Labone -- and then back to East Legon: most of the evening in a taxi,
+     * paid for out of the budget.
+     *
+     * So, last: swap any stop for a nearby alternative from its own slot, but
+     * only one that fits as well -- within a point of the same score, never a
+     * plainer order -- still inside the budget, and at least two kilometres
+     * shorter to reach and leave. Those conditions are what stop this from
+     * trading the dinner somebody's evening was built around for a worse one
+     * two streets away. Stops keep their order, because the order is the
+     * shape of the evening: dinner does not move behind dessert to save a
+     * ride. Repeated until nothing moves, because pulling one stop in can
+     * make its neighbour the next thing out of place.
+     */
+    /*
+     * Judged on the whole route, not one stop's two legs.
+     *
+     * The first version compared a stop's own legs and nothing else, and it
+     * cut distance by a third while creating the very shape it existed to
+     * remove: pulling three stops into East Legon and leaving one stranded in
+     * Achimota between them. Each swap looked shorter locally; together they
+     * made East Legon, Achimota, East Legon.
+     *
+     * So a swap is weighed against the entire route, and it may never add a
+     * return to an area already left. Shorter is only better when it is not
+     * also a detour back.
+     */
+    const revisitsOf = (picks: Option[]) => {
+      let n = 0;
+      const left = new Set<string>();
+      for (let i = 1; i < picks.length; i++) {
+        const prev = picks[i - 1].venue.area_id;
+        if (picks[i].venue.area_id !== prev) left.add(prev);
+        if (left.has(picks[i].venue.area_id)) n++;
+      }
+      return n;
+    };
+    const routeKm = (picks: Option[]) =>
+      picks.reduce((sum, p, i) => (i ? sum + kmBetween(picks[i - 1].venue, p.venue) : 0), 0);
+
+    for (let pass = 0; pass < 4; pass++) {
+      let moved = false;
+      for (let i = 0; i < chosen.length; i++) {
+        if (i === pinnedIndex) continue;
+        const current = chosen[i];
+        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => c.venue.id));
+        const kmNow = routeKm(chosen);
+        const backNow = revisitsOf(chosen);
+        let best: { option: Option; km: number; back: number } | null = null;
+        for (const option of slots[i]) {
+          if (option === current || taken.has(option.venue.id)) continue;
+          if (option.tier < current.tier) continue;
+          const trial = chosen.slice();
+          trial[i] = option;
+          const back = revisitsOf(trial);
+          if (back > backNow) continue;
+          /*
+           * A little more latitude when the swap removes a detour back. Two
+           * points is still inside the preference for the right kind of place
+           * (worth two on its own), so this never turns a dinner slot into a
+           * bar to save a ride, but it lets a near-equal venue in the right
+           * area beat a marginally better one on the wrong side of town.
+           */
+          if (option.score < current.score - (back < backNow ? 2 : 1)) continue;
+          const km = routeKm(trial);
+          // Fewer returns always wins; otherwise it has to be a real saving.
+          if (back === backNow && km > kmNow - 2) continue;
+          if (totalOf(trial) > inputs.budget) continue;
+          if (!best || back < best.back || (back === best.back && km < best.km)) best = { option, km, back };
+        }
+        if (best) {
+          chosen[i] = best.option;
+          moved = true;
+        }
+      }
+      if (!moved) break;
     }
 
     const stops = toStops(chosen);

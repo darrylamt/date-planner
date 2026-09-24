@@ -26,6 +26,7 @@
     "webhook:smoke": "tsx scripts/webhook-smoke.ts",
     "paywall": "tsx scripts/paywall-preview.ts",
     "tokens": "tsx scripts/token-report.ts",
+    "route:check": "tsx scripts/route-check.ts",
     "mascots": "tsx scripts/build-mascots.ts",
     "pathway:smoke": "tsx scripts/pathway-smoke.ts"
   },
