@@ -31,6 +31,7 @@ const GROUPS: {
       { href: "/admin", label: "Venues", badge: "venues" },
       { href: "/admin/areas", label: "Areas" },
       { href: "/admin/events", label: "Events" },
+      { href: "/admin/getting-around", label: "Getting around" },
       { href: "/admin/gifts", label: "Flowers and cakes" },
       { href: "/admin/featured", label: "Featured this week" },
     ],
