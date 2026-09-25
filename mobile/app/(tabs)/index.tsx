@@ -153,33 +153,51 @@ export default function Home() {
           </Glow>
         </Pressable>
 
+        {/*
+          Ringed in the bar's own four colours, so the two read as one pair
+          at the top of the screen rather than a bar and a stray grey dot.
+          A gap of background between ring and picture, the way a story ring
+          works, because a ring drawn straight onto a photo's edge is lost in
+          it.
+        */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="You and settings"
           onPress={() => router.push("/profile")}
           hitSlop={6}
           style={({ pressed }) => ({
-            width: 46,
-            height: 46,
-            borderRadius: 23,
-            overflow: "hidden",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: me?.avatarUrl || me?.initial ? c.accent : c.backgroundElement,
-            borderWidth: HAIRLINE,
-            borderColor: c.border,
+            width: 54,
+            height: 54,
+            borderRadius: 27,
+            borderWidth: 2.5,
+            borderTopColor: "#7C5CFF",
+            borderRightColor: "#FF5CA8",
+            borderBottomColor: "#FFB020",
+            borderLeftColor: "#33D6C7",
+            padding: 2.5,
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          {me?.avatarUrl ? (
-            <Image source={{ uri: me.avatarUrl }} style={{ width: 46, height: 46 }} contentFit="cover" />
-          ) : me?.initial ? (
-            <Text variant="headline" style={{ color: "#FFFFFF" }}>
-              {me.initial}
-            </Text>
-          ) : (
-            <Symbol name="person.fill" size={20} color={c.textSecondary} />
-          )}
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 22,
+              overflow: "hidden",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: me?.avatarUrl || me?.initial ? c.accent : c.backgroundElement,
+            }}
+          >
+            {me?.avatarUrl ? (
+              <Image source={{ uri: me.avatarUrl }} style={{ width: 44, height: 44 }} contentFit="cover" />
+            ) : me?.initial ? (
+              <Text variant="headline" style={{ color: "#FFFFFF" }}>
+                {me.initial}
+              </Text>
+            ) : (
+              <Symbol name="person.fill" size={20} color={c.textSecondary} />
+            )}
+          </View>
         </Pressable>
         </View>
 

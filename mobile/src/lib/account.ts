@@ -185,7 +185,15 @@ export async function uploadAvatar(uri: string): Promise<string | null> {
       .from("avatars")
       .upload(path, bytes, {
         contentType: safeExt === "png" ? "image/png" : "image/jpeg",
-        upsert: true,
+        /*
+         * Never upsert. Storage runs an upsert as insert-or-update and needs
+         * a SELECT policy on the bucket to do it, and migration 0012 dropped
+         * that policy on purpose so nobody can list everyone's avatars. With
+         * upsert on, every upload was refused by row-level security and the
+         * app said only "That picture did not upload". The filename is
+         * timestamped, so there is never anything to overwrite.
+         */
+        upsert: false,
       });
     if (uploadError) return null;
 
