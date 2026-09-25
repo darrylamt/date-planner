@@ -44,6 +44,8 @@ export async function GET() {
       ),
     ]);
 
+    // Empty is "not imported yet", and must not be cached for an hour as a dataset.
+    if (!lines.length) throw new Error("empty");
     const visible = new Set(lines.map((l) => l.id));
     return NextResponse.json(
       {
