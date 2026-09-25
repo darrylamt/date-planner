@@ -59,6 +59,24 @@ export interface CarRental {
   checked_on: string | null;
 }
 
+/**
+ * The approved trotro fare steps, nationwide, as GPRTU and GRTCC set them with
+ * the Ministry of Transport: an 8% rise on the May 2025 schedule, in force
+ * from 26 September 2026.
+ *
+ * Steps, not a rate. The schedule is a list of approved fare levels that
+ * terminals assign to routes; there is no official cedis-per-kilometre figure
+ * to compute one from, so the planner never guesses which step a trip is.
+ * These are offered to an admin as the values a checked fare should take, and
+ * the range is shown to a visitor where nobody has checked the fare yet.
+ *
+ * Update together with OFFICIAL_FARES_FROM when the next adjustment comes.
+ */
+export const OFFICIAL_TROTRO_FARES = [5.5, 6.5, 7.6, 8.7, 9.8, 11, 16.2, 21.6, 27, 32.4, 36.8];
+export const OFFICIAL_FARES_FROM = "26 September 2026";
+export const officialFareRange = () =>
+  `GHS ${OFFICIAL_TROTRO_FARES[0].toFixed(2)} to ${OFFICIAL_TROTRO_FARES[OFFICIAL_TROTRO_FARES.length - 1].toFixed(2)}`;
+
 /** A trip is one or more rides in a row, each one a checked route. */
 export interface Trip {
   legs: TrotroRoute[];

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
 import type { AccessVenue, LineSummary } from "@/app/admin/getting-around/page";
-import { RouteMapReview } from "./RouteMapReview";
+import { FareSteps, RouteMapReview } from "./RouteMapReview";
 import { fareText, type CarRental, type TrotroRoute, type TrotroStation, type VenueAccess } from "@/lib/transit";
 
 type Tab = "map" | "stations" | "routes" | "venues" | "rentals";
@@ -431,11 +431,14 @@ function Routes({ stations, routes, say }: Props) {
         </div>
         <div>
           <span className="flbl">Fare from (GHS)</span>
-          <input className="inp h-[42px] font-mono" inputMode="decimal" value={form.fare_min} onChange={(e) => setForm({ ...form, fare_min: e.target.value })} />
+          <input className="inp h-[42px] font-mono" inputMode="decimal" list="fare-steps" value={form.fare_min} onChange={(e) => setForm({ ...form, fare_min: e.target.value })} />
         </div>
         <div>
           <span className="flbl">Fare to (GHS)</span>
-          <input className="inp h-[42px] font-mono" inputMode="decimal" value={form.fare_max} placeholder="same if fixed" onChange={(e) => setForm({ ...form, fare_max: e.target.value })} />
+          <input className="inp h-[42px] font-mono" inputMode="decimal" list="fare-steps" value={form.fare_max} placeholder="same if fixed" onChange={(e) => setForm({ ...form, fare_max: e.target.value })} />
+        </div>
+        <div className="md:col-span-3">
+          <FareSteps />
         </div>
         <div>
           <span className="flbl">Minutes, usually</span>

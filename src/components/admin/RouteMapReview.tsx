@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { fareText } from "@/lib/transit";
+import { OFFICIAL_FARES_FROM, OFFICIAL_TROTRO_FARES, fareText } from "@/lib/transit";
 import type { LineSummary } from "@/app/admin/getting-around/page";
 
 type Filter = "unchecked" | "confirmed" | "hidden" | "all";
@@ -243,12 +243,13 @@ function Direction({ line, say }: { line: LineSummary; say: (m: string) => void 
           </div>
           <div>
             <span className="flbl">Fare from (GHS)</span>
-            <input className="inp h-[38px] font-mono" value={form.fare_min} onChange={(e) => setForm({ ...form, fare_min: e.target.value })} />
+            <input className="inp h-[38px] font-mono" list="fare-steps" value={form.fare_min} onChange={(e) => setForm({ ...form, fare_min: e.target.value })} />
           </div>
           <div>
             <span className="flbl">Fare to (GHS)</span>
-            <input className="inp h-[38px] font-mono" value={form.fare_max} placeholder="same if fixed" onChange={(e) => setForm({ ...form, fare_max: e.target.value })} />
+            <input className="inp h-[38px] font-mono" list="fare-steps" value={form.fare_max} placeholder="same if fixed" onChange={(e) => setForm({ ...form, fare_max: e.target.value })} />
           </div>
+          <FareSteps />
           <div className="md:col-span-4">
             <span className="flbl">Notes</span>
             <input className="inp h-[38px]" value={form.notes} placeholder="Now loads at the new terminal; slow after 4pm" onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -322,5 +323,25 @@ function StopList({ stops, say }: { stops: StopRow[]; say: (m: string) => void }
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * The approved fare steps, as suggestions on the fare fields. A fare that is
+ * not one of them is worth a second look: either the route charges off the
+ * schedule, which is worth a note, or it was misheard.
+ */
+export function FareSteps() {
+  return (
+    <>
+      <datalist id="fare-steps">
+        {OFFICIAL_TROTRO_FARES.map((f) => (
+          <option key={f} value={f.toFixed(2)} />
+        ))}
+      </datalist>
+      <div className="text-[12px] text-mutedbrown md:col-span-4">
+        Approved steps from {OFFICIAL_FARES_FROM}: {OFFICIAL_TROTRO_FARES.map((f) => f.toFixed(2)).join(", ")}.
+      </div>
+    </>
   );
 }

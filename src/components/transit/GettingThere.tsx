@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { directionsLink, fareText, uberLink, type CarRental, type TrotroStation, type VenueAccess } from "@/lib/transit";
+import {
+  OFFICIAL_FARES_FROM,
+  directionsLink,
+  fareText,
+  officialFareRange,
+  uberLink,
+  type CarRental,
+  type TrotroStation,
+  type VenueAccess,
+} from "@/lib/transit";
 
 export interface PlaceOption {
   id: string;
@@ -223,8 +232,15 @@ export function GettingThere({
         <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
           OpenStreetMap contributors
         </a>
-        , available under the Open Database Licence. Times are estimates and fares are only shown where somebody has
-        checked them.
+        , available under the{" "}
+        <a className="underline" href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">
+          Open Database Licence
+        </a>
+        . Our corrected version of that data is{" "}
+        <a className="underline" href="/api/transit/data">
+          free to download
+        </a>{" "}
+        under the same licence. Times are estimates; a route&apos;s fare is shown only where somebody has checked it.
       </p>
     </main>
   );
@@ -363,7 +379,15 @@ function OptionCard({ option, how, placeName }: { option: ApiOption; how: VenueA
             : "One trotro";
   const fare = fareText(option.trotroFareMin, option.trotroFareMax);
   const cost = [
-    option.kind !== "taxi" && option.kind !== "walk" ? (fare ? `trotro ${fare}` : "trotro fare not checked") : null,
+    /*
+     * The official range where nobody has checked this route's fare: a real
+     * bound on what it can cost, rather than a guess at which step it is.
+     */
+    option.kind !== "taxi" && option.kind !== "walk"
+      ? fare
+        ? `trotro ${fare}`
+        : `trotro fare not checked, official fares ${officialFareRange()} a ride`
+      : null,
     option.taxiGhs ? `taxi about GHS ${option.taxiGhs}` : null,
   ]
     .filter(Boolean)
@@ -505,7 +529,12 @@ function TrotroGuide() {
             To get off, say <b>&ldquo;Bus stop&rdquo;</b> clearly, a little before your stop.
           </li>
           <li>Keep your phone and bag close in busy stations. After dark, a taxi or ride app is the safer choice.</li>
-          <li>Fares move with fuel prices, so they are shown only with the date somebody last checked them.</li>
+          <li>
+            Official trotro fares run from {officialFareRange()} a ride, set by the transport unions from{" "}
+            {OFFICIAL_FARES_FROM}. Each route has a fixed step; short hops in town are the lowest. If the mate asks for
+            more, it is fine to ask what the fare is.
+          </li>
+          <li>Fares move with fuel prices, so a route&apos;s fare is shown with the date somebody last checked it.</li>
         </ul>
       ) : null}
     </div>
