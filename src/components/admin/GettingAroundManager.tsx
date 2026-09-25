@@ -6,12 +6,14 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
-import type { AccessVenue } from "@/app/admin/getting-around/page";
+import type { AccessVenue, LineSummary } from "@/app/admin/getting-around/page";
+import { RouteMapReview } from "./RouteMapReview";
 import { fareText, type CarRental, type TrotroRoute, type TrotroStation, type VenueAccess } from "@/lib/transit";
 
-type Tab = "stations" | "routes" | "venues" | "rentals";
+type Tab = "map" | "stations" | "routes" | "venues" | "rentals";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "map", label: "Route map (2019)" },
   { id: "stations", label: "Stations" },
   { id: "routes", label: "Trotro routes" },
   { id: "venues", label: "Venue directions" },
@@ -54,8 +56,9 @@ export function GettingAroundManager(props: {
   rentals: CarRental[];
   areas: Area[];
   venues: AccessVenue[];
+  lines: LineSummary[] | null;
 }) {
-  const [tab, setTab] = useState<Tab>("stations");
+  const [tab, setTab] = useState<Tab>("map");
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => {
     setToast(m);
@@ -63,6 +66,7 @@ export function GettingAroundManager(props: {
   };
 
   const withDirections = props.access.filter((a) => a.landmark || a.station_id).length;
+  const confirmed = (props.lines ?? []).filter((l) => l.status === "confirmed").length;
 
   return (
     <div className="max-w-[980px]">
@@ -74,7 +78,8 @@ export function GettingAroundManager(props: {
       </div>
       <div className="text-[14px] text-mutedbrown">
         How to reach a place without knowing the city: what to tell a driver, which trotro, where to get
-        off. {props.stations.length} stations, {props.routes.length} routes, {withDirections} venues with
+        off. {props.lines?.length ?? 0} route-map directions ({confirmed} confirmed), {props.stations.length} stations,{" "}
+        {props.routes.length} hand-entered rides, {withDirections} venues with
         directions, {props.rentals.length} rental companies.
       </div>
 
@@ -93,6 +98,7 @@ export function GettingAroundManager(props: {
       </div>
 
       <div className="mt-5">
+        {tab === "map" && <RouteMapReview lines={props.lines} say={say} />}
         {tab === "stations" && <Stations {...props} say={say} />}
         {tab === "routes" && <Routes {...props} say={say} />}
         {tab === "venues" && <VenueDirections {...props} say={say} />}

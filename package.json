@@ -27,6 +27,8 @@
     "paywall": "tsx scripts/paywall-preview.ts",
     "tokens": "tsx scripts/token-report.ts",
     "route:check": "tsx scripts/route-check.ts",
+    "transit:import": "tsx scripts/import-route-map.ts",
+    "journey:check": "tsx scripts/journey-check.ts",
     "mascots": "tsx scripts/build-mascots.ts",
     "pathway:smoke": "tsx scripts/pathway-smoke.ts"
   },
@@ -44,6 +46,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
+    "fflate": "^0.8.3",
     "postcss": "^8.4.49",
     "sharp": "^0.34.4",
     "tailwindcss": "^3.4.17",

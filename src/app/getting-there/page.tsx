@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { GettingThere, type PlaceOption } from "@/components/transit/GettingThere";
-import type { CarRental, TrotroRoute, TrotroStation, VenueAccess } from "@/lib/transit";
+import type { CarRental, TrotroStation, VenueAccess } from "@/lib/transit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,15 +25,16 @@ export default async function GettingTherePage({
   searchParams: { venue?: string };
 }) {
   const supabase = createClient();
-  const [stations, routes, access, rentals, venues] = await Promise.all([
+  const [stations, lines, access, rentals, venues] = await Promise.all([
     supabase.from("trotro_stations").select("*").eq("is_active", true).order("name"),
-    supabase.from("trotro_routes").select("*").eq("is_active", true),
+    // Only to tell whether the route map is loaded; the planner reads it itself.
+    supabase.from("trotro_lines").select("id", { count: "exact", head: true }),
     supabase.from("venue_access").select("*"),
     supabase.from("car_rentals").select("*").eq("is_active", true).order("name"),
     supabase.from("venues").select("id, name, lat, lng, areas(name)").eq("is_active", true).order("name"),
   ]);
 
-  const notReady = [stations, routes, access, rentals].some((r) => r.error);
+  const notReady = [stations, lines, access, rentals].some((r) => r.error) || !lines.count;
 
   const places: PlaceOption[] = (venues.data ?? []).map((v: Record<string, unknown>) => ({
     id: v.id as string,
@@ -48,7 +49,6 @@ export default async function GettingTherePage({
       notReady={notReady}
       places={places}
       stations={(stations.data ?? []) as TrotroStation[]}
-      routes={(routes.data ?? []) as TrotroRoute[]}
       access={(access.data ?? []) as VenueAccess[]}
       rentals={(rentals.data ?? []) as CarRental[]}
       initialVenue={searchParams.venue ?? null}
