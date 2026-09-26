@@ -484,7 +484,13 @@ const DRAFT_BEST_FOR = [
   "first_date",
   "anniversary",
   "date_night",
+  "birthday",
+  "graduation",
+  "celebration",
   "friend_outing",
+  "solo_day",
+  "business_meeting",
+  "family_day",
   "casual_hangout",
 ] as const;
 

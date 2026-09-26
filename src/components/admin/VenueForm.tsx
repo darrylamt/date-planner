@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { OCCASIONS } from "@/lib/planConstants";
 import { Fragment, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
@@ -22,7 +23,20 @@ const BANDS = ["budget", "mid", "premium"] as const;
 // venues already carried, and all six of the tags the plan flow's Beach,
 // Dancing, Sporty, Outdoorsy, Artsy and Foodie chips look for.
 const VIBES = [...VENUE_VIBE_TAGS];
-const BEST_FOR = ["first_date", "anniversary", "date_night", "friend_outing", "casual_hangout"];
+/*
+ * Every occasion the app plans, by the name people pick it by, plus the
+ * casual hangout tag 89 venues already carry.
+ *
+ * This was five tags, all but one about couples, and the planner only gives a
+ * venue its occasion bonus when best_for holds that exact occasion. So a
+ * birthday, a family day or a business meeting could never find a venue
+ * marked for it, and every tagging decision was "is this a date spot or
+ * not", which is how the Honeysuckle ended up tagged for first dates.
+ */
+const BEST_FOR: { id: string; label: string }[] = [
+  ...OCCASIONS.map((o) => ({ id: o.id, label: o.title })),
+  { id: "casual_hangout", label: "Casual hangout" },
+];
 const CATEGORIES: MenuCategory[] = ["starter", "main", "dessert", "drink", "activity", "other"];
 
 /** Plural, for a heading over a group. */
@@ -1011,12 +1025,12 @@ export function VenueForm({
           <div className="flex flex-wrap gap-2">
             {BEST_FOR.map((t) => (
               <button
-                key={t}
+                key={t.id}
                 type="button"
-                className={`chip px-3.5 py-2 text-[14px] ${v.best_for.includes(t) ? "chip-on" : ""}`}
-                onClick={() => setV({ ...v, best_for: toggle(v.best_for, t) })}
+                className={`chip px-3.5 py-2 text-[14px] ${v.best_for.includes(t.id) ? "chip-on" : ""}`}
+                onClick={() => setV({ ...v, best_for: toggle(v.best_for, t.id) })}
               >
-                {t.replace(/_/g, " ")}
+                {t.label}
               </button>
             ))}
           </div>
