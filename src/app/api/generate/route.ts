@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { planInputsSchema } from "@/lib/schemas";
 import { fetchCandidates } from "@/lib/matching";
 import {
+  focusesOf,
   openOnDate,
   planItinerary,
   focusVenueTypes,
@@ -164,7 +165,7 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
      * sends them round a loop with no exit.
      */
     const hours = openOnDate(candidates.venues, inputs.date, inputs.startTime, inputs.hours);
-    if (hours.closed > 0 && hours.open + hours.unknown < stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops)) {
+    if (hours.closed > 0 && hours.open + hours.unknown < stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops)) {
       const weekday = new Date(`${inputs.date}T12:00:00`).toLocaleDateString("en-GB", {
         weekday: "long",
       });
@@ -220,7 +221,8 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
       });
     }
 
-    const focusTypes = focusVenueTypes(inputs.focus);
+    const narrowed = focusesOf(inputs);
+    const focusTypes = focusVenueTypes(narrowed);
     if (focusTypes.length) {
       const available = candidates.venues.filter((v) => focusTypes.includes(v.type)).length;
       /*
@@ -229,10 +231,13 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
        * enough for a full day, and the earlier fixed threshold of two let the
        * second case fall through to a message about money.
        */
-      if (available < stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops)) {
+      if (available < stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops)) {
         return NextResponse.json({
           status: "no_match",
-          headline: FOCUS_SHORTFALL[inputs.focus],
+          headline:
+            narrowed.length === 1
+              ? FOCUS_SHORTFALL[narrowed[0]]
+              : "We do not have enough priced places of those kinds in the catalogue yet.",
           message:
             "That is a gap in our catalog, not in your budget, we would rather say so than send you somewhere that does not fit.",
           suggestions: [

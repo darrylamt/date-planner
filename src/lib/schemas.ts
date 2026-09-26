@@ -36,6 +36,7 @@ export const planInputsSchema = z.object({
   // Defaulted rather than required: a plan posted by an older build of the
   // app still has to be plannable.
   focus: z.enum(["everything", "food", "drinks", "activities"]).default("everything"),
+  focuses: z.array(z.enum(["food", "drinks", "activities"])).max(2).optional(),
   // Defaulted, so a plan posted by an older build of the app still validates.
   cuisine: z.enum(["either", "local", "continental"]).default("either"),
   formality: z.enum(["either", "casual", "fancy"]).default("either"),
@@ -63,6 +64,7 @@ export const planInputsSchema = z.object({
   city: z.string().max(60).optional(),
   wellness: z.boolean().optional(),
   wellnessKind: z.enum(["massage", "facial", "nails", "any"]).optional(),
+  wellnessKinds: z.array(z.enum(["massage", "facial", "nails"])).max(3).optional(),
   ai: z.boolean().optional(),
   partner: z.object({
     name: z.string().max(60).default(""),

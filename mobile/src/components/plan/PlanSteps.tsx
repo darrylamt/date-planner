@@ -27,8 +27,8 @@ import {
   DEFAULT_CITY,
   wellnessAllowed,
   WELLNESS_KINDS,
-  DEFAULT_WELLNESS_KIND,
-  type WellnessKind,
+  focusesOf,
+  wellnessKindsOf,
   partySizeOptions,
   VIBES,
   cap,
@@ -399,19 +399,36 @@ export function PlanSteps({
       <>
         <StepHeading
           title="What is the outing made of?"
-          subtitle="Pick one. It decides what kind of places we look for."
+          subtitle="Pick up to two, or leave it to us."
         />
+        {/*
+          Up to two, because "food and drinks" is the commonest evening there
+          is and a single choice could not say it. "A bit of everything" stands
+          alone: picking it clears the others, and picking any other clears
+          it. A third pick replaces the oldest, so the row never refuses a tap.
+          `focus` is kept as the first choice for anything that reads only one.
+        */}
         <Group>
-          {FOCUS_OPTIONS.map((f) => (
-            <Row
-              key={f.id}
-              icon={FOCUS_ICON[f.id]}
-              title={f.title}
-              subtitle={f.sub}
-              selected={inputs.focus === f.id}
-              onPress={() => update({ focus: f.id })}
-            />
-          ))}
+          {FOCUS_OPTIONS.map((f) => {
+            const chosen = focusesOf(inputs);
+            const on = f.id === "everything" ? chosen.length === 0 : chosen.includes(f.id);
+            return (
+              <Row
+                key={f.id}
+                icon={FOCUS_ICON[f.id]}
+                title={f.title}
+                subtitle={f.sub}
+                selected={on}
+                onPress={() => {
+                  if (f.id === "everything") return update({ focus: "everything", focuses: [] });
+                  const next = on
+                    ? chosen.filter((x) => x !== f.id)
+                    : [...chosen, f.id].slice(-2);
+                  update({ focuses: next, focus: next[0] ?? "everything" });
+                }}
+              />
+            );
+          })}
         </Group>
 
         {/*
@@ -445,16 +462,27 @@ export function PlanSteps({
           are shown, each with its own starting price.
         */}
         {inputs.wellness && wellnessAllowed(inputs) && wellnessFloors ? (
-          <View style={{ paddingHorizontal: GUTTER, marginTop: -Spacing.two, marginBottom: Spacing.three }}>
-            <Segmented
-              options={WELLNESS_KINDS.filter((k) => wellnessFloors[k.id] != null).map((k) => ({
-                value: k.id,
-                label: k.label,
-              }))}
-              value={inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND}
-              onChange={(k: WellnessKind) => update({ wellnessKind: k })}
-            />
-          </View>
+          <>
+            <GroupLabel>Which treatments? Pick any</GroupLabel>
+            <ChipRow>
+              {WELLNESS_KINDS.filter((k) => k.id === "any" || wellnessFloors[k.id] != null).map((k) => {
+                const chosen = wellnessKindsOf(inputs);
+                const on = k.id === "any" ? chosen.length === 0 : chosen.includes(k.id as never);
+                return (
+                  <Chip
+                    key={k.id}
+                    label={k.label}
+                    selected={on}
+                    onPress={() => {
+                      if (k.id === "any") return update({ wellnessKinds: [], wellnessKind: "any" });
+                      const next = on ? chosen.filter((x) => x !== k.id) : [...chosen, k.id as never];
+                      update({ wellnessKinds: next, wellnessKind: next[0] ?? "any" });
+                    }}
+                  />
+                );
+              })}
+            </ChipRow>
+          </>
         ) : null}
 
         {/*
@@ -463,7 +491,7 @@ export function PlanSteps({
           question with no consequence, and a flow that asks those teaches
           people to stop reading it.
         */}
-        {inputs.focus === "everything" || inputs.focus === "food" ? (
+        {focusesOf(inputs).length === 0 || focusesOf(inputs).includes("food") ? (
           <>
             <GroupLabel>What kind of food?</GroupLabel>
             <Group>
@@ -521,7 +549,7 @@ export function PlanSteps({
           orders no drinks, so asking would be a question with no consequence,
           and a flow that asks those teaches people to stop reading it.
         */}
-        {inputs.focus !== "activities" ? (
+        {!(focusesOf(inputs).length === 1 && focusesOf(inputs)[0] === "activities") ? (
           <>
             <GroupLabel>Alcohol?</GroupLabel>
             <Group>
@@ -771,35 +799,41 @@ export function PlanSteps({
         title={solo ? "Now, tell us about you." : `Now, tell us about ${who}.`}
         subtitle="All optional."
       />
-      <View style={{ paddingHorizontal: GUTTER }}>
-        <Field
-          label={solo ? "A food or cuisine you love" : `A food or cuisine ${ps.they} love${verbS}`}
-          placeholder="jollof, sushi, waakye"
-          value={inputs.partner.food}
-          onChangeText={(food) => update({ partner: { ...inputs.partner, food } })}
-        />
-        <Field
-          label={solo ? "Your kind of place" : `${cap(ps.their)} kind of place`}
-          placeholder="rooftops? gardens? cosy corners?"
-          value={inputs.partner.place}
-          onChangeText={(place) => update({ partner: { ...inputs.partner, place } })}
-        />
-        <Field
-          label={
-            solo ? "Something you are into" : `Something ${ps.they}${"’"}${contraction} into`
-          }
-          placeholder="a movie, artist, or hobby"
-          value={inputs.partner.interests}
-          onChangeText={(interests) => update({ partner: { ...inputs.partner, interests } })}
-        />
-        <Field
-          label="Anything to avoid?"
-          placeholder="allergies, loud music, long walks"
-          value={inputs.partner.avoid}
-          onChangeText={(avoid) => update({ partner: { ...inputs.partner, avoid } })}
-          multiline
-        />
-      </View>
+      {/*
+        Taps, with typing as the fallback.
+
+        These were four free-text boxes and almost nobody filled them in:
+        typing on a phone mid-flow is work, and an empty box asks you to
+        invent an answer. Choices are one tap each. Whatever is picked is
+        stored as the same comma-separated words the boxes held, so the plan
+        description reads them exactly as before, and "Something else" still
+        takes anything the choices do not cover.
+      */}
+      <ChoiceField
+        label={solo ? "Food you love" : `Food ${ps.they} love${verbS}`}
+        options={["Jollof", "Waakye", "Grills", "Seafood", "Pizza", "Burgers", "Sushi", "Pastries"]}
+        value={inputs.partner.food}
+        onChange={(food) => update({ partner: { ...inputs.partner, food } })}
+      />
+      <ChoiceField
+        label={solo ? "Your kind of place" : `${cap(ps.their)} kind of place`}
+        options={["Rooftops", "Gardens", "Beachside", "Cosy corners", "Lively spots", "Quiet and calm"]}
+        value={inputs.partner.place}
+        onChange={(place) => update({ partner: { ...inputs.partner, place } })}
+      />
+      <ChoiceField
+        label={solo ? "Things you are into" : `Things ${ps.they}${"’"}${contraction} into`}
+        options={["Music", "Art", "Films", "Games", "Sport", "Books", "Fashion", "Food"]}
+        value={inputs.partner.interests}
+        onChange={(interests) => update({ partner: { ...inputs.partner, interests } })}
+      />
+      <ChoiceField
+        label="Anything to avoid?"
+        options={["Loud music", "Spicy food", "Crowds", "Long walks", "Smoke"]}
+        value={inputs.partner.avoid}
+        onChange={(avoid) => update({ partner: { ...inputs.partner, avoid } })}
+        otherPlaceholder="Allergies, anything else"
+      />
 
     </>
   );
@@ -859,4 +893,62 @@ function parseNames(text: string, max: number): string[] {
     .map((n) => n.trim())
     .filter(Boolean)
     .slice(0, Math.max(0, max));
+}
+
+/**
+ * A row of choices with a "Something else" box under it, stored as one
+ * comma-separated string so it slots into the fields that used to be typed.
+ *
+ * Parsing is by exact option name: a part that matches an option lights its
+ * chip, anything else is what was typed. Order is kept as chosen.
+ */
+function ChoiceField({
+  label,
+  options,
+  value,
+  onChange,
+  otherPlaceholder = "Something else",
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  otherPlaceholder?: string;
+}) {
+  const parts = value
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const picked = parts.filter((p) => options.includes(p));
+  const other = parts.filter((p) => !options.includes(p)).join(", ");
+  const write = (chips: string[], text: string) =>
+    onChange([...chips, ...(text.trim() ? [text.trim()] : [])].join(", "));
+
+  return (
+    <>
+      <GroupLabel>{label}</GroupLabel>
+      <ChipRow>
+        {options.map((o) => {
+          const on = picked.includes(o);
+          return (
+            <Chip
+              key={o}
+              label={o}
+              selected={on}
+              onPress={() => write(on ? picked.filter((x) => x !== o) : [...picked, o], other)}
+            />
+          );
+        })}
+      </ChipRow>
+      <View style={{ paddingHorizontal: GUTTER }}>
+        <Field
+          label=""
+          placeholder={otherPlaceholder}
+          value={other}
+          maxLength={120}
+          onChangeText={(t) => write(picked, t)}
+        />
+      </View>
+    </>
+  );
 }

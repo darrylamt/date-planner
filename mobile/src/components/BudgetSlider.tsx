@@ -114,7 +114,23 @@ export function BudgetSlider({
           <TextInput
             value={draft}
             onFocus={() => setTyping(true)}
-            onChangeText={(t) => setDraft(t.replace(/[^0-9]/g, ""))}
+            onChangeText={(t) => {
+              /*
+               * Saved as it is typed, not on Enter. It used to wait for blur
+               * or the return key, and tapping Next with the keyboard still up
+               * moved on before either fired, so the plan went out with the
+               * old budget. Only the upper bound is applied here: clamping to
+               * the minimum mid-number would fight somebody typing "1500" one
+               * digit at a time. Blur still tidies the field.
+               */
+              const digits = t.replace(/[^0-9]/g, "");
+              setDraft(digits);
+              if (digits !== "") {
+                const next = Math.min(MAX, Number(digits));
+                setLive(next);
+                onChange(next);
+              }
+            }}
             onBlur={commitDraft}
             onSubmitEditing={commitDraft}
             keyboardType="number-pad"

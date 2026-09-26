@@ -23,6 +23,26 @@ export const BUDGET_STEP = 50;
 export const BUDGET_DEFAULT = 800;
 
 /**
+ * The per-head figure that means "nobody has set this".
+ *
+ * Twenty-nine live venues sat at exactly GHS 100 a head with no menu at all,
+ * every one of them marked price_source 'menu': an import default, not a
+ * price. The planner was booking them as "Typical spend, per person, GHS 100",
+ * which is an invented bill. A venue at exactly this figure with no menu rows
+ * is treated as unpriced and withheld until somebody edits the figure. A
+ * place that genuinely costs 100 a head can say so by adding its menu, or by
+ * marking the price 'estimated' in the admin.
+ */
+export const PLACEHOLDER_AVG_GHS = 100;
+
+export function isPlaceholderAvg(
+  v: { avg_cost_per_person_ghs?: number | null; price_source?: string | null },
+  hasMenu: boolean
+): boolean {
+  return !hasMenu && Number(v.avg_cost_per_person_ghs) === PLACEHOLDER_AVG_GHS && v.price_source !== "estimated";
+}
+
+/**
  * Whether this plan pays for taxis between stops.
  *
  * Two ways to arrive at no: saying you are driving, and setting the budget to

@@ -1,5 +1,5 @@
 import { BUDGET_DEFAULT } from "./budget";
-import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs } from "./types";
+import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -152,6 +152,17 @@ export const DEFAULT_CITY = "Accra";
 export const WELLNESS_TREATMENT_MIN_GHS = 100;
 
 /**
+ * The focuses a request narrows to, as a list: empty for "a bit of
+ * everything", one or two otherwise. Everything that used to read the single
+ * `focus` reads this, so a plan from an older app, which only ever sends one,
+ * is handled exactly as before.
+ */
+export function focusesOf(inputs: Pick<PlanInputs, "focus" | "focuses">): NarrowFocus[] {
+  if (inputs.focuses?.length) return [...new Set(inputs.focuses)].slice(0, 2);
+  return inputs.focus === "everything" ? [] : [inputs.focus];
+}
+
+/**
  * What kind of treatment the spa stop is for.
  *
  * "Spa" means a massage to most people who tick it, and the planner used to
@@ -184,6 +195,23 @@ const TREATMENT_WORDS: Record<Exclude<WellnessKind, "any">, RegExp> = {
   // Not bare "polish": Resense's "The Polish" is a GHS 1,210 body scrub.
   nails: /pedi|mani|nail|acrylic|gel polish|regular polish|powder (set|refill)|builder gel|hands?\s*(&|and)\s*feet/i,
 };
+
+/**
+ * The treatments a spa stop books, one of each.
+ *
+ * Several can be chosen: somebody treating themselves often wants the massage
+ * and the nails. Empty means "surprise me", any single treatment. A plan from
+ * an older app sends at most one kind, and one that never said gets a massage.
+ */
+export function wellnessKindsOf(
+  inputs: Pick<PlanInputs, "wellnessKind" | "wellnessKinds">
+): Exclude<WellnessKind, "any">[] {
+  if (inputs.wellnessKinds) {
+    return [...new Set(inputs.wellnessKinds)];
+  }
+  const one = inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND;
+  return one === "any" ? [] : [one];
+}
 
 export function treatmentMatches(kind: WellnessKind | undefined, name: string): boolean {
   const k = kind ?? DEFAULT_WELLNESS_KIND;

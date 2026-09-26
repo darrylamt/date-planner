@@ -1,3 +1,4 @@
+import { isPlaceholderAvg } from "./budget";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "./fetchAll";
 
@@ -122,12 +123,12 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * over. Same mistake the thin-menu badge made with the Honeysuckle
      * branches, and there are eight branches in the catalogue now.
      */
-    unpriced: active.filter(
-      (v: any) =>
-        !(v.is_free ?? false) &&
-        Number(v.avg_cost_per_person_ghs) <= 0 &&
-        (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) === 0
-    ).length,
+    unpriced: active.filter((v: any) => {
+      if (v.is_free ?? false) return false;
+      const hasMenu = (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) > 0;
+      // The GHS 100 import default is not a price either.
+      return isPlaceholderAvg(v, hasMenu) || (Number(v.avg_cost_per_person_ghs) <= 0 && !hasMenu);
+    }).length,
     // Counted across every venue, not just active ones: a number on a paused
     // venue is still a number that could be dialled if it is switched back on.
     phonesPending: rows.filter((v: any) => v.phone_status === "pending").length,

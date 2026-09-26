@@ -69,3 +69,23 @@ export function randomSlug(): string {
   for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
 }
+
+/**
+ * Uber, with the drop-off filled in and the pickup left to Uber.
+ *
+ * "my_location" is Uber reading the phone's position in its own app, under its
+ * own permission, so aduro never asks for or sees where anybody is. The
+ * universal link opens the app when installed and Uber's mobile site when not.
+ * Without coordinates, a plan saved before stops carried them, the drop-off is
+ * the venue's name and area as an address for Uber to search.
+ */
+export function uberRideLink(stop: { name: string; area?: string | null; lat?: number | null; lng?: number | null }): string {
+  const q = new URLSearchParams({ action: "setPickup", pickup: "my_location", "dropoff[nickname]": stop.name });
+  if (stop.lat != null && stop.lng != null) {
+    q.set("dropoff[latitude]", String(stop.lat));
+    q.set("dropoff[longitude]", String(stop.lng));
+  } else {
+    q.set("dropoff[formatted_address]", [stop.name, stop.area, "Accra, Ghana"].filter(Boolean).join(", "));
+  }
+  return `https://m.uber.com/ul/?${q.toString()}`;
+}

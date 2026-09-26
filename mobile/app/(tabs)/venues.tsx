@@ -8,6 +8,7 @@ import { Symbol } from "../../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space, TAB_BAR } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { ghs } from "../../src/lib/format";
+import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { listVenues, type VenueListing } from "../../src/lib/data";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
 
@@ -202,7 +203,8 @@ export default function Venues() {
             <Text variant="footnote" tone="secondary" numberOfLines={1}>
               {[VENUE_KIND[v.type] ?? v.type, v.area].filter(Boolean).join(" · ")}
             </Text>
-            {v.avg_cost_per_person_ghs ? (
+            {/* Not the GHS 100 import default: that is no price at all. */}
+            {v.avg_cost_per_person_ghs && v.avg_cost_per_person_ghs !== PLACEHOLDER_AVG_GHS ? (
               <Text variant="footnote" tone="tertiary" tabular>
                 About {ghs(v.avg_cost_per_person_ghs)} a head
               </Text>

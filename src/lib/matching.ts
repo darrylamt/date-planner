@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
-import { focusVenueTypes, meetingVenueTypes } from "./planner";
+import { focusesOf, focusVenueTypes, meetingVenueTypes } from "./planner";
+import { isPlaceholderAvg } from "./budget";
 import { DEFAULT_CITY, wellnessAllowed } from "./planConstants";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
@@ -341,11 +342,10 @@ export async function fetchCandidates(
        * an estimate is a claim and "unknown" is the absence of one.
        */
       if (v.price_source === "unknown") return false;
-      return (
-        Number(v.avg_cost_per_person_ghs) > 0 ||
-        pricedVenueIds.has(menuOwnerOf(v)) ||
-        pricedVenueIds.has(v.id)
-      );
+      const hasMenu = pricedVenueIds.has(menuOwnerOf(v)) || pricedVenueIds.has(v.id);
+      // An import default, not a price: see PLACEHOLDER_AVG_GHS.
+      if (isPlaceholderAvg(v, hasMenu)) return false;
+      return Number(v.avg_cost_per_person_ghs) > 0 || hasMenu;
     }
   );
 
@@ -384,7 +384,7 @@ export async function fetchCandidates(
    * arrives at the planner with no bar to use. The focus types are added back
    * from the full scored list, best first.
    */
-  const focusTypes = focusVenueTypes(inputs.focus);
+  const focusTypes = focusVenueTypes(focusesOf(inputs));
 
   /*
    * A crawl asked for by vibe needs the same reservation a crawl asked for by

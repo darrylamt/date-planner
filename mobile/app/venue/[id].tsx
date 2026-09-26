@@ -9,6 +9,7 @@ import { Paywall } from "../../src/components/chat/Paywall";
 import { GUTTER, HAIRLINE, radius, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { ghs, instagramUrl } from "../../src/lib/format";
+import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { fetchMenu, fetchVenue, type VenueDetail } from "../../src/lib/data";
 import { fetchAllowance } from "../../src/lib/chat";
 import { useAuth } from "../../src/lib/useAuth";
@@ -145,7 +146,7 @@ export default function VenuePage() {
           <Text variant="subheadline" tone="secondary">
             {[VENUE_KIND[venue.type] ?? venue.type, venue.area, venue.city].filter(Boolean).join(" · ")}
           </Text>
-          {venue.avg_cost_per_person_ghs ? (
+          {venue.avg_cost_per_person_ghs && venue.avg_cost_per_person_ghs !== PLACEHOLDER_AVG_GHS ? (
             <Text variant="subheadline" tone="secondary" tabular>
               About {ghs(venue.avg_cost_per_person_ghs)} a head
             </Text>

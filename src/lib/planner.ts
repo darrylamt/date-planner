@@ -5,7 +5,14 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
 import { schedulesDuring } from "./schedules";
-import { WELLNESS_TREATMENT_MIN_GHS, treatmentMatches, wellnessAllowed, type WellnessKind } from "./planConstants";
+import {
+  focusesOf,
+  WELLNESS_TREATMENT_MIN_GHS,
+  treatmentMatches,
+  wellnessAllowed,
+  wellnessKindsOf,
+  type WellnessKind,
+} from "./planConstants";
 import type {
   EventRow,
   Formality,
@@ -18,8 +25,7 @@ import type {
   PriceBand,
   Venue,
   VenueSchedule,
-  VenueType,
-} from "./types";
+  VenueType, NarrowFocus } from "./types";
 
 /**
  * Deterministic itinerary planning.
@@ -46,6 +52,20 @@ const ROLE_TYPES: Record<Role, VenueType[]> = {
   dessert: ["dessert"],
   // Never "activity": a spa is only ever the stop somebody asked for.
   wellness: ["wellness"],
+};
+
+/**
+ * When a slot's own kind has run out, what stands in for it, nearest first.
+ * Kinds not listed come after these. A bar is last for every slot that is not
+ * a bar, because a bar is the one substitute that changes what the stop is.
+ */
+const FALLBACK_TYPES: Record<Role, VenueType[]> = {
+  meal: ["cafe", "dessert", "lounge"],
+  cafe: ["dessert", "restaurant", "lounge"],
+  dessert: ["cafe", "restaurant", "lounge"],
+  activity: ["cafe", "dessert", "restaurant", "lounge"],
+  lounge: ["restaurant", "cafe", "dessert"],
+  wellness: [],
 };
 
 /** Typical time spent, before travel. */
@@ -140,10 +160,15 @@ function withWellness(
   return ["wellness" as Role, ...roles].slice(0, Math.max(roles.length, 1));
 }
 
+export { focusesOf };
+
+const asFocuses = (f: PlanFocus | NarrowFocus[]): NarrowFocus[] =>
+  Array.isArray(f) ? f : f === "everything" ? [] : [f];
+
 function roleSequence(
   startHour: number,
   stopCount: number,
-  focus: PlanFocus,
+  focus: PlanFocus | NarrowFocus[],
   vibes: string[] = [],
   /** Set when the occasion names the kind of place itself. Beats everything. */
   forced: Role | null = null
@@ -155,10 +180,19 @@ function roleSequence(
    * drinks wants a second bar, not dinner at the sensible hour for it, and
    * cycling the focus roles is what turns one request into a crawl.
    */
-  if (focus !== "everything") {
-    const base = FOCUS_ROLES[focus];
+  const narrowed = asFocuses(focus);
+  if (narrowed.length) {
+    /*
+     * Two focuses take turns, each cycling its own roles: food and drinks
+     * over four stops is a meal, a bar, dessert, a bar. One focus is the old
+     * behaviour exactly.
+     */
+    const n = narrowed.length;
     return withLoungeFloor(
-      Array.from({ length: stopCount }, (_, i) => base[i % base.length]),
+      Array.from({ length: stopCount }, (_, i) => {
+        const roles = FOCUS_ROLES[narrowed[i % n]];
+        return roles[Math.floor(i / n) % roles.length];
+      }),
       loungeFloor(vibes)
     );
   }
@@ -223,17 +257,16 @@ const FOCUS_ROLES: Record<Exclude<PlanFocus, "everything">, Role[]> = {
  * fourteen slots with restaurants, and a "just drinks" request then reaches
  * the planner with no bar in it at all.
  */
-export function focusVenueTypes(focus: PlanFocus): VenueType[] {
-  if (focus === "everything") return [];
+export function focusVenueTypes(focus: PlanFocus | NarrowFocus[]): VenueType[] {
   const types = new Set<VenueType>();
-  FOCUS_ROLES[focus].forEach((role) => ROLE_TYPES[role].forEach((t) => types.add(t)));
+  for (const f of asFocuses(focus)) FOCUS_ROLES[f].forEach((role) => ROLE_TYPES[role].forEach((t) => types.add(t)));
   return [...types];
 }
 
 /** Two stops in a short window, four only when there is genuinely time. */
 export function stopCountFor(
   hours: number,
-  focus: PlanFocus = "everything",
+  focus: PlanFocus | NarrowFocus[] = "everything",
   vibes: string[] = [],
   /** What they asked for, when they were asked. Beats every inference here. */
   stops?: number
@@ -255,7 +288,9 @@ export function stopCountFor(
    * as a vibe rather than a focus, so it has to be read here too or the chip
    * reaches the planner with nowhere to put the bars it wants.
    */
-  const crawl = focus === "drinks" || focus === "activities" || loungeFloor(vibes) >= 2;
+  const narrowed = asFocuses(focus);
+  const crawl =
+    (narrowed.length > 0 && narrowed.every((f) => f === "drinks" || f === "activities")) || loungeFloor(vibes) >= 2;
 
   if (hours <= 2) return 2;
   if (hours <= 4) return crawl ? 4 : 3;
@@ -499,9 +534,14 @@ function planOrders(
    * mixed menu to order from; never to refuse a venue.
    */
   wantedCuisines: string[] = [],
-  /** At a spa, which treatment. Unlike cuisine this is a filter: see WELLNESS_KINDS. */
-  treatment?: WellnessKind
+  /**
+   * At a spa, the treatments to book, one of each. Unlike cuisine this is a
+   * filter: see WELLNESS_KINDS. Empty is any single treatment.
+   */
+  treatments: WellnessKind[] = []
 ): OrderPlan | null {
+  // Which treatment an order is being dealt for, while the spa branch runs.
+  let onlyKind: WellnessKind | null = null;
   /*
    * Venues that charge for a thing rather than for a person.
    *
@@ -572,7 +612,7 @@ function planOrders(
      * different afternoon, and a spa with nothing of the kind is left for one
      * that has it.
      */
-    if (venue.type === "wellness" && !treatmentMatches(treatment, m.name)) return false;
+    if (venue.type === "wellness" && onlyKind && !treatmentMatches(onlyKind, m.name)) return false;
     if (m.min_players != null && partySize < m.min_players) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
     if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
@@ -711,6 +751,22 @@ function planOrders(
   } else if (venue.type === "lounge") {
     const drinks = orderFrom("drink", partySize);
     lines.push(...(drinks.length ? drinks : orderFrom("other", partySize)));
+  } else if (venue.type === "wellness" && treatments.length) {
+    /*
+     * One of each treatment asked for, at this one spa. A spa that cannot do
+     * all of them is not the answer to the question, so it is refused here
+     * and the planner looks for one that can, or says none does.
+     */
+    for (const kind of treatments) {
+      onlyKind = kind;
+      const got = [
+        () => orderFrom("activity", partySize),
+        () => orderFrom("other", partySize),
+      ].reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+      onlyKind = null;
+      if (!got.length) return null;
+      lines.push(...got);
+    }
   } else {
     /*
      * Activities and outdoor spots. "activity" first, because a go-kart and a
@@ -926,10 +982,31 @@ export function openOnDate(
   return { open, closed, unknown };
 }
 
-export function planItinerary(
+/**
+ * Plan without letting a bar stand in for another kind of stop, and only if
+ * nothing can be built that way, plan again allowing it.
+ *
+ * A bar in the dessert slot is a real compromise on a small budget, where it
+ * may be the only thing that fits, and a wrong one everywhere else. Two passes
+ * give both: the plan everybody should get when there is one, and the
+ * compromise instead of an empty screen when there is not.
+ */
+export function planItinerary(inputs: PlanInputs, candidates: Candidates): PlannedItinerary | null {
+  return planWith(inputs, candidates, false) ?? planWith(inputs, candidates, true);
+}
+
+function planWith(
   inputs: PlanInputs,
-  candidates: Candidates
+  candidates: Candidates,
+  barsMayStandIn: boolean
 ): PlannedItinerary | null {
+  /*
+   * A spa stop runs longer the more it books: an hour a treatment, and never
+   * under the hour and a half a single visit is given.
+   */
+  const spaMinutes = Math.max(ROLE_MINUTES.wellness, 60 * wellnessKindsOf(inputs).length);
+  const roleMinutes = (r: Role) => (r === "wellness" ? spaMinutes : ROLE_MINUTES[r]);
+
   const wantedTags = expandVibes(inputs.vibes);
   const menuByVenue = new Map<string, MenuItem[]>();
   candidates.menuItems.forEach((m) => {
@@ -1025,7 +1102,7 @@ export function planItinerary(
    * with three restaurants, which is not a thin answer to the question, it is
    * an answer to a different one.
    */
-  const focusTypes = focusVenueTypes(inputs.focus);
+  const focusTypes = focusVenueTypes(focusesOf(inputs));
 
   /*
    * Roughly when a slot will be reached, before anything has been chosen.
@@ -1039,7 +1116,7 @@ export function planItinerary(
   const TRAVEL_ALLOWANCE = 15;
   const nominalStart = (roles: Role[], index: number): number => {
     let t = startMinutes;
-    for (let i = 0; i < index; i++) t += ROLE_MINUTES[roles[i]] + TRAVEL_ALLOWANCE;
+    for (let i = 0; i < index; i++) t += roleMinutes(roles[i]) + TRAVEL_ALLOWANCE;
     return t;
   };
 
@@ -1088,7 +1165,7 @@ export function planItinerary(
         parsePeriods(venue.opening_periods),
         weekday,
         slotStart,
-        ROLE_MINUTES[role]
+        roleMinutes(role)
       );
       if (open === false) return out;
     }
@@ -1107,7 +1184,7 @@ export function planItinerary(
       schedulesByVenue.get(venue.id) ?? [],
       inputs.date,
       slotStart,
-      ROLE_MINUTES[role]
+      roleMinutes(role)
     );
     const score =
       scoreVenue(venue, inputs, wantedTags) +
@@ -1168,10 +1245,10 @@ export function planItinerary(
         menu,
         inputs.partySize,
         tier,
-        ROLE_MINUTES[role],
+        roleMinutes(role),
         slotStart,
         inputs.cuisines ?? [],
-        inputs.wellnessKind
+        wellnessKindsOf(inputs)
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and
@@ -1315,7 +1392,38 @@ export function planItinerary(
      * those are exhausted or unaffordable. A bar slot filled by a restaurant
      * is a compromise, and a compromise beats an empty screen.
      */
-    const rest = build(candidates.venues.filter((v) => !roleTypes.includes(v.type)));
+    /*
+     * And the compromise has an order of its own.
+     *
+     * "Everything else" was one pool sorted by score, so when Osu ran out of
+     * dessert parlours the dessert slot went to whichever venue scored
+     * highest, and a lively bar pouring shots out-scores a quiet cafe. The
+     * Honeysuckle filled the dessert stop in five of eighteen Osu date plans
+     * that way. Nearest kind first now: something sweet falls back to a cafe,
+     * then a restaurant's dessert list, and a bar only after those.
+     */
+    const others = candidates.venues.filter((v) => !roleTypes.includes(v.type));
+    const order = FALLBACK_TYPES[role];
+    const rank = (t: VenueType) => {
+      const i = order.indexOf(t);
+      return i === -1 ? order.length : i;
+    };
+    const groups = new Map<number, Venue[]>();
+    for (const v of others) {
+      const r = rank(v.type);
+      groups.set(r, [...(groups.get(r) ?? []), v]);
+    }
+    const rest = [...groups.keys()].sort((a, b) => a - b).flatMap((r) => build(groups.get(r)!));
+
+    /*
+     * Order alone was not enough: the budget walk and the route pass choose
+     * from anywhere in a slot's list, and a bar next door is both cheap and
+     * close, so it kept winning the dessert stop from behind. So a bar is in a
+     * non-bar slot's list only when nothing else could fill it at all.
+     */
+    if (role !== "lounge" && !barsMayStandIn) {
+      return [...preferred, ...rest.filter((o) => o.venue.type !== "lounge")];
+    }
     return [...preferred, ...rest];
   };
 
@@ -1324,7 +1432,7 @@ export function planItinerary(
     pin: Anchor | null
   ): PlannedItinerary | null => {
     const roles = withWellness(
-      roleSequence(startHour, stopCount, inputs.focus, inputs.vibes, meetingRole(inputs)),
+      roleSequence(startHour, stopCount, focusesOf(inputs), inputs.vibes, meetingRole(inputs)),
       inputs
     );
     const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
@@ -1685,7 +1793,7 @@ export function planItinerary(
       transportTotal,
       total: foodTotal + transportTotal,
       confidence,
-      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops),
+      trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops),
     };
 
     function toStops(picks: Option[]): PlannedStop[] {
@@ -1719,7 +1827,7 @@ export function planItinerary(
             : ROLE_TYPES[role].includes(p.venue.type)
               ? ROLE_LABEL[role]
               : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
-          durationMins: ROLE_MINUTES[role],
+          durationMins: roleMinutes(role),
           arrivalMinutes: 0,
           orders: p.orders,
           cost: p.cost,
@@ -1748,7 +1856,7 @@ export function planItinerary(
    */
   const floor = inputs.stops === 1 ? 1 : 2;
   const wanted = Math.min(
-    stopCountFor(inputs.hours, inputs.focus, inputs.vibes, inputs.stops),
+    stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops),
     Math.max(floor, candidates.venues.length)
   );
   for (let count = wanted; count >= floor; count--) {

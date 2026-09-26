@@ -1,3 +1,4 @@
+import { isPlaceholderAvg } from "../../budget";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "../../fetchAll";
 import { isOpenAt, parsePeriods, weekdayOf, describeDay } from "../../hours";
@@ -77,6 +78,7 @@ export async function menusFor(
 export function isPriced(v: Venue, menuItemCount: number): boolean {
   if (v.is_free === true) return true;
   if (v.price_source === "unknown") return false;
+  if (isPlaceholderAvg(v, menuItemCount > 0)) return false;
   return Number(v.avg_cost_per_person_ghs) > 0 || menuItemCount > 0;
 }
 

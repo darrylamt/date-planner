@@ -36,7 +36,7 @@ import {
   defaultInputs,
   stepsFor,
   wellnessAllowed,
-  DEFAULT_WELLNESS_KIND,
+  wellnessKindsOf,
 } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
@@ -435,7 +435,7 @@ export default function PlanNew() {
           if (s.action === "raise_budget" && s.value) {
             void generate({ budget: s.value });
           } else if (s.action === "clear_focus") {
-            void generate({ focus: "everything" });
+            void generate({ focus: "everything", focuses: [] });
           } else if (s.action === "clear_wellness") {
             void generate({ wellness: false });
           } else {
@@ -490,8 +490,20 @@ export default function PlanNew() {
   const goNext = () =>
     stepIndex === totalSteps - 1 ? void generate() : goTo(stepIndex + 1);
 
-  // The floor for the treatment they chose; a massage when they have not said.
-  const wellnessFloor = wellnessFloors?.[inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND] ?? null;
+  /*
+   * The floor for what they chose: one of each treatment, so the kinds add up.
+   * "Surprise me" is the cheapest single treatment of any kind.
+   */
+  const wellnessFloor = (() => {
+    if (!wellnessFloors) return null;
+    const kinds = wellnessKindsOf(inputs);
+    if (!kinds.length) {
+      const all = Object.values(wellnessFloors).filter((n): n is number => n != null);
+      return all.length ? Math.min(...all) : null;
+    }
+    const each = kinds.map((k) => wellnessFloors[k]);
+    return each.every((n) => n != null) ? (each as number[]).reduce((t, n) => t + n, 0) : null;
+  })();
 
   const canContinue =
     (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0) &&

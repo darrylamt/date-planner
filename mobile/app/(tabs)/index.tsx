@@ -215,8 +215,7 @@ export default function Home() {
           Where to next?
         </Text>
         <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two, marginBottom: Spacing.three }}>
-          Dates, days out, meetings and trips across the city, planned to your budget with real
-          prices.
+          Dates, days out, meetings and trips, planned to your budget with real prices.
         </Text>
       </View>
 

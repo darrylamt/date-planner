@@ -8,7 +8,7 @@ import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { ghs, instagramUrl, time12 } from "../../lib/format";
+import { ghs, instagramUrl, time12, uberRideLink } from "../../lib/format";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -397,6 +397,19 @@ export function StopCard({
           ) : null}
           <StopAction icon="map" label="Map" onPress={openMaps} />
           {/*
+            A ride here, from wherever they are when they tap it.
+
+            The pickup is left to Uber ("my_location"), so Uber reads the
+            phone's position in its own app under its own permission, and
+            aduro never asks for or sees it. On the first stop that is the trip
+            from home; on the rest it is the hop from the stop before.
+          */}
+          <StopAction
+            glyph={() => <UberMark />}
+            label="Uber"
+            onPress={() => void Linking.openURL(uberRideLink(stop))}
+          />
+          {/*
             Always here, greyed when there is nothing to open.
             
             Only twenty-nine of a hundred and eighty-five venues have a handle
@@ -587,6 +600,30 @@ function InstagramGlyph({ color }: { color: string }) {
           backgroundColor: color,
         }}
       />
+    </View>
+  );
+}
+
+/**
+ * Uber's name on Uber's black, which is how their own ride buttons read.
+ *
+ * Their wordmark is a licensed file, not a font; until the official asset is
+ * in the app this is the name set in their colours, not an imitation of the
+ * mark. Black on every theme, because that is the brand's, not ours.
+ */
+function UberMark() {
+  return (
+    <View
+      style={{
+        backgroundColor: "#000000",
+        borderRadius: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+      }}
+    >
+      <Text variant="caption2" weight="700" style={{ color: "#FFFFFF", letterSpacing: -0.2 }}>
+        Uber
+      </Text>
     </View>
   );
 }

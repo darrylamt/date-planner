@@ -272,6 +272,8 @@ export type Pronoun = "they" | "she" | "he";
  * it is worth one tap to be told.
  */
 export type PlanFocus = "everything" | "food" | "drinks" | "activities";
+/** A focus that narrows the outing; "everything" is the absence of one. */
+export type NarrowFocus = Exclude<PlanFocus, "everything">;
 
 /**
  * What kind of kitchen. Accra eats two ways and a chop bar and a
@@ -329,6 +331,12 @@ export interface PlanInputs {
   stops?: number;
   vibes: string[];
   focus: PlanFocus;
+  /**
+   * Up to two narrowed focuses, when more than one was chosen: "mostly food"
+   * and "mostly drinks" together. Wins over `focus` when present; `focus` is
+   * kept, set to the first of these, for anything that reads only one.
+   */
+  focuses?: NarrowFocus[];
   cuisine: PlanCuisine;
   /**
    * Specific kitchens, when somebody named one.
@@ -365,6 +373,11 @@ export interface PlanInputs {
    * WELLNESS_KINDS in planConstants.
    */
   wellnessKind?: "massage" | "facial" | "nails" | "any";
+  /**
+   * Every treatment wanted, one of each booked at the same spa. Wins over
+   * wellnessKind; empty means any single treatment.
+   */
+  wellnessKinds?: ("massage" | "facial" | "nails")[];
   /**
    * False when the person declined sending their answers to Anthropic
    * (guideline 5.1.2(i)). The plan is unaffected -- our own code builds it --
@@ -464,6 +477,12 @@ export interface ItineraryStop {
   images?: string[];
   google_maps_url?: string | null;
   /**
+   * Where the venue is, for a ride app's drop-off. Absent on plans made before
+   * this existed; a ride link then falls back to the name and area.
+   */
+  lat?: number | null;
+  lng?: number | null;
+  /**
    * The venue's Instagram, as recorded. Null means nobody has found one, which
    * is not the same as the venue not having one, and the card says so by
    * showing the action greyed rather than by hiding it.
@@ -534,6 +553,8 @@ export interface StopAlternate {
   /** Likewise: a swap changes whose Instagram the card points at. */
   instagram_handle?: string | null;
   google_maps_url: string | null;
+  lat?: number | null;
+  lng?: number | null;
   reservation_required: boolean;
   orders: ItineraryOrder[];
   est_cost_ghs: number;

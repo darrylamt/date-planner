@@ -1,4 +1,4 @@
-/** How often plans double back to an area already left, and how far they travel.  npm run route:check
+/** How often plans double back to an area already left, and how far they travel.  npm run route:check */
 import fs from "fs";
 for (const l of fs.readFileSync(".env.local", "utf8").split(/\r?\n/)) {
   const m = l.match(/^([A-Z0-9_]+)=(.*)$/);

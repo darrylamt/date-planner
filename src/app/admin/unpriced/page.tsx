@@ -1,5 +1,6 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { UnpricedVenues } from "@/components/admin/UnpricedVenues";
+import { isPlaceholderAvg } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function AdminUnpricedPage() {
   const { data: venues } = await supabase
     .from("venues")
     .select(
-      "id, name, type, is_free, menu_shared_from, avg_cost_per_person_ghs, areas(name), menu_items(id)"
+      "id, name, type, is_free, menu_shared_from, avg_cost_per_person_ghs, price_source, areas(name), menu_items(id)"
     )
     .eq("is_active", true)
     .order("name");
@@ -32,8 +33,11 @@ export default async function AdminUnpricedPage() {
   const rows = (venues ?? [])
     .filter((v: any) => {
       if (v.is_free === true) return false;
+      const hasMenu = ownIds.has((v.menu_shared_from as string | null) || v.id);
+      // The GHS 100 import default counts as no price: see PLACEHOLDER_AVG_GHS.
+      if (isPlaceholderAvg(v, hasMenu)) return true;
       if (Number(v.avg_cost_per_person_ghs) > 0) return false;
-      return !ownIds.has((v.menu_shared_from as string | null) || v.id);
+      return !hasMenu;
     })
     .map((v: any) => ({
       id: v.id,
