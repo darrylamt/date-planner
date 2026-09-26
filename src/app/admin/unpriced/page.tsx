@@ -11,9 +11,8 @@ export default async function AdminUnpricedPage() {
   const { data: venues } = await supabase
     .from("venues")
     .select(
-      "id, name, type, is_free, menu_shared_from, avg_cost_per_person_ghs, price_source, areas(name), menu_items(id)"
+      "id, name, type, is_free, is_active, business_status, menu_shared_from, avg_cost_per_person_ghs, price_source, areas(name), menu_items(id)"
     )
-    .eq("is_active", true)
     .order("name");
 
   /*
@@ -33,6 +32,12 @@ export default async function AdminUnpricedPage() {
   const rows = (venues ?? [])
     .filter((v: any) => {
       if (v.is_free === true) return false;
+      /*
+       * Switched off for want of a price belongs here too, so the queue is
+       * the one place every venue waiting on a price can be found. Closed is
+       * different: no price brings back a place that has shut.
+       */
+      if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
       const hasMenu = ownIds.has((v.menu_shared_from as string | null) || v.id);
       // The GHS 100 import default counts as no price: see PLACEHOLDER_AVG_GHS.
       if (isPlaceholderAvg(v, hasMenu)) return true;
@@ -44,6 +49,7 @@ export default async function AdminUnpricedPage() {
       name: v.name,
       type: v.type,
       area: v.areas?.name ?? "no area",
+      inactive: !v.is_active,
     }));
 
   return (

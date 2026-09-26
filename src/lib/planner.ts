@@ -538,7 +538,9 @@ function planOrders(
    * At a spa, the treatments to book, one of each. Unlike cuisine this is a
    * filter: see WELLNESS_KINDS. Empty is any single treatment.
    */
-  treatments: WellnessKind[] = []
+  treatments: WellnessKind[] = [],
+  /** The plan's weekday, 0 = Sunday, for prices sold only on some days. */
+  planWeekday: number | null = null
 ): OrderPlan | null {
   // Which treatment an order is being dealt for, while the spa branch runs.
   let onlyKind: WellnessKind | null = null;
@@ -632,6 +634,14 @@ function planOrders(
    * back into the day before comparing.
    */
   function onSaleNow(m: MenuItem): boolean {
+    /*
+     * The day first. A late plan's slot can run past midnight, and then it is
+     * the next day's price that applies.
+     */
+    if (m.available_days?.length && planWeekday != null) {
+      const day = (planWeekday + Math.floor(slotStartMinute / 1440)) % 7;
+      if (!m.available_days.includes(day)) return false;
+    }
     const from = m.available_from_minute;
     const to = m.available_to_minute;
     if (from == null && to == null) return true;
@@ -1248,7 +1258,8 @@ function planWith(
         roleMinutes(role),
         slotStart,
         inputs.cuisines ?? [],
-        wellnessKindsOf(inputs)
+        wellnessKindsOf(inputs),
+        weekdayOf(inputs.date)
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and

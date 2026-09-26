@@ -182,6 +182,11 @@ export interface MenuItem {
    */
   available_from_minute?: number | null;
   available_to_minute?: number | null;
+  /**
+   * The days this price is on sale, 0 = Sunday. Null means every day. The
+   * same item can appear once per set of days, each at its own price.
+   */
+  available_days?: number[] | null;
 }
 
 /**

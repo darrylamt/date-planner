@@ -10,6 +10,8 @@ interface Row {
   name: string;
   type: string;
   area: string;
+  /** Switched off while it had no price; saving a price switches it back on. */
+  inactive?: boolean;
 }
 
 /**
@@ -117,7 +119,7 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
       // any menu is consulted.
       const { error: venueError } = await supabase
         .from("venues")
-        .update({ avg_cost_per_person_ghs: price })
+        .update({ avg_cost_per_person_ghs: price, ...(row.inactive ? { is_active: true } : {}) })
         .eq("id", row.id);
       if (venueError) throw venueError;
 
@@ -175,6 +177,9 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                       <div className="text-[13px] font-normal capitalize text-mutedbrown">
                         {row.type}
                       </div>
+                      {row.inactive ? (
+                        <span className="badge b-stale mt-1 normal-case">Switched off, saving turns it on</span>
+                      ) : null}
                     </td>
                     <td>{row.area}</td>
                     <td>

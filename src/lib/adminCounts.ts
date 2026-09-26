@@ -123,7 +123,9 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
      * over. Same mistake the thin-menu badge made with the Honeysuckle
      * branches, and there are eight branches in the catalogue now.
      */
-    unpriced: active.filter((v: any) => {
+    // Switched-off venues waiting on a price count too; closed ones do not.
+    unpriced: rows.filter((v: any) => {
+      if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
       if (v.is_free ?? false) return false;
       const hasMenu = (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) > 0;
       // The GHS 100 import default is not a price either.

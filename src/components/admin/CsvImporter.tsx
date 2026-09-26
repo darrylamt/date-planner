@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { itemKey, parseClock, parseDays } from "@/lib/menuTiming";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ensureAreaId } from "@/lib/areas";
@@ -328,8 +329,25 @@ export function CsvImporter({
             duration_minutes: num(r.duration_minutes),
             min_age: num(r.min_age),
             requires_gear: r.requires_gear || null,
+            /*
+             * When the price applies. All three optional and all three
+             * independent: a weekend price, an evening price, or a Friday
+             * evening price. Blank is every day, all day.
+             */
+            ...(r.days?.trim() ? { available_days: parseDays(r.days) } : {}),
+            ...(r.from?.trim() ? { available_from_minute: parseClock(r.from) } : {}),
+            ...(r.to?.trim() ? { available_to_minute: parseClock(r.to) } : {}),
           },
         });
+        const last = pending[pending.length - 1].values;
+        if (last.available_days === null || last.available_from_minute === null || last.available_to_minute === null) {
+          log.push(
+            `Row ${i + 2} (${r.name}): could not read days "${r.days ?? ""}" or times "${r.from ?? ""}"-"${r.to ?? ""}". ` +
+              `Use days like Mon-Thu, Fri;Sat, weekdays, weekends, and times like 16:00.`
+          );
+          pending.pop();
+          continue;
+        }
       }
 
       if (dryRun) {
@@ -357,10 +375,13 @@ export function CsvImporter({
       for (let at = 0; at < venueIds.length; at += 50) {
         const { data } = await supabase
           .from("menu_items")
-          .select("id, venue_id, name")
+          .select("id, venue_id, name, available_days, available_from_minute")
           .in("venue_id", venueIds.slice(at, at + 50));
         for (const row of data ?? []) {
-          existing.set(`${row.venue_id}::${(row.name ?? "").trim().toLowerCase()}`, row.id);
+          existing.set(
+            itemKey(row.venue_id, row.name, row.available_days, row.available_from_minute),
+            row.id
+          );
         }
       }
 
@@ -370,7 +391,18 @@ export function CsvImporter({
       const seen = new Set<string>();
 
       for (const item of pending) {
-        const k = `${item.values.venue_id}::${String(item.values.name).trim().toLowerCase()}`;
+        /*
+         * The same dish at a different price on different days is two rows,
+         * not one row listed twice: the weekday and weekend pool passes share
+         * a name. So the days and start time are part of what makes a row
+         * "the same one".
+         */
+        const k = itemKey(
+          item.values.venue_id,
+          item.values.name,
+          item.values.available_days,
+          item.values.available_from_minute
+        );
         if (seen.has(k)) {
           log.push(`Row ${item.row} (${String(item.values.name)}): listed twice in this file, kept once`);
           continue;
@@ -467,7 +499,7 @@ export function CsvImporter({
           ) : (
             <>
               <b>Headers:</b>{" "}
-              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes</code>
+              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes,days,from,to</code>
               <br />
               <span className="text-mutedbrown">
                 Activity lists may add{" "}
@@ -476,6 +508,11 @@ export function CsvImporter({
                 </code>
                 . covers_people is how many people one price covers, so a GHS 30
                 foosball table for two is 30 with covers_people 2, not 30 each.
+                <br />
+                <b>days, from, to</b> are optional: when a price applies. days is Mon-Thu,
+                Fri;Sat, weekdays or weekends; from and to are times like 16:00. List the same
+                item once per price, e.g. a pool pass at 85 for weekdays and 130 for weekends.
+                Blank means every day, all day.
               </span>
               <br />
               <span className="text-mutedbrown">
@@ -635,3 +672,4 @@ export function CsvImporter({
     </div>
   );
 }
+
