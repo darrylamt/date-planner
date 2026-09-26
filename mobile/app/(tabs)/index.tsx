@@ -201,30 +201,24 @@ export default function Home() {
         </Pressable>
         </View>
 
+        {/*
+          Wider than an evening out, because the app is.
+
+          It said "Plan something worth turning up for" over a sprite of two
+          people at a table, which was right when every plan was a date. The
+          same screen now starts meetings, family days, spa afternoons and
+          outings across the city, and the first words decide what people
+          think the app is for. The table scene went with it: a picture of a
+          dinner for two argues with every other kind of plan.
+        */}
         <Text variant="display" style={{ marginTop: Spacing.four }}>
-          {/*
-            Not "a date". The catalogue plans birthdays, friends out, solo
-            days and graduations, and the word on the first screen decides what
-            people think the app is for before they have opened anything.
-          */}
-          Plan something worth turning up for.
+          Where to next?
+        </Text>
+        <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two, marginBottom: Spacing.three }}>
+          Dates, days out, meetings and trips across the city, planned to your budget with real
+          prices.
         </Text>
       </View>
-
-      {/* A scene rather than a mascot: two figures at one table read as an
-          evening, which is what the app makes. Decorative only, so it is
-          hidden from screen readers. */}
-      <Image
-        source={require("../../assets/mascots/scene_table.png")}
-        style={{
-          width: "100%",
-          height: 128,
-          marginTop: Spacing.three,
-        }}
-        contentFit="contain"
-        transition={0}
-        accessible={false}
-      />
 
       {/* In progress */}
       {hasDraft && draftInputs ? (

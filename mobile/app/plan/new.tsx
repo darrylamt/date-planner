@@ -25,6 +25,7 @@ import {
   fetchAreas,
   fetchCuisines,
   fetchWellnessFloor,
+  type WellnessFloors,
   savePlan,
 } from "../../src/lib/data";
 import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
@@ -35,6 +36,7 @@ import {
   defaultInputs,
   stepsFor,
   wellnessAllowed,
+  DEFAULT_WELLNESS_KIND,
 } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
 import { longDate } from "../../src/lib/format";
@@ -145,7 +147,7 @@ export default function PlanNew() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [areasFailed, setAreasFailed] = useState(false);
   const [cuisines, setCuisines] = useState<{ id: string; label: string }[]>([]);
-  const [wellnessFloor, setWellnessFloor] = useState<number | null>(null);
+  const [wellnessFloors, setWellnessFloors] = useState<WellnessFloors | null>(null);
   /*
    * The pending consent question, and the answer it is waiting for. A ref
    * rather than state for the resolver, because it is a callback to finish a
@@ -217,7 +219,7 @@ export default function PlanNew() {
 
     // Optional in the same way: without it the spa row simply is not offered.
     fetchWellnessFloor()
-      .then((floor) => active && setWellnessFloor(floor))
+      .then((floors) => active && setWellnessFloors(floors))
       .catch(() => undefined);
 
     return () => {
@@ -488,6 +490,9 @@ export default function PlanNew() {
   const goNext = () =>
     stepIndex === totalSteps - 1 ? void generate() : goTo(stepIndex + 1);
 
+  // The floor for the treatment they chose; a massage when they have not said.
+  const wellnessFloor = wellnessFloors?.[inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND] ?? null;
+
   const canContinue =
     (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0) &&
     (stepId !== "vibe" || inputs.vibes.length > 0) &&
@@ -539,6 +544,7 @@ export default function PlanNew() {
               areas={areas}
               cuisines={cuisines}
               wellnessFloor={wellnessFloor}
+              wellnessFloors={wellnessFloors}
               update={update}
             />
             <StepMascot step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />

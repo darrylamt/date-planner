@@ -17,7 +17,7 @@ import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import { fetchCandidates } from "../src/lib/matching";
 import { planItinerary } from "../src/lib/planner";
-import { defaultInputs, defaultStopsFor, OCCASION_IDS } from "../src/lib/planConstants";
+import { defaultInputs, defaultStopsFor, OCCASION_IDS, treatmentMatches } from "../src/lib/planConstants";
 import { planInputsSchema } from "../src/lib/schemas";
 import type { PlanInputs } from "../src/lib/types";
 
@@ -221,6 +221,27 @@ async function main() {
       check("and it is a treatment, not an add-on", lines.length > 0 && cheapest >= 100, `cheapest line GHS ${cheapest}`);
       const without = await build({ ...defaultInputs(), occasion: "date_night", partySize: 2, vibes: ["Calm"], surpriseMe: true });
       check("nobody who did not ask is given one", !without.candidates.venues.some((v) => v.type === "wellness"));
+
+      // "Spa" means a massage unless they say otherwise, and a named kind is honoured.
+      const spaLines = (p: typeof duo) =>
+        ((p.plan?.stops[0] as unknown as { orders?: { item: string }[] })?.orders ?? []).map((o) => o.item);
+      const unsaid = spaLines(duo);
+      check("a spa with no treatment named books massages", unsaid.length > 0 && unsaid.every((n) => treatmentMatches("massage", n)), unsaid.join("; "));
+      const nails = await build({
+        ...defaultInputs(),
+        occasion: "date_night",
+        partySize: 2,
+        hours: 4,
+        startTime: "13:00",
+        budget: 2500,
+        vibes: ["Calm"],
+        surpriseMe: true,
+        wellness: true,
+        wellnessKind: "nails",
+      });
+      const nailLines = spaLines(nails);
+      console.log("   debug nails:", nails.candidates.venues.filter((v) => v.type === "wellness").map((v) => v.name).join(", "), "| first stop:", nails.plan?.stops[0]?.venue.name ?? "no plan");
+      check("asking for mani & pedi books nails", nailLines.length > 0 && nailLines.every((n) => treatmentMatches("nails", n)), nailLines.join("; "));
     }
   }
 

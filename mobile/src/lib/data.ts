@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { WELLNESS_TREATMENT_MIN_GHS } from "./planConstants";
+import { WELLNESS_KINDS, WELLNESS_TREATMENT_MIN_GHS, treatmentMatches, type WellnessKind } from "./planConstants";
 import { randomSlug } from "./format";
 import type { Area, Itinerary, MenuItem, PlanInputs, SavedPlan } from "./types";
 
@@ -48,7 +48,17 @@ export async function fetchAreas(): Promise<Area[]> {
  * type yet and the query is refused: the spa option simply does not appear,
  * which is right, because there is nothing it could book.
  */
-export async function fetchWellnessFloor(): Promise<number | null> {
+export type WellnessFloors = Partial<Record<WellnessKind, number>>;
+
+/**
+ * The cheapest real treatment of each kind, per person.
+ *
+ * Per kind because the kinds cost different amounts: a manicure floor would
+ * tell somebody a massage fits a budget it does not. A kind with no line at
+ * or above the treatment minimum is absent, and the questionnaire does not
+ * offer it.
+ */
+export async function fetchWellnessFloor(): Promise<WellnessFloors | null> {
   const { data: spas, error } = await supabase
     .from("venues")
     .select("id")
@@ -57,13 +67,16 @@ export async function fetchWellnessFloor(): Promise<number | null> {
   if (error || !spas?.length) return null;
   const { data: items } = await supabase
     .from("menu_items")
-    .select("price_ghs")
+    .select("name, price_ghs")
     .in("venue_id", (spas as { id: string }[]).map((s) => s.id))
-    .gte("price_ghs", WELLNESS_TREATMENT_MIN_GHS)
-    .order("price_ghs", { ascending: true })
-    .limit(1);
-  const price = Number((items as { price_ghs: number }[] | null)?.[0]?.price_ghs);
-  return Number.isFinite(price) && price > 0 ? price : null;
+    .gte("price_ghs", WELLNESS_TREATMENT_MIN_GHS);
+  const rows = (items ?? []) as { name: string; price_ghs: number }[];
+  const floors: WellnessFloors = {};
+  for (const { id } of WELLNESS_KINDS) {
+    const prices = rows.filter((r) => treatmentMatches(id, r.name)).map((r) => Number(r.price_ghs)).filter((n) => n > 0);
+    if (prices.length) floors[id] = Math.min(...prices);
+  }
+  return Object.keys(floors).length ? floors : null;
 }
 
 /**

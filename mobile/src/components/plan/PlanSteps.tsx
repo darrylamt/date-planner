@@ -8,6 +8,7 @@ import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
 import { WheelPicker } from "../WheelPicker";
 import { DayStrip } from "./DayStrip";
+import type { WellnessFloors } from "../../lib/data";
 import { GUTTER, Spacing } from "../../theme";
 import { aboutName, possessiveName, pronounForGender, pronounSet } from "../../lib/pronouns";
 import {
@@ -25,6 +26,9 @@ import {
   STOP_OPTIONS,
   DEFAULT_CITY,
   wellnessAllowed,
+  WELLNESS_KINDS,
+  DEFAULT_WELLNESS_KIND,
+  type WellnessKind,
   partySizeOptions,
   VIBES,
   cap,
@@ -95,6 +99,8 @@ export interface StepProps {
   cuisines?: { id: string; label: string }[];
   /** The cheapest spa treatment for one, or null when there is no spa to offer. */
   wellnessFloor?: number | null;
+  /** The cheapest treatment of each kind; a kind that is absent is not offered. */
+  wellnessFloors?: WellnessFloors | null;
   update: (patch: Partial<PlanInputs>) => void;
 }
 
@@ -127,7 +133,15 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PlanSteps({ step, inputs, areas, cuisines = [], wellnessFloor = null, update }: StepProps) {
+export function PlanSteps({
+  step,
+  inputs,
+  areas,
+  cuisines = [],
+  wellnessFloor = null,
+  wellnessFloors = null,
+  update,
+}: StepProps) {
   const solo = inputs.partySize <= 1;
   const pair = inputs.partySize === 2;
   const pronoun = pronounForGender(inputs.partner.gender);
@@ -420,6 +434,27 @@ export function PlanSteps({ step, inputs, areas, cuisines = [], wellnessFloor = 
               onPress={() => update({ wellness: !inputs.wellness })}
             />
           </Group>
+        ) : null}
+
+        {/*
+          Which treatment, asked the moment the spa is ticked.
+
+          "Spa" meant a massage to almost everybody who chose it, and the
+          planner was ordering whatever sat mid-price on the list, which at the
+          nail-and-wax spa is a pedicure. Only kinds some spa actually offers
+          are shown, each with its own starting price.
+        */}
+        {inputs.wellness && wellnessAllowed(inputs) && wellnessFloors ? (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: -Spacing.two, marginBottom: Spacing.three }}>
+            <Segmented
+              options={WELLNESS_KINDS.filter((k) => wellnessFloors[k.id] != null).map((k) => ({
+                value: k.id,
+                label: k.label,
+              }))}
+              value={inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND}
+              onChange={(k: WellnessKind) => update({ wellnessKind: k })}
+            />
+          </View>
         ) : null}
 
         {/*

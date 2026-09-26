@@ -11,7 +11,7 @@ import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
-import { wellnessAllowed } from "@/lib/planConstants";
+import { DEFAULT_WELLNESS_KIND, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
   GenerateResponse,
   Itinerary,
@@ -187,9 +187,14 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
     if (inputs.wellness && wellnessAllowed(inputs)) {
       return NextResponse.json({
         status: "no_match",
-        headline: "We could not fit a spa into this one.",
+        headline:
+          (inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND) === "any"
+            ? "We could not fit a spa into this one."
+            : `We could not fit a ${(
+                WELLNESS_KINDS.find((k) => k.id === (inputs.wellnessKind ?? DEFAULT_WELLNESS_KIND))?.label ?? "spa"
+              ).toLowerCase()} into this one.`,
         message:
-          "Either no spa we hold is open then, or a treatment and the rest of the evening do not fit the budget together. We would rather say so than leave the spa out without telling you.",
+          "Either no spa we hold offers it then, or the treatment and the rest of the evening do not fit the budget together. We would rather say so than book a different treatment without telling you.",
         suggestions: [
           { label: "Plan it without the spa", action: "clear_wellness" },
           ...suggestions.filter((sug) => sug.action === "raise_budget"),

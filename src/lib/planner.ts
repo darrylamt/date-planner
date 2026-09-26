@@ -5,7 +5,7 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
 import { schedulesDuring } from "./schedules";
-import { WELLNESS_TREATMENT_MIN_GHS, wellnessAllowed } from "./planConstants";
+import { WELLNESS_TREATMENT_MIN_GHS, treatmentMatches, wellnessAllowed, type WellnessKind } from "./planConstants";
 import type {
   EventRow,
   Formality,
@@ -498,7 +498,9 @@ function planOrders(
    * Kitchens the party asked for, if any. Used to choose which half of a
    * mixed menu to order from; never to refuse a venue.
    */
-  wantedCuisines: string[] = []
+  wantedCuisines: string[] = [],
+  /** At a spa, which treatment. Unlike cuisine this is a filter: see WELLNESS_KINDS. */
+  treatment?: WellnessKind
 ): OrderPlan | null {
   /*
    * Venues that charge for a thing rather than for a person.
@@ -564,6 +566,13 @@ function planOrders(
      * Resense's GHS 0 couples package, and called either one a spa visit.
      */
     if (venue.type === "wellness" && !(Number(m.price_ghs) >= WELLNESS_TREATMENT_MIN_GHS)) return false;
+    /*
+     * The treatment they asked for, and only that. A filter rather than a
+     * preference, unlike cuisine: a pedicure is not a lesser massage, it is a
+     * different afternoon, and a spa with nothing of the kind is left for one
+     * that has it.
+     */
+    if (venue.type === "wellness" && !treatmentMatches(treatment, m.name)) return false;
     if (m.min_players != null && partySize < m.min_players) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
     if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
@@ -1161,7 +1170,8 @@ export function planItinerary(
         tier,
         ROLE_MINUTES[role],
         slotStart,
-        inputs.cuisines ?? []
+        inputs.cuisines ?? [],
+        inputs.wellnessKind
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and

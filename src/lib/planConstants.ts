@@ -152,6 +152,45 @@ export const DEFAULT_CITY = "Accra";
 export const WELLNESS_TREATMENT_MIN_GHS = 100;
 
 /**
+ * What kind of treatment the spa stop is for.
+ *
+ * "Spa" means a massage to most people who tick it, and the planner used to
+ * order whatever sat mid-price on the venue's list. Signature Spa's list is
+ * 83 lines of which 5 are massages and 41 are nails, waxing and lashes, so a
+ * couple asking for a spa afternoon was booked a pedicure. The kind is now
+ * asked, and a plan that never said -- every phone on an older build --
+ * gets a massage, because that is what the word means.
+ */
+export type WellnessKind = "massage" | "facial" | "nails" | "any";
+
+export const WELLNESS_KINDS: { id: WellnessKind; label: string }[] = [
+  { id: "massage", label: "Massage" },
+  { id: "facial", label: "Facial" },
+  { id: "nails", label: "Mani & pedi" },
+  { id: "any", label: "Surprise me" },
+];
+
+export const DEFAULT_WELLNESS_KIND: WellnessKind = "massage";
+
+/*
+ * Read from the treatment's own name, which is all a price list gives. Kept
+ * narrow on purpose: a line that matches nothing is simply not ordered for
+ * that kind, and a spa with no line of the kind is not chosen for it. "Any"
+ * matches everything, packages included.
+ */
+const TREATMENT_WORDS: Record<Exclude<WellnessKind, "any">, RegExp> = {
+  massage: /massage|swedish|deep tissue|hot stone|reflexology|aromatherapy|shiatsu|lomi|bamboo/i,
+  facial: /facial|dermaplan|peel|hydra|acne|microderm|oxygen/i,
+  // Not bare "polish": Resense's "The Polish" is a GHS 1,210 body scrub.
+  nails: /pedi|mani|nail|acrylic|gel polish|regular polish|powder (set|refill)|builder gel|hands?\s*(&|and)\s*feet/i,
+};
+
+export function treatmentMatches(kind: WellnessKind | undefined, name: string): boolean {
+  const k = kind ?? DEFAULT_WELLNESS_KIND;
+  return k === "any" || TREATMENT_WORDS[k].test(name);
+}
+
+/**
  * Whether a plan may include a spa at all.
  *
  * One or two people. A spa booked for a group is a group booking, which is a

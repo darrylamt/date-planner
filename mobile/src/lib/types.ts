@@ -366,6 +366,11 @@ export interface PlanInputs {
    */
   wellness?: boolean;
   /**
+   * Which treatment the spa stop is for. Absent means a massage: see
+   * WELLNESS_KINDS in planConstants.
+   */
+  wellnessKind?: "massage" | "facial" | "nails" | "any";
+  /**
    * False when the person declined sending their answers to Anthropic
    * (guideline 5.1.2(i)). The plan is unaffected -- our own code builds it --
    * and only its description falls back to plain text. Absent means an
