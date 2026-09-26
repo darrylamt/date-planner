@@ -12,9 +12,11 @@ import { minutesOf, parseCsv } from "./gtfs-csv";
 import { buildNetwork, planJourney, type NetLine, type NetStop } from "../src/lib/journey";
 
 const SOURCE = "https://gitlab.com/digitaltransport/data/africa/accra/-/raw/master/GTFS/GTFS_Accra.zip";
+const KEPT = "data/gtfs/accra-GTFS_Accra.zip";
 
 async function main() {
-  const local = process.argv[2];
+  // The copy kept in the repo unless told otherwise; see data/gtfs/PROVENANCE.md.
+  const local = process.argv[2] ?? (fs.existsSync(KEPT) ? KEPT : undefined);
   const bytes = local ? new Uint8Array(fs.readFileSync(local)) : new Uint8Array(await (await fetch(SOURCE)).arrayBuffer());
   const files = unzipSync(bytes);
   const read = (n: string) => parseCsv(strFromU8(files[n]));

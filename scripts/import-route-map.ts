@@ -22,6 +22,7 @@ for (const l of fs.readFileSync(".env.local", "utf8").split(/\r?\n/)) {
 }
 
 const SOURCE = "https://gitlab.com/digitaltransport/data/africa/accra/-/raw/master/GTFS/GTFS_Accra.zip";
+const KEPT = "data/gtfs/accra-GTFS_Accra.zip";
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 async function inBatches<T>(rows: T[], size: number, run: (batch: T[]) => PromiseLike<{ error: unknown }>) {
@@ -42,7 +43,8 @@ async function selectAll<T>(table: string, cols: string): Promise<T[]> {
 }
 
 async function main() {
-  const local = process.argv[2];
+  // The copy kept in the repo unless told otherwise; see data/gtfs/PROVENANCE.md.
+  const local = process.argv[2] ?? (fs.existsSync(KEPT) ? KEPT : undefined);
   const bytes = local
     ? new Uint8Array(fs.readFileSync(local))
     : new Uint8Array(await (await fetch(SOURCE)).arrayBuffer());
