@@ -1,14 +1,18 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
+import { createClient as createSupabase, type SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "./fetchAll";
 import { buildNetwork, type NetLine, type NetStop, type Network } from "./journey";
 
 /**
  * The trotro network, read from the database and held for a few minutes.
  *
- * Fifteen thousand rows across three tables is too much to read per request
- * and too little to need anything cleverer than a module-level cache. Five
- * minutes means an admin's confirm or hide shows up on the page without a
- * deploy, and a burst of requests reads the tables once.
+ * Fifteen thousand rows across three tables is too much to read per request.
+ * It was held in module memory, which measured 4.6 to 6.7 seconds a request
+ * in production: every fresh serverless instance starts with an empty module
+ * and reads all fifteen thousand again. So the rows are kept in Next's shared
+ * data cache, which every instance reads, packed small enough to fit its item
+ * limit, with module memory in front of that for warm instances. Five minutes
+ * means an admin's confirm or hide shows up without a deploy.
  *
  * Two sources become one network:
  *   - trotro_lines, the 2019 route map and anything an admin has added, with
@@ -20,9 +24,52 @@ import { buildNetwork, type NetLine, type NetStop, type Network } from "./journe
 const TTL_MS = 5 * 60 * 1000;
 let cached: { at: number; net: Network } | null = null;
 
-export async function loadNetwork(supabase: SupabaseClient): Promise<Network> {
-  if (cached && Date.now() - cached.at < TTL_MS) return cached.net;
+/*
+ * Packed: stop ids become positions, so each stop-on-a-line is two numbers
+ * rather than two uuids. About a sixth of the size, and the difference
+ * between fitting the shared cache's per-item limit and not.
+ */
+type Packed = {
+  stops: [string, string, string | null, number, number][];
+  lines: (Omit<NetLine, "stops"> & { s: [number, number | null][] })[];
+};
 
+function pack(stops: NetStop[], lines: NetLine[]): Packed {
+  const at = new Map(stops.map((s, i) => [s.id, i]));
+  return {
+    stops: stops.map((s) => [s.id, s.name, s.landmark, s.lat, s.lng]),
+    lines: lines.map(({ stops: ls, ...rest }) => ({ ...rest, s: ls.map((x) => [at.get(x.stopId)!, x.minutes]) })),
+  };
+}
+
+function unpack(p: Packed): { stops: NetStop[]; lines: NetLine[] } {
+  const stops = p.stops.map(([id, name, landmark, lat, lng]) => ({ id, name, landmark, lat, lng }));
+  const lines = p.lines.map(({ s, ...rest }) => ({ ...rest, stops: s.map(([i, minutes]) => ({ stopId: stops[i].id, minutes })) }));
+  return { stops, lines };
+}
+
+// Built from the public anon key alone: this is shared by every caller.
+const readShared = unstable_cache(
+  async () => {
+    const db = createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      auth: { persistSession: false },
+    });
+    const { stops, lines } = await readNetwork(db);
+    return pack(stops, lines);
+  },
+  ["trotro-network-v1"],
+  { revalidate: 300, tags: ["trotro-network"] }
+);
+
+export async function loadNetwork(): Promise<Network> {
+  if (cached && Date.now() - cached.at < TTL_MS) return cached.net;
+  const { stops, lines } = unpack(await readShared());
+  const net = buildNetwork(stops, lines);
+  cached = { at: Date.now(), net };
+  return net;
+}
+
+async function readNetwork(supabase: SupabaseClient): Promise<{ stops: NetStop[]; lines: NetLine[] }> {
   const [stopRows, lineRows, lineStopRows, stations, manual] = await Promise.all([
     fetchAllRows<{ id: string; name: string; landmark: string | null; lat: number; lng: number }>((a, b) =>
       supabase.from("trotro_stops").select("id, name, landmark, lat, lng").range(a, b)
@@ -98,7 +145,5 @@ export async function loadNetwork(supabase: SupabaseClient): Promise<Network> {
     });
   }
 
-  const net = buildNetwork(stops, lines);
-  cached = { at: Date.now(), net };
-  return net;
+  return { stops, lines };
 }

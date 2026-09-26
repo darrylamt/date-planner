@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
   let net;
   try {
-    net = await loadNetwork(db);
+    net = await loadNetwork();
   } catch (e) {
     console.error("transit network load failed", e);
     return NextResponse.json({ error: "The route map is not set up yet." }, { status: 503 });
