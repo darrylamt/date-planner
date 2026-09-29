@@ -617,7 +617,13 @@ function planOrders(
     if (venue.type === "wellness" && onlyKind && !treatmentMatches(onlyKind, m.name)) return false;
     if (m.min_players != null && partySize < m.min_players) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
-    if (covers === 1 && m.max_players != null && partySize > m.max_players) return false;
+    /*
+     * A maximum of one on a per-person line is not a cap on the party: it is
+     * the line saying "per person", and a couple simply books two. Signature
+     * Spa records every treatment that way, and reading it as a cap meant no
+     * couple could ever be sent there for anything.
+     */
+    if (covers === 1 && m.max_players != null && m.max_players > 1 && partySize > m.max_players) return false;
     return onSaleNow(m);
   };
 
