@@ -64,6 +64,8 @@ export const planInputsSchema = z.object({
   city: z.string().max(60).optional(),
   wellness: z.boolean().optional(),
   wellnessKind: z.enum(["massage", "facial", "nails", "any"]).optional(),
+  radiusKm: z.number().min(0).max(20).optional(),
+  near: z.object({ lat: z.number().min(4).max(12), lng: z.number().min(-4).max(2) }).optional(),
   wellnessKinds: z.array(z.enum(["massage", "facial", "nails"])).max(3).optional(),
   ai: z.boolean().optional(),
   partner: z.object({

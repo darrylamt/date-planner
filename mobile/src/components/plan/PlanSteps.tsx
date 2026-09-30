@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { View } from "react-native";
+﻿import { useEffect, useState } from "react";
+import { Alert, View } from "react-native";
+import { currentPlace, locationAvailable } from "../../lib/location";
 import { Text } from "../Text";
 import { Group, Row } from "../List";
 import { Chip } from "../Chip";
@@ -27,6 +28,8 @@ import {
   DEFAULT_CITY,
   wellnessAllowed,
   WELLNESS_KINDS,
+  RADIUS_OPTIONS,
+  DEFAULT_RADIUS_KM,
   focusesOf,
   wellnessKindsOf,
   partySizeOptions,
@@ -198,10 +201,56 @@ export function PlanSteps({
             subtitle={`Anywhere in ${city}`}
             selected={inputs.surpriseMe}
             onPress={() =>
-              update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [] })
+              update({ surpriseMe: !inputs.surpriseMe, areaIds: [], areaNames: [], near: undefined })
             }
           />
+          {/*
+            Around where they are, when this build can ask. Location is read
+            once, here, on the tap, and goes into this plan only.
+          */}
+          {locationAvailable() ? (
+            <Row
+              icon="location.fill"
+              title="Near me"
+              subtitle={inputs.near ? "Planning around where you are" : "Places close to where you are now"}
+              selected={Boolean(inputs.near)}
+              onPress={async () => {
+                if (inputs.near) return update({ near: undefined, areaNames: [] });
+                const at = await currentPlace();
+                if (at === "denied") {
+                  Alert.alert("Location is off", "Turn on location for aduro in Settings to plan near you, or pick an area.");
+                  return;
+                }
+                if (at === "unavailable") {
+                  Alert.alert("Could not find you", "Pick an area instead, or try again in a moment.");
+                  return;
+                }
+                update({ near: at, surpriseMe: false, areaIds: [], areaNames: ["near you"] });
+              }}
+            />
+          ) : null}
         </Group>
+
+        {/*
+          How far past the areas to look. An area is an anchor, not a wall:
+          the right place is often a few hundred metres over the boundary, and
+          the picked areas still come first.
+        */}
+        {!inputs.surpriseMe && (inputs.areaIds.length > 0 || inputs.near) ? (
+          <View style={{ paddingHorizontal: GUTTER, marginBottom: Spacing.three }}>
+            <Text variant="footnote" tone="secondary" style={{ marginBottom: Spacing.two }}>
+              {inputs.near ? "How far from you?" : "Also look nearby?"}
+            </Text>
+            <Segmented
+              options={(inputs.near ? RADIUS_OPTIONS.filter((o) => o.km > 0) : RADIUS_OPTIONS).map((o) => ({
+                value: String(o.km),
+                label: o.label.replace("+ ", inputs.near ? "" : "+ "),
+              }))}
+              value={String(inputs.radiusKm ?? (inputs.near ? 5 : DEFAULT_RADIUS_KM))}
+              onChange={(v: string) => update({ radiusKm: Number(v) })}
+            />
+          </View>
+        ) : null}
         <Group>
           {inCity.map((a) => {
             const on = inputs.areaIds.includes(a.id);
@@ -224,6 +273,7 @@ export function PlanSteps({
                     areaNames: areas.filter((x) => ids.includes(x.id)).map((x) => x.name),
                     city,
                     surpriseMe: false,
+                    near: undefined,
                   });
                 }}
               />
@@ -822,7 +872,7 @@ export function PlanSteps({
         onChange={(place) => update({ partner: { ...inputs.partner, place } })}
       />
       <ChoiceField
-        label={solo ? "Things you are into" : `Things ${ps.they}${"’"}${contraction} into`}
+        label={solo ? "Things you are into" : `Things ${ps.they}${"â€™"}${contraction} into`}
         options={["Music", "Art", "Films", "Games", "Sport", "Books", "Fashion", "Food"]}
         value={inputs.partner.interests}
         onChange={(interests) => update({ partner: { ...inputs.partner, interests } })}

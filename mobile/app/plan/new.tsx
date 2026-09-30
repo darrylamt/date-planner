@@ -506,7 +506,7 @@ export default function PlanNew() {
   })();
 
   const canContinue =
-    (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0) &&
+    (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0 || Boolean(inputs.near)) &&
     (stepId !== "vibe" || inputs.vibes.length > 0) &&
     // The spa floor: the cheapest real treatment, for everybody coming.
     (stepId !== "budget" ||

@@ -63,8 +63,11 @@ export function ItemSheet({
   venueName,
   onClose,
   recommended = false,
+  favouriteOnly = false,
   onRecommend,
 }: {
+  /** Recommended, but kept as a favourite: no visit behind it yet, so it does not count. */
+  favouriteOnly?: boolean;
   item: MenuItem | null;
   venueName: string;
   onClose: () => void;
@@ -169,13 +172,13 @@ export function ItemSheet({
               >
                 <Symbol name={recommended ? "hand.thumbsup.fill" : "hand.thumbsup"} size={16} color={recommended ? c.textOnBrand : c.accent} />
                 <Text variant="callout" weight="600" style={{ color: recommended ? c.textOnBrand : c.accent }}>
-                  {recommended ? "You recommend this" : "Recommend"}
+                  {recommended ? (favouriteOnly ? "In your favourites" : "You recommend this") : "Recommend"}
                 </Text>
               </Pressable>
             ) : null}
             {(item.recommend_count ?? 0) > 0 ? (
               <Text variant="footnote" tone="secondary">
-                Recommended by {item.recommend_count} {item.recommend_count === 1 ? "person" : "people"} on aduro
+                Recommended by {item.recommend_count} {item.recommend_count === 1 ? "person" : "people"} who planned a visit
               </Text>
             ) : null}
 

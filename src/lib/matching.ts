@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit } from "./planner";
 import { isPlaceholderAvg } from "./budget";
+import { haversineKm } from "./transport";
+import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, wellnessAllowed } from "./planConstants";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
@@ -79,6 +81,13 @@ export async function fetchCandidates(
    * filter is the one outcome worse than the bug it fixes.
    */
   let scope: Set<string> | null = null;
+  /*
+   * The areas they picked, and how far past them to reach. With a reach, the
+   * query covers the whole city and venues are kept by distance below; the
+   * picked areas still score first, so a nearby place gets in on merit.
+   */
+  let pickedAreas: string[] = [];
+  const reachKm = inputs.surpriseMe ? 0 : inputs.near ? inputs.radiusKm || DEFAULT_NEAR_KM : inputs.radiusKm ?? DEFAULT_RADIUS_KM;
   {
     const { data: allAreas, error: cityError } = await supabase.from("areas").select("id,city");
     if (cityError) {
@@ -96,8 +105,9 @@ export async function fetchCandidates(
       let inCity = areasIn(inputs.city || DEFAULT_CITY);
       if (!inCity.size) inCity = areasIn(DEFAULT_CITY);
       if (inCity.size) {
-        const picked = !inputs.surpriseMe ? inputs.areaIds.filter((id) => inCity.has(id)) : [];
-        scope = picked.length ? new Set(picked) : inCity;
+        const picked = !inputs.surpriseMe && !inputs.near ? inputs.areaIds.filter((id) => inCity.has(id)) : [];
+        pickedAreas = picked;
+        scope = picked.length && !reachKm ? new Set(picked) : inCity;
       }
     }
   }
@@ -287,6 +297,40 @@ export async function fetchCandidates(
    */
   if (!wantsWellness) venues = venues.filter((v) => v.type !== "wellness");
 
+  /*
+   * The reach. A venue is in if it is in a picked area, or within reachKm of
+   * one: of the area's middle, worked out from the venues in it that have a
+   * pin, or of the point for "near me". A venue with no pin of its own is
+   * placed at its area's middle, the same stand-in the route check uses.
+   */
+  if (!inputs.surpriseMe && reachKm > 0 && (inputs.near || pickedAreas.length)) {
+    const sums = new Map<string, { lat: number; lng: number; n: number }>();
+    for (const v of venues) {
+      if (v.lat == null || v.lng == null) continue;
+      const s = sums.get(v.area_id) ?? { lat: 0, lng: 0, n: 0 };
+      s.lat += Number(v.lat);
+      s.lng += Number(v.lng);
+      s.n++;
+      sums.set(v.area_id, s);
+    }
+    const middle = (areaId: string) => {
+      const s = sums.get(areaId);
+      return s ? { lat: s.lat / s.n, lng: s.lng / s.n } : null;
+    };
+    const anchors = inputs.near
+      ? [inputs.near]
+      : pickedAreas.map(middle).filter((p): p is { lat: number; lng: number } => p != null);
+    const picked = new Set(pickedAreas);
+    venues = venues.filter((v) => {
+      if (picked.has(v.area_id)) return true;
+      const at = v.lat != null && v.lng != null ? { lat: Number(v.lat), lng: Number(v.lng) } : middle(v.area_id);
+      return at != null && anchors.some((a) => haversineKm(a, at) <= reachKm);
+    });
+    // Events follow the venues: only nights in an area the plan can reach.
+    const reached = new Set([...pickedAreas, ...venues.map((v) => v.area_id)]);
+    events = events.filter((e) => !e.area_id || reached.has(e.area_id));
+  }
+
   if (opts.excludeVenueIds?.length) {
     venues = venues.filter((v) => !opts.excludeVenueIds!.includes(v.id));
   }
@@ -377,7 +421,15 @@ export async function fetchCandidates(
         placeFit(v, inputs.partner?.place ?? "") -
         avoidPenalty(v, inputs.partner?.avoid ?? "") +
         familyBonus(v, inputs);
-      return { v, score: overlap * 2 + occasion + prefs };
+      /*
+       * The areas they named come first. With a reach, the shortlist spans
+       * the neighbourhoods around them too, and scored on feel alone the
+       * neighbours crowded the named area out: Osu fell from 12 of the
+       * shortlist to 3 at five kilometres. Three points, a vibe and a half,
+       * so a nearby place still gets in when it is the better fit.
+       */
+      const named = pickedAreas.includes(v.area_id) ? 3 : 0;
+      return { v, score: overlap * 2 + occasion + prefs + named };
     })
     .sort((a, b) => b.score - a.score);
 

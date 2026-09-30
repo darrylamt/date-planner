@@ -530,14 +530,17 @@ export async function fetchVenue(id: string): Promise<VenueDetail | null> {
  * migration 0063, because a missing table is "nothing recommended yet" to a
  * screen, not an error.
  */
-export async function fetchMyRecommendations(itemIds: string[]): Promise<Set<string>> {
-  if (!itemIds.length) return new Set();
+export async function fetchMyRecommendations(itemIds: string[]): Promise<Map<string, boolean>> {
+  if (!itemIds.length) return new Map();
   const { data, error } = await supabase
     .from("menu_item_recommendations")
-    .select("menu_item_id")
+    .select("*")
     .in("menu_item_id", itemIds.slice(0, 500));
-  if (error) return new Set();
-  return new Set((data ?? []).map((r: { menu_item_id: string }) => r.menu_item_id));
+  if (error) return new Map();
+  // Item -> whether it counts publicly. Before 0064 every row counted.
+  return new Map(
+    (data ?? []).map((r: { menu_item_id: string; counted?: boolean }) => [r.menu_item_id, r.counted ?? true])
+  );
 }
 
 /**
@@ -551,15 +554,30 @@ export async function setRecommendation(
   itemId: string,
   venueId: string,
   on: boolean
-): Promise<"ok" | "account" | "error"> {
+): Promise<"counted" | "favourite" | "removed" | "account" | "error"> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || user.is_anonymous) return "account";
-  const { error } = on
-    ? await supabase.from("menu_item_recommendations").insert({ user_id: user.id, menu_item_id: itemId, venue_id: venueId })
-    : await supabase.from("menu_item_recommendations").delete().eq("user_id", user.id).eq("menu_item_id", itemId);
+  if (!on) {
+    const { error } = await supabase
+      .from("menu_item_recommendations")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("menu_item_id", itemId);
+    return error ? "error" : "removed";
+  }
+  /*
+   * The database decides whether it counts (0064): a saved plan or a table
+   * request here, dated today or earlier, from an account over a day old. The
+   * answer comes back so the app can say which it was.
+   */
+  const { data, error } = await supabase
+    .from("menu_item_recommendations")
+    .insert({ user_id: user.id, menu_item_id: itemId, venue_id: venueId })
+    .select("*")
+    .single();
   // A second tap racing the first is already the state it asked for.
-  if (error && error.code !== "23505") return "error";
-  return "ok";
+  if (error) return error.code === "23505" ? "counted" : "error";
+  return (data as { counted?: boolean }).counted === false ? "favourite" : "counted";
 }

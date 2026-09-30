@@ -79,7 +79,8 @@ export default function VenuePage() {
   const [query, setQuery] = useState("");
   const [hoursOpen, setHoursOpen] = useState(false);
   const [item, setItem] = useState<MenuItem | null>(null);
-  const [mine, setMine] = useState<Set<string>>(new Set());
+  // Item -> whether this account's recommendation counts publicly.
+  const [mine, setMine] = useState<Map<string, boolean>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -120,22 +121,35 @@ export default function VenuePage() {
    * round trip before a thumb lights up reads as the tap not having landed.
    */
   async function recommend(target: MenuItem, on: boolean) {
-    const bump = (delta: number) => {
+    const wasCounted = mine.get(target.id) ?? false;
+    const apply = (mark: boolean | null, countDelta: number) => {
       const fix = (m: MenuItem) =>
-        m.id === target.id ? { ...m, recommend_count: Math.max(0, (m.recommend_count ?? 0) + delta) } : m;
-      setMenu((cur) => (cur ? cur.map(fix) : cur));
-      setItem((cur) => (cur ? fix(cur) : cur));
+        m.id === target.id ? { ...m, recommend_count: Math.max(0, (m.recommend_count ?? 0) + countDelta) } : m;
+      if (countDelta) {
+        setMenu((cur) => (cur ? cur.map(fix) : cur));
+        setItem((cur) => (cur ? fix(cur) : cur));
+      }
       setMine((cur) => {
-        const next = new Set(cur);
-        if (delta > 0) next.add(target.id);
-        else next.delete(target.id);
+        const next = new Map(cur);
+        if (mark === null) next.delete(target.id);
+        else next.set(target.id, mark);
         return next;
       });
     };
-    bump(on ? 1 : -1);
+    // Lit straight away; the count only moves once the database says it counts.
+    apply(on ? false : null, on ? 0 : wasCounted ? -1 : 0);
     const result = await setRecommendation(target.id, id, on);
-    if (result === "ok") return;
-    bump(on ? -1 : 1);
+    if (result === "counted") return apply(true, 1);
+    if (result === "favourite") {
+      Alert.alert(
+        "Saved to your favourites",
+        "Recommendations count toward the public number once you have planned a visit here, so the number only reflects people who went. Plan a visit, then recommend it after."
+      );
+      return;
+    }
+    if (result === "removed") return;
+    // Put back what was there.
+    apply(on ? null : wasCounted, on ? 0 : wasCounted ? 1 : 0);
     if (result === "account") {
       Alert.alert("Sign in to recommend", "Recommendations come from accounts, one each, so the counts stay honest.", [
         { text: "Not now", style: "cancel" },
@@ -540,6 +554,7 @@ export default function VenuePage() {
         venueName={venue.name}
         onClose={() => setItem(null)}
         recommended={item ? mine.has(item.id) : false}
+        favouriteOnly={item ? mine.get(item.id) === false : false}
         onRecommend={item ? (on) => void recommend(item, on) : undefined}
       />
     </>
@@ -584,7 +599,7 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Symbol name="hand.thumbsup.fill" size={11} color={c.accent} />
             <Text variant="caption" tone="tint">
-              Recommended by {item.recommend_count}
+              Recommended by {item.recommend_count} who went
             </Text>
           </View>
         ) : null}

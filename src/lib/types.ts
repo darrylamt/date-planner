@@ -373,6 +373,18 @@ export interface PlanInputs {
    */
   city?: string;
   /**
+   * How far past the chosen areas to look, in km. 0 is only those areas.
+   * Absent means the default nearby reach (DEFAULT_RADIUS_KM): an area is an
+   * anchor, not a wall, and the place 300 m over the boundary is fair game.
+   */
+  radiusKm?: number;
+  /**
+   * Plan around a point rather than named areas: the phone's location, when
+   * somebody chose "near me". Used once for this plan, never stored apart
+   * from the plan itself.
+   */
+  near?: { lat: number; lng: number };
+  /**
    * Include a spa or wellness stop. Only honoured for one or two people, and
    * never for a family day or a business meeting.
    */

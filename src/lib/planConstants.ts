@@ -1,4 +1,4 @@
-import { BUDGET_DEFAULT } from "./budget";
+﻿import { BUDGET_DEFAULT } from "./budget";
 import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
@@ -162,6 +162,17 @@ export function focusesOf(inputs: Pick<PlanInputs, "focus" | "focuses">): Narrow
   return inputs.focus === "everything" ? [] : [inputs.focus];
 }
 
+/** How far past the chosen areas a plan looks when nobody has said. */
+export const DEFAULT_RADIUS_KM = 2;
+/** How far "near me" reaches when nobody has said. */
+export const DEFAULT_NEAR_KM = 5;
+/** The reach choices the questionnaire offers under the areas. */
+export const RADIUS_OPTIONS: { km: number; label: string }[] = [
+  { km: 0, label: "Only these" },
+  { km: 2, label: "+ 2 km" },
+  { km: 5, label: "+ 5 km" },
+];
+
 /**
  * What kind of treatment the spa stop is for.
  *
@@ -312,7 +323,7 @@ export function partyLabel(size: number): string {
   return `all ${size} of you`;
 }
 
-/* ── occasion pathways ────────────────────────────────────────────────── */
+/* â”€â”€ occasion pathways â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export type StepId =
   | "occasion"
@@ -366,7 +377,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "how_met",
         label: "How you met (optional)",
-        placeholder: "a friend's party, matched online, work…",
+        placeholder: "a friend's party, matched online, workâ€¦",
       },
     ],
   },
@@ -378,7 +389,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "tradition",
         label: "Something you always do (optional)",
-        placeholder: "the place you had your first date…",
+        placeholder: "the place you had your first dateâ€¦",
       },
     ],
   },
@@ -405,7 +416,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "reason",
         label: "The good news",
-        placeholder: "a promotion, a new job, closing on a house…",
+        placeholder: "a promotion, a new job, closing on a houseâ€¦",
       },
     ],
   },
@@ -416,7 +427,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "intent",
         label: "What you are after",
-        placeholder: "somewhere quiet to read, try something new, treat myself…",
+        placeholder: "somewhere quiet to read, try something new, treat myselfâ€¦",
       },
     ],
   },
@@ -437,7 +448,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "purpose",
         label: "What it is about (optional)",
-        placeholder: "a pitch, a catch-up, signing something…",
+        placeholder: "a pitch, a catch-up, signing somethingâ€¦",
       },
     ],
   },
@@ -461,7 +472,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "must",
         label: "Anything that has to happen (optional)",
-        placeholder: "the beach, somewhere to run around, back by six…",
+        placeholder: "the beach, somewhere to run around, back by sixâ€¦",
       },
     ],
   },
@@ -537,7 +548,7 @@ export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] 
   return steps;
 }
 
-/* ── party rules ──────────────────────────────────────────────────────── */
+/* â”€â”€ party rules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface PartyRule {
   min: number;
@@ -610,7 +621,7 @@ export function clampParty(occasion: Occasion, size: number): number {
   return Math.min(rule.max, Math.max(rule.min, size));
 }
 
-/* ── occasion themes ──────────────────────────────────────────────────── */
+/* â”€â”€ occasion themes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface OccasionTheme {
   /** Carries buttons, selected states and the mascot's circle. */
@@ -671,17 +682,17 @@ export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
  * makes the plan underneath harder to read, which is the opposite of the job.
  */
 const OCCASION_GLYPHS: Record<Occasion, string[]> = {
-  birthday: ["🎂", "🕯", "🎈"],
-  celebration: ["🥂", "✦", "🎉"],
-  graduation: ["🎓", "✦", "📜"],
-  anniversary: ["♥", "✦", "♥"],
-  date_night: ["♥", "✦", "♥"],
-  first_date: ["✦", "♥", "✦"],
-  friend_outing: ["✦", "☻", "✦"],
-  solo_day: ["✦", "☾", "✦"],
+  birthday: ["ðŸŽ‚", "ðŸ•¯", "ðŸŽˆ"],
+  celebration: ["ðŸ¥‚", "âœ¦", "ðŸŽ‰"],
+  graduation: ["ðŸŽ“", "âœ¦", "ðŸ“œ"],
+  anniversary: ["â™¥", "âœ¦", "â™¥"],
+  date_night: ["â™¥", "âœ¦", "â™¥"],
+  first_date: ["âœ¦", "â™¥", "âœ¦"],
+  friend_outing: ["âœ¦", "â˜»", "âœ¦"],
+  solo_day: ["âœ¦", "â˜¾", "âœ¦"],
   // No hearts and no confetti. This one is work.
-  business_meeting: ["✦", "◦", "✦"],
-  family_day: ["☀", "✦", "☻"],
+  business_meeting: ["âœ¦", "â—¦", "âœ¦"],
+  family_day: ["â˜€", "âœ¦", "â˜»"],
 };
 
 /**
