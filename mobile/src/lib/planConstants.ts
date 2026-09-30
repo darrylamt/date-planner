@@ -686,7 +686,7 @@ export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
  * paper: at full strength a tiled cake reads as a party-supplies advert and
  * makes the plan underneath harder to read, which is the opposite of the job.
  */
-const OCCASION_GLYPHS: Record<Occasion, string[]> = {
+export const OCCASION_GLYPHS: Record<Occasion, string[]> = {
   birthday: ["🎂", "🕯", "🎈"],
   celebration: ["🥂", "✦", "🎉"],
   graduation: ["🎓", "✦", "📜"],

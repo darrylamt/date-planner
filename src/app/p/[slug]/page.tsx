@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Logo } from "@/components/Logo";
-import { SmartImage } from "@/components/SmartImage";
+import { SharedPlan, type SharedStop } from "@/components/shared/SharedPlan";
 import { createServiceClient } from "@/lib/supabase/server";
 import { instagramUrl, longDate, time12 } from "@/lib/format";
-import { OCCASION_THEME, occasionBackdrop, partyLabel } from "@/lib/planConstants";
-import { occasionCard } from "@/lib/occasionCard";
-import type { SavedPlan } from "@/lib/types";
+import { OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConstants";
+import { occasionCard, occasionColors, occasionEntrance } from "@/lib/occasionCard";
+import type { ItineraryStop, SavedPlan } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -61,13 +59,41 @@ export async function generateMetadata({
 }
 
 /**
+ * A picture for a stop that has none: what sort of place it is, as one emoji.
+ * The label and the venue's type first; the description only as a last
+ * resort, since "bubble teas" in a noodle bar's line is not a café.
+ */
+const BY_WORD: [RegExp, string][] = [
+  [/golf/, "⛳"],
+  [/bowl/, "🎳"],
+  [/arcade|game|machine|kart|laser|racing track/, "🕹️"],
+  [/music|karaoke|dj/, "🎶"],
+  [/pool|swim/, "🏊"],
+  [/massage|spa|pedi|mani/, "💆"],
+  [/waffle|crepe|dessert|ice cream|cake|pastr/, "🍰"],
+  [/coffee|boba|café|cafe/, "☕"],
+  [/cocktail|drink|nightcap|sip|wine|beer/, "🍸"],
+  [/walk|garden|park|beach/, "🌿"],
+];
+const BY_TYPE: Record<string, string> = {
+  restaurant: "🍽️",
+  activity: "🎯",
+  lounge: "🍸",
+  outdoor: "🌿",
+  cafe: "☕",
+  dessert: "🍰",
+  wellness: "💆",
+};
+function stopEmoji(stop: ItineraryStop): string {
+  if (stop.kind === "event") return "🎟️";
+  const match = (text: string) => BY_WORD.find(([re]) => re.test(text.toLowerCase()))?.[1];
+  return match(stop.label ?? "") ?? BY_TYPE[stop.venue_type ?? ""] ?? match(stop.what_to_do ?? "") ?? "🍽️";
+}
+
+/**
  * Shared plan, public read-only view served by slug via the service role
- * (no public SELECT policy on plans).
- *
- * Wears the occasion's own accent, so a link opened by someone who was not
- * there still looks like the occasion it was made for rather than like a
- * generic export. The accent is inlined as a CSS variable because these
- * colours are per-plan and cannot be Tailwind classes known at build time.
+ * (no public SELECT policy on plans). The page itself lives in SharedPlan;
+ * this reads the plan and hands it over as plain words and numbers.
  */
 export default async function SharedPlanPage({ params }: { params: { slug: string } }) {
   const supabase = createServiceClient();
@@ -83,160 +109,48 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
 
   const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
   const card = occasionCard(inputs);
+  const date = longDate(inputs.date);
+  const gap = date.indexOf(" ");
+  const stops = itinerary.stops ?? [];
+  const hops = stops.slice(1).map((_, i) => itinerary.hops?.[i]?.mins ?? 12);
+
+  // Accra keeps GMT all year, so the plan's own clock is UTC.
+  const startsAt = Date.parse(`${inputs.date}T${inputs.startTime}:00Z`);
+  const length = stops.reduce((t, st) => t + (st.duration_mins ?? 0), 0) + hops.reduce((t, m) => t + m, 0);
+
+  const shared: SharedStop[] = stops.map((st, i) => ({
+    key: `${st.venue_id}-${i}`,
+    name: st.name,
+    area: st.area,
+    time: st.arrival_time,
+    label: st.label,
+    what: st.what_to_do || "",
+    whatsOn: st.whats_on ?? [],
+    // The first picture only, which is the event's poster where there is one.
+    image: st.images?.[0] ?? st.image_url ?? null,
+    instagram: instagramUrl(st.instagram_handle),
+    emoji: stopEmoji(st),
+  }));
 
   return (
-    <main
-      /*
-       * The card used to be the house teal whatever the occasion, so a
-       * birthday arrived looking like any other Tuesday. The occasion theme
-       * already knew a birthday is warm caramel on cream; the card was simply
-       * not asking it. The glyph tile sits over the colour at seven percent,
-       * which reads as a watermark rather than wrapping paper.
-       */
-      className="min-h-screen text-lagoon-faint"
-      style={{
-        ["--occasion" as string]: theme.accentDark,
-        backgroundColor: theme.pageDark,
-        backgroundImage: occasionBackdrop(inputs.occasion),
-        backgroundRepeat: "repeat",
-      }}
-    >
-      <div className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col md:max-w-[1080px]">
-        {/* Header */}
-        <div className="px-7 pb-2 pt-10 text-center md:pt-16">
-          <div className="kente mx-auto w-[72px] md:w-[88px]" />
-          <div
-            className="mt-5 text-caption font-bold tracking-[0.14em] md:mt-6 md:tracking-[0.16em]"
-            style={{ color: "var(--occasion)" }}
-          >
-            {card.motif} {card.eyebrow} {card.motif}
-          </div>
-          <h1 className="mt-2.5 font-display text-[34px] font-bold leading-[1.2] md:mt-3 md:text-[52px] md:leading-[1.15]">
-            {longDate(inputs.date)}
-          </h1>
-          <div className="mt-2.5 text-[15px] text-lagoon-soft md:text-[16px]">
-            {itinerary.summary_route} · from {time12(inputs.startTime)}
-          </div>
-          {/* Addressed to whoever opened the link, which is rarely the person
-              who made the plan. */}
-          <p className="mx-auto mt-4 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
-            {card.invitation}
-          </p>
-
-          {plan.planner_note ? (
-            <div
-              className="mx-auto mt-6 max-w-[440px] rounded-bar px-5 py-4 text-left"
-              style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-            >
-              <div
-                className="text-caption font-bold tracking-[0.12em]"
-                style={{ color: "var(--occasion)" }}
-              >
-                A NOTE
-              </div>
-              <p className="mt-1.5 whitespace-pre-line text-[15px] leading-relaxed text-lagoon-faint">
-                {plan.planner_note}
-              </p>
-            </div>
-          ) : null}
-        </div>
-
-        {/* Stops */}
-        <div className="flex flex-col px-6 py-6 md:flex-row md:items-stretch md:justify-center md:gap-6 md:px-14 md:py-11">
-          {itinerary.stops.map((stop, i) => (
-            <div key={`${stop.venue_id}-${i}`} className="md:w-[320px]">
-              <div className="card text-ink">
-                {/*
-                  The first picture only, which is the event's poster where
-                  there is one. A carousel here would need a client component
-                  for a page whose whole job is to be opened once from a chat
-                  and read straight down.
-                */}
-                <SmartImage
-                  src={stop.images?.[0] ?? stop.image_url}
-                  alt={stop.name}
-                  className="h-[130px] md:h-[170px]"
-                />
-                <div className="px-[18px] pb-[18px] pt-4">
-                  <div className="stime">{stop.arrival_time}</div>
-                  <div className="text-vname font-semibold">{stop.name}</div>
-                  <div className="text-[14px] text-mutedbrown">
-                    {stop.area}, {stop.what_to_do || stop.label.toLowerCase()}
-                  </div>
-                  {(stop.whats_on ?? []).map((line) => (
-                    <div key={line} className="mt-1 text-[13px] font-semibold text-flame">
-                      {line}
-                    </div>
-                  ))}
-                  {/*
-                    The one link worth having here. Somebody opening a plan
-                    they did not make wants to see what the place looks like,
-                    and this page carries no menu, no map and now no prices.
-                    Omitted rather than greyed: this is the guest's copy, and a
-                    dead icon is a gap in our catalogue that means nothing to
-                    them.
-                  */}
-                  {instagramUrl(stop.instagram_handle) ? (
-                    <a
-                      href={instagramUrl(stop.instagram_handle)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1.5 inline-block text-[13px] font-semibold text-flame hover:underline"
-                    >
-                      See it on Instagram →
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-              {i < itinerary.stops.length - 1 && (
-                <div className="flex items-center gap-3 py-1.5 pl-[26px] md:hidden">
-                  <div className="hopline-dark h-11 w-[2px]" />
-                  <div className="text-[14px] text-lagoon-soft">
-                    a short ride, ~{itinerary.hops[i]?.mins ?? 12} min
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-auto px-7 pb-10 pt-2 text-center md:pb-14">
-          {/*
-            No prices here, deliberately.
-
-            This page used to carry the estimate range, on the reasoning that
-            whoever opens the link often ends up paying. That reasoning does not
-            survive who actually opens it: a plan for two is shared with the
-            person it was made for, and telling them what the evening costs is
-            the one thing the sender did not want to say. Every stop card here
-            was already priceless and the footer was the last line that was not.
-
-            The person who made the plan still sees every figure, in their own
-            app and in their own list of plans. This is the guest's copy.
-          */}
-          {/* The sign-off, which is the one line that changes most between a
-              graduation and a solo day. */}
-          <p className="mx-auto mb-6 max-w-[420px] text-[15px] text-lagoon-faint md:text-[16px]">
-            {card.closing}
-          </p>
-          <div className="text-[16px] italic text-lagoon-soft md:text-[17px]">
-            planned with care on
-          </div>
-          <div className="my-2">
-            <Logo size={24} dark href={null} />
-          </div>
-          {/* The one place a stranger meets aduro, so it goes where planning
-              actually happens rather than to a web form that no longer
-              exists. */}
-          <Link
-            href="/get"
-            className="btn mx-auto mt-3 w-full max-w-[260px] !bg-amber !text-lagoon hover:!bg-amber-deep"
-          >
-            Plan your own
-          </Link>
-        </div>
-      </div>
-    </main>
+    <SharedPlan
+      eyebrow={card.eyebrow}
+      motif={card.motif}
+      invitation={card.invitation}
+      closing={card.closing}
+      weekday={gap > 0 ? date.slice(0, gap) : date}
+      dayMonth={gap > 0 ? date.slice(gap + 1) : ""}
+      route={itinerary.summary_route.split(/\s*→\s*/).filter(Boolean)}
+      from={time12(inputs.startTime)}
+      startsAt={Number.isNaN(startsAt) ? null : startsAt}
+      endsAt={Number.isNaN(startsAt) ? null : startsAt + Math.max(length, 60) * 60_000}
+      note={plan.planner_note?.trim() || null}
+      stops={shared}
+      hops={hops}
+      colors={occasionColors(inputs.occasion)}
+      page={theme.pageDark}
+      glyphs={OCCASION_GLYPHS[inputs.occasion] ?? OCCASION_GLYPHS.date_night}
+      entrance={occasionEntrance(inputs.occasion)}
+    />
   );
 }

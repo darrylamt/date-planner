@@ -1,4 +1,5 @@
 import type { Occasion, PlanInputs } from "./types";
+import { OCCASION_THEME } from "./planConstants";
 
 /**
  * How a shared plan introduces itself to whoever opens the link.
@@ -133,4 +134,34 @@ export function occasionCard(inputs: PlanInputs): OccasionCard {
   };
 
   return cards[inputs.occasion] ?? cards.date_night;
+}
+
+/*
+ * The two colours a shared plan glows in: the occasion's own accent, and a
+ * second it drifts toward. The poll taught that two colours moving read as
+ * alive where one reads as a theme.
+ */
+const GLOW_PARTNER: Record<Occasion, string> = {
+  date_night: "#E23D6D",
+  first_date: "#E5B04E",
+  anniversary: "#C2185B",
+  birthday: "#F472B6",
+  graduation: "#E5B04E",
+  celebration: "#F472B6",
+  friend_outing: "#22C3B5",
+  solo_day: "#8B5CF6",
+  business_meeting: "#4F6D8A",
+  family_day: "#FF8A5B",
+};
+
+export function occasionColors(occasion: Occasion): [string, string] {
+  const theme = OCCASION_THEME[occasion] ?? OCCASION_THEME.date_night;
+  return [theme.accentDark, GLOW_PARTNER[occasion] ?? GLOW_PARTNER.date_night];
+}
+
+/** The occasions that open with confetti. A date floats hearts; a meeting does neither. */
+export function occasionEntrance(occasion: Occasion): "confetti" | "hearts" | "calm" {
+  if (["birthday", "celebration", "graduation", "anniversary"].includes(occasion)) return "confetti";
+  if (["date_night", "first_date"].includes(occasion)) return "hearts";
+  return "calm";
 }

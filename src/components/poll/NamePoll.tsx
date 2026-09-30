@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import s from "./NamePoll.module.css";
 import { NAME_OPTIONS, POLL_CLOSES_AT, colorsFor, nameKey, type Choice, type PollResults } from "@/lib/namePoll";
 import { APP_STORE_URL } from "@/lib/links";
+import { FlipText } from "@/components/fx/FlipText";
+import { GetTheApp } from "@/components/fx/GetTheApp";
+import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
 
 const STORE = "aduro-name-poll-v1";
 /** The name as it is today, in its own colours. */
@@ -11,78 +14,7 @@ const TODAY = { name: "aduro", c1: "#E23D6D", c2: "#E5B04E" };
 
 type Results = PollResults;
 
-/*
- * Dark text on a light gradient, white on a dark one. Judged on the brighter
- * of the two stops, since the button's label crosses both: white on Outly's
- * gold was unreadable.
- */
-function inkOn(a: string, b: string): string {
-  const lum = (hex: string) => {
-    const n = parseInt(hex.replace("#", ""), 16);
-    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
-      const c = v / 255;
-      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
-  };
-  return Math.max(lum(a), lum(b)) > 0.5 ? "#1A0D14" : "#FFFFFF";
-}
 type Particle = { id: number; x: number; y: number; dx: number; dy: number; rot: number; color: string };
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const q = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(q.matches);
-    const on = () => setReduced(q.matches);
-    q.addEventListener("change", on);
-    return () => q.removeEventListener("change", on);
-  }, []);
-  return reduced;
-}
-
-/**
- * The wordmark, re-lettered whenever the name changes: the old letters fall
- * away while the new ones flip up one by one. The last third of the name
- * takes the accent, the way "adu" and "ro" are split today, or all of it
- * when `whole` is set.
- */
-function Wordmark({ name, className = s.word, whole = false }: { name: string; className?: string; whole?: boolean }) {
-  const [layers, setLayers] = useState([{ key: 0, text: name, leaving: false }]);
-  const next = useRef(1);
-
-  useEffect(() => {
-    setLayers((cur) => {
-      if (cur[cur.length - 1]?.text === name) return cur;
-      const key = next.current++;
-      return [...cur.filter((l) => !l.leaving).map((l) => ({ ...l, leaving: true })), { key, text: name, leaving: false }];
-    });
-    const t = setTimeout(() => setLayers((cur) => cur.filter((l) => !l.leaving)), 700);
-    return () => clearTimeout(t);
-  }, [name]);
-
-  return (
-    <span className={className} aria-label={name} role="img">
-      {layers.map((l) => {
-        const letters = [...l.text];
-        const split = whole ? 0 : letters.length - Math.max(2, Math.ceil(letters.length / 3));
-        return (
-          <span key={l.key} className={s.wordLayer} aria-hidden>
-            {letters.map((ch, i) => (
-              <span
-                key={i}
-                className={`${s.letter} ${l.leaving ? s.letterOut : s.letterIn} ${i >= split ? s.accent : ""}`}
-                style={{ animationDelay: `${l.leaving ? i * 22 : 140 + i * 48}ms` }}
-              >
-                {ch}
-              </span>
-            ))}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
 
 /** Numbers that count up to where they are going. */
 function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
@@ -149,146 +81,6 @@ function Countdown({ now }: { now: number | null }) {
             </div>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-/** Two and a half seconds of paper, then the canvas removes itself. */
-function confetti(colors: string[]) {
-  const canvas = document.createElement("canvas");
-  canvas.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:60";
-  document.body.appendChild(canvas);
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(dpr, dpr);
-  const W = window.innerWidth;
-  const bits = Array.from({ length: 170 }, () => ({
-    x: W / 2 + (Math.random() - 0.5) * 120,
-    y: window.innerHeight * 0.55,
-    vx: (Math.random() - 0.5) * 16,
-    vy: -Math.random() * 17 - 7,
-    w: 6 + Math.random() * 7,
-    h: 8 + Math.random() * 10,
-    r: Math.random() * Math.PI,
-    vr: (Math.random() - 0.5) * 0.35,
-    c: colors[Math.floor(Math.random() * colors.length)],
-  }));
-  const start = performance.now();
-  const frame = (t: number) => {
-    const age = t - start;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const b of bits) {
-      b.vy += 0.42;
-      b.vx *= 0.99;
-      b.x += b.vx;
-      b.y += b.vy;
-      b.r += b.vr;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - age / 2600);
-      ctx.translate(b.x, b.y);
-      ctx.rotate(b.r);
-      ctx.fillStyle = b.c;
-      ctx.fillRect(-b.w / 2, -b.h / 2, b.w, Math.abs(Math.cos(b.r)) * b.h);
-      ctx.restore();
-    }
-    if (age < 2700) requestAnimationFrame(frame);
-    else canvas.remove();
-  };
-  requestAnimationFrame(frame);
-}
-
-/*
- * What aduro plans, one turning into the next, each with the shape of the
- * outing it would hand back. Illustrations: no venue is named.
- */
-const NEXT = [
-  { word: "date", emoji: "💘", stops: ["🍽️ Dinner in Osu", "🍸 Cocktails nearby"], total: "GHS 640 for two" },
-  { word: "birthday", emoji: "🎂", stops: ["🎳 Games first", "🍰 Dinner, then cake"], total: "GHS 1,100 for four" },
-  { word: "anniversary", emoji: "💍", stops: ["💆 Couples massage", "🥂 Dinner by the sea"], total: "GHS 1,800 for two" },
-  { word: "link-up", emoji: "🤙", stops: ["🍗 Grills and drinks", "🎤 Karaoke after"], total: "GHS 750 for five" },
-  { word: "solo day", emoji: "🧘", stops: ["🏊 A pool day", "☕ Brunch after"], total: "GHS 350 for one" },
-  { word: "family day", emoji: "👨‍👩‍👧", stops: ["🌳 Out in the open", "🍕 Lunch after"], total: "GHS 1,200 for six" },
-];
-
-/**
- * The way to the app, for the many voting on its name who do not have it
- * yet. The word after "Plan your next" turns over through what aduro plans,
- * and a small plan for each rises under it. Apple's badge is left exactly
- * as Apple draws it; everything around it moves instead.
- */
-function GetTheApp({ reduced, ink }: { reduced: boolean; ink: string }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (reduced) return;
-    const t = setInterval(() => setI((n) => (n + 1) % NEXT.length), 2600);
-    return () => clearInterval(t);
-  }, [reduced]);
-  const now = NEXT[i];
-
-  return (
-    <div className={`${s.appCard} mt-6 rounded-[28px] border border-white/10 p-5 md:p-7`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/55">Still aduro, for now</p>
-          <h2 className="mt-2 text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] md:text-[36px]">
-            Plan your next
-            <span className="sr-only"> date.</span>
-            <span aria-hidden className="block">
-              <Wordmark name={`${now.word}.`} className={s.rotor} whole />
-            </span>
-          </h2>
-        </div>
-        <span key={now.word} aria-hidden className={`${s.heart} shrink-0 text-[44px] leading-none`}>
-          {now.emoji}
-        </span>
-      </div>
-
-      <p className="mt-3 max-w-[480px] text-[15px] text-white/70">
-        Tell it your budget and what you are in the mood for. It picks the places, orders from real menus and
-        adds up the whole outing, the ride there included.
-      </p>
-
-      <div key={`plan-${now.word}`} aria-hidden className="mt-4 flex flex-wrap items-center gap-2 text-[13px] font-semibold sm:text-[14px]">
-        {now.stops.map((stop, k) => (
-          <span key={stop} className="flex items-center gap-2">
-            {/* Not on a phone, where the chips wrap and an arrow would start a line. */}
-            {k ? (
-              <span className={`${s.rise} hidden text-white/40 sm:inline`} style={{ animationDelay: `${80 + k * 160}ms` }}>
-                →
-              </span>
-            ) : null}
-            <span
-              className={`${s.rise} rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5`}
-              style={{ animationDelay: `${120 + k * 160}ms` }}
-            >
-              {stop}
-            </span>
-          </span>
-        ))}
-        <span
-          className={`${s.rise} rounded-full px-3 py-1.5 font-bold`}
-          style={{ animationDelay: "460ms", background: "linear-gradient(90deg, var(--c1), var(--c2))", color: ink }}
-        >
-          {now.total}
-        </span>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <a
-          href={APP_STORE_URL}
-          target="_blank"
-          rel="noopener"
-          className="inline-block rounded-[9px] outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/app-store-badge.svg" alt="Download on the App Store" width={150} height={50} className="block h-[50px] w-auto" />
-        </a>
-        <span className="text-[13px] text-white/55">
-          Free on iPhone. Listed as <b className="text-white/80">AduroGH</b>.
-        </span>
       </div>
     </div>
   );
@@ -591,7 +383,7 @@ export function NamePoll() {
               <span key={shown} className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
                 {opt?.id === "Other" && !typed ? "?" : initial}
               </span>
-              <Wordmark name={shown} />
+              <FlipText name={shown} />
             </a>
             <div className="flex items-center gap-3">
               <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/80 md:inline">
@@ -835,7 +627,7 @@ export function NamePoll() {
               </div>
             )}
 
-            <GetTheApp reduced={reduced} ink={buttonInk} />
+            <GetTheApp reduced={reduced} ink={buttonInk} className="mt-6" />
           </section>
 
           {/* ── the name, tried on ── */}

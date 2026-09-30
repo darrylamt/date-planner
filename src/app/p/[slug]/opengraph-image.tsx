@@ -2,34 +2,71 @@ import { ImageResponse } from "next/og";
 import { createServiceClient } from "@/lib/supabase/server";
 import { longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME } from "@/lib/planConstants";
-import { occasionCard } from "@/lib/occasionCard";
-import type { SavedPlan } from "@/lib/types";
+import { occasionCard, occasionColors } from "@/lib/occasionCard";
+import type { Occasion, SavedPlan } from "@/lib/types";
 
 export const alt = "A plan made with aduro";
+
+/*
+ * The card's ornaments are typographic (✦, ❦, ◈), which the page draws from
+ * the phone's own fonts and this renderer cannot: it has Figtree and emoji,
+ * and a ✦ came out as an empty box. So the picture wears an emoji instead.
+ */
+const MOTIF: Record<Occasion, string> = {
+  first_date: "✨",
+  date_night: "❤️",
+  anniversary: "💞",
+  birthday: "🎂",
+  graduation: "🎓",
+  celebration: "🥂",
+  friend_outing: "🤙",
+  solo_day: "🌙",
+  business_meeting: "🤝",
+  family_day: "☀️",
+};
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+/*
+ * Figtree, the site's own face, fetched as the picture is drawn. A preview is
+ * cached by every chat app that fetches it, so this runs about once a link;
+ * if the fetch fails the picture still draws, in the default face.
+ */
+async function font(weight: 600 | 800): Promise<ArrayBuffer | null> {
+  try {
+    const res = await fetch(`https://cdn.jsdelivr.net/fontsource/fonts/figtree@latest/latin-${weight}-normal.woff`);
+    return res.ok ? await res.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The picture that shows when a plan is pasted into WhatsApp.
  *
- * A shared plan is sent to one person, usually in a chat, and until now it
- * arrived as a bare link under the site's generic title. The whole point of
- * the card is that it looks like it was made for the person opening it, and
- * the first thing they see is the preview, not the page.
+ * A shared plan is sent to one person, usually in a chat, and the preview is
+ * the first thing they see and, if they do not tap, the only thing. So it is
+ * dressed the way the page is: the occasion's two colours glowing out of the
+ * dark, the date large with its second line in the gradient, and the stops
+ * down the right as the cards they will find on the page.
  *
- * Drawn rather than photographed. A venue photo would be the obvious choice
- * and is the wrong one: it would show one stop out of three, and the stop it
- * showed would depend on which venue happened to have an image on file.
- *
- * Every figure comes from the saved plan. Nothing here is generated.
+ * Drawn rather than photographed: a venue photo would show one stop out of
+ * three, chosen by whichever venue happened to have an image on file. Every
+ * word comes from the saved plan, and there is no price, because the preview
+ * shows in the chat before anyone taps.
  */
 export default async function Image({ params }: { params: { slug: string } }) {
   const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("plans")
-    .select("inputs, itinerary")
-    .eq("share_slug", params.slug)
-    .maybeSingle();
+  const [{ data }, semi, bold] = await Promise.all([
+    supabase.from("plans").select("inputs, itinerary").eq("share_slug", params.slug).maybeSingle(),
+    font(600),
+    font(800),
+  ]);
+  const fonts = [
+    ...(semi ? [{ name: "Figtree", data: semi, weight: 600 as const, style: "normal" as const }] : []),
+    ...(bold ? [{ name: "Figtree", data: bold, weight: 800 as const, style: "normal" as const }] : []),
+  ];
+  const family = fonts.length ? "Figtree" : "sans-serif";
 
   const plan = data as Pick<SavedPlan, "inputs" | "itinerary"> | null;
 
@@ -44,23 +81,32 @@ export default async function Image({ params }: { params: { slug: string } }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#140B0D",
+            backgroundColor: "#140B0D",
+            backgroundImage: "radial-gradient(circle at 25% 20%, #E23D6D55, transparent 55%), radial-gradient(circle at 80% 85%, #E5B04E44, transparent 55%)",
             color: "#F3E4E8",
-            fontSize: 52,
-            fontWeight: 700,
+            fontSize: 64,
+            fontWeight: 800,
+            fontFamily: family,
           }}
         >
           aduro
         </div>
       ),
-      size
+      { ...size, fonts }
     );
   }
 
   const { inputs, itinerary } = plan;
   const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
+  const [c1, c2] = occasionColors(inputs.occasion);
   const card = occasionCard(inputs);
   const stops = itinerary.stops ?? [];
+  const date = longDate(inputs.date);
+  const gap = date.indexOf(" ");
+  const weekday = gap > 0 ? date.slice(0, gap) : date;
+  const dayMonth = gap > 0 ? date.slice(gap + 1) : "";
+  const route = (itinerary.summary_route ?? "").split(/\s*→\s*/).filter(Boolean).slice(0, 4);
+  const shown = stops.slice(0, 3);
 
   return new ImageResponse(
     (
@@ -69,93 +115,157 @@ export default async function Image({ params }: { params: { slug: string } }) {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          background: theme.pageDark,
-          color: "#F4ECEE",
-          padding: "54px 64px",
-          fontFamily: "sans-serif",
+          backgroundColor: theme.pageDark,
+          // Colour apart from the gradients: the renderer refuses the two in one shorthand.
+          backgroundImage: `radial-gradient(circle at 12% 8%, ${c1}66, transparent 48%), radial-gradient(circle at 92% 95%, ${c2}55, transparent 52%), radial-gradient(circle at 60% 40%, ${c1}1f, transparent 60%)`,
+          color: "#F7E9F0",
+          padding: "56px 60px",
+          fontFamily: family,
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 24,
-              letterSpacing: 6,
-              fontWeight: 700,
-              color: theme.accentDark,
-            }}
-          >
-            {card.eyebrow.toUpperCase()}
-          </div>
-          <div style={{ display: "flex", fontSize: 68, fontWeight: 700, marginTop: 10 }}>
-            {longDate(inputs.date)}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 30,
-              marginTop: 12,
-              color: "rgba(244,236,238,0.72)",
-            }}
-          >
-            {itinerary.summary_route}
-          </div>
-        </div>
-
-        {/* The stops, named. A plan is the places, so they are the picture. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {stops.slice(0, 3).map((s, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 29 }}>
-              {/*
-                Fixed and non-wrapping. At 92px "11:15 PM" broke onto a second
-                line, which pushed the footer off the bottom of the card, and
-                an overflowing OG image is simply a cropped one: nothing warns
-                you, it is just missing.
-              */}
+        {/* ── left: the occasion ── */}
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", width: 640, paddingRight: 30 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", alignItems: "center", fontSize: 24, fontWeight: 800, letterSpacing: 5, color: c1 }}>
+              <span style={{ marginRight: 14, fontSize: 30 }}>{MOTIF[inputs.occasion] ?? "✨"}</span>
+              {card.eyebrow}
+            </div>
+            <div style={{ display: "flex", fontSize: 92, fontWeight: 800, letterSpacing: -3, lineHeight: 1, marginTop: 22 }}>{weekday}</div>
+            {dayMonth ? (
               <div
                 style={{
                   display: "flex",
-                  width: 132,
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                  color: theme.accentDark,
-                  fontWeight: 700,
+                  fontSize: 92,
+                  fontWeight: 800,
+                  letterSpacing: -3,
+                  lineHeight: 1.08,
+                  backgroundImage: `linear-gradient(90deg, ${c1}, ${c2})`,
+                  backgroundClip: "text",
+                  color: "transparent",
                 }}
               >
-                {s.arrival_time}
+                {dayMonth}
               </div>
-              <div style={{ display: "flex", whiteSpace: "nowrap" }}>{s.name}</div>
+            ) : null}
+            <div style={{ display: "flex", flexWrap: "wrap", marginTop: 26 }}>
+              {route.map((area, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center" }}>
+                  {i ? <div style={{ display: "flex", margin: "0 12px", fontSize: 28, fontWeight: 800, color: c1 }}>→</div> : null}
+                  <div
+                    style={{
+                      display: "flex",
+                      fontSize: 24,
+                      fontWeight: 600,
+                      padding: "8px 18px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      background: "rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    {area}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 54,
+                height: 54,
+                borderRadius: 16,
+                background: `linear-gradient(135deg, ${c1}, ${c2})`,
+                fontSize: 28,
+                fontWeight: 800,
+                color: "#1A0D14",
+              }}
+            >
+              A
+            </div>
+            <div style={{ display: "flex", fontSize: 34, fontWeight: 800, marginLeft: 14, letterSpacing: -1 }}>
+              adu<span style={{ color: c2 }}>ro</span>
+            </div>
+            {/*
+              The total used to sit here, and a preview is the worst place for
+              it: it shows in the chat before anyone taps, so a plan made for
+              two announced its own cost to the person it was made for. The
+              start time says the useful thing and gives nothing away.
+            */}
+            <div style={{ display: "flex", fontSize: 24, fontWeight: 600, marginLeft: 26, color: "rgba(247,233,240,0.7)" }}>
+              {stops.length} stop{stops.length === 1 ? "" : "s"} · from {time12(inputs.startTime)}
+            </div>
+          </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "1px solid rgba(244,236,238,0.18)",
-            paddingTop: 22,
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", fontSize: 28, fontWeight: 700 }}>aduro</div>
-          {/*
-            The total used to sit here, and a preview is the worst place for it:
-            it shows in the chat before anyone taps, so a plan made for two
-            announced its own cost to the person it was made for, in a thread
-            neither of them can take it back out of. The start time says the
-            same useful thing about the evening and gives nothing away.
-          */}
-          <div style={{ display: "flex", fontSize: 28, color: "rgba(244,236,238,0.72)" }}>
-            {stops.length} stop{stops.length === 1 ? "" : "s"} · from{" "}
-            {time12(inputs.startTime)}
-          </div>
+        {/* ── right: the stops, as the page's cards ── */}
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, position: "relative" }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 29,
+              top: 70,
+              bottom: 70,
+              width: 4,
+              borderRadius: 4,
+              background: `linear-gradient(180deg, ${c1}, ${c2})`,
+              opacity: 0.6,
+            }}
+          />
+          {shown.map((st, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", marginTop: i ? 18 : 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 62,
+                  height: 62,
+                  borderRadius: 20,
+                  background: `linear-gradient(135deg, ${c1}, ${c2})`,
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: "#1A0D14",
+                  flexShrink: 0,
+                }}
+              >
+                {i + 1}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: 1,
+                  marginLeft: 18,
+                  padding: "16px 22px",
+                  borderRadius: 22,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.07)",
+                }}
+              >
+                {/*
+                  Fixed and non-wrapping. A wrapped time or name pushes the rest
+                  off the bottom, and an overflowing preview is simply a cropped
+                  one: nothing warns you, it is just missing.
+                */}
+                <div style={{ display: "flex", fontSize: 21, fontWeight: 800, color: c1, whiteSpace: "nowrap" }}>{st.arrival_time}</div>
+                <div style={{ display: "flex", fontSize: 29, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 340 }}>
+                  {st.name}
+                </div>
+              </div>
+            </div>
+          ))}
+          {stops.length > shown.length ? (
+            <div style={{ display: "flex", marginTop: 14, marginLeft: 80, fontSize: 22, fontWeight: 600, color: "rgba(247,233,240,0.6)" }}>
+              + {stops.length - shown.length} more
+            </div>
+          ) : null}
         </div>
       </div>
     ),
-    size
+    { ...size, fonts }
   );
 }
