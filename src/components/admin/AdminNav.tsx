@@ -60,6 +60,7 @@ const GROUPS: {
     label: "Operations",
     links: [
       { href: "/admin/demand", label: "Demand" },
+      { href: "/admin/poll", label: "Name poll" },
       { href: "/admin/reservations", label: "Reservations" },
       { href: "/admin/venue-logins", label: "Venue logins" },
       { href: "/admin/planners", label: "Event planners" },
