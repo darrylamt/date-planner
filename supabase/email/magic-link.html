@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Your aduro sign-in link</title>
+</head>
+<body style="margin:0;padding:0;background:#FBF4F7;">
+<!-- The inbox preview line, hidden in the email itself. -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Tap to sign in. No password needed.&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF4F7;">
+  <tr>
+    <td align="center" style="padding:32px 14px;">
+
+      <!-- The logo: the tile and the wordmark, drawn in HTML so it shows with images off. -->
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="width:40px;height:40px;border-radius:12px;background:#E23D6D;background-image:linear-gradient(135deg,#E23D6D,#E5B04E);color:#ffffff;font:800 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;text-align:center;line-height:40px;">A</td>
+          <td style="padding-left:10px;font:800 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;letter-spacing:-0.5px;color:#1C1216;">adu<span style="color:#E23D6D;">ro</span></td>
+        </tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin-top:22px;background:#ffffff;border-radius:26px;overflow:hidden;box-shadow:0 18px 50px -28px rgba(226,61,109,0.45);">
+        <tr>
+          <td style="padding:30px 32px 12px;text-align:center;">
+            <!-- A short bar rather than a strip: mail clients do not clip a full-width one to the card's corners. -->
+            <div style="width:72px;height:5px;border-radius:5px;background:#E23D6D;background-image:linear-gradient(90deg,#E23D6D,#E5B04E);margin:0 auto 24px;font-size:0;line-height:0;">&nbsp;</div>
+            <div style="font-size:44px;line-height:1;">✨</div>
+            <h1 style="margin:18px 0 0;font:800 27px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#1C1216;letter-spacing:-0.4px;">Here is your way in</h1>
+            <p style="margin:14px 0 0;font:16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#6E5A63;">Tap below to sign in to aduro as {{ .Email }}. No password needed.</p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:24px 32px 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="border-radius:999px;background:#E23D6D;background-image:linear-gradient(100deg,#E23D6D,#E5B04E);">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:16px 36px;font:700 17px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">Sign me in</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 32px 34px;text-align:center;">
+            <p style="margin:0;font:13px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#6E5A63;">The link works once and expires soon. If you did not ask to sign in, ignore this email.</p>
+            <p style="margin:16px 0 0;font:12px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#A8969E;">Button not working? Paste this into your browser:<br>
+              <a href="{{ .ConfirmationURL }}" style="color:#E23D6D;word-break:break-all;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+        <tr>
+          <td style="padding:24px 20px 0;text-align:center;font:13px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#6E5A63;">
+            Dates, birthdays and days out in Accra, planned from real menus and real prices.<br>
+            <a href="https://apps.apple.com/gh/app/adurogh/id6809005685" style="color:#E23D6D;font-weight:700;text-decoration:none;">Get aduro on the App Store &rarr;</a>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -102,6 +102,7 @@ export default function SavedPlanScreen() {
     <OccasionThemeProvider occasion={plan.inputs.occasion}>
       <ItineraryView
         inputs={plan.inputs}
+        initialNote={plan.planner_note}
         itinerary={itinerary}
         onItineraryChange={handleChange}
         /*

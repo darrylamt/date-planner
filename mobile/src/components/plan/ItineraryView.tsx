@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Alert,
   InteractionManager,
@@ -39,7 +39,8 @@ import { ghs, instagramUrl, longDate } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
-import { planMailto } from "../../lib/planEmail";
+import { planEmailHtml, planMailto } from "../../lib/planEmail";
+import { nativeOptional } from "../../lib/nativeOptional";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -54,6 +55,15 @@ import type {
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
+/*
+ * The Mail composer arrived with the 1.1.0 build. Resolved defensively, so a
+ * phone on an older binary that gets this bundle over the air sends the
+ * plain email instead of losing the button.
+ */
+function mailComposer() {
+  return nativeOptional(() => require("expo-mail-composer") as typeof import("expo-mail-composer"));
+}
+
 export function ItineraryView({
   inputs,
   itinerary,
@@ -62,6 +72,7 @@ export function ItineraryView({
   onSave,
   shareSlug,
   saving,
+  initialNote = null,
 }: {
   inputs: PlanInputs;
   itinerary: Itinerary;
@@ -71,11 +82,18 @@ export function ItineraryView({
   onSave: () => Promise<string | null>;
   shareSlug: string | null;
   saving: boolean;
+  /** The note already on the saved plan, if this is one. */
+  initialNote?: string | null;
 }) {
   const c = useTheme();
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
+  // "share" is the note asked for on the way to the share sheet; "edit" is
+  // changing it afterwards from the card, with no share at the end.
+  const [noteMode, setNoteMode] = useState<"share" | "edit">("share");
+  const [note, setNote] = useState<string | null>(initialNote?.trim() || null);
+  useEffect(() => setNote(initialNote?.trim() || null), [initialNote]);
   const [pickupOpen, setPickupOpen] = useState(false);
   const [pickup, setPickup] = useState<PickupChoice | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
@@ -287,8 +305,26 @@ export function ItineraryView({
     }
 
     const url = slug ? `${WEB_URL}/p/${slug}` : null;
+    /*
+     * The designed email where the phone can compose one: Apple Mail with an
+     * account set up. Anywhere else, Gmail or a phone with no Mail account or
+     * a build from before the composer was added, a mailto link can only
+     * carry plain text, so it gets the plain version, which says the same.
+     */
+    const composer = mailComposer();
+    if (composer) {
+      try {
+        if (await composer.isAvailableAsync()) {
+          const { subject, html } = planEmailHtml(itinerary, inputs, url, note);
+          await composer.composeAsync({ subject, body: html, isHtml: true });
+          return;
+        }
+      } catch {
+        // Fall through to the plain one.
+      }
+    }
     try {
-      await Linking.openURL(planMailto(itinerary, inputs.date, url));
+      await Linking.openURL(planMailto(itinerary, inputs.date, url, "", note));
     } catch {
       setToast("No mail app is set up on this device.");
     }
@@ -307,7 +343,21 @@ export function ItineraryView({
 
     // The sheet decides; sharing continues in shareWith once it closes.
     setPendingSlug(slug);
+    setNoteMode("share");
     setNoteOpen(true);
+  }
+
+  /** Change or clear the note later, from the card that shows it. */
+  async function saveNoteOnly(text: string | null) {
+    setNoteOpen(false);
+    if (!shareSlug || text == null) return;
+    const saved = await setPlannerNote(shareSlug, text);
+    if (!saved) {
+      setToast("The note did not save. Try again.");
+      return;
+    }
+    setNote(text.trim() || null);
+    setToast(text.trim() ? "Note saved. They will see it when they open the link." : "Note removed.");
   }
 
   /**
@@ -321,21 +371,34 @@ export function ItineraryView({
    * the dismissal time it needed; "Share without a note" has nothing to await
    * and so did nothing at all.
    */
-  async function shareWith(note: string | null) {
+  async function shareWith(picked: string | null) {
     const slug = pendingSlug;
     setNoteOpen(false);
     setPendingSlug(null);
     if (!slug) return;
 
-    if (note) {
-      const saved = await setPlannerNote(slug, note);
-      if (!saved) setToast("The note did not save, sharing anyway.");
+    /*
+     * "Share without a note" on a plan that already has one means without it,
+     * so the old note comes off rather than riding along unseen by the sender.
+     */
+    const wanted = picked ?? (note ? "" : null);
+    if (wanted != null) {
+      const saved = await setPlannerNote(slug, wanted);
+      if (saved) setNote(wanted.trim() || null);
+      else setToast("The note did not save, sharing anyway.");
     }
+    const sending = picked?.trim() || null;
 
     await waitForModalToClose();
 
     const url = `${WEB_URL}/p/${slug}`;
-    const said = `Our plan for ${longDate(inputs.date)}`;
+    /*
+     * The note leads the message as well as the page, so it is read in the
+     * chat even by somebody who never taps the link.
+     */
+    const said = sending
+      ? `"${sending}"\n\nOur plan for ${longDate(inputs.date)}`
+      : `Our plan for ${longDate(inputs.date)}`;
     try {
       /*
        * The link goes in exactly one of these, and which one depends on the
@@ -603,6 +666,41 @@ export function ItineraryView({
           </View>
         ) : null}
 
+        {/*
+          The note, where the sender can see it again. It used to go straight
+          to the shared page and never come back, so nobody who had written
+          one could check it or change it.
+        */}
+        {shareSlug && note ? (
+          <Pressable
+            onPress={() => {
+              setNoteMode("edit");
+              setNoteOpen(true);
+            }}
+            style={{
+              marginHorizontal: GUTTER,
+              marginBottom: space.xl,
+              padding: space.lg,
+              borderRadius: radius.card,
+              backgroundColor: c.accentSoft,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginBottom: space.xs }}>
+              <Symbol name="envelope.fill" size={13} color={c.accent} />
+              <Text variant="caption1" tone="tint" weight="700" style={{ flex: 1, letterSpacing: 0.6 }}>
+                YOUR NOTE
+              </Text>
+              <Text variant="footnote" tone="tint" weight="600">
+                Edit
+              </Text>
+            </View>
+            <Text variant="body">{note}</Text>
+            <Text variant="caption1" tone="secondary" style={{ marginTop: space.xs }}>
+              In your message, and at the top of the plan when they open the link.
+            </Text>
+          </Pressable>
+        ) : null}
+
         {/* Timeline */}
         <View style={{ paddingHorizontal: GUTTER }}>
           {itinerary.stops.map((stop, i) => (
@@ -682,14 +780,13 @@ export function ItineraryView({
 
       <NoteSheet
         visible={noteOpen}
-        // The itinerary in hand carries no note; it lives on the saved plan
-        // row, which this screen has not loaded.
-        initial=""
+        mode={noteMode}
+        initial={note ?? ""}
         onClose={() => {
           setNoteOpen(false);
           setPendingSlug(null);
         }}
-        onDone={(note) => void shareWith(note)}
+        onDone={(text) => void (noteMode === "edit" ? saveNoteOnly(text) : shareWith(text))}
       />
 
       <Toast message={toast} onDone={() => setToast(null)} />

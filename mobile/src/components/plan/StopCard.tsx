@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { ActivityIndicator, Linking, Pressable, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Easing, Linking, Pressable, View } from "react-native";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { StopGallery } from "./StopGallery";
@@ -162,11 +163,22 @@ export function StopCard({
           is. The night is what somebody came for; the name of the building
           it happens in was set larger than the name of the thing happening.
         */}
-        {stop.event ? (
-          <Text variant="title2">{stop.event.title}</Text>
-        ) : (
-          <Text variant="title3">{stop.name}</Text>
-        )}
+        {/*
+          Swap beside the name, filled, rather than one grey pill among eight
+          at the foot of the card. Testers read the card top to bottom, found
+          what they wanted to change at the top, and never got as far as the
+          row that could change it.
+        */}
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.sm }}>
+          <View style={{ flex: 1 }}>
+            {stop.event ? (
+              <Text variant="title2">{stop.event.title}</Text>
+            ) : (
+              <Text variant="title3">{stop.name}</Text>
+            )}
+          </View>
+          <SwapButton onPress={onSwap} busy={swapping} hint={index === 0} />
+        </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
           <Symbol name="mappin" size={12} color={c.textSecondary} />
@@ -194,6 +206,27 @@ export function StopCard({
             <Text variant="footnote" tone="tint" weight="600">
               On this date only
               {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* A night only some people can come to says so, before anybody forwards it. */}
+        {stop.event?.audience && stop.event.audience !== "everyone" ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              alignSelf: "flex-start",
+              gap: space.xs,
+              backgroundColor: c.accentSoft,
+              borderRadius: radius.pill,
+              paddingHorizontal: space.sm,
+              paddingVertical: 3,
+            }}
+          >
+            <Symbol name="person.2.fill" size={12} color={c.accent} />
+            <Text variant="footnote" tone="tint" weight="700">
+              {stop.event.audience === "women" ? "Ladies only" : "Men only"}
             </Text>
           </View>
         ) : null}
@@ -327,6 +360,29 @@ export function StopCard({
           </View>
         ) : null}
 
+        {/*
+          The way into the menu, right under the dishes, which is where
+          somebody looking at what they are ordering already is. It used to
+          be a pill at the bottom labelled "Menu", which read as a heading.
+        */}
+        {editable ? (
+          <BigAction
+            icon={isActivityVenue ? "figure.bowling" : "fork.knife"}
+            title={isActivityVenue ? "See what you can do here" : "See the full menu"}
+            sub={
+              isActivityVenue
+                ? "Games, sessions and prices"
+                : stop.orders.length
+                  ? "Change what you order, or add to it"
+                  : "Pick something to order here"
+            }
+            onPress={() => (isActivityVenue ? setActivityOpen(true) : setMenuOpen(true))}
+          />
+        ) : null}
+        {editable && isActivityVenue ? (
+          <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one" onPress={() => setMenuOpen(true)} />
+        ) : null}
+
         {/* Stop subtotal */}
         <View
           style={{
@@ -382,24 +438,6 @@ export function StopCard({
             paddingTop: space.md,
           }}
         >
-          <StopAction icon="arrow.triangle.2.circlepath" label="Swap" onPress={onSwap} busy={swapping} />
-          {editable ? (
-            <StopAction icon="list.bullet" label="Menu" onPress={() => setMenuOpen(true)} />
-          ) : null}
-          {/*
-            Somewhere you do something rather than eat something, so what is on
-            offer is a price list of lanes and courts and not a menu. Shown
-            from the venue's own type, which the itinerary now carries: the
-            card used to know this stop's name, area and price and nothing at
-            all about what kind of place it was.
-          */}
-          {editable && isActivityVenue ? (
-            <StopAction
-              icon="figure.bowling"
-              label="Activity"
-              onPress={() => setActivityOpen(true)}
-            />
-          ) : null}
           <StopAction icon="map" label="Map" onPress={openMaps} />
           {/*
             A ride here, from wherever they are when they tap it.
@@ -499,6 +537,177 @@ export function StopCard({
         only="activity"
       />
     </View>
+  );
+}
+
+const SWAP_HINT = "aduro-swap-hint-v1";
+// Read once per launch, so every card does not ask storage the same question.
+let hintSeen: boolean | null = null;
+
+/**
+ * Swap, where it is seen: filled in the occasion's colour, beside the name.
+ *
+ * On the first stop of somebody's first plan it pulses and says what it is
+ * for, once, and never again after they tap it or wave the hint away.
+ */
+function SwapButton({ onPress, busy, hint }: { onPress: () => void; busy: boolean; hint: boolean }) {
+  const c = useTheme();
+  const [showHint, setShowHint] = useState(false);
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!hint) return;
+    let live = true;
+    (async () => {
+      if (hintSeen == null) {
+        try {
+          hintSeen = (await AsyncStorage.getItem(SWAP_HINT)) === "1";
+        } catch {
+          hintSeen = true; // No storage: better never to nag than to nag always.
+        }
+      }
+      if (live && !hintSeen) setShowHint(true);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [hint]);
+
+  useEffect(() => {
+    if (!showHint) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(500),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [showHint, pulse]);
+
+  function seen() {
+    hintSeen = true;
+    setShowHint(false);
+    void AsyncStorage.setItem(SWAP_HINT, "1").catch(() => undefined);
+  }
+
+  return (
+    <View style={{ alignItems: "flex-end" }}>
+      <View>
+        {showHint ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: radius.pill,
+              backgroundColor: c.accent,
+              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }],
+            }}
+          />
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Swap this stop for another place"
+          disabled={busy}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            if (showHint) seen();
+            onPress();
+          }}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: space.md,
+            height: 36,
+            borderRadius: radius.pill,
+            backgroundColor: c.accent,
+            opacity: pressed ? 0.8 : 1,
+          })}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color={c.textOnBrand} />
+          ) : (
+            <Symbol name="arrow.triangle.2.circlepath" size={14} color={c.textOnBrand} weight="semibold" />
+          )}
+          <Text variant="subheadline" weight="700" style={{ color: c.textOnBrand }}>
+            Swap
+          </Text>
+        </Pressable>
+      </View>
+      {showHint ? (
+        <Pressable
+          onPress={seen}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss hint"
+          style={{
+            marginTop: space.xs,
+            maxWidth: 190,
+            backgroundColor: c.accentSoft,
+            borderRadius: 12,
+            paddingHorizontal: space.sm,
+            paddingVertical: 6,
+          }}
+        >
+          <Text variant="caption1" tone="tint" weight="600">
+            Not feeling a place? Swap it for another that fits. Tap to hide.
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/** A full-width row for an action worth finding: tinted, with a line saying what it does. */
+function BigAction({
+  icon,
+  title,
+  sub,
+  onPress,
+}: {
+  icon: Parameters<typeof Symbol>[0]["name"];
+  title: string;
+  sub: string;
+  onPress: () => void;
+}) {
+  const c = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={() => {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.md,
+        marginTop: space.xs,
+        paddingHorizontal: space.md,
+        paddingVertical: space.sm + 2,
+        borderRadius: radius.control,
+        backgroundColor: c.accentSoft,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      <Symbol name={icon} size={18} color={c.accent} />
+      <View style={{ flex: 1 }}>
+        <Text variant="subheadline" weight="700" tone="tint">
+          {title}
+        </Text>
+        <Text variant="caption1" tone="secondary">
+          {sub}
+        </Text>
+      </View>
+      <Symbol name="chevron.right" size={14} color={c.accent} weight="semibold" />
+    </Pressable>
   );
 }
 

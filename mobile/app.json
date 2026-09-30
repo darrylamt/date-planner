@@ -173,7 +173,8 @@
           "color": "#E4572E",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-mail-composer"
     ],
     "experiments": {
       "typedRoutes": true

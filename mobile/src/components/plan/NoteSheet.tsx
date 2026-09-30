@@ -23,11 +23,14 @@ const MAX = 400;
 export function NoteSheet({
   visible,
   initial,
+  mode = "share",
   onClose,
   onDone,
 }: {
   visible: boolean;
   initial: string;
+  /** "share" on the way to sending the plan; "edit" to change it afterwards. */
+  mode?: "share" | "edit";
   onClose: () => void;
   /** Null means skip. A string, including empty, means save that. */
   onDone: (note: string | null) => void;
@@ -63,7 +66,7 @@ export function NoteSheet({
             borderBottomColor: c.border,
           }}
         >
-          <Text variant="headline">Add a note</Text>
+          <Text variant="headline">{mode === "edit" ? "Your note" : initial ? "Your note" : "Add a note"}</Text>
           <Pressable onPress={onClose} hitSlop={12}>
             <Symbol name="xmark.circle.fill" size={28} color={c.textTertiary} />
           </Pressable>
@@ -71,8 +74,9 @@ export function NoteSheet({
 
         <View style={{ padding: GUTTER, flex: 1 }}>
           <Text variant="footnote" tone="secondary" style={{ marginBottom: space.sm }}>
-            One line on the card, from you. Why you picked this, what to wear, or
-            that it is a surprise.
+            A line from you. It goes at the start of your message, and at the top
+            of the plan when they open the link. Why you picked this, what to
+            wear, or that it is a surprise.
           </Text>
 
           <TextInput
@@ -101,15 +105,23 @@ export function NoteSheet({
             {text.length} / {MAX}
           </Text>
 
-          <View style={{ marginTop: space.lg, gap: space.sm }}>
-            <Button
-              title="Add it and share"
-              onPress={() => onDone(text.trim())}
-              disabled={!text.trim()}
-            />
-            {/* Plain, not secondary: skipping is the common case, not a retreat. */}
-            <Button title="Share without a note" kind="plain" onPress={() => onDone(null)} />
-          </View>
+          {mode === "edit" ? (
+            <View style={{ marginTop: space.lg, gap: space.sm }}>
+              <Button title="Save note" onPress={() => onDone(text.trim())} disabled={!text.trim() || text.trim() === initial.trim()} />
+              {/* Empty is "take it off", which the plan then shows as no note at all. */}
+              <Button title="Remove the note" kind="plain" onPress={() => onDone("")} />
+            </View>
+          ) : (
+            <View style={{ marginTop: space.lg, gap: space.sm }}>
+              <Button
+                title={initial ? "Share with this note" : "Add it and share"}
+                onPress={() => onDone(text.trim())}
+                disabled={!text.trim()}
+              />
+              {/* Plain, not secondary: skipping is the common case, not a retreat. */}
+              <Button title="Share without a note" kind="plain" onPress={() => onDone(null)} />
+            </View>
+          )}
         </View>
 
         <View style={{ height: insets.bottom }} />

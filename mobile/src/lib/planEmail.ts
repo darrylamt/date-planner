@@ -1,5 +1,8 @@
-import { ghs, longDate } from "./format";
-import type { Itinerary } from "./types";
+import { ghs, longDate, time12 } from "./format";
+import { OCCASION_THEME } from "./planConstants";
+import type { Itinerary, PlanInputs } from "./types";
+
+const APP_STORE = "https://apps.apple.com/gh/app/adurogh/id6809005685";
 
 /**
  * The plan as an email.
@@ -16,10 +19,15 @@ import type { Itinerary } from "./types";
 export function planEmail(
   itinerary: Itinerary,
   date: string,
-  url: string | null
+  url: string | null,
+  note: string | null = null
 ): { subject: string; body: string } {
   const lines: string[] = [];
 
+  if (note) {
+    lines.push(`"${note}"`);
+    lines.push("");
+  }
   lines.push(itinerary.title);
   lines.push(longDate(date));
   if (itinerary.summary_route) lines.push(itinerary.summary_route);
@@ -78,10 +86,182 @@ export function planMailto(
   itinerary: Itinerary,
   date: string,
   url: string | null,
-  to = ""
+  to = "",
+  note: string | null = null
 ): string {
-  const { subject, body } = planEmail(itinerary, date, url);
+  const { subject, body } = planEmail(itinerary, date, url, note);
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(
     subject
   )}&body=${encodeURIComponent(body)}`;
+}
+
+/** Text from the catalogue or the sender, made safe to set inside HTML. */
+function esc(text: string | null | undefined): string {
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * The plan as a designed email, for the phone's own Mail composer.
+ *
+ * Built the way mail clients need it, not the way a web page would be:
+ * tables for layout, every style inline, a flat colour behind every gradient
+ * for the clients that drop gradients, and nothing that needs a script or a
+ * stylesheet. Light, because a dark email is inverted unpredictably by the
+ * clients that apply their own dark mode.
+ *
+ * The same content as the plain version, in the same order, so which one a
+ * phone sends changes how it looks and never what it says.
+ */
+export function planEmailHtml(
+  itinerary: Itinerary,
+  inputs: Pick<PlanInputs, "date" | "startTime" | "occasion">,
+  url: string | null,
+  note: string | null = null
+): { subject: string; html: string } {
+  const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
+  const accent = theme.accent;
+  const glow = theme.accentDark;
+  const ink = "#1C1216";
+  const soft = "#6E5A63";
+  const line = "#EFE4E8";
+  const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+  const stops = itinerary.stops
+    .map((stop, i) => {
+      const orders = stop.orders.length
+        ? stop.orders
+            .map(
+              (o) => `
+                <tr>
+                  <td style="padding:4px 0;font:15px ${font};color:${ink};">${esc(o.item)}${o.qty > 1 ? ` <span style="color:${soft};">&times;${o.qty}</span>` : ""}</td>
+                  <td align="right" valign="top" style="padding:4px 0 4px 14px;font:15px ${font};color:${ink};white-space:nowrap;">${esc(ghs(Number(o.price_ghs)))}</td>
+                </tr>`
+            )
+            .join("")
+        : `<tr><td colspan="2" style="padding:4px 0;font:15px ${font};color:${soft};">Free to enter</td></tr>`;
+
+      const hop = itinerary.hops[i];
+      const ride =
+        hop && i < itinerary.stops.length - 1
+          ? `
+          <tr>
+            <td style="padding:14px 0 14px 18px;font:14px ${font};color:${soft};">
+              <span style="display:inline-block;width:2px;height:22px;background:${glow};vertical-align:middle;margin-right:14px;"></span>
+              About ${hop.mins} min to the next stop${Number(hop.cost_ghs) > 0 ? `, ${esc(ghs(Number(hop.cost_ghs)))}` : ", your own drive"}
+            </td>
+          </tr>`
+          : "";
+
+      return `
+          <tr>
+            <td style="padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${line};border-radius:18px;">
+                <tr>
+                  <td width="44" valign="top" style="padding:18px 0 18px 18px;">
+                    <div style="width:36px;height:36px;line-height:36px;border-radius:12px;background:${accent};background-image:linear-gradient(135deg,${accent},${glow});color:#ffffff;font:700 16px ${font};text-align:center;">${i + 1}</div>
+                  </td>
+                  <td valign="top" style="padding:18px 18px 18px 12px;">
+                    <div style="font:700 12px ${font};letter-spacing:1.2px;color:${accent};text-transform:uppercase;">${esc(stop.arrival_time)} &middot; ${esc(stop.event ? stop.event.title : stop.label)}</div>
+                    <div style="font:800 20px ${font};color:${ink};margin-top:4px;">${esc(stop.name)}</div>
+                    <div style="font:14px ${font};color:${soft};margin-top:2px;">${esc(stop.area)}</div>
+                    ${stop.what_to_do ? `<div style="font:15px/1.5 ${font};color:${ink};margin-top:10px;">${esc(stop.what_to_do)}</div>` : ""}
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid ${line};padding-top:6px;">
+                      ${orders}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>${ride}`;
+    })
+    .join("");
+
+  const transport = Number(itinerary.transport_total_ghs) > 0;
+  const button = url
+    ? `
+          <tr>
+            <td align="center" style="padding:28px 0 4px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-radius:999px;background:${accent};background-image:linear-gradient(100deg,${accent},${glow});">
+                    <a href="${esc(url)}" style="display:inline-block;padding:15px 32px;font:700 16px ${font};color:#ffffff;text-decoration:none;border-radius:999px;">Open the live plan</a>
+                  </td>
+                </tr>
+              </table>
+              <div style="font:12px ${font};color:${soft};margin-top:10px;">Times, directions and anything that changes, kept up to date.</div>
+            </td>
+          </tr>`
+    : "";
+
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+</head>
+<body style="margin:0;padding:0;background:#F7F0F3;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F0F3;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:26px;overflow:hidden;">
+        <tr>
+          <td style="background:${accent};background-image:linear-gradient(135deg,${accent} 0%,${glow} 100%);padding:30px 28px 28px;">
+            <div style="font:700 12px ${font};letter-spacing:2px;color:rgba(255,255,255,0.85);text-transform:uppercase;">${esc(longDate(inputs.date))} &middot; from ${esc(time12(inputs.startTime))}</div>
+            <div style="font:800 30px/1.15 ${font};color:#ffffff;margin-top:10px;">${esc(itinerary.title)}</div>
+            ${itinerary.summary_route ? `<div style="font:15px ${font};color:rgba(255,255,255,0.92);margin-top:10px;">${esc(itinerary.summary_route)}</div>` : ""}
+          </td>
+        </tr>
+        ${
+          note
+            ? `
+        <tr>
+          <td style="padding:24px 28px 0;">
+            <div style="border-left:4px solid ${accent};background:#FBF4F7;border-radius:4px 14px 14px 4px;padding:14px 18px;">
+              <div style="font:700 11px ${font};letter-spacing:1.4px;color:${accent};text-transform:uppercase;">A note for you</div>
+              <div style="font:17px/1.5 ${font};color:${ink};margin-top:6px;">${esc(note)}</div>
+            </div>
+          </td>
+        </tr>`
+            : ""
+        }
+        <tr>
+          <td style="padding:24px 20px 4px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              ${stops}
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 28px 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF4F7;border-radius:16px;">
+              <tr><td style="padding:14px 18px 4px;font:15px ${font};color:${soft};">Food and entry</td><td align="right" style="padding:14px 18px 4px;font:15px ${font};color:${ink};">${esc(ghs(Number(itinerary.food_total_ghs)))}</td></tr>
+              ${transport ? `<tr><td style="padding:4px 18px;font:15px ${font};color:${soft};">Transport</td><td align="right" style="padding:4px 18px;font:15px ${font};color:${ink};">${esc(ghs(Number(itinerary.transport_total_ghs)))}</td></tr>` : ""}
+              <tr><td style="padding:8px 18px 14px;font:800 17px ${font};color:${ink};">Total</td><td align="right" style="padding:8px 18px 14px;font:800 17px ${font};color:${accent};">${esc(ghs(Number(itinerary.est_total_ghs)))}</td></tr>
+            </table>
+            ${itinerary.budget_note ? `<div style="font:13px/1.5 ${font};color:${soft};margin-top:10px;">${esc(itinerary.budget_note)}</div>` : ""}
+          </td>
+        </tr>
+        ${button}
+        <tr>
+          <td style="padding:28px 28px 30px;text-align:center;">
+            <div style="font:13px ${font};color:${soft};">Planned with</div>
+            <div style="font:800 22px ${font};color:${ink};margin-top:2px;">adu<span style="color:${accent};">ro</span></div>
+            <div style="font:13px ${font};margin-top:12px;"><a href="${APP_STORE}" style="color:${accent};font-weight:700;text-decoration:none;">Plan your own on the App Store &rarr;</a></div>
+            <div style="font:11px/1.5 ${font};color:#A8969E;margin-top:14px;">Menu prices are from our catalogue and can change. A plan is a suggestion, not a booking.</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+
+  return { subject: `${itinerary.title}, ${longDate(inputs.date)}`, html };
 }
