@@ -20,6 +20,10 @@ export const NAME_OPTIONS: NameOption[] = [
 ];
 
 export const CHOICES = NAME_OPTIONS.map((o) => o.id);
+
+/** Voting closes at noon on 1 October, Accra time (GMT all year). Move this to extend it. */
+export const POLL_CLOSES_AT = Date.parse("2026-10-01T12:00:00Z");
+export const pollClosed = (now = Date.now()) => now >= POLL_CLOSES_AT;
 export type Choice = NameOption["id"];
 
 /** Case, spaces and punctuation aside: "duro", "Duro!" and " DURO " are one name. */

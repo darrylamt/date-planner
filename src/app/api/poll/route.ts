@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
-import { CHOICES, cleanName, fixedOptionFor, isAllowedName, nameKey, type PollResults } from "@/lib/namePoll";
+import { CHOICES, cleanName, fixedOptionFor, isAllowedName, nameKey, pollClosed, type PollResults } from "@/lib/namePoll";
 
 /**
  * The name poll.   GET: the counts and the suggested names.   POST: one vote.
@@ -57,6 +57,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  // The countdown on the page is only honest if the server keeps to it too.
+  if (pollClosed()) return NextResponse.json({ error: "Voting has closed." }, { status: 403 });
   let body: z.infer<typeof vote>;
   try {
     body = vote.parse(await req.json());

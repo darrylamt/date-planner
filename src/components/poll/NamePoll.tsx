@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import s from "./NamePoll.module.css";
-import { NAME_OPTIONS, colorsFor, nameKey, type Choice, type PollResults } from "@/lib/namePoll";
+import { NAME_OPTIONS, POLL_CLOSES_AT, colorsFor, nameKey, type Choice, type PollResults } from "@/lib/namePoll";
 import { APP_STORE_URL } from "@/lib/links";
 
 const STORE = "aduro-name-poll-v1";
@@ -103,6 +103,54 @@ function CountUp({ to, suffix = "" }: { to: number; suffix?: string }) {
       {n}
       {suffix}
     </>
+  );
+}
+
+/**
+ * The time left to vote, each digit flipping as it changes. Drawn only once
+ * mounted: the server's clock and the phone's would disagree on the seconds.
+ */
+function Countdown({ now }: { now: number | null }) {
+  const left = now == null ? null : Math.max(0, POLL_CLOSES_AT - now);
+  const parts = left == null
+    ? null
+    : [
+        { label: "hours", v: Math.floor(left / 3_600_000) },
+        { label: "mins", v: Math.floor(left / 60_000) % 60 },
+        { label: "secs", v: Math.floor(left / 1000) % 60 },
+      ];
+  const urgent = left != null && left < 3_600_000;
+
+  return (
+    <div className={`${s.countdown} ${urgent ? s.urgent : ""} mt-6 inline-flex flex-wrap items-center gap-x-5 gap-y-3 rounded-[22px] border border-white/10 px-5 py-4`}>
+      <div>
+        <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white/60">
+          <span className={s.liveDot} />
+          Voting closes in
+        </div>
+        <div className="mt-1 text-[13px] text-white/50">Thursday 1 October, 12 noon</div>
+      </div>
+      <div className="flex items-start gap-2" role="timer" aria-live="off">
+        {(parts ?? [{ label: "hours", v: -1 }, { label: "mins", v: -1 }, { label: "secs", v: -1 }]).map((p, k) => {
+          const text = p.v < 0 ? "--" : String(p.v).padStart(2, "0");
+          return (
+            <div key={p.label} className="flex items-start gap-2">
+              {k ? <span className="pt-1 text-[26px] font-extrabold text-white/40">:</span> : null}
+              <div className="text-center">
+                <div className="flex gap-1">
+                  {[...text].map((d, i) => (
+                    <span key={`${i}-${d}`} className={`${s.digit} grid h-[46px] w-[34px] place-items-center rounded-[10px] text-[28px] font-extrabold tabular-nums`}>
+                      {d}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">{p.label}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -270,6 +318,14 @@ export function NamePoll() {
   const otherRef = useRef<HTMLInputElement>(null);
   const pid = useRef(0);
   const reduced = useReducedMotion();
+  // The clock, ticking once a second; null until mounted.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const closed = now != null && now >= POLL_CLOSES_AT;
 
   const opt = NAME_OPTIONS.find((o) => o.id === (phase === "done" ? mine?.choice ?? choice : choice));
   const typed = (phase === "done" ? mine?.other ?? other : other).trim().slice(0, 16);
@@ -319,11 +375,16 @@ export function NamePoll() {
     }
   }, [loadResults]);
 
+  // At noon the form gives way to the final count, for voters and everyone else.
   useEffect(() => {
-    if (phase !== "done" || !results) return;
+    if (closed && !results) void loadResults();
+  }, [closed, results, loadResults]);
+
+  useEffect(() => {
+    if ((phase !== "done" && !closed) || !results) return;
     const t = setTimeout(() => setGrown(true), 120);
     return () => clearTimeout(t);
-  }, [phase, results]);
+  }, [phase, results, closed]);
 
   const burst = useCallback(
     (x: number, y: number, colors: string[]) => {
@@ -534,7 +595,7 @@ export function NamePoll() {
             </a>
             <div className="flex items-center gap-3">
               <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/80 md:inline">
-                {phase === "done" ? "Thanks for voting" : "Name poll · live"}
+                {closed ? "Voting closed" : phase === "done" ? "Thanks for voting" : "Name poll · live"}
               </span>
               <a
                 href={APP_STORE_URL}
@@ -547,6 +608,20 @@ export function NamePoll() {
               </a>
             </div>
           </div>
+          {/* On a phone the full countdown is a long scroll down, so the time left rides in the bar. */}
+          {now != null && !closed ? (
+            <div className="flex items-center justify-center gap-2 border-t border-white/5 py-1.5 text-[12px] font-semibold text-white/75 md:hidden">
+              <span className={s.liveDot} />
+              Voting closes in{" "}
+              <b className="font-mono text-white">
+                {(() => {
+                  const left = Math.max(0, POLL_CLOSES_AT - now);
+                  const pad = (n: number) => String(n).padStart(2, "0");
+                  return `${pad(Math.floor(left / 3_600_000))}:${pad(Math.floor(left / 60_000) % 60)}:${pad(Math.floor(left / 1000) % 60)}`;
+                })()}
+              </b>
+            </div>
+          ) : null}
         </header>
 
         <main className="mx-auto grid max-w-[1120px] grid-cols-1 gap-8 px-4 pb-24 pt-8 sm:px-5 md:grid-cols-[minmax(0,1fr)_330px] md:gap-14 md:pt-16">
@@ -558,10 +633,12 @@ export function NamePoll() {
               <span className={s.shimmer}>Be part of the change :)</span>
             </h1>
             <p className="mt-4 max-w-[560px] text-[16px] text-white/70">
-              Tap a name to try it on. Watch the logo up there, and the phone, become it.
+              {closed ? "Voting has closed. Here is how it ended." : "Tap a name to try it on. Watch the logo up there, and the phone, become it."}
             </p>
 
-            {phase !== "done" ? (
+            {closed ? null : <Countdown now={now} />}
+
+            {phase !== "done" && !closed ? (
               <div className="mt-8 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md md:p-7">
                 <h2 className="text-[18px] font-bold">
                   What should be Aduro&apos;s new name? <span style={{ color: c1 }}>*</span>
@@ -701,10 +778,17 @@ export function NamePoll() {
             ) : (
               /* ── after voting: the results, counting up ── */
               <div className={`${s.rise} mt-8 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md md:p-7`}>
-                <div className="text-[34px]">🎉</div>
-                <h2 className="mt-2 text-[26px] font-extrabold tracking-[-0.01em]">Thank you!</h2>
+                <div className="text-[34px]">{closed ? "🏁" : "🎉"}</div>
+                <h2 className="mt-2 text-[26px] font-extrabold tracking-[-0.01em]">{closed ? "The final count" : "Thank you!"}</h2>
                 <p className="mt-1 text-[15px] text-white/70">
-                  You picked <b style={{ color: c1 }}>{mine?.choice === "Other" ? mine?.other : mine?.choice}</b>. Here is how the vote is going.
+                  {mine ? (
+                    <>
+                      You picked <b style={{ color: c1 }}>{mine.choice === "Other" ? mine.other : mine.choice}</b>.{" "}
+                      {closed ? "Voting closed at noon on 1 October." : "Here is how the vote is going."}
+                    </>
+                  ) : (
+                    "Voting closed at noon on 1 October. Thank you to everybody who voted."
+                  )}
                 </p>
 
                 <div className="mt-6 grid gap-4">
@@ -736,7 +820,7 @@ export function NamePoll() {
                 </div>
                 {results ? (
                   <p className="mt-4 text-[13px] text-white/50">
-                    <CountUp to={results.total} /> {results.total === 1 ? "vote" : "votes"} so far.
+                    <CountUp to={results.total} /> {results.total === 1 ? "vote" : "votes"} {closed ? "in all" : "so far"}.
                   </p>
                 ) : null}
 
@@ -746,7 +830,7 @@ export function NamePoll() {
                   className={`${s.submit} mt-6 h-[54px] w-full rounded-[18px] text-[17px] font-extrabold`}
                   style={{ color: buttonInk }}
                 >
-                  {copied ? "Link copied" : "Send the poll to a friend"}
+                  {copied ? "Link copied" : closed ? "Share the result" : "Send the poll to a friend"}
                 </button>
               </div>
             )}
