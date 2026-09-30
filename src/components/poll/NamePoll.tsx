@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import s from "./NamePoll.module.css";
 import { NAME_OPTIONS, colorsFor, nameKey, type Choice, type PollResults } from "@/lib/namePoll";
+import { APP_STORE_URL } from "@/lib/links";
 
 const STORE = "aduro-name-poll-v1";
 /** The name as it is today, in its own colours. */
@@ -43,9 +44,10 @@ function useReducedMotion() {
 /**
  * The wordmark, re-lettered whenever the name changes: the old letters fall
  * away while the new ones flip up one by one. The last third of the name
- * takes the accent, the way "adu" and "ro" are split today.
+ * takes the accent, the way "adu" and "ro" are split today, or all of it
+ * when `whole` is set.
  */
-function Wordmark({ name }: { name: string }) {
+function Wordmark({ name, className = s.word, whole = false }: { name: string; className?: string; whole?: boolean }) {
   const [layers, setLayers] = useState([{ key: 0, text: name, leaving: false }]);
   const next = useRef(1);
 
@@ -60,10 +62,10 @@ function Wordmark({ name }: { name: string }) {
   }, [name]);
 
   return (
-    <span className={s.word} aria-label={name} role="img">
+    <span className={className} aria-label={name} role="img">
       {layers.map((l) => {
         const letters = [...l.text];
-        const split = letters.length - Math.max(2, Math.ceil(letters.length / 3));
+        const split = whole ? 0 : letters.length - Math.max(2, Math.ceil(letters.length / 3));
         return (
           <span key={l.key} className={s.wordLayer} aria-hidden>
             {letters.map((ch, i) => (
@@ -148,6 +150,100 @@ function confetti(colors: string[]) {
     else canvas.remove();
   };
   requestAnimationFrame(frame);
+}
+
+/*
+ * What aduro plans, one turning into the next, each with the shape of the
+ * outing it would hand back. Illustrations: no venue is named.
+ */
+const NEXT = [
+  { word: "date", emoji: "💘", stops: ["🍽️ Dinner in Osu", "🍸 Cocktails nearby"], total: "GHS 640 for two" },
+  { word: "birthday", emoji: "🎂", stops: ["🎳 Games first", "🍰 Dinner, then cake"], total: "GHS 1,100 for four" },
+  { word: "anniversary", emoji: "💍", stops: ["💆 Couples massage", "🥂 Dinner by the sea"], total: "GHS 1,800 for two" },
+  { word: "link-up", emoji: "🤙", stops: ["🍗 Grills and drinks", "🎤 Karaoke after"], total: "GHS 750 for five" },
+  { word: "solo day", emoji: "🧘", stops: ["🏊 A pool day", "☕ Brunch after"], total: "GHS 350 for one" },
+  { word: "family day", emoji: "👨‍👩‍👧", stops: ["🌳 Out in the open", "🍕 Lunch after"], total: "GHS 1,200 for six" },
+];
+
+/**
+ * The way to the app, for the many voting on its name who do not have it
+ * yet. The word after "Plan your next" turns over through what aduro plans,
+ * and a small plan for each rises under it. Apple's badge is left exactly
+ * as Apple draws it; everything around it moves instead.
+ */
+function GetTheApp({ reduced, ink }: { reduced: boolean; ink: string }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reduced) return;
+    const t = setInterval(() => setI((n) => (n + 1) % NEXT.length), 2600);
+    return () => clearInterval(t);
+  }, [reduced]);
+  const now = NEXT[i];
+
+  return (
+    <div className={`${s.appCard} mt-6 rounded-[28px] border border-white/10 p-5 md:p-7`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-white/55">Still aduro, for now</p>
+          <h2 className="mt-2 text-[30px] font-extrabold leading-[1.08] tracking-[-0.02em] md:text-[36px]">
+            Plan your next
+            <span className="sr-only"> date.</span>
+            <span aria-hidden className="block">
+              <Wordmark name={`${now.word}.`} className={s.rotor} whole />
+            </span>
+          </h2>
+        </div>
+        <span key={now.word} aria-hidden className={`${s.heart} shrink-0 text-[44px] leading-none`}>
+          {now.emoji}
+        </span>
+      </div>
+
+      <p className="mt-3 max-w-[480px] text-[15px] text-white/70">
+        Tell it your budget and what you are in the mood for. It picks the places, orders from real menus and
+        adds up the whole outing, the ride there included.
+      </p>
+
+      <div key={`plan-${now.word}`} aria-hidden className="mt-4 flex flex-wrap items-center gap-2 text-[13px] font-semibold sm:text-[14px]">
+        {now.stops.map((stop, k) => (
+          <span key={stop} className="flex items-center gap-2">
+            {/* Not on a phone, where the chips wrap and an arrow would start a line. */}
+            {k ? (
+              <span className={`${s.rise} hidden text-white/40 sm:inline`} style={{ animationDelay: `${80 + k * 160}ms` }}>
+                →
+              </span>
+            ) : null}
+            <span
+              className={`${s.rise} rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5`}
+              style={{ animationDelay: `${120 + k * 160}ms` }}
+            >
+              {stop}
+            </span>
+          </span>
+        ))}
+        <span
+          className={`${s.rise} rounded-full px-3 py-1.5 font-bold`}
+          style={{ animationDelay: "460ms", background: "linear-gradient(90deg, var(--c1), var(--c2))", color: ink }}
+        >
+          {now.total}
+        </span>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <a
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener"
+          className="inline-block rounded-[9px] outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/app-store-badge.svg" alt="Download on the App Store" width={150} height={50} className="block h-[50px] w-auto" />
+        </a>
+        <span className="text-[13px] text-white/55">
+          Free on iPhone. Listed as <b className="text-white/80">AduroGH</b>.
+        </span>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -429,15 +525,27 @@ export function NamePoll() {
         {/* The nav, whose logo becomes the name being tried on. */}
         <header className={s.nav}>
           <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-5">
-            <a href="/" className="flex items-center gap-3" aria-label="Home">
+            {/* Clipped rather than pushed: a long typed name must not shove "Get the app" off a phone. */}
+            <a href="/" className="flex h-full min-w-0 items-center gap-3 overflow-hidden pr-3" aria-label="Home">
               <span key={shown} className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
                 {opt?.id === "Other" && !typed ? "?" : initial}
               </span>
               <Wordmark name={shown} />
             </a>
-            <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/80 sm:inline">
-              {phase === "done" ? "Thanks for voting" : "Name poll · live"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/80 md:inline">
+                {phase === "done" ? "Thanks for voting" : "Name poll · live"}
+              </span>
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener"
+                className={`${s.submit} shrink-0 rounded-full px-3.5 py-2 text-[12px] font-extrabold sm:px-4 sm:text-[13px]`}
+                style={{ color: buttonInk }}
+              >
+                Get the app
+              </a>
+            </div>
           </div>
         </header>
 
@@ -642,6 +750,8 @@ export function NamePoll() {
                 </button>
               </div>
             )}
+
+            <GetTheApp reduced={reduced} ink={buttonInk} />
           </section>
 
           {/* ── the name, tried on ── */}

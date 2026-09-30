@@ -80,6 +80,7 @@
   border-radius: 11px;
   font-weight: 800;
   font-size: 19px;
+  flex-shrink: 0;
   color: #fff;
   box-shadow: 0 6px 22px -6px var(--c1, #e23d6d);
   animation: tilePop 620ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -93,7 +94,8 @@
 .word {
   display: grid;
   font-weight: 800;
-  font-size: 26px;
+  /* A size smaller on a phone, where "Get the app" shares the bar. */
+  font-size: clamp(20px, 5.6vw, 26px);
   letter-spacing: -0.02em;
   line-height: 1;
   perspective: 600px;
@@ -328,9 +330,56 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── get the app ───────────────────────────────────────────────────────── */
+
+.appCard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+/* A slow turn of the chosen name's colours behind the card. */
+.appCard::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, transparent 0deg, var(--c1) 60deg, transparent 140deg, var(--c2) 220deg, transparent 300deg);
+  opacity: 0.22;
+  filter: blur(50px);
+  animation: turn 16s linear infinite;
+}
+@keyframes turn {
+  to { transform: rotate(360deg); }
+}
+
+/* The word after "Plan your next", as tall as the heading around it. */
+.rotor {
+  display: grid;
+  justify-items: start;
+  perspective: 600px;
+}
+
+.heart {
+  display: inline-block;
+  animation: popIn 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both, beat 1.6s ease-in-out 600ms infinite;
+}
+@keyframes popIn {
+  0% { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes beat {
+  0%, 60%, 100% { transform: scale(1); }
+  12% { transform: scale(1.18); }
+  24% { transform: scale(0.98); }
+  36% { transform: scale(1.1); }
+}
+
 /* Fewer moving parts for anybody who asked their device for less motion. */
 @media (prefers-reduced-motion: reduce) {
-  .blob, .phone, .shimmer, .submit::after, .letterIn, .letterOut, .tile, .notification, .appIcon, .bounceIn, .rise, .optionOn .optionEmoji, .check, .expand {
+  .blob, .phone, .shimmer, .submit::after, .letterIn, .letterOut, .tile, .notification, .appIcon, .bounceIn, .rise, .optionOn .optionEmoji, .check, .expand, .appCard::before, .heart {
     animation: none !important;
   }
   .option, .option:hover { transform: none; }

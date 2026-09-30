@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { APP_STORE_URL } from "@/lib/links";
 
 /**
  * Where "plan a date" goes now.
@@ -15,8 +16,6 @@ import { Logo } from "@/components/Logo";
  * has already agreed.
  */
 
-const TESTFLIGHT = "https://testflight.apple.com/join/VW3ujCKf";
-
 export const metadata: Metadata = {
   title: "Get aduro",
   description: "aduro plans your evening in Accra. It is an iPhone app.",
@@ -25,13 +24,13 @@ export const metadata: Metadata = {
 const STEPS = [
   {
     n: "01",
-    title: "Install TestFlight",
-    body: "Apple's app for testing apps before they reach the App Store. Free, from the App Store.",
+    title: "Download aduro",
+    body: "Free from the App Store, where it is listed as AduroGH.",
   },
   {
     n: "02",
-    title: "Open the aduro invite",
-    body: "The button below. TestFlight will ask you to accept, then install aduro.",
+    title: "Say what the evening is",
+    body: "Who it is for, what you want to spend, and what you are in the mood for.",
   },
   {
     n: "03",
@@ -56,22 +55,17 @@ export default function GetTheAppPage() {
         </h1>
         <p className="mt-4 text-sub text-cocoa">
           Planning happens in the app, so a plan is in your pocket on the night rather than in
-          a browser tab you left open. It is free while we are in testing.
+          a browser tab you left open.
         </p>
       </div>
 
       <div className="mt-6 px-6">
-        <a href={TESTFLIGHT} className="btn" target="_blank" rel="noreferrer">
+        {/* noopener without noreferrer, so App Store Connect can see where installs came from. */}
+        <a href={APP_STORE_URL} className="btn" target="_blank" rel="noopener">
           Get the app
         </a>
-        {/*
-          Said before the tap rather than after it. A TestFlight link opened on
-          a phone without TestFlight installed lands on an App Store page for
-          TestFlight, which reads like the wrong link rather than like a first
-          step.
-        */}
         <p className="mt-2.5 text-center text-caption text-mutedbrown">
-          Opens in TestFlight, Apple&apos;s testing app
+          Free on the App Store, listed as AduroGH
         </p>
       </div>
 
@@ -99,7 +93,7 @@ export default function GetTheAppPage() {
         <div className="rounded-btn bg-sand p-5">
           <div className="text-[15px] font-bold">On Android?</div>
           <div className="mt-1 text-[14px] leading-normal text-mutedbrown">
-            Not yet. aduro is iPhone-only while we are testing. A plan somebody shares with you
+            Not yet. aduro is on iPhone first. A plan somebody shares with you
             still opens in any browser, so you can be taken out in the meantime.
           </div>
         </div>

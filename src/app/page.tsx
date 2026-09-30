@@ -98,7 +98,7 @@ export default function LandingPage() {
               Plan a date
             </Link>
             <p className="text-center text-caption text-mutedbrown">
-              aduro is an iPhone app, free while we are testing
+              aduro is an iPhone app, free on the App Store
             </p>
           </div>
         </div>
