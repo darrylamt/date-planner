@@ -438,11 +438,30 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number 
     cuisine +
     specific +
     family +
+    premiumLean(v, inputs) +
     placeFit(v, inputs.partner?.place ?? "") -
     avoidPenalty(v, inputs.partner?.avoid ?? "") +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion)
   );
+}
+
+/**
+ * Date nights and anniversaries lean to the best places the money reaches.
+ *
+ * The planner scored a premium restaurant like any other, so a couple with
+ * GHS 1,200 was sent somewhere premium on about a quarter of stops, and a
+ * date night reads as the evening to spend on. Five points, more than a vibe
+ * tag and a half, once the budget is at least GHS 425 a head, the level at
+ * which premium venues are shortlisted at all for two. A boost and never a
+ * filter: the real menu still has to fit the budget, and where it does not
+ * the planner falls back as it always did.
+ */
+const PREMIUM_FLOOR_PER_HEAD = 425;
+export function premiumLean(v: Venue, inputs: Pick<PlanInputs, "occasion" | "budget" | "partySize">): number {
+  if (v.price_band !== "premium") return 0;
+  if (inputs.occasion !== "date_night" && inputs.occasion !== "anniversary") return 0;
+  return inputs.budget / Math.max(1, inputs.partySize) >= PREMIUM_FLOOR_PER_HEAD ? 5 : 0;
 }
 
 /** Six points on a family day for somewhere children are welcome. */
@@ -587,6 +606,22 @@ function priceCentre(tier: OrderTier, count: number): number {
  * still constitutes a visit, 1 is a typical order. Fitting a budget means
  * walking stops back down the tiers rather than inventing cheaper items.
  */
+/**
+ * A line sold only to children: "(Kids)", "under 12s", "Trampoline, under 12
+ * years". Something for adults and children together is not one of these.
+ */
+function childOnly(m: MenuItem): boolean {
+  const text = `${m.name} ${m.notes ?? ""}`.toLowerCase();
+  if (/\badults?\b|\b1[0-8]\s*(and|&)\s*over\b|\b1[0-8]\s*\+/.test(text)) return false;
+  return /\b(kids?|child(ren)?|toddlers?|juniors?)\b|\bunder[\s-]*\d{1,2}\s*(s|yrs?|years?)?\b/.test(text);
+}
+
+/** A line bought on top of another and never on its own: an extra token, an add-on. */
+function addOnOnly(m: MenuItem): boolean {
+  const text = `${m.name} ${m.notes ?? ""}`.toLowerCase();
+  return /\badd[\s-]?ons?\b|not sold on its own|\bon top of\b|\bextra (token|game|round|life)\b|\btop[\s-]?up\b/.test(text);
+}
+
 function planOrders(
   venue: Venue,
   menu: MenuItem[],
@@ -606,7 +641,9 @@ function planOrders(
    */
   treatments: WellnessKind[] = [],
   /** The plan's weekday, 0 = Sunday, for prices sold only on some days. */
-  planWeekday: number | null = null
+  planWeekday: number | null = null,
+  /** Whether children may be in the party: a family day. Kids' lines are for nobody else. */
+  withChildren = false
 ): OrderPlan | null {
   // Which treatment an order is being dealt for, while the spa branch runs.
   let onlyKind: WellnessKind | null = null;
@@ -682,6 +719,12 @@ function planOrders(
      */
     if (venue.type === "wellness" && onlyKind && !treatmentMatches(onlyKind, m.name)) return false;
     if (m.min_players != null && partySize < m.min_players) return false;
+    /*
+     * A kids' line is for a family day and nobody else. Bliss sells the
+     * trampoline as "12 and over" and "under 12s", and a birthday for six
+     * adults was booked onto the under-12s one because it was cheaper.
+     */
+    if (!withChildren && childOnly(m)) return false;
     const covers = Math.max(1, m.covers_people ?? 1);
     /*
      * A maximum of one on a per-person line is not a cap on the party: it is
@@ -784,6 +827,16 @@ function planOrders(
      * The price window below is applied after this, so a cheap plan stays
      * cheap within the cuisine rather than reaching for its priciest dish.
      */
+    /*
+     * An add-on is bought on top of something, never instead of it: "Arcade,
+     * extra token" says in its own notes it is not sold alone, and at GHS 10
+     * it is what the cheap tier reached for first.
+     */
+    if (category === "activity") {
+      const standalone = all.filter((m) => !addOnOnly(m));
+      if (standalone.length) all = standalone;
+    }
+
     const wanted = wantedCuisines;
     const onTheme = wanted.length
       ? all.filter((m) => dishMatchesCuisine(m.name, m.notes, wanted))
@@ -815,6 +868,31 @@ function planOrders(
       candidates = candidates.map((c, i) => (i === unliked[1] ? m : c));
     }
     candidates = [...candidates].sort((a, b) => rec(b) - rec(a) || byPrice(a, b));
+
+    /*
+     * Something to do is done together.
+     *
+     * A table orders a spread, one dish each; a group at a bowling alley does
+     * not split up so that one person bowls alone while another is on the
+     * trampoline. A birthday for six was dealt exactly that way, two on the
+     * arcade, two on mini-bowling, one trampoline and one game of bowling.
+     * So everybody gets the same activity, and at the fullest order a second
+     * one, also for everybody. A line that covers several people (a lane, a
+     * table) is bought once per that many. Not at a spa, where each person
+     * has their own treatment and the spread is the point.
+     */
+    if (category === "activity" && venue.type !== "wellness") {
+      const n = tier === 2 && candidates.length > 1 ? 2 : 1;
+      return candidates.slice(0, n).map((m) => {
+        const qty = Math.ceil(people / Math.max(1, m.covers_people ?? 1));
+        return {
+          item: m.name,
+          qty,
+          price_ghs: Math.round(Number(m.price_ghs) * qty),
+          note: m.notes ?? null,
+        };
+      });
+    }
 
     const counts = new Map<string, { item: MenuItem; qty: number }>();
     let covered = 0;
@@ -1396,7 +1474,8 @@ function planWith(
         slotStart,
         inputs.cuisines ?? [],
         wellnessKindsOf(inputs),
-        weekdayOf(inputs.date)
+        weekdayOf(inputs.date),
+        inputs.occasion === "family_day"
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and

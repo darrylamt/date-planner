@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
-import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit } from "./planner";
+import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
 import { isPlaceholderAvg } from "./budget";
 import { haversineKm } from "./transport";
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
@@ -444,7 +444,9 @@ export async function fetchCandidates(
       const prefs =
         placeFit(v, inputs.partner?.place ?? "") -
         avoidPenalty(v, inputs.partner?.avoid ?? "") +
-        familyBonus(v, inputs);
+        familyBonus(v, inputs) +
+        // Here too, or a premium restaurant never reaches the planner to be chosen.
+        premiumLean(v, inputs);
       /*
        * The areas they named come first. With a reach, the shortlist spans
        * the neighbourhoods around them too, and scored on feel alone the
