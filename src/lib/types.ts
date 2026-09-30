@@ -187,6 +187,8 @@ export interface MenuItem {
    * same item can appear once per set of days, each at its own price.
    */
   available_days?: number[] | null;
+  /** A picture of the item, when a venue or an admin has added one (0062). */
+  image_url?: string | null;
 }
 
 /**

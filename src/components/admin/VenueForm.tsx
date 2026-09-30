@@ -59,7 +59,7 @@ const CATEGORY_ONE: Record<MenuCategory, string> = {
   other: "an extra",
 };
 
-type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean };
+type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean; _photo?: boolean };
 
 /** Venue add/edit with inline menu items, built for “add a venue in under 2 minutes”. */
 interface EditableSchedule {
@@ -397,6 +397,12 @@ export function VenueForm({
         duration_minutes: item.duration_minutes ?? null,
         min_age: item.min_age ?? null,
         requires_gear: item.requires_gear || null,
+        /*
+         * Only when the row has the field, which it has once migration 0062
+         * has run and the menu was read back with it. Naming a column the
+         * database does not have fails the whole save.
+         */
+        ...(item.image_url !== undefined ? { image_url: item.image_url || null } : {}),
       });
 
       const live = items.filter((i) => !i._deleted && i.name?.trim());
@@ -1485,6 +1491,7 @@ export function VenueForm({
                         {item.category === "activity" && (
                           <ActivityDetail item={item} setItems={setItems} />
                         )}
+                        {(item._photo || item.image_url) && <PhotoDetail item={item} setItems={setItems} />}
                       </Fragment>
                     ))}
                   </tbody>
@@ -1607,13 +1614,40 @@ function MenuRow({ item, setItems }: { item: EditableItem; setItems: SetItems })
           onChange={(e) => patch({ notes: e.target.value })}
         />
       </td>
-      <td>
+      <td className="whitespace-nowrap">
+        {/* A picture for the item sheet in the app. Hidden until wanted. */}
+        {!item.image_url && !item._photo ? (
+          <button className="mr-3 font-semibold text-flame hover:underline" onClick={() => patch({ _photo: true })}>
+            Photo
+          </button>
+        ) : null}
         <button
           className="font-semibold text-staletext hover:underline"
           onClick={() => patch({ _deleted: true })}
         >
           Remove
         </button>
+      </td>
+    </tr>
+  );
+}
+
+/** The item's picture, under its row, once somebody asks for one. */
+function PhotoDetail({ item, setItems }: { item: EditableItem; setItems: SetItems }) {
+  const patch = (fields: Partial<EditableItem>) =>
+    setItems((cur) => cur.map((x) => (x._tmpId === item._tmpId ? { ...x, ...fields } : x)));
+  return (
+    <tr className="bg-cream/40">
+      <td colSpan={6}>
+        <div className="max-w-[520px] px-1 py-1">
+          <ImageField
+            label={`Picture of ${item.name || "this item"}`}
+            value={item.image_url ?? ""}
+            onChange={(url) => patch({ image_url: url })}
+            folder="menu"
+            hint="Shown on the item's page in the app. Run migration 0062 before saving one."
+          />
+        </div>
       </td>
     </tr>
   );

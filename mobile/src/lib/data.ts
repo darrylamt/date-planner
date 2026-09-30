@@ -168,10 +168,19 @@ export async function fetchMenu(venueId: string): Promise<MenuItem[]> {
 
   const owner = (venue as { menu_shared_from?: string | null } | null)?.menu_shared_from || venueId;
 
+  /*
+   * Every column, because the item sheet shows them all: duration, players,
+   * age, when it is on sale, the picture. "*" is safe here where it is not on
+   * venues: menu_items has a table-wide grant, and it keeps working on a
+   * database that has not run a newer migration yet.
+   *
+   * The branch's own dishes too. A branch can list something only its kitchen
+   * does, written on its own row, and reading only the owner's list hid it.
+   */
   const { data } = await supabase
     .from("menu_items")
-    .select("id, venue_id, name, category, price_ghs, notes, dietary_note, is_alcoholic")
-    .eq("venue_id", owner)
+    .select("*")
+    .in("venue_id", owner === venueId ? [venueId] : [owner, venueId])
     .order("category")
     .order("name");
   return (data ?? []) as MenuItem[];
@@ -454,8 +463,11 @@ export interface VenueDetail extends VenueListing {
   gallery_urls: string[];
   instagram_handle: string | null;
   phone: string | null;
+  whatsapp_phone: string | null;
   booking_url: string | null;
   google_maps_url: string | null;
+  lat: number | null;
+  lng: number | null;
   opening_hours_text: string[] | null;
   place_rating: number | null;
   place_rating_count: number | null;
@@ -469,7 +481,7 @@ export async function fetchVenue(id: string): Promise<VenueDetail | null> {
   const { data, error } = await supabase
     .from("venues")
     .select(
-      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, description, best_for, dress_code, gallery_urls, instagram_handle, phone, booking_url, google_maps_url, opening_hours_text, place_rating, place_rating_count, reservation_required, min_party_size, max_party_size, has_vegetarian_options, areas(name, city)"
+      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, description, best_for, dress_code, gallery_urls, instagram_handle, phone, whatsapp_phone, booking_url, google_maps_url, lat, lng, opening_hours_text, place_rating, place_rating_count, reservation_required, min_party_size, max_party_size, has_vegetarian_options, areas(name, city)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -494,8 +506,11 @@ export async function fetchVenue(id: string): Promise<VenueDetail | null> {
     gallery_urls: (v.gallery_urls as string[] | null) ?? [],
     instagram_handle: (v.instagram_handle as string | null) ?? null,
     phone: (v.phone as string | null) ?? null,
+    whatsapp_phone: (v.whatsapp_phone as string | null) ?? null,
     booking_url: (v.booking_url as string | null) ?? null,
     google_maps_url: (v.google_maps_url as string | null) ?? null,
+    lat: v.lat == null ? null : Number(v.lat),
+    lng: v.lng == null ? null : Number(v.lng),
     opening_hours_text: (v.opening_hours_text as string[] | null) ?? null,
     place_rating: (v.place_rating as number | null) ?? null,
     place_rating_count: (v.place_rating_count as number | null) ?? null,

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import { ghs } from "@/lib/format";
+import { ImageField } from "@/components/admin/ImageField";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 
 const CATEGORIES: { value: MenuCategory; label: string }[] = [
@@ -63,6 +64,10 @@ export function MenuEditor({
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState<MenuCategory>("main");
   const [everywhere, setEverywhere] = useState(true);
+  // Which item has its details open: a description and a picture.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [draftNotes, setDraftNotes] = useState("");
+  const [draftImage, setDraftImage] = useState("");
 
   const branched = scope.branchCount > 1;
 
@@ -130,6 +135,35 @@ export function MenuEditor({
       return;
     }
     setRows((r) => r.map((x) => (x.id === item.id ? { ...x, price_ghs: next } : x)));
+  }
+
+  function openDetails(item: MenuItem) {
+    if (openId === item.id) return setOpenId(null);
+    setOpenId(item.id);
+    setDraftNotes(item.notes ?? "");
+    setDraftImage(item.image_url ?? "");
+  }
+
+  /*
+   * The description and picture guests see when they tap the item in the
+   * app. The picture is only sent when one was set, so saving a description
+   * works on a database that has not added the picture column yet.
+   */
+  async function saveDetails(item: MenuItem) {
+    setBusy(item.id);
+    const patch: Record<string, unknown> = { notes: draftNotes.trim() || null };
+    if (draftImage.trim() || item.image_url) patch.image_url = draftImage.trim() || null;
+    const { error } = await supabase.from("menu_items").update(patch).eq("id", item.id);
+    setBusy(null);
+    if (error) {
+      say(`Could not save that: ${error.message}`);
+      return;
+    }
+    setRows((r) =>
+      r.map((x) => (x.id === item.id ? { ...x, notes: patch.notes as string | null, image_url: (patch.image_url as string | null | undefined) ?? x.image_url } : x))
+    );
+    setOpenId(null);
+    say("Saved");
   }
 
   async function remove(item: MenuItem) {
@@ -239,11 +273,13 @@ export function MenuEditor({
               {group.items.map((item) => {
                 const onlyHere = item.venue_id === scope.venueId && scope.ownerId !== scope.venueId;
                 return (
-                  <div
-                    key={item.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-2.5"
-                  >
+                  <div key={item.id} className="py-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
+                      {item.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.image_url} alt="" className="mr-2 inline-block h-8 w-8 rounded object-cover align-middle" />
+                      ) : null}
                       <span className="text-[14.5px]">{item.name}</span>
                       {branched ? (
                         <span
@@ -270,6 +306,12 @@ export function MenuEditor({
                         }}
                       />
                       <button
+                        onClick={() => openDetails(item)}
+                        className="rounded-md border border-line px-2 py-1 text-[12px] font-semibold text-cocoa transition-colors hover:border-flame hover:text-flame"
+                      >
+                        {openId === item.id ? "Close" : "Details"}
+                      </button>
+                      <button
                         onClick={() => void remove(item)}
                         disabled={busy === item.id}
                         aria-label={`Remove ${item.name}`}
@@ -278,6 +320,36 @@ export function MenuEditor({
                         ✕
                       </button>
                     </div>
+                  </div>
+                  {item.notes && openId !== item.id ? (
+                    <div className="mt-1 text-[12.5px] text-mutedbrown">{item.notes}</div>
+                  ) : null}
+                  {openId === item.id ? (
+                    <div className="mt-3 grid gap-3 rounded-bar bg-cream/60 p-4">
+                      <label className="flex flex-col">
+                        <span className="flbl">What is in it, or what to expect</span>
+                        <textarea
+                          className="inp min-h-[70px] py-2"
+                          maxLength={400}
+                          value={draftNotes}
+                          placeholder="Grilled tilapia, banku and pepper sauce. Serves one."
+                          onChange={(e) => setDraftNotes(e.target.value)}
+                        />
+                      </label>
+                      <ImageField
+                        label="Picture"
+                        value={draftImage}
+                        onChange={setDraftImage}
+                        folder="menu"
+                        hint="Shown when a guest taps this item in the app"
+                      />
+                      <div>
+                        <button className="btn btnsm px-6" disabled={busy === item.id} onClick={() => void saveDetails(item)}>
+                          {busy === item.id ? "Saving…" : "Save details"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                   </div>
                 );
               })}
