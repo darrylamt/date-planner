@@ -1,4 +1,4 @@
-﻿import { BUDGET_DEFAULT } from "./budget";
+import { BUDGET_DEFAULT } from "./budget";
 import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
@@ -323,7 +323,7 @@ export function partyLabel(size: number): string {
   return `all ${size} of you`;
 }
 
-/* â”€â”€ occasion pathways â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── occasion pathways ────────────────────────────────────────────────── */
 
 export type StepId =
   | "occasion"
@@ -377,7 +377,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "how_met",
         label: "How you met (optional)",
-        placeholder: "a friend's party, matched online, workâ€¦",
+        placeholder: "a friend's party, matched online, work…",
       },
     ],
   },
@@ -389,7 +389,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "tradition",
         label: "Something you always do (optional)",
-        placeholder: "the place you had your first dateâ€¦",
+        placeholder: "the place you had your first date…",
       },
     ],
   },
@@ -416,7 +416,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "reason",
         label: "The good news",
-        placeholder: "a promotion, a new job, closing on a houseâ€¦",
+        placeholder: "a promotion, a new job, closing on a house…",
       },
     ],
   },
@@ -427,7 +427,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "intent",
         label: "What you are after",
-        placeholder: "somewhere quiet to read, try something new, treat myselfâ€¦",
+        placeholder: "somewhere quiet to read, try something new, treat myself…",
       },
     ],
   },
@@ -448,7 +448,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "purpose",
         label: "What it is about (optional)",
-        placeholder: "a pitch, a catch-up, signing somethingâ€¦",
+        placeholder: "a pitch, a catch-up, signing something…",
       },
     ],
   },
@@ -472,7 +472,7 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
       {
         key: "must",
         label: "Anything that has to happen (optional)",
-        placeholder: "the beach, somewhere to run around, back by sixâ€¦",
+        placeholder: "the beach, somewhere to run around, back by six…",
       },
     ],
   },
@@ -548,7 +548,7 @@ export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] 
   return steps;
 }
 
-/* â”€â”€ party rules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── party rules ──────────────────────────────────────────────────────── */
 
 export interface PartyRule {
   min: number;
@@ -621,7 +621,7 @@ export function clampParty(occasion: Occasion, size: number): number {
   return Math.min(rule.max, Math.max(rule.min, size));
 }
 
-/* â”€â”€ occasion themes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── occasion themes ──────────────────────────────────────────────────── */
 
 export interface OccasionTheme {
   /** Carries buttons, selected states and the mascot's circle. */
@@ -682,17 +682,17 @@ export const OCCASION_THEME: Record<Occasion, OccasionTheme> = {
  * makes the plan underneath harder to read, which is the opposite of the job.
  */
 const OCCASION_GLYPHS: Record<Occasion, string[]> = {
-  birthday: ["ðŸŽ‚", "ðŸ•¯", "ðŸŽˆ"],
-  celebration: ["ðŸ¥‚", "âœ¦", "ðŸŽ‰"],
-  graduation: ["ðŸŽ“", "âœ¦", "ðŸ“œ"],
-  anniversary: ["â™¥", "âœ¦", "â™¥"],
-  date_night: ["â™¥", "âœ¦", "â™¥"],
-  first_date: ["âœ¦", "â™¥", "âœ¦"],
-  friend_outing: ["âœ¦", "â˜»", "âœ¦"],
-  solo_day: ["âœ¦", "â˜¾", "âœ¦"],
+  birthday: ["🎂", "🕯", "🎈"],
+  celebration: ["🥂", "✦", "🎉"],
+  graduation: ["🎓", "✦", "📜"],
+  anniversary: ["♥", "✦", "♥"],
+  date_night: ["♥", "✦", "♥"],
+  first_date: ["✦", "♥", "✦"],
+  friend_outing: ["✦", "☻", "✦"],
+  solo_day: ["✦", "☾", "✦"],
   // No hearts and no confetti. This one is work.
-  business_meeting: ["âœ¦", "â—¦", "âœ¦"],
-  family_day: ["â˜€", "âœ¦", "â˜»"],
+  business_meeting: ["✦", "◦", "✦"],
+  family_day: ["☀", "✦", "☻"],
 };
 
 /**

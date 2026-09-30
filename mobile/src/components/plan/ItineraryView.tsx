@@ -359,7 +359,7 @@ export function ItineraryView({
   /**
    * Put every stop in the phone's calendar.
    *
-   * â”€â”€ why finding the calendar is the hard part â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   * ── why finding the calendar is the hard part ───────────────────────────
    * iOS 17 split calendar permission in two. An app can be granted write-only
    * access, which is enough to add an event and not enough to list calendars,
    * and getDefaultCalendarAsync reads before it writes. On a phone that
@@ -538,7 +538,7 @@ export function ItineraryView({
                         pickup.colour,
                       ]
                         .filter(Boolean)
-                        .join(" Â· ")
+                        .join(" · ")
                     : giftsForOccasion(inputs.occasion).includes("cake")
                       ? "Flowers or a cake, collected before you set off"
                       : "Flowers, collected before you set off"}

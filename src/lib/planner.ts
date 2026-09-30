@@ -501,7 +501,7 @@ export function avoidPenalty(v: Venue, avoid: string): number {
   return said.filter((p) => AVOID_MATCH[p](v)).length * 5;
 }
 
-/* â”€â”€ orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── orders ───────────────────────────────────────────────────────────── */
 
 interface OrderPlan {
   orders: ItineraryOrder[];
@@ -1002,7 +1002,7 @@ function planOrders(
   return { orders, cost };
 }
 
-/* â”€â”€ planning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── planning ─────────────────────────────────────────────────────────── */
 
 export interface PlannedStop {
   venue: Venue;
@@ -1364,7 +1364,7 @@ function planWith(
     const doorKnown = covers.length > 0 || ticket != null;
 
     const doorLabel = fixtures.length
-      ? `${fixtures.map((f) => f.title).join(" and ")} â€” entry`
+      ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
       : "Entry";
     /*
      * A free door is still worth a line.
@@ -2036,7 +2036,7 @@ function planWith(
   return null;
 }
 
-/** "17:30" + n minutes â†’ "5:30 PM", for the itinerary's display times. */
+/** "17:30" + n minutes → "5:30 PM", for the itinerary's display times. */
 export function clockFromMinutes(total: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;

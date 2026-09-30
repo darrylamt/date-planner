@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { currentPlace, locationAvailable } from "../../lib/location";
 import { Text } from "../Text";
@@ -872,7 +872,7 @@ export function PlanSteps({
         onChange={(place) => update({ partner: { ...inputs.partner, place } })}
       />
       <ChoiceField
-        label={solo ? "Things you are into" : `Things ${ps.they}${"â€™"}${contraction} into`}
+        label={solo ? "Things you are into" : `Things ${ps.they}${"’"}${contraction} into`}
         options={["Music", "Art", "Films", "Games", "Sport", "Books", "Fashion", "Food"]}
         value={inputs.partner.interests}
         onChange={(interests) => update({ partner: { ...inputs.partner, interests } })}

@@ -88,7 +88,7 @@ export function VenueNav({
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
-                {v.area ? ` â€” ${v.area}` : ""}
+                {v.area ? ` — ${v.area}` : ""}
               </option>
             ))}
           </select>
