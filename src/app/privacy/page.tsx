@@ -78,6 +78,14 @@ export default function PrivacyPage() {
           Yango. aduro never reads your location in the background.
         </p>
         <p>
+          <strong>To decide where to add venues:</strong> a rough, anonymous
+          record of each plan request: the area chosen (or, for &ldquo;near
+          me&rdquo;, a square about a kilometre across, never your exact
+          position), the occasion, party size, a budget range, the day, and
+          whether we found a plan. It carries no account or device identifier.
+          Venues see only totals from it, never anything about a person.
+        </p>
+        <p>
           <strong>When you recommend a dish:</strong> that your account
           recommends it. Other people see only the total number of
           recommendations, never who made them.

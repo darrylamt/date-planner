@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const VENUE_TABS = [
   { href: "/venue", label: "Bookings" },
+  { href: "/venue/insights", label: "Insights" },
   { href: "/venue/listing", label: "Your listing" },
   { href: "/venue/hours", label: "Hours" },
   { href: "/venue/menu", label: "Menu" },
@@ -87,7 +88,7 @@ export function VenueNav({
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
-                {v.area ? ` — ${v.area}` : ""}
+                {v.area ? ` â€” ${v.area}` : ""}
               </option>
             ))}
           </select>

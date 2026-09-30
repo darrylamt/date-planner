@@ -10,6 +10,7 @@ import {
 } from "@/lib/planner";
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
+import { recordDemand } from "@/lib/demand";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
 import { DEFAULT_WELLNESS_KIND, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
@@ -37,7 +38,25 @@ const FOCUS_SHORTFALL: Record<string, string> = {
   everything: "We could not fill the whole evening.",
 };
 
+/**
+ * The route, with an anonymous note of what was asked and how it went
+ * (migration 0065), taken from the answer itself so every exit is covered.
+ * Awaited, because a serverless function may stop the moment it has replied,
+ * and an insert is a few milliseconds.
+ */
 export async function POST(req: Request): Promise<NextResponse<GenerateResponse>> {
+  const copy = req.clone();
+  const res = await generate(req);
+  try {
+    const parsed = planInputsSchema.safeParse(await copy.json());
+    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse);
+  } catch {
+    /* never a failed plan over statistics */
+  }
+  return res;
+}
+
+async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   let inputs: PlanInputs;
   try {
     inputs = planInputsSchema.parse(await req.json()) as PlanInputs;
