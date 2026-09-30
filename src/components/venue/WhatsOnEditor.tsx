@@ -6,7 +6,7 @@ import { Toast } from "@/components/Toast";
 import { ImageField } from "@/components/admin/ImageField";
 import { DAY_NAMES, describeSchedule } from "@/lib/schedules";
 import { longDate } from "@/lib/format";
-import type { EventRow, VenueSchedule } from "@/lib/types";
+import type { Audience, EventRow, VenueSchedule } from "@/lib/types";
 
 const CATEGORIES = [
   "live_music",
@@ -67,6 +67,7 @@ export function WhatsOnEditor({
   const [wFrom, setWFrom] = useState("20:00");
   const [wTo, setWTo] = useState("23:00");
   const [wCover, setWCover] = useState("");
+  const [wWho, setWWho] = useState<Audience>("everyone");
 
   // Dated
   const [eTitle, setETitle] = useState("");
@@ -77,6 +78,7 @@ export function WhatsOnEditor({
   const [eCategory, setECategory] = useState("live_music");
   const [eImage, setEImage] = useState("");
   const [ePhone, setEPhone] = useState("");
+  const [eWho, setEWho] = useState<Audience>("everyone");
 
   async function addWeekly() {
     if (!wTitle.trim()) return say("Give it a name.");
@@ -92,6 +94,8 @@ export function WhatsOnEditor({
         // Blank is not free, it is "nobody said". Null keeps that distinction,
         // and only a real figure is ever added to somebody's budget.
         cover_ghs: wCover.trim() === "" ? null : Number(wCover),
+        // Only when it is not everyone: before migration 0067 the column does not exist.
+        ...(wWho !== "everyone" ? { audience: wWho } : {}),
       })
       .select("*")
       .single();
@@ -121,6 +125,7 @@ export function WhatsOnEditor({
         title: eTitle.trim(),
         // Only when written: before migration 0058 the column does not exist.
         ...(eDesc.trim() ? { description: eDesc.trim() } : {}),
+        ...(eWho !== "everyone" ? { audience: eWho } : {}),
         venue_id: venueId,
         area_id: areaId,
         event_date: eDate,
@@ -195,7 +200,7 @@ export function WhatsOnEditor({
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-[1fr_140px_110px_110px_130px_auto] md:items-end">
+        <div className="grid gap-3 md:grid-cols-[1fr_140px_110px_110px_130px_150px_auto] md:items-end">
           <label className="flex flex-col">
             <span className="flbl">What</span>
             <input
@@ -247,6 +252,14 @@ export function WhatsOnEditor({
               placeholder="none"
               onChange={(e) => setWCover(e.target.value)}
             />
+          </label>
+          <label className="flex flex-col">
+            <span className="flbl">Who can come</span>
+            <select className="inp" value={wWho} onChange={(e) => setWWho(e.target.value as Audience)}>
+              <option value="everyone">Everyone</option>
+              <option value="women">Ladies only</option>
+              <option value="men">Men only</option>
+            </select>
           </label>
           <button
             className="btn btnsm px-5"
@@ -361,6 +374,17 @@ export function WhatsOnEditor({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="flex flex-col">
+            <span className="flbl">Who can come</span>
+            <select className="inp" value={eWho} onChange={(e) => setEWho(e.target.value as Audience)}>
+              <option value="everyone">Everyone</option>
+              <option value="women">Ladies only</option>
+              <option value="men">Men only</option>
+            </select>
+            <span className="mt-1.5 text-[12px] text-mutedbrown">
+              Only if nobody else can come. Free entry for ladies is still Everyone.
+            </span>
           </label>
         </div>
 

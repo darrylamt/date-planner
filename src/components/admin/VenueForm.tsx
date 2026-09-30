@@ -15,7 +15,7 @@ import { clockText, daysText, parseClock, parseDays } from "@/lib/menuTiming";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/catalog";
-import type { Area, MenuCategory, MenuItem, Venue, VenueSchedule } from "@/lib/types";
+import type { Area, Audience, MenuCategory, MenuItem, Venue, VenueSchedule } from "@/lib/types";
 
 const TYPES = ["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert"] as const;
 const BANDS = ["budget", "mid", "premium"] as const;
@@ -80,6 +80,7 @@ interface EditableSchedule {
   title: string;
   cover_ghs: number | "";
   notes: string;
+  audience: Audience;
 }
 
 function clockOf(minute: number): string {
@@ -211,6 +212,7 @@ export function VenueForm({
       title: f.title,
       cover_ghs: f.cover_ghs ?? "",
       notes: f.notes ?? "",
+      audience: f.audience ?? "everyone",
     }))
   );
   const [busy, setBusy] = useState(false);
@@ -468,6 +470,8 @@ export function VenueForm({
           cover_ghs: f.cover_ghs === "" ? null : Number(f.cover_ghs),
           notes: f.notes.trim() || null,
           is_active: true,
+          // Only once migration 0067 is in, or when it matters.
+          ...(f.audience !== "everyone" || schedules.some((x) => "audience" in x) ? { audience: f.audience } : {}),
         });
 
         const dropF = fixtures.filter((f) => f._deleted && !newF(f) && f.id).map((f) => f.id!);
@@ -1248,6 +1252,7 @@ export function VenueForm({
                 title: "",
                 cover_ghs: "",
                 notes: "",
+                audience: "everyone",
               },
             ])
           }
@@ -1269,6 +1274,7 @@ export function VenueForm({
               <th>From</th>
               <th>To</th>
               <th className="whitespace-nowrap">Cover (GHS)</th>
+              <th className="whitespace-nowrap">Who can come</th>
               <th>Notes</th>
               <th />
             </tr>
@@ -1276,7 +1282,7 @@ export function VenueForm({
           <tbody>
             {fixtures.filter((f) => !f._deleted).length === 0 && (
               <tr>
-                <td colSpan={7} className="text-[14px] text-mutedbrown">
+                <td colSpan={8} className="text-[14px] text-mutedbrown">
                   Nothing recorded. Most venues have none, and an empty list means exactly that.
                 </td>
               </tr>
@@ -1352,6 +1358,20 @@ export function VenueForm({
                         )
                       }
                     />
+                  </td>
+                  <td>
+                    <select
+                      value={f.audience}
+                      onChange={(e) =>
+                        setFixtures((cur) =>
+                          cur.map((x, j) => (j === i ? { ...x, audience: e.target.value as Audience } : x))
+                        )
+                      }
+                    >
+                      <option value="everyone">Everyone</option>
+                      <option value="women">Ladies only</option>
+                      <option value="men">Men only</option>
+                    </select>
                   </td>
                   <td>
                     <input

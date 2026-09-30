@@ -38,6 +38,7 @@ import {
   partyLabel,
   startTimeOptions,
   vibeBlurb,
+  crewChoices,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
@@ -774,6 +775,28 @@ export function PlanSteps({
               Only used so the plan reads like it was written for your group.
             </Text>
           </View>
+        ) : null}
+
+        {/*
+          Who is going, for the nights only some people can come to. Asked of
+          every group but a meeting, skippable, and mixed unless answered, so
+          a ladies-only brunch is only ever planned for somebody who said the
+          whole group is ladies.
+        */}
+        {inputs.occasion !== "business_meeting" ? (
+          <>
+            <GroupLabel>{solo ? "Ladies-only spots too?" : "Who's going?"}</GroupLabel>
+            <Group footer="Some nights are for ladies only, or men only. We only plan one when everyone going can get in. Skip this and it stays mixed.">
+              {crewChoices(solo).map((choice) => (
+                <Row
+                  key={choice.value}
+                  title={choice.label}
+                  selected={(inputs.crew ?? "mixed") === choice.value}
+                  onPress={() => update({ crew: choice.value })}
+                />
+              ))}
+            </Group>
+          </>
         ) : null}
 
         {solo ? (

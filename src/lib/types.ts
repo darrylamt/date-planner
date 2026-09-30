@@ -212,6 +212,8 @@ export interface VenueSchedule {
   cover_ghs: number | null;
   notes: string | null;
   is_active: boolean;
+  /** Absent before migration 0067, which is everyone. */
+  audience?: Audience;
 }
 
 export interface EventRow {
@@ -224,6 +226,8 @@ export interface EventRow {
   cost_ghs: number | null;
   category: string;
   source_url: string | null;
+  /** Who can come. Absent before migration 0067, which is everyone. */
+  audience?: Audience;
   /**
    * What the night is, in the organiser's words. Optional, because a build
    * running against a database without migration 0058 has no such column.
@@ -268,6 +272,20 @@ export interface EventRow {
  * default and always a valid answer.
  */
 export type Gender = "unspecified" | "female" | "male";
+
+/**
+ * Who a night is open to. "women" and "men" are nights nobody else may come
+ * to; a ladies' night that lets everybody in and the women in free is
+ * "everyone", with the perk in its notes.
+ */
+export type Audience = "everyone" | "women" | "men";
+
+/**
+ * Who is going on a plan, as far as ladies-only nights are concerned.
+ * Mixed unless somebody says otherwise, and only "ladies" or "guys" opens a
+ * night that is for one of them.
+ */
+export type Crew = "mixed" | "ladies" | "guys";
 
 /** Derived from Gender for copy; no longer asked directly. */
 export type Pronoun = "they" | "she" | "he";
@@ -412,6 +430,8 @@ export interface PlanInputs {
    * make a plan specific rather than generically correct.
    */
   occasionDetail: Record<string, string>;
+  /** Who is going, for ladies-only and men-only nights. Absent is mixed. */
+  crew?: Crew;
   partner: {
     name: string; // optional display name ("" allowed)
     gender: Gender;
@@ -545,6 +565,8 @@ export interface ItineraryStop {
      * the one night a year it puts a band on.
      */
     reservation_required?: boolean;
+    /** Who can come, so the card can say "ladies only". Absent is everyone. */
+    audience?: Audience;
   } | null;
   /**
    * What the venue does every week that is on while you are here, already

@@ -60,6 +60,8 @@ export const planInputsSchema = z.object({
     "family_day",
   ]),
   occasionDetail: z.record(z.string().max(300)).default({}),
+  // Optional: absent is mixed, and a build from before the question sends none.
+  crew: z.enum(["mixed", "ladies", "guys"]).optional(),
   // Both optional, so a plan posted by an older build still validates.
   city: z.string().max(60).optional(),
   wellness: z.boolean().optional(),

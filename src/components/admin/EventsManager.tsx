@@ -25,6 +25,7 @@ const EMPTY = {
   vibe_tags: "",
   reservation_required: false,
   booking_url: "",
+  audience: "everyone",
 };
 
 export function EventsManager({
@@ -85,6 +86,7 @@ export function EventsManager({
       vibe_tags: (e.vibe_tags ?? []).join(", "),
       reservation_required: e.reservation_required ?? false,
       booking_url: e.booking_url ?? "",
+      audience: e.audience ?? "everyone",
     });
   }
 
@@ -134,6 +136,9 @@ export function EventsManager({
         .filter(Boolean),
       reservation_required: form.reservation_required,
       booking_url: form.booking_url.trim() || null,
+      // Only once migration 0067 is in, or when it matters: naming a column
+      // the database lacks fails the whole save.
+      ...(form.audience !== "everyone" || events.some((e) => "audience" in e) ? { audience: form.audience } : {}),
     };
     const q = editingId
       ? supabase.from("events").update(payload).eq("id", editingId)
@@ -275,6 +280,17 @@ export function EventsManager({
             Used instead of the venue&apos;s, for this night only.
           </span>
         </div>
+        <div>
+          <span className="flbl">Who can come</span>
+          <select className="inp h-[42px]" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })}>
+            <option value="everyone">Everyone</option>
+            <option value="women">Ladies only</option>
+            <option value="men">Men only</option>
+          </select>
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            Only when nobody else can come. A ladies&apos; night with free entry for women is Everyone.
+          </span>
+        </div>
         <div className="flex items-end">
           <label className="flex items-center gap-2 pb-2 text-[14px]">
             <input
@@ -363,7 +379,14 @@ export function EventsManager({
           <tbody>
             {paged.pageRows.map((e) => (
               <tr key={e.id} className={e.is_active && !isPast(e) ? "" : "opacity-50"}>
-                <td className="font-bold">{e.title}</td>
+                <td className="font-bold">
+                  {e.title}
+                  {e.audience && e.audience !== "everyone" ? (
+                    <span className="ml-2 rounded-full bg-flame/15 px-2 py-0.5 text-[11px] font-bold text-flame">
+                      {e.audience === "women" ? "Ladies only" : "Men only"}
+                    </span>
+                  ) : null}
+                </td>
                 <td className="font-mono">{e.event_date}</td>
                 <td>{areas.find((a) => a.id === e.area_id)?.name ?? "anywhere"}</td>
                 <td className="font-mono">{e.cost_ghs === null ? "free" : `GHS ${e.cost_ghs}`}</td>

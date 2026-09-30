@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { SharedPlan, type SharedStop } from "@/components/shared/SharedPlan";
 import { createServiceClient } from "@/lib/supabase/server";
 import { instagramUrl, longDate, time12 } from "@/lib/format";
-import { OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConstants";
+import { AUDIENCE_BADGE, OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors, occasionEntrance } from "@/lib/occasionCard";
 import type { ItineraryStop, SavedPlan } from "@/lib/types";
 
@@ -123,7 +123,8 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
     name: st.name,
     area: st.area,
     time: st.arrival_time,
-    label: st.label,
+    // "Ladies only" rides on the label, so nobody forwards it to a friend it excludes.
+    label: [st.label, st.event?.audience ? AUDIENCE_BADGE[st.event.audience] : null].filter(Boolean).join(" · "),
     what: st.what_to_do || "",
     whatsOn: st.whats_on ?? [],
     // The first picture only, which is the event's poster where there is one.

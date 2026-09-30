@@ -4,7 +4,8 @@ import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueType
 import { isPlaceholderAvg } from "./budget";
 import { haversineKm } from "./transport";
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
-import { DEFAULT_CITY, wellnessAllowed } from "./planConstants";
+import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
+import { schedulesDuring } from "./schedules";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -167,7 +168,29 @@ export async function fetchCandidates(
       return h * 60 + m > nowMins;
     });
   }
-  const allSchedules = (schedulesRes.data ?? []) as VenueSchedule[];
+  /*
+   * Who can come.
+   *
+   * A night for ladies only is planned for a group that said it is all
+   * ladies, and for nobody else; the same for men. Mixed is the default, so a
+   * plan that never answered the question never meets one. A venue whose
+   * ladies-only fixture overlaps the planned hours is closed to everybody
+   * else for the evening, since the group would be turned away at the door,
+   * and the fixture itself is dropped so it is never offered as what is on.
+   */
+  const crew = inputs.crew ?? "mixed";
+  events = events.filter((e) => audienceAllows(e.audience, crew));
+  const fixturesRaw = (schedulesRes.data ?? []) as VenueSchedule[];
+  const [sh, sm] = inputs.startTime.split(":").map(Number);
+  const closedTonight = new Set(
+    schedulesDuring(
+      fixturesRaw.filter((f) => !audienceAllows(f.audience, crew)),
+      inputs.date,
+      sh * 60 + (sm || 0),
+      Math.round(inputs.hours * 60)
+    ).map((f) => f.venue_id)
+  );
+  const allSchedules = fixturesRaw.filter((f) => audienceAllows(f.audience, crew));
 
   /*
    * Venues priced by the door rather than by a menu.
@@ -288,6 +311,7 @@ export async function fetchCandidates(
    * database grants, and Venue is what the planner reads.
    */
   let venues = (venuesRaw ?? []) as unknown as Venue[];
+  if (closedTonight.size) venues = venues.filter((v) => !closedTonight.has(v.id));
 
   /*
    * A spa is only ever the stop somebody asked for.

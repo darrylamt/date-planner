@@ -58,6 +58,7 @@ const argsSchema = z.object({
   focus: z.enum(["everything", "food", "drinks", "activities"]).optional(),
   cuisine: z.enum(["either", "local", "continental"]).optional(),
   alcohol: z.enum(["either", "none"]).optional(),
+  crew: z.enum(["mixed", "ladies", "guys"]).optional(),
   occasion: z
     .enum([
       "first_date",
@@ -142,6 +143,11 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         enum: ["either", "none"],
         description:
           "Pass 'none' only if they said they do not drink. Orders then come only from drinks confirmed alcohol-free.",
+      },
+      crew: {
+        enum: ["mixed", "ladies", "guys"],
+        description:
+          "Only if they said the whole group is women ('ladies') or men ('guys'), a girls' night or a boys' trip. This is what lets a ladies-only or men-only night into the plan; leave it out otherwise.",
       },
       occasion: {
         enum: [
@@ -334,6 +340,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas): PlanInputs {
     cuisine: args.cuisine ?? "either",
     formality: "either",
     alcohol: args.alcohol ?? "either",
+    crew: args.crew,
     occasion: args.occasion ?? "date_night",
     occasionDetail: {},
     partner: {

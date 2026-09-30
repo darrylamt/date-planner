@@ -1,5 +1,5 @@
 import { BUDGET_DEFAULT } from "./budget";
-import type { AlcoholChoice, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
+import type { AlcoholChoice, Audience, Crew, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -717,4 +717,41 @@ export function occasionBackdrop(occasion: Occasion): string {
   </svg>`;
 
   return `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/\s+/g, " "))}")`;
+}
+
+/* ── who can come ─────────────────────────────────────────────────────── */
+
+/**
+ * Whether a night is open to this plan's group.
+ *
+ * Mixed is the default and opens only nights for everyone: a ladies-only
+ * brunch must never be the answer to a plan that did not say it was all
+ * ladies, because the group finds out at the door.
+ */
+export function audienceAllows(audience: Audience | null | undefined, crew: Crew | null | undefined): boolean {
+  if (!audience || audience === "everyone") return true;
+  if (audience === "women") return crew === "ladies";
+  return crew === "guys";
+}
+
+/** How a night that is not for everyone says so. */
+export const AUDIENCE_BADGE: Record<Audience, string | null> = {
+  everyone: null,
+  women: "Ladies only",
+  men: "Men only",
+};
+
+/** The question on the "how many" step, worded for one person or several. */
+export function crewChoices(solo: boolean): { value: Crew; label: string }[] {
+  return solo
+    ? [
+        { value: "mixed", label: "Rather not say" },
+        { value: "ladies", label: "I'm a lady" },
+        { value: "guys", label: "I'm a guy" },
+      ]
+    : [
+        { value: "mixed", label: "Mixed" },
+        { value: "ladies", label: "All ladies" },
+        { value: "guys", label: "All guys" },
+      ];
 }
