@@ -4,6 +4,7 @@ import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
+import { isBase, needsBase, pickBase } from "./accompaniments";
 import { schedulesDuring } from "./schedules";
 import {
   focusesOf,
@@ -500,7 +501,7 @@ export function avoidPenalty(v: Venue, avoid: string): number {
   return said.filter((p) => AVOID_MATCH[p](v)).length * 5;
 }
 
-/* ── orders ───────────────────────────────────────────────────────────── */
+/* â”€â”€ orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface OrderPlan {
   orders: ItineraryOrder[];
@@ -748,8 +749,23 @@ function planOrders(
    * round-robin so the variety appears at two people as well as at seven.
    * With only one dish on the list, this is exactly the old behaviour.
    */
+  const dining = venue.type === "restaurant" || venue.type === "cafe";
+  /** What this menu sells to eat a stew with. */
+  const bases = dining ? menu.filter((m) => isBase(m) && fitsParty(m) && Number(m.price_ghs) > 0) : [];
+
   const orderFrom = (category: string, people: number): OrderLine[] => {
-    const all = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    let all = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    /*
+     * At a table, a side is never somebody's meal and a stew is only ordered
+     * where it can be eaten. See accompaniments.ts: plain rice filed as a
+     * starter was a dinner on a tight budget, and an egg stew with nothing to
+     * eat it with was a date. Each step only narrows when something is left.
+     */
+    if (dining && category !== "drink" && category !== "dessert") {
+      const meals = all.filter((m) => !isBase(m));
+      const fed = bases.length ? meals : meals.filter((m) => !needsBase(m));
+      all = fed.length ? fed : meals.length ? meals : all;
+    }
     if (!all.length || people < 1) return [];
 
     /*
@@ -821,6 +837,36 @@ function planOrders(
 
   const lines: OrderLine[] = [];
 
+  /*
+   * The rice, yam, banku or fufu each stew is eaten with, one per portion,
+   * from this menu at its own price. Two dishes that want the same side share
+   * the line. A stew at a venue that lists no sides keeps a note to ask,
+   * because a side there is usually extra and we do not know its price.
+   */
+  const withBases = (dishes: OrderLine[]): OrderLine[] => {
+    const byName = new Map(menu.map((m) => [m.name, m]));
+    const want = new Map<string, { base: MenuItem; qty: number; dishes: string[] }>();
+    for (const d of dishes) {
+      const item = byName.get(d.item);
+      if (!item || !needsBase(item)) continue;
+      const base = pickBase(item, bases);
+      if (!base) {
+        d.note = [d.note, "Ask what it is served with; a side may cost extra."].filter(Boolean).join(" ");
+        continue;
+      }
+      const w = want.get(base.id) ?? { base, qty: 0, dishes: [] };
+      w.qty += d.qty;
+      w.dishes.push(d.item.toLowerCase().replace(/\s+only$/, ""));
+      want.set(base.id, w);
+    }
+    return [...want.values()].map((w) => ({
+      item: w.base.name,
+      qty: w.qty,
+      price_ghs: Math.round(Number(w.base.price_ghs) * w.qty),
+      note: `To eat with the ${[...new Set(w.dishes)].join(" and ")}`,
+    }));
+  };
+
   if (venue.type === "restaurant" || venue.type === "cafe") {
     const mains = [
       () => orderFrom("main", partySize),
@@ -838,6 +884,7 @@ function planOrders(
     if (tier === 2 && hasMains) lines.push(...orderFrom("starter", partySize));
 
     lines.push(...mains);
+    lines.push(...withBases(mains));
 
     /*
      * A drink each at a typical order. Spread too, because a table of seven
@@ -955,7 +1002,7 @@ function planOrders(
   return { orders, cost };
 }
 
-/* ── planning ─────────────────────────────────────────────────────────── */
+/* â”€â”€ planning â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface PlannedStop {
   venue: Venue;
@@ -1317,7 +1364,7 @@ function planWith(
     const doorKnown = covers.length > 0 || ticket != null;
 
     const doorLabel = fixtures.length
-      ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
+      ? `${fixtures.map((f) => f.title).join(" and ")} â€” entry`
       : "Entry";
     /*
      * A free door is still worth a line.
@@ -1989,7 +2036,7 @@ function planWith(
   return null;
 }
 
-/** "17:30" + n minutes → "5:30 PM", for the itinerary's display times. */
+/** "17:30" + n minutes â†’ "5:30 PM", for the itinerary's display times. */
 export function clockFromMinutes(total: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;
