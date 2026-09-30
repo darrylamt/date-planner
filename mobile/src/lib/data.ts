@@ -200,12 +200,20 @@ export async function savePlan(inputs: PlanInputs, itinerary: Itinerary): Promis
   } = await supabase.auth.getUser();
   if (!user) throw new SignInRequiredError();
 
+  /*
+   * Never the phone's position. A "near me" plan carries it in its inputs to
+   * be planned, and saving those inputs as they were would keep a location
+   * on the account, which the privacy policy and the App Privacy answers
+   * both say does not happen. The plan keeps "near you" as its area and the
+   * reach, which is all it needs to be read again; the point is dropped.
+   */
+  const { near: _dropped, ...kept } = inputs;
   const { data, error } = await supabase
     .from("plans")
     .insert({
       user_id: user.id,
       share_slug: randomSlug(),
-      inputs,
+      inputs: kept,
       itinerary,
       total_budget_ghs: inputs.budget,
       estimated_total_ghs: itinerary.est_total_ghs,
