@@ -91,6 +91,14 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "aduro uses your location only when you ask for directions, to find the trotro stop or taxi pickup nearest you. It is not stored.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
         "expo-alternate-app-icons",
         [
           {

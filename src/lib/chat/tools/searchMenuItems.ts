@@ -62,7 +62,9 @@ export const searchMenuItems: ChatTool<SearchMenuItemsArgs> = {
 
     let q = ctx.catalog
       .from("menu_items")
-      .select("id,venue_id,name,category,price_ghs,notes")
+      // "*" so the recommendation count arrives without a named column that
+      // would fail on a database without 0063.
+      .select("*")
       .ilike("name", `%${needle}%`);
 
     if (args.category) q = q.eq("category", args.category);
@@ -112,9 +114,14 @@ export const searchMenuItems: ChatTool<SearchMenuItemsArgs> = {
 
     let rows = serving.map((v) => {
       const owner = v.menu_shared_from || v.id;
+      // Most recommended first, then cheapest: "where is good jollof" is
+      // answered by the jollof people liked before the jollof that is cheap.
       const hits = (byOwner.get(owner) ?? [])
         .slice()
-        .sort((a, b) => Number(a.price_ghs) - Number(b.price_ghs));
+        .sort(
+          (a, b) =>
+            (b.recommend_count ?? 0) - (a.recommend_count ?? 0) || Number(a.price_ghs) - Number(b.price_ghs)
+        );
       return {
         venue_id: v.id,
         venue: v.name,
@@ -124,8 +131,9 @@ export const searchMenuItems: ChatTool<SearchMenuItemsArgs> = {
           price_ghs: Number(m.price_ghs),
           category: m.category,
           ...(m.notes ? { notes: m.notes } : {}),
+          ...((m.recommend_count ?? 0) > 0 ? { recommended_by: m.recommend_count } : {}),
         })),
-        cheapest_ghs: hits.length ? Number(hits[0].price_ghs) : null,
+        cheapest_ghs: hits.length ? Math.min(...hits.map((m) => Number(m.price_ghs))) : null,
       };
     });
 

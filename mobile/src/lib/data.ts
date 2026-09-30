@@ -520,3 +520,46 @@ export async function fetchVenue(id: string): Promise<VenueDetail | null> {
     has_vegetarian_options: (v.has_vegetarian_options as boolean | null) ?? null,
   };
 }
+
+/* ── recommendations ─────────────────────────────────────────────────── */
+
+/**
+ * Which of these items this account has recommended.
+ *
+ * Empty for somebody signed out or account-less, and on a database without
+ * migration 0063, because a missing table is "nothing recommended yet" to a
+ * screen, not an error.
+ */
+export async function fetchMyRecommendations(itemIds: string[]): Promise<Set<string>> {
+  if (!itemIds.length) return new Set();
+  const { data, error } = await supabase
+    .from("menu_item_recommendations")
+    .select("menu_item_id")
+    .in("menu_item_id", itemIds.slice(0, 500));
+  if (error) return new Set();
+  return new Set((data ?? []).map((r: { menu_item_id: string }) => r.menu_item_id));
+}
+
+/**
+ * Recommend an item, or take it back.
+ *
+ * "account" when there is no real account to recommend with: the database
+ * refuses account-less sessions, so a count cannot be run up by making a new
+ * one per tap.
+ */
+export async function setRecommendation(
+  itemId: string,
+  venueId: string,
+  on: boolean
+): Promise<"ok" | "account" | "error"> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.is_anonymous) return "account";
+  const { error } = on
+    ? await supabase.from("menu_item_recommendations").insert({ user_id: user.id, menu_item_id: itemId, venue_id: venueId })
+    : await supabase.from("menu_item_recommendations").delete().eq("user_id", user.id).eq("menu_item_id", itemId);
+  // A second tap racing the first is already the state it asked for.
+  if (error && error.code !== "23505") return "error";
+  return "ok";
+}

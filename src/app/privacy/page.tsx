@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
 export const metadata = {
@@ -6,7 +6,7 @@ export const metadata = {
   description: "What aduro collects, why, and how to get rid of it.",
 };
 
-const UPDATED = "24 September 2026";
+const UPDATED = "30 September 2026";
 const CONTACT = "planbyaduro@gmail.com";
 
 /**
@@ -70,6 +70,19 @@ export default function PrivacyPage() {
           from. Notifications need a device token so reminders reach your phone.
         </p>
         <p>
+          <strong>When you ask for directions from where you are:</strong> the
+          app asks permission, then reads your phone&apos;s location once, while
+          the app is open, and sends it to our server to find the trotro stops
+          and taxi routes near you. It is used for that one answer and not
+          stored. If you open Yango from a plan, the start point is passed to
+          Yango. aduro never reads your location in the background.
+        </p>
+        <p>
+          <strong>When you recommend a dish:</strong> that your account
+          recommends it. Other people see only the total number of
+          recommendations, never who made them.
+        </p>
+        <p>
           <strong>To run the service:</strong> how many assistant messages each
           account has used this month, and how much each request to Anthropic
           cost, so we can keep the free allowance fair and the bill paid.
@@ -78,7 +91,7 @@ export default function PrivacyPage() {
 
       <Section title="What we do not collect">
         <p>
-          No location tracking, no advertising identifiers, no contacts, and
+          No location tracking or location history, no advertising identifiers, no contacts, and
           nothing from your photo library except a picture you choose for your
           profile. We do not sell anything to anyone, and we do not use your data
           for advertising.

@@ -11,6 +11,7 @@ import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places"
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
 import { HoursEditor } from "./HoursEditor";
 import { ImageField, ImageListField } from "./ImageField";
+import { clockText, daysText, parseClock, parseDays } from "@/lib/menuTiming";
 import { ensureAreaId } from "@/lib/areas";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { VenueDraft } from "@/lib/catalog";
@@ -59,7 +60,13 @@ const CATEGORY_ONE: Record<MenuCategory, string> = {
   other: "an extra",
 };
 
-type EditableItem = Partial<MenuItem> & { _tmpId: string; _deleted?: boolean; _photo?: boolean };
+type EditableItem = Partial<MenuItem> & {
+  _tmpId: string;
+  _deleted?: boolean;
+  _photo?: boolean;
+  /** Showing the "when does this price apply" row. */
+  _when?: boolean;
+};
 
 /** Venue add/edit with inline menu items, built for “add a venue in under 2 minutes”. */
 interface EditableSchedule {
@@ -403,6 +410,10 @@ export function VenueForm({
          * database does not have fails the whole save.
          */
         ...(item.image_url !== undefined ? { image_url: item.image_url || null } : {}),
+        // When the price applies (0021, 0061). Sent only when the row carries them.
+        ...(item.available_days !== undefined ? { available_days: item.available_days?.length ? item.available_days : null } : {}),
+        ...(item.available_from_minute !== undefined ? { available_from_minute: item.available_from_minute } : {}),
+        ...(item.available_to_minute !== undefined ? { available_to_minute: item.available_to_minute } : {}),
       });
 
       const live = items.filter((i) => !i._deleted && i.name?.trim());
@@ -1492,6 +1503,10 @@ export function VenueForm({
                           <ActivityDetail item={item} setItems={setItems} />
                         )}
                         {(item._photo || item.image_url) && <PhotoDetail item={item} setItems={setItems} />}
+                        {(item._when ||
+                          item.available_days?.length ||
+                          item.available_from_minute != null ||
+                          item.available_to_minute != null) && <WhenDetail item={item} setItems={setItems} />}
                       </Fragment>
                     ))}
                   </tbody>
@@ -1621,6 +1636,11 @@ function MenuRow({ item, setItems }: { item: EditableItem; setItems: SetItems })
             Photo
           </button>
         ) : null}
+        {!item._when && !item.available_days?.length && item.available_from_minute == null && item.available_to_minute == null ? (
+          <button className="mr-3 font-semibold text-flame hover:underline" onClick={() => patch({ _when: true })}>
+            When
+          </button>
+        ) : null}
         <button
           className="font-semibold text-staletext hover:underline"
           onClick={() => patch({ _deleted: true })}
@@ -1694,6 +1714,75 @@ function ActivityDetail({ item, setItems }: { item: EditableItem; setItems: SetI
               onChange={(e) => patch({ requires_gear: e.target.value })}
             />
           </label>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * When this price applies: some days, some hours, or both. A weekday and a
+ * weekend pool pass are two rows with the same name, each with its own days.
+ * Blank is every day, all day. Checked as it is typed, and only a readable
+ * value is kept, so a typo shows in red rather than saving as "always".
+ */
+function WhenDetail({ item, setItems }: { item: EditableItem; setItems: SetItems }) {
+  const patch = (fields: Partial<EditableItem>) =>
+    setItems((cur) => cur.map((x) => (x._tmpId === item._tmpId ? { ...x, ...fields } : x)));
+  const [days, setDays] = useState(daysText(item.available_days));
+  const [from, setFrom] = useState(clockText(item.available_from_minute));
+  const [to, setTo] = useState(clockText(item.available_to_minute));
+  const daysBad = days.trim() !== "" && parseDays(days) === null;
+  const fromBad = from.trim() !== "" && parseClock(from) === null;
+  const toBad = to.trim() !== "" && parseClock(to) === null;
+
+  return (
+    <tr className="bg-cream/40">
+      <td colSpan={6}>
+        <div className="flex flex-wrap items-end gap-3 px-1 py-1">
+          <span className="text-[12.5px] font-semibold text-mutedbrown">{item.name || "This item"} is on sale:</span>
+          <label className="flex flex-col">
+            <span className="text-[11.5px] font-semibold text-mutedbrown">Days</span>
+            <input
+              className={`inp h-[34px] w-[170px] text-[13px] ${daysBad ? "!border-staletext" : ""}`}
+              value={days}
+              placeholder="weekends, Mon-Thu, Fri;Sat"
+              onChange={(e) => {
+                setDays(e.target.value);
+                const parsed = e.target.value.trim() ? parseDays(e.target.value) : [];
+                if (parsed) patch({ available_days: parsed.length ? parsed : null });
+              }}
+            />
+          </label>
+          <label className="flex flex-col">
+            <span className="text-[11.5px] font-semibold text-mutedbrown">From</span>
+            <input
+              className={`inp h-[34px] w-[90px] font-mono text-[13px] ${fromBad ? "!border-staletext" : ""}`}
+              value={from}
+              placeholder="16:00"
+              onChange={(e) => {
+                setFrom(e.target.value);
+                const parsed = e.target.value.trim() ? parseClock(e.target.value) : null;
+                if (!e.target.value.trim() || parsed !== null) patch({ available_from_minute: parsed });
+              }}
+            />
+          </label>
+          <label className="flex flex-col">
+            <span className="text-[11.5px] font-semibold text-mutedbrown">To</span>
+            <input
+              className={`inp h-[34px] w-[90px] font-mono text-[13px] ${toBad ? "!border-staletext" : ""}`}
+              value={to}
+              placeholder="22:00"
+              onChange={(e) => {
+                setTo(e.target.value);
+                const parsed = e.target.value.trim() ? parseClock(e.target.value) : null;
+                if (!e.target.value.trim() || parsed !== null) patch({ available_to_minute: parsed });
+              }}
+            />
+          </label>
+          <span className="pb-2 text-[12px] text-mutedbrown">
+            {daysBad || fromBad || toBad ? "Days like weekends or Mon-Thu, times like 16:00." : "Blank means every day, all day."}
+          </span>
         </div>
       </td>
     </tr>

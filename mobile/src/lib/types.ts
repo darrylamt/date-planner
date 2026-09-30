@@ -194,6 +194,8 @@ export interface MenuItem {
   available_days?: number[] | null;
   /** A picture of the item, when a venue or an admin has added one (0062). */
   image_url?: string | null;
+  /** How many accounts recommend it (0063). Kept by a trigger; never written directly. */
+  recommend_count?: number;
 }
 
 /**

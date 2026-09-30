@@ -65,6 +65,12 @@ export const VENUE_VIBE_TAGS = [
   "artsy",
   "foodie",
   "dancing",
+  /*
+   * Somewhere children are welcome and have something to do: a play area, a
+   * garden, a menu with small portions. Read by family days, which prefer it
+   * strongly and keep bars out unless a bar carries it.
+   */
+  "family_friendly",
 ] as const;
 
 export type VenueVibeTag = (typeof VENUE_VIBE_TAGS)[number];

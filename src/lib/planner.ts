@@ -424,15 +424,80 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number 
   const named = inputs.cuisines ?? [];
   const specific =
     named.length && (v.cuisines ?? []).some((c) => named.includes(c.toLowerCase())) ? 6 : 0;
+  /*
+   * A family day leans hard towards somewhere children are welcome. Tagged
+   * family-friendly, or marked best for family days, scores like two vibe
+   * matches; the bar exclusion is a filter, applied where the slots are built.
+   */
+  const family = familyBonus(v, inputs);
   return (
     overlap * 3 +
     occasion * 2 +
     inArea +
     cuisine +
     specific +
+    family +
+    placeFit(v, inputs.partner?.place ?? "") -
+    avoidPenalty(v, inputs.partner?.avoid ?? "") +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion)
   );
+}
+
+/** Six points on a family day for somewhere children are welcome. */
+export function familyBonus(v: Venue, inputs: Pick<PlanInputs, "occasion">): number {
+  return inputs.occasion === "family_day" && (v.vibe_tags.includes("family_friendly") || v.best_for.includes("family_day"))
+    ? 6
+    : 0;
+}
+
+/** The words a venue says about itself, for the checks below that tags cannot answer. */
+const venueWords = (v: Venue) => `${v.name} ${v.description ?? ""}`.toLowerCase();
+
+/*
+ * "Their kind of place", from the questionnaire's choices, as what a venue
+ * has to show to match it. Tags where the catalogue carries one; the venue's
+ * own words where it does not, because there is no rooftop tag and a rooftop
+ * bar says "rooftop".
+ */
+const PLACE_MATCH: Record<string, (v: Venue) => boolean> = {
+  rooftops: (v) => /rooftop|roof top|sky ?(bar|lounge)|skyline/.test(venueWords(v)),
+  gardens: (v) => v.vibe_tags.includes("outdoorsy") || /garden|courtyard|open[- ]air/.test(venueWords(v)),
+  beachside: (v) => v.vibe_tags.includes("beach") || /beach|seaside|oceanfront/.test(venueWords(v)),
+  "cosy corners": (v) => v.vibe_tags.includes("calm") || v.vibe_tags.includes("chill"),
+  "lively spots": (v) => v.vibe_tags.includes("lively") || v.vibe_tags.includes("dancing"),
+  "quiet and calm": (v) => v.vibe_tags.includes("calm") && !v.vibe_tags.includes("lively"),
+};
+
+/*
+ * Four points a matched preference, at most eight: as much as naming a local
+ * or continental kitchen, and more than a vibe tag. At two it was a nudge
+ * nobody could see: across eighteen plans for somebody whose kind of place is
+ * "beachside", not one stop was on a beach. Still a score, never a filter.
+ */
+export function placeFit(v: Venue, place: string): number {
+  const wants = place.toLowerCase().split(",").map((p) => p.trim()).filter((p) => PLACE_MATCH[p]);
+  const hits = wants.filter((p) => PLACE_MATCH[p](v)).length;
+  return Math.min(8, hits * 4);
+}
+
+/*
+ * What to avoid, as what would make a venue wrong. Spicy food is absent on
+ * purpose: nothing in the catalogue says how spicy a kitchen is, and guessing
+ * from a cuisine is the kind of claim this planner does not make. It still
+ * reaches the written description.
+ */
+const AVOID_MATCH: Record<string, (v: Venue) => boolean> = {
+  "loud music": (v) => v.vibe_tags.includes("dancing") || v.vibe_tags.includes("lively") || /\bclub\b|\bdj\b|live band/.test(venueWords(v)),
+  crowds: (v) => v.vibe_tags.includes("lively") || v.vibe_tags.includes("dancing"),
+  "long walks": (v) => v.type === "outdoor" || /hike|hiking|trail|walking tour/.test(venueWords(v)),
+  smoke: (v) => /shisha|hookah|cigar|smoking/.test(venueWords(v)),
+};
+
+/** Five points each: heavier than a preference, since avoiding is the stronger ask. */
+export function avoidPenalty(v: Venue, avoid: string): number {
+  const said = avoid.toLowerCase().split(",").map((p) => p.trim()).filter((p) => AVOID_MATCH[p]);
+  return said.filter((p) => AVOID_MATCH[p](v)).length * 5;
 }
 
 /* ── orders ───────────────────────────────────────────────────────────── */
@@ -714,7 +779,26 @@ function planOrders(
     const WIDTH = 4;
     const centre = priceCentre(tier, items.length);
     const from = Math.max(0, Math.min(centre - 1, items.length - WIDTH));
-    const candidates = items.slice(from, from + WIDTH);
+    let candidates = items.slice(from, from + WIDTH);
+
+    /*
+     * What people recommend, first.
+     *
+     * Two steps, both inside the price the tier already chose. A recommended
+     * dish up to two places either side of the window may take the place of an
+     * unrecommended one in it, so the price barely moves; then the window is
+     * dealt most-recommended first, so a couple's two dishes are the two
+     * people liked. With no recommendations anywhere near, nothing changes.
+     */
+    const rec = (m: MenuItem) => m.recommend_count ?? 0;
+    const near = items.slice(Math.max(0, from - 2), from + WIDTH + 2);
+    const outsiders = near.filter((m) => rec(m) > 0 && !candidates.includes(m)).sort((a, b) => rec(b) - rec(a));
+    for (const m of outsiders) {
+      const unliked = candidates.map((c, i) => [c, i] as const).filter(([c]) => rec(c) === 0).pop();
+      if (!unliked) break;
+      candidates = candidates.map((c, i) => (i === unliked[1] ? m : c));
+    }
+    candidates = [...candidates].sort((a, b) => rec(b) - rec(a) || byPrice(a, b));
 
     const counts = new Map<string, { item: MenuItem; qty: number }>();
     let covered = 0;
@@ -1355,9 +1439,18 @@ function planWith(
      * quietly reach outside the focus either. Preference for the exact role
      * type is applied in the sort below instead.
      */
+    /*
+     * No bars on a family day, unless the bar says children are welcome. A
+     * lounge can still win an evening slot on score alone, and a family with
+     * a seven-year-old sent to a cocktail bar is a plan nobody would keep.
+     */
+    const venuesHere =
+      inputs.occasion === "family_day"
+        ? candidates.venues.filter((v) => v.type !== "lounge" || v.vibe_tags.includes("family_friendly"))
+        : candidates.venues;
     const pool = focusTypes.length
-      ? candidates.venues.filter((v) => focusTypes.includes(v.type))
-      : candidates.venues.filter((v) => roleTypes.includes(v.type));
+      ? venuesHere.filter((v) => focusTypes.includes(v.type))
+      : venuesHere.filter((v) => roleTypes.includes(v.type));
 
     /*
      * Preference, then a full order before a minimal one, then price.
@@ -1419,7 +1512,7 @@ function planWith(
      * that way. Nearest kind first now: something sweet falls back to a cafe,
      * then a restaurant's dessert list, and a bar only after those.
      */
-    const others = candidates.venues.filter((v) => !roleTypes.includes(v.type));
+    const others = venuesHere.filter((v) => !roleTypes.includes(v.type));
     const order = FALLBACK_TYPES[role];
     const rank = (t: VenueType) => {
       const i = order.indexOf(t);

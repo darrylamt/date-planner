@@ -89,3 +89,28 @@ export function uberRideLink(stop: { name: string; area?: string | null; lat?: n
   }
   return `https://m.uber.com/ul/?${q.toString()}`;
 }
+
+/**
+ * Yango, with both ends filled in, through its documented universal link.
+ *
+ * Unlike Uber, Yango has no "my location" token, so it needs a real start
+ * point: the phone's position when somebody has shared it, or the stop they
+ * are leaving from. With no start point there is no link, and the button is
+ * not shown rather than opening Yango blank.
+ */
+export function yangoRideLink(
+  start: { lat: number; lng: number },
+  end: { lat: number; lng: number }
+): string {
+  const q = new URLSearchParams({
+    "start-lat": String(start.lat),
+    "start-lon": String(start.lng),
+    "end-lat": String(end.lat),
+    "end-lon": String(end.lng),
+    ref: "aduro",
+    adj_t: "vokme8e_nd9s9z9",
+    lang: "en",
+    adj_deeplink_js: "1",
+  });
+  return `https://yango.go.link/route?${q.toString()}`;
+}

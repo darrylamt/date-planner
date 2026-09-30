@@ -13,7 +13,9 @@ import { useTheme } from "../../src/lib/useTheme";
 import { ghs, instagramUrl, uberRideLink } from "../../src/lib/format";
 import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { OCCASIONS } from "../../src/lib/planConstants";
-import { fetchMenu, fetchVenue, type VenueDetail } from "../../src/lib/data";
+import { fetchMenu, fetchMyRecommendations, fetchVenue, setRecommendation, type VenueDetail } from "../../src/lib/data";
+import { Alert } from "react-native";
+import { router } from "expo-router";
 import { fetchAllowance } from "../../src/lib/chat";
 import { useAuth } from "../../src/lib/useAuth";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
@@ -77,6 +79,7 @@ export default function VenuePage() {
   const [query, setQuery] = useState("");
   const [hoursOpen, setHoursOpen] = useState(false);
   const [item, setItem] = useState<MenuItem | null>(null);
+  const [mine, setMine] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -101,12 +104,47 @@ export default function VenuePage() {
     if (!pro || menu) return;
     let active = true;
     fetchMenu(id)
-      .then((m) => active && setMenu(m))
+      .then((m) => {
+        if (!active) return;
+        setMenu(m);
+        void fetchMyRecommendations(m.map((x) => x.id)).then((s) => active && setMine(s));
+      })
       .catch(() => active && setMenu([]));
     return () => {
       active = false;
     };
   }, [pro, id, menu]);
+
+  /*
+   * Shown straight away and put back if the database says no: waiting on a
+   * round trip before a thumb lights up reads as the tap not having landed.
+   */
+  async function recommend(target: MenuItem, on: boolean) {
+    const bump = (delta: number) => {
+      const fix = (m: MenuItem) =>
+        m.id === target.id ? { ...m, recommend_count: Math.max(0, (m.recommend_count ?? 0) + delta) } : m;
+      setMenu((cur) => (cur ? cur.map(fix) : cur));
+      setItem((cur) => (cur ? fix(cur) : cur));
+      setMine((cur) => {
+        const next = new Set(cur);
+        if (delta > 0) next.add(target.id);
+        else next.delete(target.id);
+        return next;
+      });
+    };
+    bump(on ? 1 : -1);
+    const result = await setRecommendation(target.id, id, on);
+    if (result === "ok") return;
+    bump(on ? -1 : 1);
+    if (result === "account") {
+      Alert.alert("Sign in to recommend", "Recommendations come from accounts, one each, so the counts stay honest.", [
+        { text: "Not now", style: "cancel" },
+        { text: "Sign in", onPress: () => router.push("/login") },
+      ]);
+    } else {
+      Alert.alert("Could not save that", "Try again in a moment.");
+    }
+  }
 
   const isActivity = venue?.type === "activity" || venue?.type === "outdoor";
 
@@ -117,6 +155,15 @@ export default function VenuePage() {
   }, [menu, isActivity]);
 
   const current = tab && categories.includes(tab) ? tab : categories[0] ?? null;
+  // What people here liked, across the whole menu: the answer to "what should I get".
+  const liked = useMemo(
+    () =>
+      (menu ?? [])
+        .filter((m) => (m.recommend_count ?? 0) > 0)
+        .sort((a, b) => (b.recommend_count ?? 0) - (a.recommend_count ?? 0))
+        .slice(0, 8),
+    [menu]
+  );
   const needle = query.trim().toLowerCase();
   /*
    * A search looks through the whole menu, not just the open tab: somebody
@@ -319,6 +366,51 @@ export default function VenuePage() {
                 </Text>
               ) : (
                 <>
+                  {liked.length && !needle ? (
+                    <View style={{ marginTop: space.md }}>
+                      <Text variant="eyebrow" tone="secondary" uppercase style={{ paddingHorizontal: GUTTER }}>
+                        Most recommended
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingHorizontal: GUTTER, gap: space.sm, paddingTop: space.sm }}
+                      >
+                        {liked.map((m) => (
+                          <Pressable
+                            key={m.id}
+                            onPress={() => setItem(m)}
+                            style={({ pressed }) => ({
+                              width: 150,
+                              borderRadius: radius.card,
+                              backgroundColor: c.backgroundElement,
+                              overflow: "hidden",
+                              opacity: pressed ? 0.7 : 1,
+                            })}
+                          >
+                            {m.image_url ? (
+                              <Image source={{ uri: m.image_url }} style={{ width: 150, height: 96 }} contentFit="cover" />
+                            ) : null}
+                            <View style={{ padding: space.md, gap: 2 }}>
+                              <Text variant="footnote" weight="600" numberOfLines={2}>
+                                {m.name}
+                              </Text>
+                              <Text variant="footnote" tabular>
+                                {ghs(Number(m.price_ghs))}
+                              </Text>
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                                <Symbol name="hand.thumbsup.fill" size={11} color={c.accent} />
+                                <Text variant="caption" tone="tint">
+                                  {m.recommend_count}
+                                </Text>
+                              </View>
+                            </View>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  ) : null}
+
                   {menu.length > SEARCHABLE ? (
                     <View
                       style={{
@@ -443,7 +535,13 @@ export default function VenuePage() {
         )}
       </ScrollView>
 
-      <ItemSheet item={item} venueName={venue.name} onClose={() => setItem(null)} />
+      <ItemSheet
+        item={item}
+        venueName={venue.name}
+        onClose={() => setItem(null)}
+        recommended={item ? mine.has(item.id) : false}
+        onRecommend={item ? (on) => void recommend(item, on) : undefined}
+      />
     </>
   );
 }
@@ -481,6 +579,14 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
           <Text variant="caption" tone="tint">
             {when}
           </Text>
+        ) : null}
+        {(item.recommend_count ?? 0) > 0 ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Symbol name="hand.thumbsup.fill" size={11} color={c.accent} />
+            <Text variant="caption" tone="tint">
+              Recommended by {item.recommend_count}
+            </Text>
+          </View>
         ) : null}
         <Text variant="callout" tabular style={{ marginTop: 2 }}>
           {ghs(Number(item.price_ghs))}

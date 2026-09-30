@@ -137,6 +137,12 @@ export const getVenue: ChatTool<GetVenueArgs> = {
             ? `yes, per ${venue.dietary_source ?? "a call to the venue"}`
             : `no, per ${venue.dietary_source ?? "a call to the venue"}`,
       menu: summarise(menu, args.category),
+      /*
+       * What aduro users have recommended here, most first. Counts from real
+       * accounts, one per person per dish; empty is the common case and means
+       * nobody has yet, not that nothing is good.
+       */
+      most_recommended: mostRecommended(menu),
       menu_shared_from: ownerName ?? null,
       note: guidance(venue, menu),
     };
@@ -150,6 +156,15 @@ export const getVenue: ChatTool<GetVenueArgs> = {
  * it is returned as one: the model is told not to read it as either open or
  * shut, because most of this catalogue has no hours on file.
  */
+function mostRecommended(menu: MenuItem[]) {
+  const liked = menu
+    .filter((m) => (m.recommend_count ?? 0) > 0)
+    .sort((a, b) => (b.recommend_count ?? 0) - (a.recommend_count ?? 0))
+    .slice(0, 6)
+    .map((m) => ({ name: m.name, price_ghs: Number(m.price_ghs), recommended_by: m.recommend_count ?? 0 }));
+  return liked.length ? liked : "nobody has recommended anything here yet";
+}
+
 function hours(v: Venue): { known: boolean; week?: { day: string; hours: string }[] } {
   const periods = parsePeriods(v.opening_periods);
   if (!periods) return { known: false };

@@ -142,3 +142,57 @@ export async function fetchPickups(
     return [];
   }
 }
+
+/* ── getting there ───────────────────────────────────────────────────── */
+
+export interface TripStop {
+  id: string;
+  name: string;
+  label: string;
+  lat: number;
+  lng: number;
+}
+export interface TripLine {
+  id: string;
+  name: string;
+  headsign: string | null;
+  headwayMins: number | null;
+  status: "unchecked" | "confirmed";
+  calledAs: string | null;
+  fareMin: number | null;
+  fareMax: number | null;
+  notes: string | null;
+  checkedOn: string | null;
+}
+export type TripStep =
+  | { kind: "walk"; toLabel: string; minutes: number; meters: number }
+  | { kind: "ride"; line: TripLine; board: TripStop; alight: TripStop; stopsBetween: number; minutes: number; waitMinutes: number }
+  | { kind: "taxi"; fromLabel: string; toLabel: string; minutes: number; costGhs: number; reason: string };
+export interface TripOption {
+  kind: "trotro" | "trotro+taxi" | "taxi" | "walk";
+  steps: TripStep[];
+  minutes: number;
+  trotroFareMin: number | null;
+  trotroFareMax: number | null;
+  taxiGhs: number;
+  unchecked: boolean;
+}
+
+/** Walk, trotro and taxi options between two places, from the server's route map. */
+export async function planTrip(
+  from: { lat: number; lng: number; label?: string } | { venueId: string },
+  toVenueId: string
+): Promise<{ options: TripOption[]; landmark: string | null } | { error: string }> {
+  try {
+    const res = await fetch(`${BASE}/api/transit/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: { venueId: toVenueId } }),
+    });
+    const body = await res.json();
+    if (!res.ok) return { error: body.error ?? "Could not work out the way there." };
+    return { options: body.options as TripOption[], landmark: body.access?.landmark ?? null };
+  } catch {
+    return { error: "Could not reach the route planner. Check your connection." };
+  }
+}

@@ -6,6 +6,7 @@ import { Symbol } from "../Symbol";
 import { StopGallery } from "./StopGallery";
 import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
+import { GettingThereSheet } from "./GettingThereSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, instagramUrl, time12, uberRideLink } from "../../lib/format";
@@ -17,6 +18,7 @@ import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
  */
 export function StopCard({
   stop,
+  previous = null,
   index,
   onSwap,
   onOrdersChange,
@@ -26,6 +28,8 @@ export function StopCard({
   reserving,
 }: {
   stop: ItineraryStop;
+  /** The stop before this one, which is where they will be setting off from. */
+  previous?: ItineraryStop | null;
   index: number;
   onSwap: () => void;
   onOrdersChange: (orders: ItineraryOrder[]) => void;
@@ -38,6 +42,7 @@ export function StopCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [tripOpen, setTripOpen] = useState(false);
 
   const editable = stop.kind !== "event";
   /*
@@ -404,11 +409,12 @@ export function StopCard({
             aduro never asks for or sees it. On the first stop that is the trip
             from home; on the rest it is the hop from the stop before.
           */}
-          <StopAction
-            glyph={() => <UberMark />}
-            label="Uber"
-            onPress={() => void Linking.openURL(uberRideLink(stop))}
-          />
+          {/*
+            One button for every way there: Uber and Yango with the drop-off
+            filled in, and walk, trotro and taxi directions from the stop
+            before, or from where they are if they choose to share it.
+          */}
+          <StopAction icon="figure.walk" label="Get there" onPress={() => setTripOpen(true)} />
           {/*
             Always here, greyed when there is nothing to open.
             
@@ -463,6 +469,8 @@ export function StopCard({
           />
         </View>
       </View>
+
+      <GettingThereSheet visible={tripOpen} onClose={() => setTripOpen(false)} stop={stop} previous={previous} />
 
       <ReportSheet
         visible={reportOpen}

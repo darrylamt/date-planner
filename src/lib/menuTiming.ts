@@ -43,3 +43,19 @@ export function itemKey(venueId: unknown, name: unknown, days: unknown, from: un
   const d = Array.isArray(days) && days.length ? [...days].sort().join(",") : "all";
   return `${venueId}::${String(name ?? "").trim().toLowerCase()}::${d}::${from ?? "any"}`;
 }
+
+/** The reverse of parseDays, for showing a saved row: [0,6] -> "weekends". */
+export function daysText(days: number[] | null | undefined): string {
+  if (!days?.length) return "";
+  const key = [...days].sort().join(",");
+  if (key === "1,2,3,4,5") return "weekdays";
+  if (key === "0,6") return "weekends";
+  if (days.length === 7) return "";
+  return [...days].sort().map((d) => DAY_NAMES[d][0].toUpperCase() + DAY_NAMES[d].slice(1)).join(";");
+}
+
+/** The reverse of parseClock: 960 -> "16:00". */
+export function clockText(mins: number | null | undefined): string {
+  if (mins == null) return "";
+  return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+}

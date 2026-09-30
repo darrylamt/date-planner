@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
-import { focusesOf, focusVenueTypes, meetingVenueTypes } from "./planner";
+import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit } from "./planner";
 import { isPlaceholderAvg } from "./budget";
 import { DEFAULT_CITY, wellnessAllowed } from "./planConstants";
 import { weekdayOf } from "./hours";
@@ -368,7 +368,16 @@ export async function fetchCandidates(
     .map((v) => {
       const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
       const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
-      return { v, score: overlap * 2 + occasion };
+      /*
+       * The same preferences the planner scores, so a beachside place can
+       * reach the shortlist at all: a venue left out here is one no amount of
+       * planner scoring can choose.
+       */
+      const prefs =
+        placeFit(v, inputs.partner?.place ?? "") -
+        avoidPenalty(v, inputs.partner?.avoid ?? "") +
+        familyBonus(v, inputs);
+      return { v, score: overlap * 2 + occasion + prefs };
     })
     .sort((a, b) => b.score - a.score);
 

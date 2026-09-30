@@ -62,10 +62,16 @@ export function ItemSheet({
   item,
   venueName,
   onClose,
+  recommended = false,
+  onRecommend,
 }: {
   item: MenuItem | null;
   venueName: string;
   onClose: () => void;
+  /** Whether this account already recommends it. */
+  recommended?: boolean;
+  /** Absent where recommending does not apply. */
+  onRecommend?: (on: boolean) => void;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -135,6 +141,41 @@ export function ItemSheet({
             {item.notes ? (
               <Text variant="body" style={{ marginTop: space.sm }}>
                 {item.notes}
+              </Text>
+            ) : null}
+
+            {/*
+              Recommending, right under the price, because it is the one thing
+              on this sheet somebody does rather than reads. The count is real
+              accounts, one each, so it is shown as a number of people.
+            */}
+            {onRecommend ? (
+              <Pressable
+                onPress={() => onRecommend(!recommended)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: recommended }}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  alignSelf: "flex-start",
+                  gap: space.sm,
+                  marginTop: space.sm,
+                  paddingHorizontal: space.lg,
+                  paddingVertical: space.sm,
+                  borderRadius: radius.pill,
+                  backgroundColor: recommended ? c.accent : c.accentSoft,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Symbol name={recommended ? "hand.thumbsup.fill" : "hand.thumbsup"} size={16} color={recommended ? c.textOnBrand : c.accent} />
+                <Text variant="callout" weight="600" style={{ color: recommended ? c.textOnBrand : c.accent }}>
+                  {recommended ? "You recommend this" : "Recommend"}
+                </Text>
+              </Pressable>
+            ) : null}
+            {(item.recommend_count ?? 0) > 0 ? (
+              <Text variant="footnote" tone="secondary">
+                Recommended by {item.recommend_count} {item.recommend_count === 1 ? "person" : "people"} on aduro
               </Text>
             ) : null}
 
