@@ -1,4 +1,4 @@
-import { ghs, longDate, time12 } from "./format";
+import { longDate, time12 } from "./format";
 import { OCCASION_THEME } from "./planConstants";
 import type { Itinerary, PlanInputs } from "./types";
 
@@ -15,6 +15,11 @@ const APP_STORE = "https://apps.apple.com/gh/app/adurogh/id6809005685";
  *
  * Written as plain text on purpose: every mail client renders it, and a plan
  * that arrives as a wall of broken HTML is worse than one that arrives plain.
+ *
+ * No money anywhere, the same rule as the shared page: the email goes to the
+ * people being taken out, and what the evening costs is the one thing the
+ * sender did not mean to tell them. The dishes and activities are named, so
+ * they know what is coming; every figure stays in the sender's own app.
  */
 export function planEmail(
   itinerary: Itinerary,
@@ -38,45 +43,24 @@ export function planEmail(
     if (stop.label) lines.push(`   ${stop.label}`);
     if (stop.what_to_do) lines.push(`   ${stop.what_to_do}`);
 
-    stop.orders.forEach((o) => {
-      lines.push(`   · ${o.item}${o.qty > 1 ? ` ×${o.qty}` : ""}, ${ghs(Number(o.price_ghs))}`);
+    // What is on the order, by name. The door line says nothing without its figure.
+    onThePlan(stop.orders).forEach((o) => {
+      lines.push(`   · ${o.item}${o.qty > 1 ? ` ×${o.qty}` : ""}`);
     });
-
-    // A genuinely free stop should say so rather than show nothing at all.
-    if (!stop.orders.length) lines.push("   · Free to enter");
-    for (const ch of stop.charges ?? []) {
-      if (ch.ghs > 0) lines.push(`   + ${ch.label}, ${ghs(ch.ghs)}`);
-    }
 
     const hop = itinerary.hops[i];
     if (hop && i < itinerary.stops.length - 1) {
-      // A hop priced at nothing is somebody driving, not a free taxi.
-      lines.push(
-        `   ↓ about ${hop.mins} min` +
-          (Number(hop.cost_ghs) > 0 ? `, ${ghs(Number(hop.cost_ghs))}` : ", your own drive")
-      );
+      lines.push(`   ↓ about ${hop.mins} min to the next stop`);
     }
     lines.push("");
   });
 
-  lines.push(`Food and entry: ${ghs(Number(itinerary.food_total_ghs))}`);
-  if (Number(itinerary.transport_total_ghs) > 0) {
-    lines.push(`Transport: ${ghs(Number(itinerary.transport_total_ghs))}`);
-  }
-  lines.push(`Total: ${ghs(Number(itinerary.est_total_ghs))}`);
-
-  if (itinerary.budget_note) {
-    lines.push("");
-    lines.push(itinerary.budget_note);
-  }
-
   if (url) {
-    lines.push("");
     lines.push(`See it online: ${url}`);
+    lines.push("");
   }
 
-  lines.push("");
-  lines.push("Planned with aduro. Menu prices are from our catalog and can change.");
+  lines.push("Planned with aduro. A plan is a suggestion, not a booking.");
 
   return {
     subject: `${itinerary.title}, ${longDate(date)}`,
@@ -98,6 +82,14 @@ export function planMailto(
   )}&body=${encodeURIComponent(body)}`;
 }
 
+/**
+ * What is on a stop's order that is worth naming: the dishes and activities,
+ * not the door, which without its figure says nothing.
+ */
+function onThePlan(orders: Itinerary["stops"][number]["orders"]): { item: string; qty: number }[] {
+  return orders.filter((o) => !o.door && o.qty > 0).map((o) => ({ item: o.item, qty: o.qty }));
+}
+
 /** Text from the catalogue or the sender, made safe to set inside HTML. */
 function esc(text: string | null | undefined): string {
   return String(text ?? "")
@@ -117,7 +109,8 @@ function esc(text: string | null | undefined): string {
  * clients that apply their own dark mode.
  *
  * The same content as the plain version, in the same order, so which one a
- * phone sends changes how it looks and never what it says.
+ * phone sends changes how it looks and never what it says: no money in
+ * either.
  */
 export function planEmailHtml(
   itinerary: Itinerary,
@@ -135,25 +128,15 @@ export function planEmailHtml(
 
   const stops = itinerary.stops
     .map((stop, i) => {
-      const orders = stop.orders.length
-        ? stop.orders
-            .map(
-              (o) => `
-                <tr>
-                  <td style="padding:4px 0;font:15px ${font};color:${ink};">${esc(o.item)}${o.qty > 1 ? ` <span style="color:${soft};">&times;${o.qty}</span>` : ""}</td>
-                  <td align="right" valign="top" style="padding:4px 0 4px 14px;font:15px ${font};color:${ink};white-space:nowrap;">${esc(ghs(Number(o.price_ghs)))}</td>
-                </tr>`
-            )
-            .join("")
-        : `<tr><td colspan="2" style="padding:4px 0;font:15px ${font};color:${soft};">Free to enter</td></tr>`;
-      // The venue's service charge and tax, under the dishes they are charged on.
-      const charged = (stop.charges ?? [])
-        .filter((ch) => ch.ghs > 0)
+      // What is on the order, by name only: no price, no charges, no door line.
+      const dishes = onThePlan(stop.orders);
+      const orders = dishes
         .map(
-          (ch) => `
+          (o) => `
                 <tr>
-                  <td style="padding:4px 0;font:14px ${font};color:${soft};">${esc(ch.label)}</td>
-                  <td align="right" valign="top" style="padding:4px 0 4px 14px;font:14px ${font};color:${soft};white-space:nowrap;">${esc(ghs(ch.ghs))}</td>
+                  <td style="padding:4px 0;font:15px ${font};color:${ink};">
+                    <span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:${accent};vertical-align:middle;margin-right:10px;"></span>${esc(o.item)}${o.qty > 1 ? ` <span style="color:${soft};">&times;${o.qty}</span>` : ""}
+                  </td>
                 </tr>`
         )
         .join("");
@@ -165,7 +148,7 @@ export function planEmailHtml(
           <tr>
             <td style="padding:14px 0 14px 18px;font:14px ${font};color:${soft};">
               <span style="display:inline-block;width:2px;height:22px;background:${glow};vertical-align:middle;margin-right:14px;"></span>
-              About ${hop.mins} min to the next stop${Number(hop.cost_ghs) > 0 ? `, ${esc(ghs(Number(hop.cost_ghs)))}` : ", your own drive"}
+              About ${hop.mins} min to the next stop
             </td>
           </tr>`
           : "";
@@ -183,9 +166,14 @@ export function planEmailHtml(
                     <div style="font:800 20px ${font};color:${ink};margin-top:4px;">${esc(stop.name)}</div>
                     <div style="font:14px ${font};color:${soft};margin-top:2px;">${esc(stop.area)}</div>
                     ${stop.what_to_do ? `<div style="font:15px/1.5 ${font};color:${ink};margin-top:10px;">${esc(stop.what_to_do)}</div>` : ""}
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid ${line};padding-top:6px;">
-                      ${orders}${charged}
-                    </table>
+                    ${
+                      orders
+                        ? `<div style="font:700 11px ${font};letter-spacing:1.2px;color:${soft};text-transform:uppercase;margin-top:14px;padding-top:12px;border-top:1px solid ${line};">On the plan</div>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;">
+                      ${orders}
+                    </table>`
+                        : ""
+                    }
                   </td>
                 </tr>
               </table>
@@ -194,7 +182,6 @@ export function planEmailHtml(
     })
     .join("");
 
-  const transport = Number(itinerary.transport_total_ghs) > 0;
   const button = url
     ? `
           <tr>
@@ -251,23 +238,13 @@ export function planEmailHtml(
             </table>
           </td>
         </tr>
-        <tr>
-          <td style="padding:20px 28px 0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF4F7;border-radius:16px;">
-              <tr><td style="padding:14px 18px 4px;font:15px ${font};color:${soft};">Food and entry</td><td align="right" style="padding:14px 18px 4px;font:15px ${font};color:${ink};">${esc(ghs(Number(itinerary.food_total_ghs)))}</td></tr>
-              ${transport ? `<tr><td style="padding:4px 18px;font:15px ${font};color:${soft};">Transport</td><td align="right" style="padding:4px 18px;font:15px ${font};color:${ink};">${esc(ghs(Number(itinerary.transport_total_ghs)))}</td></tr>` : ""}
-              <tr><td style="padding:8px 18px 14px;font:800 17px ${font};color:${ink};">Total</td><td align="right" style="padding:8px 18px 14px;font:800 17px ${font};color:${accent};">${esc(ghs(Number(itinerary.est_total_ghs)))}</td></tr>
-            </table>
-            ${itinerary.budget_note ? `<div style="font:13px/1.5 ${font};color:${soft};margin-top:10px;">${esc(itinerary.budget_note)}</div>` : ""}
-          </td>
-        </tr>
         ${button}
         <tr>
           <td style="padding:28px 28px 30px;text-align:center;">
             <div style="font:13px ${font};color:${soft};">Planned with</div>
             <div style="font:800 22px ${font};color:${ink};margin-top:2px;">adu<span style="color:${accent};">ro</span></div>
             <div style="font:13px ${font};margin-top:12px;"><a href="${APP_STORE}" style="color:${accent};font-weight:700;text-decoration:none;">Plan your own on the App Store &rarr;</a></div>
-            <div style="font:11px/1.5 ${font};color:#A8969E;margin-top:14px;">Menu prices are from our catalogue and can change. A plan is a suggestion, not a booking.</div>
+            <div style="font:11px/1.5 ${font};color:#A8969E;margin-top:14px;">A plan is a suggestion, not a booking.</div>
           </td>
         </tr>
       </table>

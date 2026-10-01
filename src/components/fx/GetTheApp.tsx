@@ -31,11 +31,17 @@ export function GetTheApp({
   ink,
   eyebrow = "Still aduro, for now",
   className = "",
+  prices = true,
 }: {
   reduced: boolean;
   ink: string;
   eyebrow?: string;
   className?: string;
+  /**
+   * The example totals. Off under a shared plan, where "GHS 640 for two"
+   * beside somebody's own date reads as what their evening cost.
+   */
+  prices?: boolean;
 }) {
   const [i, setI] = useState(0);
   useEffect(() => {
@@ -64,8 +70,9 @@ export function GetTheApp({
       </div>
 
       <p className="mt-3 max-w-[480px] text-[15px] text-white/70">
-        Tell it your budget and what you are in the mood for. It picks the places, orders from real menus and
-        adds up the whole outing, the ride there included.
+        {prices
+          ? "Tell it your budget and what you are in the mood for. It picks the places, orders from real menus and adds up the whole outing, the ride there included."
+          : "Tell it who it is for and what you are in the mood for. It picks the places, what to order and how to get between them."}
       </p>
 
       <div key={`plan-${now.word}`} aria-hidden className="mt-4 flex flex-wrap items-center gap-2 text-[13px] font-semibold sm:text-[14px]">
@@ -85,12 +92,14 @@ export function GetTheApp({
             </span>
           </span>
         ))}
-        <span
-          className={`${fx.rise} rounded-full px-3 py-1.5 font-bold`}
-          style={{ animationDelay: "460ms", background: "linear-gradient(90deg, var(--c1), var(--c2))", color: ink }}
-        >
-          {now.total}
-        </span>
+        {prices ? (
+          <span
+            className={`${fx.rise} rounded-full px-3 py-1.5 font-bold`}
+            style={{ animationDelay: "460ms", background: "linear-gradient(90deg, var(--c1), var(--c2))", color: ink }}
+          >
+            {now.total}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">

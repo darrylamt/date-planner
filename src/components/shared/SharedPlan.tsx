@@ -16,6 +16,8 @@ export interface SharedStop {
   label: string;
   what: string;
   whatsOn: string[];
+  /** What is on the order, without prices. */
+  dishes: { item: string; qty: number }[];
   image: string | null;
   instagram: string | null;
   emoji: string;
@@ -295,6 +297,22 @@ export function SharedPlan(p: SharedPlanProps) {
                     <h2 className="mt-2 text-[23px] font-extrabold leading-tight tracking-[-0.01em]">{st.name}</h2>
                     <div className="mt-0.5 text-[14px] text-white/55">📍 {st.area}</div>
                     {st.what ? <p className="mt-2.5 text-[15px] leading-relaxed text-white/75">{st.what}</p> : null}
+                    {st.dishes.length ? (
+                      <div className="mt-3 rounded-[16px] border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">On the plan</div>
+                        <ul className="mt-1.5 grid gap-1">
+                          {st.dishes.map((d) => (
+                            <li key={d.item} className="flex items-baseline gap-2 text-[15px] text-white/85">
+                              <span className="h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full" style={{ background: c1 }} />
+                              <span className="min-w-0">
+                                {d.item}
+                                {d.qty > 1 ? <span className="text-white/45"> &times;{d.qty}</span> : null}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {st.whatsOn.map((line) => (
                       <div key={line} className="mt-2 text-[14px] font-semibold" style={{ color: c1 }}>
                         ✨ {line}
@@ -337,7 +355,7 @@ export function SharedPlan(p: SharedPlanProps) {
               </div>
             </div>
 
-            <GetTheApp reduced={reduced} ink={ink} eyebrow="Want one of these?" className="mt-10" />
+            <GetTheApp reduced={reduced} ink={ink} eyebrow="Want one of these?" className="mt-10" prices={false} />
           </section>
         </main>
       </div>

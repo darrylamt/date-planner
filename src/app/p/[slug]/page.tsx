@@ -126,7 +126,13 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
     // "Ladies only" rides on the label, so nobody forwards it to a friend it excludes.
     label: [st.label, st.event?.audience ? AUDIENCE_BADGE[st.event.audience] : null].filter(Boolean).join(" · "),
     what: st.what_to_do || "",
-    whatsOn: st.whats_on ?? [],
+    // Without the cover: the guest's copy carries no money anywhere.
+    whatsOn: (st.whats_on ?? []).map((line) => line.replace(/, GHS [\d,.]+ in/, "")),
+    /*
+     * What they will eat and do there, by name and never by price. The door
+     * line is left out: without its figure it says nothing.
+     */
+    dishes: st.orders.filter((o) => !o.door && o.qty > 0).map((o) => ({ item: o.item, qty: o.qty })),
     // The first picture only, which is the event's poster where there is one.
     image: st.images?.[0] ?? st.image_url ?? null,
     instagram: instagramUrl(st.instagram_handle),
