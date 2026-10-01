@@ -222,7 +222,23 @@ export async function savePlan(inputs: PlanInputs, itinerary: Itinerary): Promis
     .single();
 
   if (error) throw error;
+  widgetsChanged();
   return data.share_slug as string;
+}
+
+/*
+ * The home screen widget shows the next saved plan, so anything that adds,
+ * changes or removes one tells it. Required lazily: widgets.ts reads plans
+ * through this file, and the two must not import each other at load.
+ */
+function widgetsChanged() {
+  setTimeout(() => {
+    try {
+      void (require("./widgets") as typeof import("./widgets")).refreshWidgets();
+    } catch {
+      // A widget that is not there is not a failure to save.
+    }
+  }, 0);
 }
 
 export async function listPlans(): Promise<SavedPlan[]> {
@@ -285,6 +301,7 @@ export async function updateSavedItinerary(
       estimated_total_ghs: Math.round(Number(itinerary.est_total_ghs)),
     })
     .eq("share_slug", slug);
+  if (!error) widgetsChanged();
   return !error;
 }
 
@@ -302,6 +319,7 @@ export async function setPlannerNote(slug: string, note: string): Promise<boolea
 export async function deletePlan(id: string): Promise<void> {
   const { error } = await supabase.from("plans").delete().eq("id", id);
   if (error) throw error;
+  widgetsChanged();
 }
 
 /**

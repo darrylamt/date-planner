@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Stack, router } from "expo-router";
-import { Text } from "react-native";
+import { AppState, Text } from "react-native";
+import { refreshWidgets } from "../src/lib/widgets";
+import { supabase } from "../src/lib/supabase";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -73,6 +75,26 @@ function RootShell() {
   useEffect(() => {
     configureNotificationHandler();
     return subscribeToNotificationTaps((url) => router.push(url as never));
+  }, []);
+
+  /*
+   * The home screen widget, kept current: when the app opens and whenever it
+   * comes back to the front, which is when a plan made on another phone or
+   * the passing of a day would otherwise leave it saying the wrong thing.
+   */
+  useEffect(() => {
+    void refreshWidgets();
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") void refreshWidgets();
+    });
+    // Signing out must take the last person's plan off the home screen.
+    const { data: auth } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") void refreshWidgets();
+    });
+    return () => {
+      sub.remove();
+      auth.subscription.unsubscribe();
+    };
   }, []);
 
   if (!fontsLoaded && !fontError) return null;

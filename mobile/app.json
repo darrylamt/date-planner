@@ -174,7 +174,24 @@
           "defaultChannel": "default"
         }
       ],
-      "expo-mail-composer"
+      "expo-mail-composer",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.darrylamt.aduro.widgets",
+          "groupIdentifier": "group.com.darrylamt.aduro",
+          "widgets": [
+            {
+              "name": "NextPlan",
+              "displayName": "Your next plan",
+              "description": "Your next outing at a glance, and a countdown to it.",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium", "accessoryRectangular", "accessoryInline"]
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
