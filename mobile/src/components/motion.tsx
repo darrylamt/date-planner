@@ -1,5 +1,20 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { Animated, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AccessibilityInfo, Animated, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+
+/** Whether the phone asks for less motion, so loops and rotations can rest. */
+export function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((r) => live && setReduced(r));
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduced);
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  return reduced;
+}
 
 /**
  * Small pieces of motion, shared so every screen moves the same way.
