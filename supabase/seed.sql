@@ -7,7 +7,7 @@
 -- Production was cleared of this data on 2026-09-05. To load a real catalog,
 -- see supabase/templates/README.md and import at /admin/import.
 --
--- aduro, seed data
+-- Duro, seed data
 -- ⚠️ ALL PRICES BELOW ARE PLACEHOLDERS, to be replaced with researched, venue-confirmed data.
 -- Venue names are plausible Accra-style venues for development and demos.
 -- Events are seeded relative to the current date so the demo always has active events.

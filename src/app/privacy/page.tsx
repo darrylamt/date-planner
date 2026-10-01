@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
 export const metadata = {
-  title: "Privacy, aduro",
-  description: "What aduro collects, why, and how to get rid of it.",
+  title: "Privacy, Duro",
+  description: "What Duro collects, why, and how to get rid of it.",
 };
 
 const UPDATED = "30 September 2026";
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
           <strong>Who else sees it</strong> below.
         </p>
         <p>
-          <strong>If you use aduro without an account:</strong> to use the
+          <strong>If you use Duro without an account:</strong> to use the
           assistant or subscribe without registering, the app creates an
           identifier for your device. It has no email or name attached. Your
           conversations and any subscription are stored against it.
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
           your conversations with the assistant.
         </p>
         <p>
-          <strong>If you subscribe to aduro Pro:</strong> whether your
+          <strong>If you subscribe to Duro Pro:</strong> whether your
           subscription is active and when it renews. Payment is handled entirely
           by Apple; we never see your card.
         </p>
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
           the app is open, and sends it to our server to find the trotro stops
           and taxi routes near you. It is used for that one answer and not
           stored. If you open Yango from a plan, the start point is passed to
-          Yango. aduro never reads your location in the background.
+          Yango. Duro never reads your location in the background.
         </p>
         <p>
           <strong>To decide where to add venues:</strong> a rough, anonymous
@@ -134,7 +134,7 @@ export default function PrivacyPage() {
           name detached, because a closed venue is still closed.
         </p>
         <p>
-          Deleting your account does not cancel an aduro Pro subscription, because
+          Deleting your account does not cancel a Duro Pro subscription, because
           Apple holds it rather than us. Cancel it first in your iPhone&apos;s
           Settings, under your name, then Subscriptions.
         </p>
@@ -145,7 +145,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Children">
-        <p>aduro is not intended for anyone under 13.</p>
+        <p>Duro is not intended for anyone under 13.</p>
       </Section>
 
       <Section title="Contact">

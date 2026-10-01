@@ -196,7 +196,7 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
    * Without this the only way to reach a venue was to out-rank sixty others on
    * a mood, and the model reported anything that did not make the top eight as
    * absent from the catalogue. Casa1715, three hundred menu rows and all, came
-   * back as "not among the venues aduro holds". Denying something real is a
+   * back as "not among the venues Duro holds". Denying something real is a
    * worse failure than any amount of hedging: it is the product's one promise,
    * inverted.
    */

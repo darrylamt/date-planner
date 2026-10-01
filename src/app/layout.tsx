@@ -25,7 +25,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "aduro, a date planned with intention · Accra",
+  title: "Duro, a date planned with intention · Accra",
   description:
     "Tell us your budget, the vibe, and a little about them, we'll build a back-to-back evening in Accra with real menus and real prices.",
 };

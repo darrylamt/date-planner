@@ -4,13 +4,13 @@ import { IssuesReview, type IssueRow } from "@/components/admin/IssuesReview";
 export const dynamic = "force-dynamic";
 
 /**
- * What people say is broken about aduro itself.
+ * What people say is broken about Duro itself.
  *
  * /admin/reports is the catalogue going stale: a price moved, a door was
  * locked. This is the app being wrong, which until migration 0052 had nowhere
  * to land. Chat spent an unknown stretch telling paying subscribers they were
  * out of messages for the month, and it was found only because the person who
- * runs aduro hit it himself -- everyone else got a screen that said no and no
+ * runs Duro hit it himself -- everyone else got a screen that said no and no
  * way to argue with it.
  */
 export default async function AdminIssuesPage() {

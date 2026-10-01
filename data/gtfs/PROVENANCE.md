@@ -1,6 +1,6 @@
 # Trotro route maps, kept as downloaded
 
-Copies of the GTFS feeds aduro's trotro planner is built from, or may be.
+Copies of the GTFS feeds Duro's trotro planner is built from, or may be.
 They are here so a reload never depends on the source staying online, and
 so the exact version in use is on record. Do not edit these files; corrections
 belong in the database, through the admin.

@@ -62,11 +62,11 @@ export function ReturnToApp() {
     <div className="mb-5 rounded-card border border-flame/40 bg-sand px-5 py-4">
       <div className="text-[15px] font-bold">You are signed in. Finish in the app.</div>
       <p className="mt-1 text-[14px] leading-relaxed text-cocoa">
-        Google sent you here instead of back to aduro. Tap below and the app will pick up where
+        Google sent you here instead of back to Duro. Tap below and the app will pick up where
         you left off.
       </p>
       <a href={target} className="btn mt-3 inline-block px-7">
-        Open aduro
+        Open Duro
       </a>
       <p className="mt-2 text-[12.5px] text-mutedbrown">
         Nothing happens? The app may not be installed on this device. Sign in with Apple, or with

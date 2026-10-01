@@ -42,17 +42,17 @@ interface Mail {
 const MAILS: Mail[] = [
   {
     file: "confirm-signup.html",
-    subject: "Confirm your email for aduro",
+    subject: "Confirm your email for Duro",
     preview: "One tap and your plans are saved to your account.",
     emoji: "🎉",
     heading: "One tap and you are in",
-    body: "Welcome to aduro. Confirm this is your email address and every plan you make is saved to your account, ready to share, repeat or pick up on another phone.",
+    body: "Welcome to Duro. Confirm this is your email address and every plan you make is saved to your account, ready to share, repeat or pick up on another phone.",
     button: "Confirm my email",
-    after: "If you did not sign up for aduro, ignore this email and nothing happens.",
+    after: "If you did not sign up for Duro, ignore this email and nothing happens.",
   },
   {
     file: "reset-password.html",
-    subject: "Reset your aduro password",
+    subject: "Reset your Duro password",
     preview: "Choose a new password. The link works once.",
     emoji: "🔑",
     heading: "Choose a new password",
@@ -62,21 +62,21 @@ const MAILS: Mail[] = [
   },
   {
     file: "magic-link.html",
-    subject: "Your aduro sign-in link",
+    subject: "Your Duro sign-in link",
     preview: "Tap to sign in. No password needed.",
     emoji: "✨",
     heading: "Here is your way in",
-    body: "Tap below to sign in to aduro as {{ .Email }}. No password needed.",
+    body: "Tap below to sign in to Duro as {{ .Email }}. No password needed.",
     button: "Sign me in",
     after: "The link works once and expires soon. If you did not ask to sign in, ignore this email.",
   },
   {
     file: "change-email.html",
-    subject: "Confirm your new email for aduro",
+    subject: "Confirm your new email for Duro",
     preview: "Confirm the change, and your plans follow you.",
     emoji: "📬",
     heading: "Confirm your new address",
-    body: "You asked to move your aduro account from {{ .Email }} to {{ .NewEmail }}. Confirm it and your plans come with you.",
+    body: "You asked to move your Duro account from {{ .Email }} to {{ .NewEmail }}. Confirm it and your plans come with you.",
     button: "Confirm the change",
     after: "If you did not ask for this, ignore it and your account keeps its current address.",
   },
@@ -102,8 +102,8 @@ function render(m: Mail): string {
       <!-- The logo: the tile and the wordmark, drawn in HTML so it shows with images off. -->
       <table role="presentation" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="width:40px;height:40px;border-radius:12px;background:${ROSE};background-image:linear-gradient(135deg,${ROSE},${GOLD});color:#ffffff;font:800 20px ${FONT};text-align:center;line-height:40px;">A</td>
-          <td style="padding-left:10px;font:800 26px ${FONT};letter-spacing:-0.5px;color:${INK};">adu<span style="color:${ROSE};">ro</span></td>
+          <td style="width:40px;height:40px;border-radius:12px;background:${ROSE};background-image:linear-gradient(135deg,${ROSE},${GOLD});color:#ffffff;font:800 20px ${FONT};text-align:center;line-height:40px;">D</td>
+          <td style="padding-left:10px;font:800 26px ${FONT};letter-spacing:-0.5px;color:${INK};">Du<span style="color:${ROSE};">ro!</span></td>
         </tr>
       </table>
 
@@ -142,7 +142,7 @@ function render(m: Mail): string {
         <tr>
           <td style="padding:24px 20px 0;text-align:center;font:13px/1.6 ${FONT};color:${SOFT};">
             Dates, birthdays and days out in Accra, planned from real menus and real prices.<br>
-            <a href="${APP_STORE}" style="color:${ROSE};font-weight:700;text-decoration:none;">Get aduro on the App Store &rarr;</a>
+            <a href="${APP_STORE}" style="color:${ROSE};font-weight:700;text-decoration:none;">Get Duro on the App Store &rarr;</a>
           </td>
         </tr>
       </table>
@@ -180,9 +180,9 @@ Supabase's own and are filled in when each email is sent.
 ## Who it comes from
 
 Supabase's built-in sender sends as "Supabase Auth" from its own address, and
-only a few emails an hour for the whole project. To send as aduro, set up
+only a few emails an hour for the whole project. To send as Duro, set up
 custom SMTP under **Authentication > Emails > SMTP settings** (Resend has a free
-tier) with a sender like \`aduro <hello@yourdomain>\`.
+tier) with a sender like \`Duro <hello@yourdomain>\`.
 `;
 fs.writeFileSync(path.join(out, "README.md"), readme);
 console.log("  README.md");

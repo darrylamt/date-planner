@@ -11,21 +11,21 @@ import { APP_STORE_URL } from "@/lib/links";
  * budget sliders and two places for a change to be forgotten, and the one on
  * the web was the one nobody used.
  *
- * So this page has one job: say plainly that aduro is an iPhone app and hand
+ * So this page has one job: say plainly that Duro is an iPhone app and hand
  * over the link. It does not argue, because somebody who tapped "plan a date"
  * has already agreed.
  */
 
 export const metadata: Metadata = {
-  title: "Get aduro",
-  description: "aduro plans your evening in Accra. It is an iPhone app.",
+  title: "Get Duro!",
+  description: "Duro plans your evening in Accra. It is an iPhone app.",
 };
 
 const STEPS = [
   {
     n: "01",
-    title: "Download aduro",
-    body: "Free from the App Store, where it is listed as AduroGH.",
+    title: "Download Duro!",
+    body: "Free from the App Store, where it is listed as Duro!",
   },
   {
     n: "02",
@@ -51,7 +51,7 @@ export default function GetTheAppPage() {
           iPhone
         </div>
         <h1 className="mt-2 font-display text-hero font-bold">
-          aduro lives on your <em className="not-italic text-flame">phone</em>.
+          Duro lives on your <em className="not-italic text-flame">phone</em>.
         </h1>
         <p className="mt-4 text-sub text-cocoa">
           Planning happens in the app, so a plan is in your pocket on the night rather than in
@@ -65,7 +65,7 @@ export default function GetTheAppPage() {
           Get the app
         </a>
         <p className="mt-2.5 text-center text-caption text-mutedbrown">
-          Free on the App Store, listed as AduroGH
+          Free on the App Store, listed as Duro!
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export default function GetTheAppPage() {
         <div className="rounded-btn bg-sand p-5">
           <div className="text-[15px] font-bold">On Android?</div>
           <div className="mt-1 text-[14px] leading-normal text-mutedbrown">
-            Not yet. aduro is on iPhone first. A plan somebody shares with you
+            Not yet. Duro is on iPhone first. A plan somebody shares with you
             still opens in any browser, so you can be taken out in the meantime.
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function GetTheAppPage() {
       <div className="mt-auto px-6 pb-7 pt-8">
         <div className="kente" />
         <div className="mt-1.5 flex justify-between text-caption text-mutedbrown">
-          <span>aduro · Accra first</span>
+          <span>Duro · Accra first</span>
           <span className="flex gap-3">
             <Link href="/privacy" className="hover:text-flame">
               Privacy

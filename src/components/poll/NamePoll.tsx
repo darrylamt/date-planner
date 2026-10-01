@@ -9,8 +9,10 @@ import { GetTheApp } from "@/components/fx/GetTheApp";
 import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
 
 const STORE = "aduro-name-poll-v1";
-/** The name as it is today, in its own colours. */
+/** The name as it was while the vote was open, in its own colours. */
 const TODAY = { name: "aduro", c1: "#E23D6D", c2: "#E5B04E" };
+/** What the vote chose. Once voting is over the page wears it, and says so. */
+const WINNER = NAME_OPTIONS.find((o) => o.id === "Duro!")!;
 
 type Results = PollResults;
 
@@ -92,7 +94,7 @@ function Countdown({ now }: { now: number | null }) {
  * and a notification on a phone all become the chosen name, so voting is
  * choosing what the app would feel like rather than reading a list.
  */
-export function NamePoll() {
+export function NamePoll({ initialClosed = false }: { initialClosed?: boolean }) {
   const [choice, setChoice] = useState<Choice | null>(null);
   const [other, setOther] = useState("");
   const [suggestion, setSuggestion] = useState("");
@@ -117,9 +119,11 @@ export function NamePoll() {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  const closed = now != null && now >= POLL_CLOSES_AT;
+  // Known on the server when the page is built after the close, so the
+  // announcement is there from the first paint instead of the old form.
+  const closed = now != null ? now >= POLL_CLOSES_AT : initialClosed;
 
-  const opt = NAME_OPTIONS.find((o) => o.id === (phase === "done" ? mine?.choice ?? choice : choice));
+  const opt = closed ? WINNER : NAME_OPTIONS.find((o) => o.id === (phase === "done" ? mine?.choice ?? choice : choice));
   const typed = (phase === "done" ? mine?.other ?? other : other).trim().slice(0, 16);
   const shown = opt ? (opt.id === "Other" ? typed || "your idea" : opt.id) : TODAY.name;
   // A suggested name wears its own colours, the same ones every time.
@@ -315,7 +319,7 @@ export function NamePoll() {
   async function share() {
     const url = window.location.href;
     try {
-      if (navigator.share) await navigator.share({ title: "Help rename aduro", url });
+      if (navigator.share) await navigator.share({ title: closed ? "Aduro is now Duro!" : "Help rename aduro", url });
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -387,7 +391,7 @@ export function NamePoll() {
             </a>
             <div className="flex items-center gap-3">
               <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-semibold text-white/80 md:inline">
-                {closed ? "Voting closed" : phase === "done" ? "Thanks for voting" : "Name poll · live"}
+                {closed ? "The vote is in" : phase === "done" ? "Thanks for voting" : "Name poll · live"}
               </span>
               <a
                 href={APP_STORE_URL}
@@ -418,14 +422,16 @@ export function NamePoll() {
 
         <main className="mx-auto grid max-w-[1120px] grid-cols-1 gap-8 px-4 pb-24 pt-8 sm:px-5 md:grid-cols-[minmax(0,1fr)_330px] md:gap-14 md:pt-16">
           <section className="min-w-0">
-            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/60">Aduro name change</p>
+            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/60">{closed ? "The name change" : "Aduro name change"}</p>
             <h1 className="mt-3 break-words text-[34px] font-extrabold leading-[1.05] tracking-[-0.02em] sm:text-[44px] md:text-[56px]">
-              Aduro is getting renamed.
+              {closed ? "Aduro is now Duro!" : "Aduro is getting renamed."}
               <br />
-              <span className={s.shimmer}>Be part of the change :)</span>
+              <span className={s.shimmer}>{closed ? "You named it. Thank you :)" : "Be part of the change :)"}</span>
             </h1>
             <p className="mt-4 max-w-[560px] text-[16px] text-white/70">
-              {closed ? "Voting has closed. Here is how it ended." : "Tap a name to try it on. Watch the logo up there, and the phone, become it."}
+              {closed
+                ? "Same app, same plans, same account, and a new name: the one the vote chose. Here is how it ended."
+                : "Tap a name to try it on. Watch the logo up there, and the phone, become it."}
             </p>
 
             {closed ? null : <Countdown now={now} />}
@@ -570,7 +576,7 @@ export function NamePoll() {
             ) : (
               /* ── after voting: the results, counting up ── */
               <div className={`${s.rise} mt-8 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md md:p-7`}>
-                <div className="text-[34px]">{closed ? "🏁" : "🎉"}</div>
+                <div className="text-[34px]">{closed ? "🔥" : "🎉"}</div>
                 <h2 className="mt-2 text-[26px] font-extrabold tracking-[-0.01em]">{closed ? "The final count" : "Thank you!"}</h2>
                 <p className="mt-1 text-[15px] text-white/70">
                   {mine ? (
@@ -622,12 +628,12 @@ export function NamePoll() {
                   className={`${s.submit} mt-6 h-[54px] w-full rounded-[18px] text-[17px] font-extrabold`}
                   style={{ color: buttonInk }}
                 >
-                  {copied ? "Link copied" : closed ? "Share the result" : "Send the poll to a friend"}
+                  {copied ? "Link copied" : closed ? "Share the news" : "Send the poll to a friend"}
                 </button>
               </div>
             )}
 
-            <GetTheApp reduced={reduced} ink={buttonInk} className="mt-6" />
+            <GetTheApp reduced={reduced} ink={buttonInk} eyebrow={closed ? undefined : "Still aduro, for now"} className="mt-6" />
           </section>
 
           {/* ── the name, tried on ── */}
@@ -635,7 +641,7 @@ export function NamePoll() {
             <div className="md:sticky md:top-24">
               <div className="flex flex-col items-center">
                 <div key={`name-${shown}`} className={`${s.bounceIn} mb-6 text-center`}>
-                  <div className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/50">Trying on</div>
+                  <div className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/50">{closed ? "Now called" : "Trying on"}</div>
                   <div className={`${s.shimmer} text-[46px] font-extrabold leading-tight tracking-[-0.02em]`}>{shown}</div>
                   <div className="text-[14px] text-white/60">{opt?.line ?? "Pick a name to see it on the app."}</div>
                 </div>
@@ -652,9 +658,14 @@ export function NamePoll() {
 
                       <div key={`note-${shown}`} className={s.notification}>
                         <div className="flex items-center gap-2 text-[11px] font-semibold text-black/60">
-                          <span className="grid h-4 w-4 place-items-center rounded-[5px] text-[9px] font-extrabold text-white" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
-                            {initial}
-                          </span>
+                          {closed ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src="/duro-icon.png" alt="" width={16} height={16} className="h-4 w-4 rounded-[5px]" />
+                          ) : (
+                            <span className="grid h-4 w-4 place-items-center rounded-[5px] text-[9px] font-extrabold text-white" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                              {initial}
+                            </span>
+                          )}
                           <span className="uppercase tracking-wide">{shown}</span>
                           <span className="ml-auto">now</span>
                         </div>
@@ -670,13 +681,26 @@ export function NamePoll() {
                           </div>
                         ))}
                         <div className="flex flex-col items-center gap-1">
-                          <div
-                            key={`icon-${shown}`}
-                            className={`${s.appIcon} grid h-11 w-11 place-items-center rounded-[12px] text-[20px] font-extrabold text-white shadow-lg`}
-                            style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
-                          >
-                            {opt?.id === "Other" && !typed ? "?" : initial}
-                          </div>
+                          {/* Once the name is settled, the real icon rather than a letter. */}
+                          {closed ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              key="icon-final"
+                              src="/duro-icon.png"
+                              alt=""
+                              width={44}
+                              height={44}
+                              className={`${s.appIcon} h-11 w-11 rounded-[12px] shadow-lg`}
+                            />
+                          ) : (
+                            <div
+                              key={`icon-${shown}`}
+                              className={`${s.appIcon} grid h-11 w-11 place-items-center rounded-[12px] text-[20px] font-extrabold text-white shadow-lg`}
+                              style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+                            >
+                              {opt?.id === "Other" && !typed ? "?" : initial}
+                            </div>
+                          )}
                           <div className="max-w-[60px] truncate text-[10px] font-semibold text-white">{shown}</div>
                         </div>
                       </div>

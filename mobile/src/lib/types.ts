@@ -3,7 +3,7 @@
  *
  * Run `npm run mirror` after changing the web copy.
  */
-/* Shared domain types for aduro. */
+/* Shared domain types for Duro. */
 
 /**
  * "wellness" is a spa, a massage, a facial. Its own type rather than an

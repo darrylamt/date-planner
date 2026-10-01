@@ -9,7 +9,7 @@ import { parsePeriods, type OpeningPeriod } from "./hours";
  * and what number it answers on. A wrong phone number sends a customer to a
  * stranger, and a model reading the web can invent one; Places cannot.
  *
- * It is not authoritative for anything that makes aduro worth using, menus,
+ * It is not authoritative for anything that makes Duro worth using, menus,
  * prices, who a place suits. Those stay in our own tables, joined on place_id.
  *
  * ── On cost ────────────────────────────────────────────────────────────────

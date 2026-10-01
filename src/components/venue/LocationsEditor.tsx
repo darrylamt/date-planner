@@ -21,7 +21,7 @@ import { ImageField } from "@/components/admin/ImageField";
  * Nothing reviews this. The verification happened before the account was
  * issued, which is why accounts are handed out one at a time rather than
  * signed up for. An approval queue here would mean a poster going up on
- * Tuesday for an evening that aduro cannot plan until Thursday, which is the
+ * Tuesday for an evening that Duro cannot plan until Thursday, which is the
  * same as not being listed.
  *
  * ── what it deliberately does not ask ───────────────────────────────────

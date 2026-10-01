@@ -3,7 +3,7 @@ import type { ChatTool } from "./tools";
 /**
  * One shape for a conversation, whoever is answering it.
  *
- * The chat loop is the only high-volume model call aduro will make, and the
+ * The chat loop is the only high-volume model call Duro will make, and the
  * providers that could serve it differ by roughly eight times in price. That
  * difference is worth keeping reachable, but not at the cost of a second
  * implementation of the loop, the honesty rules or the tool layer. So the loop

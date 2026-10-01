@@ -158,7 +158,7 @@ export function VenueLogins({
                  * sent to a site that does not exist and reports that the
                  * login we gave them is broken.
                  */
-                `Your aduro login\n\nGo to ${window.location.origin}/venue\nUsername: ${issued.username}\nPassword: ${issued.password}`
+                `Your Duro login\n\nGo to ${window.location.origin}/venue\nUsername: ${issued.username}\nPassword: ${issued.password}`
               )
             }
           >

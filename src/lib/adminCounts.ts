@@ -31,7 +31,7 @@ export interface AdminCounts {
   /** Open reports from people who were actually there. */
   openReports: number;
   /**
-   * Open reports about aduro itself rather than a venue.
+   * Open reports about Duro itself rather than a venue.
    *
    * Separate from openReports because they are answered by different work:
    * one is a catalogue edit, the other is a bug. Chat told paying users they

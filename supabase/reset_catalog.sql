@@ -1,4 +1,4 @@
--- aduro, clear the placeholder catalog before loading real data.
+-- Duro, clear the placeholder catalog before loading real data.
 --
 -- The original seed.sql invented 25 venues ("Chalé Bites", "Highlife House",
 -- "Asa Rooftop"…) with placeholder prices. None of them are real businesses,

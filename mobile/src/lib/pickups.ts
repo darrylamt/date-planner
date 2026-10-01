@@ -39,7 +39,7 @@ export interface GiftVendor {
   lead_time_hours: number;
   google_maps_url: string | null;
   /**
-   * How to reach them, because this is the one part of a plan aduro cannot
+   * How to reach them, because this is the one part of a plan Duro cannot
    * arrange. Flowers get ordered and a cake gets asked for, usually a day
    * ahead, and a vendor with a price and no phone number is a dead end.
    */

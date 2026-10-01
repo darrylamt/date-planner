@@ -28,7 +28,7 @@ interface Collision {
  * Phone review, the only place a number becomes dialable.
  *
  * The reservation flow hands a user to this number over WhatsApp with a
- * message signed "sent via aduro", so an unchecked number is not bad data, it
+ * message signed "sent via Duro", so an unchecked number is not bad data, it
  * is fraud under our name. Imports, the ingest tool and the verifier can only
  * ever propose; approval happens here and is recorded with who and when.
  */

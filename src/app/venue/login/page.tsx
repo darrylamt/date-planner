@@ -62,7 +62,7 @@ function VenueLoginInner() {
           Manage your listing
         </h1>
         <p className="mt-3 text-[15px] text-mutedbrown">
-          Your menu, your hours, your pictures, and the bookings people send you through aduro.
+          Your menu, your hours, your pictures, and the bookings people send you through Duro.
         </p>
 
         {notAVenue ? (
