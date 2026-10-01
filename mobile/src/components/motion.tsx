@@ -42,11 +42,17 @@ export function Rise({
   trigger?: unknown;
   style?: StyleProp<ViewStyle>;
 }) {
+  const reduced = useReducedMotion();
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    // Asked for less motion: simply there.
+    if (reduced) {
+      v.setValue(1);
+      return;
+    }
     v.setValue(0);
     Animated.spring(v, { toValue: 1, delay, useNativeDriver: true, speed: 12, bounciness: 5 }).start();
-  }, [trigger, delay, v]);
+  }, [trigger, delay, v, reduced]);
 
   return (
     <Animated.View
