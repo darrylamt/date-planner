@@ -35,6 +35,7 @@ import {
   defaultStopsFor,
   defaultInputs,
   stepsFor,
+  tidyForPathway,
   wellnessAllowed,
   wellnessKindsOf,
 } from "../../src/lib/planConstants";
@@ -273,7 +274,8 @@ export default function PlanNew() {
         await setAiConsent(consent);
       }
 
-      const finalInputs = { ...inputs, ...overrides, ai: consent === "granted" };
+      // Answers to questions this pathway never asked are dropped first.
+      const finalInputs = tidyForPathway({ ...inputs, ...overrides, ai: consent === "granted" });
       if (overrides) update(overrides);
 
       setPhase({ name: "loading" });

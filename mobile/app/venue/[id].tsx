@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Animated, LayoutAnimation, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { PressScale, Rise } from "../../src/components/motion";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -162,6 +163,9 @@ export default function VenuePage() {
 
   const isActivity = venue?.type === "activity" || venue?.type === "outdoor";
 
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [nameInBar, setNameInBar] = useState(false);
+
   const categories = useMemo(() => {
     const order = isActivity ? ACTIVITY_ORDER : FOOD_ORDER;
     const present = new Set((menu ?? []).map((m) => m.category));
@@ -209,6 +213,11 @@ export default function VenuePage() {
   }
 
   const images = [venue.image_url, ...venue.gallery_urls].filter((u): u is string => Boolean(u));
+  // What the bill adds, said plainly where it is known.
+  const charges = [
+    venue.service_charge_pct ? `a ${venue.service_charge_pct}% service charge` : null,
+    venue.tax_added_pct ? `${venue.tax_added_pct}% VAT and levies` : null,
+  ].filter(Boolean) as string[];
   const instagram = instagramUrl(venue.instagram_handle);
   const dial = venue.phone?.replace(/[^\d+]/g, "") || null;
   const whatsapp = waNumber(venue.whatsapp_phone);
@@ -248,17 +257,42 @@ export default function VenuePage() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "" }} />
-      <ScrollView
+      {/* The name moves up into the bar once it has scrolled out of sight. */}
+      <Stack.Screen options={{ title: nameInBar ? venue.name : "" }} />
+      <Animated.ScrollView
         style={{ flex: 1, backgroundColor: c.background }}
         contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+          listener: (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+            const past = e.nativeEvent.contentOffset.y > (images.length ? 300 : 60);
+            if (past !== nameInBar) setNameInBar(past);
+          },
+        })}
       >
-        {images.length ? <StopGallery images={images} alt={venue.name} /> : null}
+        {/*
+          The photo stretches when pulled down and drifts at half speed as the
+          page scrolls, so the page feels like it has depth rather than being a
+          flat list that happens to start with a picture.
+        */}
+        {images.length ? (
+          <Animated.View
+            style={{
+              transform: [
+                { translateY: scrollY.interpolate({ inputRange: [-200, 0, 400], outputRange: [-100, 0, 200], extrapolateRight: "clamp" }) },
+                { scale: scrollY.interpolate({ inputRange: [-200, 0], outputRange: [1.5, 1], extrapolateRight: "clamp" }) },
+              ],
+            }}
+          >
+            <StopGallery images={images} alt={venue.name} />
+          </Animated.View>
+        ) : null}
 
         {/* ── Is this the place ── */}
-        <View style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs }}>
+        <Rise style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs, backgroundColor: c.background }}>
           <Text variant="eyebrow" tone="tint" uppercase>
             {[VENUE_KIND[venue.type] ?? venue.type, venue.area].filter(Boolean).join(" · ")}
           </Text>
@@ -273,10 +307,11 @@ export default function VenuePage() {
             ) : null}
             {todayHours ? <Pill icon="clock" text={`Today ${todayHours}`} /> : null}
           </View>
-        </View>
+        </Rise>
 
         {/* ── Get there, book it ── */}
-        <View
+        <Rise
+          delay={90}
           style={{
             flexDirection: "row",
             justifyContent: "space-around",
@@ -287,14 +322,16 @@ export default function VenuePage() {
             backgroundColor: c.backgroundElement,
           }}
         >
-          {usable.map((a) => (
-            <Pressable
+          {usable.map((a, i) => (
+            <PressScale
               key={a.label}
               onPress={a.onPress}
               accessibilityRole="button"
               accessibilityLabel={a.label}
-              style={({ pressed }) => ({ alignItems: "center", gap: space.xs, minWidth: 56, opacity: pressed ? 0.6 : 1 })}
+              to={0.88}
+              style={{ alignItems: "center", gap: space.xs, minWidth: 56 }}
             >
+              <Rise delay={160 + i * 60} distance={10}>
               <View
                 style={{
                   width: 44,
@@ -307,17 +344,20 @@ export default function VenuePage() {
               >
                 <Symbol name={a.icon} size={19} color={c.accent} />
               </View>
+              </Rise>
               <Text variant="caption" tone="secondary">
                 {a.label}
               </Text>
-            </Pressable>
+            </PressScale>
           ))}
-        </View>
+        </Rise>
 
         {venue.description ? (
-          <Text variant="body" style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}>
-            {venue.description}
-          </Text>
+          <Rise delay={180}>
+            <Text variant="body" style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}>
+              {venue.description}
+            </Text>
+          </Rise>
         ) : null}
 
         {pro === null ? (
@@ -348,14 +388,16 @@ export default function VenuePage() {
             {/* ── What it is like ── */}
             {chips.length ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, paddingHorizontal: GUTTER, marginTop: space.lg }}>
-                {chips.map((ch) => (
-                  <Pill key={ch.text} icon={ch.icon} text={ch.text} quiet />
+                {chips.map((ch, i) => (
+                  <Rise key={ch.text} delay={240 + i * 35} distance={8}>
+                    <Pill icon={ch.icon} text={ch.text} quiet />
+                  </Rise>
                 ))}
               </View>
             ) : null}
 
             {/* ── What to order ── */}
-            <View style={{ marginTop: space.xl }}>
+            <Rise delay={300} style={{ marginTop: space.xl }}>
               <View
                 style={{
                   flexDirection: "row",
@@ -391,16 +433,15 @@ export default function VenuePage() {
                         contentContainerStyle={{ paddingHorizontal: GUTTER, gap: space.sm, paddingTop: space.sm }}
                       >
                         {liked.map((m) => (
-                          <Pressable
+                          <PressScale
                             key={m.id}
                             onPress={() => setItem(m)}
-                            style={({ pressed }) => ({
+                            style={{
                               width: 150,
                               borderRadius: radius.card,
                               backgroundColor: c.backgroundElement,
                               overflow: "hidden",
-                              opacity: pressed ? 0.7 : 1,
-                            })}
+                            }}
                           >
                             {m.image_url ? (
                               <Image source={{ uri: m.image_url }} style={{ width: 150, height: 96 }} contentFit="cover" />
@@ -419,7 +460,7 @@ export default function VenuePage() {
                                 </Text>
                               </View>
                             </View>
-                          </Pressable>
+                          </PressScale>
                         ))}
                       </ScrollView>
                     </View>
@@ -463,29 +504,37 @@ export default function VenuePage() {
                         const on = k === current;
                         const n = menu.filter((m) => m.category === k).length;
                         return (
-                          <Pressable
+                          <PressScale
                             key={k}
                             onPress={() => setTab(k)}
                             accessibilityState={{ selected: on }}
+                            to={0.92}
                             style={{
                               paddingHorizontal: space.md,
                               paddingVertical: space.sm,
                               borderRadius: radius.pill,
                               backgroundColor: on ? c.accent : c.backgroundElement,
+                              shadowColor: c.accent,
+                              shadowOpacity: on ? 0.3 : 0,
+                              shadowRadius: 8,
+                              shadowOffset: { width: 0, height: 3 },
                             }}
                           >
                             <Text variant="footnote" weight="600" tone={on ? "onTint" : "label"}>
                               {CATEGORY_LABEL[k] ?? k} {n}
                             </Text>
-                          </Pressable>
+                          </PressScale>
                         );
                       })}
                     </ScrollView>
                   ) : null}
 
                   <View style={{ marginTop: space.sm }}>
+                    {/* Re-dealt with a stagger when the category or the search changes. */}
                     {shown.map((m, i) => (
-                      <MenuRow key={m.id} item={m} first={i === 0} onPress={() => setItem(m)} />
+                      <Rise key={m.id} delay={Math.min(i, 8) * 40} distance={10} trigger={`${current}|${needle}`}>
+                        <MenuRow item={m} first={i === 0} onPress={() => setItem(m)} />
+                      </Rise>
                     ))}
                     {needle && !shown.length ? (
                       <Text variant="body" tone="secondary" style={{ paddingHorizontal: GUTTER, marginTop: space.md }}>
@@ -495,15 +544,21 @@ export default function VenuePage() {
                   </View>
 
                   <Text variant="caption" tone="tertiary" style={{ paddingHorizontal: GUTTER, marginTop: space.md }}>
-                    Menu prices. Some places add taxes or a service charge to the bill.
+                    {charges.length
+                      ? `Menu prices. The bill here adds ${charges.join(" and ")}, and plans count it.`
+                      : "Menu prices. Some places add taxes or a service charge to the bill."}
                   </Text>
                 </>
               )}
-            </View>
+            </Rise>
 
             {/* ── Hours, folded ── */}
             <Pressable
-              onPress={() => setHoursOpen(!hoursOpen)}
+              onPress={() => {
+                // The week unfolds rather than appearing.
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setHoursOpen(!hoursOpen);
+              }}
               disabled={!venue.opening_hours_text?.length}
               style={{
                 marginHorizontal: GUTTER,
@@ -547,7 +602,7 @@ export default function VenuePage() {
             </Pressable>
           </>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
       <ItemSheet
         item={item}

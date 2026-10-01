@@ -83,6 +83,8 @@ function detailLines(inputs: PlanInputs): string {
 
   return [
     p.food ? `- Food they love: ${p.food}` : "",
+    // Asked as cuisines now, which is also what the plan ordered from.
+    inputs.cuisines?.length ? `- Kitchens they asked for: ${inputs.cuisines.join(", ")}` : "",
     p.place ? `- Their kind of place: ${p.place}` : "",
     p.interests ? `- Into: ${p.interests}` : "",
     p.avoid ? `- Avoids: ${p.avoid}` : "", ...extras,

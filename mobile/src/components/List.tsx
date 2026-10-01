@@ -1,5 +1,5 @@
-import { Children, Fragment, type ReactNode } from "react";
-import { Pressable, View, type ViewStyle } from "react-native";
+import { Children, Fragment, useEffect, useRef, type ReactNode } from "react";
+import { Animated, Pressable, View, type ViewStyle } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Text } from "./Text";
 import { Symbol } from "./Symbol";
@@ -153,7 +153,12 @@ export function Row({
           </Text>
         ) : null)}
 
-      {selected && !trailing ? <Symbol name="checkmark" size={16} weight="semibold" /> : null}
+      {/*
+        A row that is one of a set of choices shows its circle whether or not
+        it is picked, so the set reads as choosable before anything is tapped.
+        A row that is not a choice (selected left out) shows nothing.
+      */}
+      {selected !== undefined && !trailing ? <Radio on={selected} /> : null}
       {chevron && !trailing ? (
         <Symbol name="chevron.right" size={14} color={c.textTertiary} weight="semibold" />
       ) : null}
@@ -163,20 +168,92 @@ export function Row({
   if (!onPress) return <View style={{ opacity: disabled ? 0.4 : 1 }}>{body}</View>;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!selected, disabled: !!disabled }}
+    <PressableRow
+      selected={selected}
       disabled={disabled}
       onPress={() => {
         void Haptics.selectionAsync();
         onPress();
       }}
+    >
+      {body}
+    </PressableRow>
+  );
+}
+
+/**
+ * The row's touch: it gives slightly under the finger, and a chosen row
+ * takes a wash of the accent so the pick is visible from across the list,
+ * not only from the tick at its edge.
+ */
+function PressableRow({
+  selected,
+  disabled,
+  onPress,
+  children,
+}: {
+  selected?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const c = useTheme();
+  const press = useRef(new Animated.Value(1)).current;
+  const springTo = (v: number) =>
+    Animated.spring(press, { toValue: v, useNativeDriver: true, speed: 40, bounciness: v === 1 ? 8 : 0 }).start();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected, disabled: !!disabled }}
+      disabled={disabled}
+      onPressIn={() => springTo(0.98)}
+      onPressOut={() => springTo(1)}
+      onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: pressed ? c.backgroundSunken : "transparent",
+        backgroundColor: selected ? c.accentSoft : pressed ? c.backgroundSunken : "transparent",
         opacity: disabled ? 0.4 : 1,
       })}
     >
-      {body}
+      <Animated.View style={{ transform: [{ scale: press }] }}>{children}</Animated.View>
     </Pressable>
+  );
+}
+
+/** A choice's circle: an outline, filled with a springing tick when chosen. */
+function Radio({ on }: { on: boolean }) {
+  const c = useTheme();
+  const fill = useRef(new Animated.Value(on ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(fill, { toValue: on ? 1 : 0, useNativeDriver: true, speed: 16, bounciness: 12 }).start();
+  }, [on, fill]);
+
+  return (
+    <View
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: on ? c.accent : c.borderStrong,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Animated.View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: c.accent,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: fill,
+          transform: [{ scale: fill }],
+        }}
+      >
+        <Symbol name="checkmark" size={12} weight="bold" color={c.textOnBrand} />
+      </Animated.View>
+    </View>
   );
 }

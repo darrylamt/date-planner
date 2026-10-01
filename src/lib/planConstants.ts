@@ -470,9 +470,10 @@ export const OCCASION_EXTRA: Partial<Record<Occasion, OccasionExtra>> = {
         placeholder: "e.g. 4 and 9, or teenagers",
       },
       {
+        // Logistics only: the beach or a garden is asked on the feel step.
         key: "must",
-        label: "Anything that has to happen (optional)",
-        placeholder: "the beach, somewhere to run around, back by six…",
+        label: "Anything to plan around (optional)",
+        placeholder: "back by six, a buggy, a nap after lunch…",
       },
     ],
   },
@@ -530,11 +531,117 @@ export function wantsDaylight(vibes: string[]): boolean {
   return vibes.some((v) => DAYTIME_VIBES.includes(v.toLowerCase()));
 }
 
+/* ── what each pathway asks ────────────────────────────────────────────── */
+
+/*
+ * The feel of the outing, offered only where it fits the occasion.
+ *
+ * Every pathway used to be offered all fourteen vibes, so a business meeting
+ * could be made "romantic" and a family day "club hopping": answers that are
+ * either nonsense or quietly harmful, because the planner obeys them. Romantic
+ * belongs to the occasions that are two people, and to a birthday or a
+ * celebration only when it is two of you.
+ */
+const PAIR_VIBES = ["Romantic", "Calm", "Lively", "Fun", "Adventurous", "Chill", "Beach", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"];
+const PARTY_VIBES = ["Lively", "Fun", "Adventurous", "Chill", "Beach", "Dancing", "Club hopping", "Sporty", "Outdoorsy", "Artsy", "Foodie", "Calm"];
+const VIBES_BY_OCCASION: Record<Occasion, string[]> = {
+  first_date: ["Romantic", "Calm", "Fun", "Chill", "Adventurous", "Beach", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
+  date_night: PAIR_VIBES,
+  anniversary: ["Romantic", "Calm", "Chill", "Lively", "Beach", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
+  birthday: PARTY_VIBES,
+  graduation: PARTY_VIBES,
+  celebration: PARTY_VIBES,
+  friend_outing: [...PARTY_VIBES, "Picnic"],
+  solo_day: ["Calm", "Chill", "Fun", "Adventurous", "Beach", "Sporty", "Outdoorsy", "Artsy", "Foodie"],
+  family_day: ["Fun", "Calm", "Adventurous", "Beach", "Sporty", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
+  // The meeting's own question has already said what kind of place it is.
+  business_meeting: [],
+};
+
+export function vibesFor(occasion: Occasion, partySize: number): string[] {
+  const base = VIBES_BY_OCCASION[occasion] ?? [...VIBES];
+  const asCouple = partySize === 2 && ["birthday", "graduation", "celebration"].includes(occasion);
+  return asCouple ? ["Romantic", ...base] : base;
+}
+
+/*
+ * The setting, asked once, beside the feel. "Beachside", "Lively spots" and
+ * "Quiet and calm" were also vibes, so the same thing was asked twice on two
+ * screens; only the settings no vibe says are kept.
+ */
+export const PLACE_SETTINGS = ["Rooftops", "Gardens", "Cosy corners"];
+
+/*
+ * The questions about the person, by pathway. "Food they love" is gone: the
+ * cuisine chips ask it and actually steer the plan. Art, sport and food are
+ * gone from interests, because Artsy, Sporty and Foodie are vibes. A meeting
+ * has no "them" to describe, and a family day only needs what to avoid.
+ */
+export type AboutQuestion = "interests" | "avoid";
+export const INTEREST_OPTIONS = ["Music", "Films", "Games", "Books", "Fashion"];
+export function aboutQuestionsFor(occasion: Occasion): AboutQuestion[] {
+  if (occasion === "business_meeting") return [];
+  if (occasion === "family_day") return ["avoid"];
+  return ["interests", "avoid"];
+}
+
+/** "What is the outing made of", which a meeting's own question has answered. */
+export function asksFocus(occasion: Occasion): boolean {
+  return occasion !== "business_meeting";
+}
+
+/** Dress code means something for an evening out, not for a day with children or on your own. */
+export function asksDressCode(occasion: Occasion): boolean {
+  return occasion !== "family_day" && occasion !== "solo_day";
+}
+
+/**
+ * Drop answers to questions this pathway does not ask.
+ *
+ * A draft that began as a date night and became a meeting still carried
+ * "romantic", and the planner obeys what it is given. So before a plan is
+ * made, anything the current pathway never showed is put back to its
+ * default.
+ */
+export function tidyForPathway(inputs: PlanInputs): PlanInputs {
+  const offered = new Set(vibesFor(inputs.occasion, inputs.partySize).map((v) => v.toLowerCase()));
+  const about = aboutQuestionsFor(inputs.occasion);
+  const place = inputs.partner.place
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => PLACE_SETTINGS.includes(p))
+    .join(", ");
+  return {
+    ...inputs,
+    vibes: inputs.vibes.filter((v) => offered.has(v.toLowerCase())),
+    ...(asksFocus(inputs.occasion) ? {} : { focus: "everything" as const, focuses: [] }),
+    ...(asksDressCode(inputs.occasion) ? {} : { formality: "either" as const }),
+    partner: {
+      ...inputs.partner,
+      food: "",
+      place: offered.size ? place : "",
+      interests: about.includes("interests") ? inputs.partner.interests : "",
+      avoid: about.includes("avoid") ? inputs.partner.avoid : "",
+    },
+  };
+}
+
 export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] {
   const steps: StepId[] = [];
   if (!occasionPreset) steps.push("occasion");
   if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
   if (OCCASION_EXTRA[occasion]) steps.push("extra");
+  /*
+   * Only the questions this pathway needs. A meeting has no feel to pick, no
+   * person to describe and one place already, so it goes from its own
+   * question straight to the practical ones.
+   */
+  const ask = (id: StepId) =>
+    (id === "details" && !aboutQuestionsFor(occasion).length) ||
+    (id === "vibe" && !vibesFor(occasion, 2).length) ||
+    (id === "stops" && occasion === "business_meeting")
+      ? null
+      : id;
   /*
    * "How many places" is its own screen, at the end.
    *
@@ -544,7 +651,9 @@ export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] 
    * wheels. Somebody who scrolled past it got the inference instead of their
    * own answer and never knew they had been asked.
    */
-  steps.push("details", "vibe", "shape", "area", "budget", "when", "timing", "stops");
+  for (const id of ["details", "vibe", "shape", "area", "budget", "when", "timing", "stops"] as StepId[]) {
+    if (ask(id)) steps.push(id);
+  }
   return steps;
 }
 

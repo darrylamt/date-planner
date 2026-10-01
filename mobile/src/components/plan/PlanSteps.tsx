@@ -39,6 +39,12 @@ import {
   startTimeOptions,
   vibeBlurb,
   crewChoices,
+  vibesFor,
+  PLACE_SETTINGS,
+  aboutQuestionsFor,
+  INTEREST_OPTIONS,
+  asksFocus,
+  asksDressCode,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
@@ -459,6 +465,7 @@ export function PlanSteps({
           it. A third pick replaces the oldest, so the row never refuses a tap.
           `focus` is kept as the first choice for anything that reads only one.
         */}
+        {asksFocus(inputs.occasion) ? (
         <Group>
           {FOCUS_OPTIONS.map((f) => {
             const chosen = focusesOf(inputs);
@@ -481,6 +488,7 @@ export function PlanSteps({
             );
           })}
         </Group>
+        ) : null}
 
         {/*
           A spa, on top of whatever the outing is made of.
@@ -542,7 +550,9 @@ export function PlanSteps({
           question with no consequence, and a flow that asks those teaches
           people to stop reading it.
         */}
-        {focusesOf(inputs).length === 0 || focusesOf(inputs).includes("food") ? (
+        {/* A meeting over coffee or a drink orders no meal, so it is not asked about one. */}
+        {(focusesOf(inputs).length === 0 || focusesOf(inputs).includes("food")) &&
+        (inputs.occasion !== "business_meeting" || inputs.occasionDetail?.setting === "restaurant") ? (
           <>
             <GroupLabel>What kind of food?</GroupLabel>
             <Group>
@@ -617,6 +627,8 @@ export function PlanSteps({
           </>
         ) : null}
 
+        {asksDressCode(inputs.occasion) ? (
+        <>
         <GroupLabel>Dress code</GroupLabel>
         {/*
           Cards rather than a segmented control. Every other choice in this
@@ -636,6 +648,8 @@ export function PlanSteps({
             />
           ))}
         </Group>
+        </>
+        ) : null}
 
       </>
     );
@@ -646,7 +660,7 @@ export function PlanSteps({
       <>
         <StepHeading title="What should it feel like?" subtitle="Pick up to three." />
         <ChipRow>
-          {VIBES.map((v) => {
+          {vibesFor(inputs.occasion, inputs.partySize).map((v) => {
             const val = v.toLowerCase();
             const on = inputs.vibes.includes(val);
             return (
@@ -676,6 +690,33 @@ export function PlanSteps({
           })}
         </ChipRow>
         {inputs.vibes.length > 0 ? <Note>{vibeBlurb(inputs.vibes)}</Note> : null}
+
+        {/*
+          The setting, here beside the feel rather than on the "about them"
+          step, where it repeated three of these vibes in other words.
+        */}
+        <GroupLabel>Any setting in mind?</GroupLabel>
+        <ChipRow>
+          {PLACE_SETTINGS.map((p) => {
+            const chosen = inputs.partner.place.split(",").map((x) => x.trim()).filter((x) => PLACE_SETTINGS.includes(x));
+            const on = chosen.includes(p);
+            return (
+              <Chip
+                key={p}
+                label={p === "Cosy corners" ? "Cosy corner" : p.replace(/s$/, "")}
+                selected={on}
+                onPress={() =>
+                  update({
+                    partner: {
+                      ...inputs.partner,
+                      place: (on ? chosen.filter((x) => x !== p) : [...chosen, p]).join(", "),
+                    },
+                  })
+                }
+              />
+            );
+          })}
+        </ChipRow>
       </>
     );
   }
@@ -869,7 +910,13 @@ export function PlanSteps({
   return (
     <>
       <StepHeading
-        title={solo ? "Now, tell us about you." : `Now, tell us about ${who}.`}
+        title={
+          inputs.occasion === "family_day"
+            ? "Anything to steer clear of?"
+            : solo
+              ? "Now, tell us about you."
+              : `Now, tell us about ${who}.`
+        }
         subtitle="All optional."
       />
       {/*
@@ -882,24 +929,19 @@ export function PlanSteps({
         description reads them exactly as before, and "Something else" still
         takes anything the choices do not cover.
       */}
-      <ChoiceField
-        label={solo ? "Food you love" : `Food ${ps.they} love${verbS}`}
-        options={["Jollof", "Waakye", "Grills", "Seafood", "Pizza", "Burgers", "Sushi", "Pastries"]}
-        value={inputs.partner.food}
-        onChange={(food) => update({ partner: { ...inputs.partner, food } })}
-      />
-      <ChoiceField
-        label={solo ? "Your kind of place" : `${cap(ps.their)} kind of place`}
-        options={["Rooftops", "Gardens", "Beachside", "Cosy corners", "Lively spots", "Quiet and calm"]}
-        value={inputs.partner.place}
-        onChange={(place) => update({ partner: { ...inputs.partner, place } })}
-      />
-      <ChoiceField
-        label={solo ? "Things you are into" : `Things ${ps.they}${"’"}${contraction} into`}
-        options={["Music", "Art", "Films", "Games", "Sport", "Books", "Fashion", "Food"]}
-        value={inputs.partner.interests}
-        onChange={(interests) => update({ partner: { ...inputs.partner, interests } })}
-      />
+      {/*
+        Only what no other step asks. Food is the cuisine chips on the next
+        screen and the kind of place is beside the vibes, so neither is asked
+        here a second time in other words.
+      */}
+      {aboutQuestionsFor(inputs.occasion).includes("interests") ? (
+        <ChoiceField
+          label={solo ? "Things you are into" : `Things ${ps.they}${"’"}${contraction} into`}
+          options={INTEREST_OPTIONS}
+          value={inputs.partner.interests}
+          onChange={(interests) => update({ partner: { ...inputs.partner, interests } })}
+        />
+      ) : null}
       <ChoiceField
         label="Anything to avoid?"
         options={["Loud music", "Spicy food", "Crowds", "Long walks", "Smoke"]}
