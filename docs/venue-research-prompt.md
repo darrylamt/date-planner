@@ -109,7 +109,11 @@ RULES
 
    Use a word outside that list only when none of them is honest — "lebanese"
    and "indian" are fine if that is genuinely what it serves. Blank for bars,
-   activities and anywhere you are not sure.
+   spas, studios, activities and anywhere you are not sure.
+
+   A venue you could not find gets NO cuisine either. A row whose only filled
+   field is cuisines is treated as a guess from the name and rejected: if
+   you found the place, you will have something to say about it too.
 
 8. dress_code — only if the venue actually states one. Short: "Smart casual",
    "No slippers", "Smart". Blank if not stated anywhere. Most venues have no

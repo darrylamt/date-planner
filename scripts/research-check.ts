@@ -253,6 +253,17 @@ async function main() {
     }
 
     const desc = get("description");
+    /*
+     * A cuisine with nothing else beside it is usually a guess from the name.
+     * One batch gave cuisines to venues its own report said it never found,
+     * and "coffee; continental" to two spas and a pilates studio. A real find
+     * comes with something to say about the place.
+     */
+    if (list("cuisines").length && !desc && !list("vibe_tags").length && !list("best_for").length) {
+      problems.push(
+        `Row ${n} "${name}": cuisines with no description, tags or best_for. Probably guessed from the name; leave the row blank unless it was found.`
+      );
+    }
     if (desc.length > 220) problems.push(`Row ${n} "${name}": description is ${desc.length} chars, max 220.`);
     if (/nestled|vibrant tapestry|heart of|!/.test(desc)) {
       notes.push(`Row ${n} "${name}": description reads like marketing copy.`);
