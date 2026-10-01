@@ -20,6 +20,8 @@ import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
 import { AskBar } from "../../src/components/home/AskBar";
+import { Avatar } from "../../src/components/home/Avatar";
+import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { fetchProfile } from "../../src/lib/account";
 import type { PlanInputs } from "../../src/lib/types";
@@ -41,6 +43,7 @@ export default function Home() {
   const c = useTheme();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
+  const [pro, setPro] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,6 +60,10 @@ export default function Home() {
               : null
           )
         )
+        .catch(() => undefined);
+      // On focus too, so the star is there when they come back from buying Pro.
+      void fetchAllowance()
+        .then((a) => active && setPro(a?.tier === "pro"))
         .catch(() => undefined);
       return () => {
         active = false;
@@ -112,52 +119,13 @@ export default function Home() {
         */}
         <AskBar onPress={() => router.push("/chat")} />
 
-        {/*
-          Ringed in the bar's own four colours, so the two read as one pair
-          at the top of the screen rather than a bar and a stray grey dot.
-          A gap of background between ring and picture, the way a story ring
-          works, because a ring drawn straight onto a photo's edge is lost in
-          it.
-        */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="You and settings"
+        {/* You: calm for everybody, gold with a star for Pro. See Avatar. */}
+        <Avatar
+          avatarUrl={me?.avatarUrl ?? null}
+          initial={me?.initial || null}
+          pro={pro}
           onPress={() => router.push("/profile")}
-          hitSlop={6}
-          style={({ pressed }) => ({
-            width: 54,
-            height: 54,
-            borderRadius: 27,
-            borderWidth: 2.5,
-            borderTopColor: "#7C5CFF",
-            borderRightColor: "#FF5CA8",
-            borderBottomColor: "#FFB020",
-            borderLeftColor: "#33D6C7",
-            padding: 2.5,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <View
-            style={{
-              flex: 1,
-              borderRadius: 22,
-              overflow: "hidden",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: me?.avatarUrl || me?.initial ? c.accent : c.backgroundElement,
-            }}
-          >
-            {me?.avatarUrl ? (
-              <Image source={{ uri: me.avatarUrl }} style={{ width: 44, height: 44 }} contentFit="cover" />
-            ) : me?.initial ? (
-              <Text variant="headline" style={{ color: "#FFFFFF" }}>
-                {me.initial}
-              </Text>
-            ) : (
-              <Symbol name="person.fill" size={20} color={c.textSecondary} />
-            )}
-          </View>
-        </Pressable>
+        />
         </View>
 
         {/*
