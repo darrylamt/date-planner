@@ -19,7 +19,7 @@ import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
-import { Glow } from "../../src/components/home/Glow";
+import { AskBar } from "../../src/components/home/AskBar";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { fetchProfile } from "../../src/lib/account";
 import type { PlanInputs } from "../../src/lib/types";
@@ -106,52 +106,11 @@ export default function Home() {
           * needs.
         */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.three }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ask adurobot"
-          onPress={() => router.push("/chat")}
-          style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.7 : 1 })}
-        >
-          <Glow>
-          {/*
-            Four colours, one border.
-            *
-            * expo-linear-gradient is not a dependency and adding one would
-            * mean a native build, which cannot ship over the air: every phone
-            * already carrying this app would keep its old binary and never
-            * see it. A rectangle has four border edges that can each take
-            * their own colour, so unlike the circle this needed no second
-            * rotated copy to fake it, and the corners blend the pairs for
-            * free.
-          */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: Spacing.two,
-              height: 54,
-              paddingHorizontal: Spacing.three,
-              borderRadius: Radius.pill,
-              borderWidth: 2,
-              borderTopColor: "#7C5CFF",
-              borderRightColor: "#FF5CA8",
-              borderBottomColor: "#FFB020",
-              borderLeftColor: "#33D6C7",
-              backgroundColor: c.backgroundElement,
-            }}
-          >
-            {/*
-              Sparkles because that is what this means now. Any other glyph
-              has to be learned; this one is already read as "ask the model".
-            */}
-            <Symbol name="sparkles" size={21} color={c.accent} />
-            <Text variant="headline" weight="600" style={{ flex: 1 }}>
-              Ask adurobot
-            </Text>
-            <Symbol name="chevron.right" size={14} color={c.textTertiary} />
-          </View>
-          </Glow>
-        </Pressable>
+        {/*
+          The bar: a ring of colour turning round its edge, and words that
+          turn over between its name and the questions it answers. See AskBar.
+        */}
+        <AskBar onPress={() => router.push("/chat")} />
 
         {/*
           Ringed in the bar's own four colours, so the two read as one pair
