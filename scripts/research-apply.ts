@@ -246,7 +246,14 @@ async function main() {
      * not a guarantee. Two handles in one batch were real-looking, correctly
      * cited and pointed at nothing, and only Instagram could say so.
      */
-    if (typeof values.instagram_handle === "string") {
+    /*
+     * --trust-handles skips the lookup, for a batch a person has already
+     * checked by hand on a day Instagram blocks this machine. Every other
+     * rule still holds: exact names, blanks only, handle matching its link.
+     */
+    if (typeof values.instagram_handle === "string" && process.argv.includes("--trust-handles")) {
+      why.push("handle trusted without an Instagram lookup (--trust-handles)");
+    } else if (typeof values.instagram_handle === "string") {
       const found = await instagramProfileTwice(values.instagram_handle);
       if (found.exists === false) {
         why.push(`handle ${values.instagram_handle} does not exist on Instagram, skipped`);
