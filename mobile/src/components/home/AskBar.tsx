@@ -18,7 +18,7 @@ const RING = 2;
  */
 // Short enough to fit beside the avatar on the narrowest iPhone.
 const LINES = [
-  "Ask adurobot",
+  "Ask Duro",
   "“Quiet dinner in Osu?”",
   "“Plan Saturday for four”",
   "“Best jollof under 100?”",
@@ -41,7 +41,7 @@ const SLICES = Array.from({ length: 24 }, (_, i) => {
 });
 
 /**
- * The way to adurobot on Home.
+ * The way to Durobot on Home.
  *
  * The bar is always fully there; every movement is on top of it, so nothing
  * here can leave the button missing if an animation does not run. The ring
@@ -98,7 +98,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Ask adurobot"
+      accessibilityLabel="Ask Duro"
       onPressIn={() => springTo(0.97)}
       onPressOut={() => springTo(1)}
       onPress={() => {

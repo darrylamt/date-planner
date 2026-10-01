@@ -60,7 +60,7 @@ export function planEmail(
     lines.push("");
   }
 
-  lines.push("Planned with aduro. A plan is a suggestion, not a booking.");
+  lines.push("Planned with Duro. A plan is a suggestion, not a booking.");
 
   return {
     subject: `${itinerary.title}, ${longDate(date)}`,
@@ -242,7 +242,7 @@ export function planEmailHtml(
         <tr>
           <td style="padding:28px 28px 30px;text-align:center;">
             <div style="font:13px ${font};color:${soft};">Planned with</div>
-            <div style="font:800 22px ${font};color:${ink};margin-top:2px;">adu<span style="color:${accent};">ro</span></div>
+            <div style="font:800 22px ${font};color:${ink};margin-top:2px;">Du<span style="color:${accent};">ro!</span></div>
             <div style="font:13px ${font};margin-top:12px;"><a href="${APP_STORE}" style="color:${accent};font-weight:700;text-decoration:none;">Plan your own on the App Store &rarr;</a></div>
             <div style="font:11px/1.5 ${font};color:#A8969E;margin-top:14px;">A plan is a suggestion, not a booking.</div>
           </td>

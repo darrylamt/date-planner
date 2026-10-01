@@ -49,7 +49,7 @@ const BUTTON_H = 56;
 const BUTTON_R = 16;
 
 /*
- * What aduro plans, one turning into the next: the word, the character for
+ * What Duro plans, one turning into the next: the word, the character for
  * it, and three things such an outing might hold, floating round the
  * character like the stops of a plan.
  */

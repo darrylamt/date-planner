@@ -460,7 +460,7 @@ export function StopCard({
 
             The pickup is left to Uber ("my_location"), so Uber reads the
             phone's position in its own app under its own permission, and
-            aduro never asks for or sees it. On the first stop that is the trip
+            Duro never asks for or sees it. On the first stop that is the trip
             from home; on the rest it is the hop from the stop before.
           */}
           {/*

@@ -396,7 +396,7 @@ export function PickupSheet({
                 {/*
                   How to actually reach them.
 
-                  This is the one part of a plan aduro does not arrange:
+                  This is the one part of a plan Duro does not arrange:
                   flowers get ordered and a cake gets asked for, usually a day
                   ahead. Adding it to the plan and stopping there left
                   somebody holding a price and a name with nothing to do next.
@@ -477,7 +477,7 @@ function VendorContact({ vendor }: { vendor: GiftVendor }) {
         ? link("WhatsApp", "message.fill", () =>
             Linking.openURL(
               `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-                `Hello ${vendor.name}, I would like to order. Sent via aduro.`
+                `Hello ${vendor.name}, I would like to order. Sent via Duro.`
               )}`
             )
           )

@@ -225,7 +225,7 @@ export function PlanSteps({
                 if (inputs.near) return update({ near: undefined, areaNames: [] });
                 const at = await currentPlace();
                 if (at === "denied") {
-                  Alert.alert("Location is off", "Turn on location for aduro in Settings to plan near you, or pick an area.");
+                  Alert.alert("Location is off", "Turn on location for Duro in Settings to plan near you, or pick an area.");
                   return;
                 }
                 if (at === "unavailable") {

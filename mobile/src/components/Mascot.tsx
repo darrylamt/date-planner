@@ -7,7 +7,7 @@ import { useTheme } from "../lib/useTheme";
 import type { Occasion } from "../lib/types";
 
 /**
- * The aduro mascot: one character, one costume per occasion, three frames each.
+ * The Duro mascot: one character, one costume per occasion, three frames each.
  *
  * Paths are written out rather than built from a template because Metro
  * resolves require() at build time, a computed path bundles nothing and fails

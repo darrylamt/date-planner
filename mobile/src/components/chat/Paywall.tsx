@@ -46,7 +46,7 @@ export function AccountlessNote() {
   return (
     <View style={{ marginTop: space.md, alignItems: "center" }}>
       <Text variant="footnote" tone="secondary" center>
-        No account needed to subscribe. Create one any time to keep aduro Pro on your other
+        No account needed to subscribe. Create one any time to keep Duro Pro on your other
         devices.
       </Text>
       <Pressable onPress={() => router.push("/login")} hitSlop={8} style={{ marginTop: space.xs }}>
@@ -181,9 +181,9 @@ export function Paywall({
       ) : null}
 
       <Text variant="footnote" tone="secondary" style={{ marginTop: space.xs }}>
-        Tell adurobot what you want and it plans it, answers questions about any place we
+        Tell Durobot what you want and it plans it, answers questions about any place we
         know, and tells you what to order when you get there. Free accounts get five messages
-        a month; aduro Pro lifts that to 150.
+        a month; Duro Pro lifts that to 150.
       </Text>
 
       {/*

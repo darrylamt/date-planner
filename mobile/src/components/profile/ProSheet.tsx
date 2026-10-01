@@ -12,7 +12,7 @@ import { configurePurchases, restore, purchasesAvailable } from "../../lib/purch
 const MANAGE_URL = "itms-apps://apps.apple.com/account/subscriptions";
 
 /**
- * aduro Pro, reachable on purpose rather than by running out.
+ * Duro Pro, reachable on purpose rather than by running out.
  *
  * Until now the paywall had exactly one door: send five messages, be refused,
  * and it appears. That made the subscription unbuyable by anyone who simply
@@ -89,7 +89,7 @@ export function ProSheet({
             borderBottomColor: c.border,
           }}
         >
-          <Text variant="headline">aduro Pro</Text>
+          <Text variant="headline">Duro Pro</Text>
           <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">
             <Symbol name="xmark.circle.fill" size={28} color={c.textTertiary} />
           </Pressable>

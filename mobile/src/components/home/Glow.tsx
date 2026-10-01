@@ -5,7 +5,7 @@ import { Radius } from "../../theme";
 /**
  * A slow halo behind its child, for the one control people keep missing.
  *
- * People walked past the adurobot bar: it sat at the top of Home looking like
+ * People walked past the Durobot bar: it sat at the top of Home looking like
  * a search field, and a search field is something you already know you do
  * not need. A light breathing behind it says "this does something" without
  * adding a word or a badge.

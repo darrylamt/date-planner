@@ -83,11 +83,11 @@ export async function reportVenue(input: {
   }
 }
 
-/** Which part of aduro went wrong, in the reporter's terms. */
+/** Which part of Duro went wrong, in the reporter's terms. */
 export type IssueArea = "chat" | "plan" | "account" | "payment" | "other";
 
 /**
- * Tell us aduro is broken, as opposed to a venue being wrong.
+ * Tell us Duro is broken, as opposed to a venue being wrong.
  *
  * Forgiving in the same way reportVenue is, and for a sharper reason: this is
  * most often tapped by somebody who has just been stopped by a failure, so an

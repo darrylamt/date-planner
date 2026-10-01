@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "aduro",
+    "name": "Duro!",
     "slug": "aduro",
     "version": "1.1.0",
     "orientation": "portrait",
@@ -11,9 +11,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.darrylamt.aduro",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
-        "NSCalendarsFullAccessUsageDescription": "aduro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsFullAccessUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
           "whatsapp",
@@ -29,7 +29,7 @@
             ]
           }
         ],
-        "NSPhotoLibraryUsageDescription": "aduro uses this to set your profile picture. Photos stay on your device unless you pick one.",
+        "NSPhotoLibraryUsageDescription": "Duro uses this to set your profile picture. Photos stay on your device unless you pick one.",
         "UIBackgroundModes": [
           "remote-notification"
         ]
@@ -79,7 +79,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "aduro adds your date plan to your calendar so you don't lose track of the evening."
+          "calendarPermission": "Duro adds your date plan to your calendar so you don't lose track of the evening."
         }
       ],
       "expo-font",
@@ -87,13 +87,13 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "aduro uses this to set your profile picture."
+          "photosPermission": "Duro uses this to set your profile picture."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "aduro uses your location only when you ask for directions, to find the trotro stop or taxi pickup nearest you. It is not stored.",
+          "locationWhenInUsePermission": "Duro uses your location only when you ask for directions, to find the trotro stop or taxi pickup nearest you. It is not stored.",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }

@@ -35,7 +35,7 @@ export function AiConsentSheet({
   const what =
     purpose === "chat"
       ? "The assistant is powered by Claude, an AI model made by Anthropic. What you type to it is sent to Anthropic so it can answer."
-      : "aduro can use Claude, an AI model made by Anthropic, to write your plan's description. To do that, your answers are sent to Anthropic, including any names or preferences you gave us.";
+      : "Duro can use Claude, an AI model made by Anthropic, to write your plan's description. To do that, your answers are sent to Anthropic, including any names or preferences you gave us.";
 
   return (
     <Modal visible={purpose !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => onAnswer(false)}>

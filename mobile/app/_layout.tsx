@@ -126,7 +126,7 @@ function RootShell() {
           <Stack.Screen
             name="chat"
             options={{
-              title: "adurobot",
+              title: "Durobot",
               headerRight: () => <Text style={{ fontSize: 26 }}>🤖</Text>,
             }}
           />

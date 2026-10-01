@@ -11,7 +11,7 @@ import { useTheme } from "../lib/useTheme";
 import { reportIssue, type IssueArea } from "../lib/api";
 
 /**
- * Tell us aduro is broken.
+ * Tell us Duro is broken.
  *
  * Its sibling, plan/ReportSheet, reports a venue: the price moved, the door
  * was locked. This reports the app, which had nowhere to go until now. Chat
@@ -139,7 +139,7 @@ export function IssueSheet({
           <View style={{ flex: 1 }}>
             <Text variant="headline">Report a problem</Text>
             <Text variant="footnote" tone="secondary" numberOfLines={1}>
-              Something in aduro, not a venue
+              Something in Duro, not a venue
             </Text>
           </View>
           <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">

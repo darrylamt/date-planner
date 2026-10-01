@@ -1,6 +1,6 @@
-# aduro, iOS app
+# Duro!, iOS app
 
-The native companion to the aduro web planner. Same Supabase project, same
+The native companion to the Duro web planner. Same Supabase project, same
 itinerary engine, an interface built to Apple's HIG.
 
 ## Setup
@@ -27,7 +27,7 @@ dashboard under **Authentication → Email Templates → Magic Link**, the templ
 must include the token:
 
 ```html
-<p>Your aduro sign-in code is <strong>{{ .Token }}</strong></p>
+<p>Your Duro sign-in code is <strong>{{ .Token }}</strong></p>
 ```
 
 Without this, users receive a link they cannot use inside the app.

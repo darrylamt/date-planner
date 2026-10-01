@@ -146,7 +146,7 @@ export default function Profile() {
        * Deleting the row here stops nothing at Apple, and somebody who
        * assumed it did would be charged again next month.
        */
-      "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to aduro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
+      "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to Duro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -413,7 +413,7 @@ export default function Profile() {
       <Group header="Subscription">
         <Row
           icon="sparkles"
-          title="aduro Pro"
+          title="Duro Pro"
           subtitle={
             allowance?.tier === "pro"
               ? "Subscribed"
@@ -541,13 +541,13 @@ export default function Profile() {
           title="Contact us"
           chevron
           onPress={() =>
-            Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("aduro")}`)
+            Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Duro")}`)
           }
         />
         {APP_STORE_ID ? (
           <Row
             icon="star"
-            title="Rate aduro"
+            title="Rate Duro"
             chevron
             onPress={() =>
               Linking.openURL(
@@ -621,7 +621,7 @@ export default function Profile() {
         style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}
       >
         <Text variant="caption1" tone="tertiary" center>
-          aduro {Constants.expoConfig?.version ?? ""} · Accra
+          Duro! {Constants.expoConfig?.version ?? ""} · Accra
         </Text>
         <Text variant="caption2" tone="tertiary" center style={{ marginTop: 2 }}>
           {buildLine}
@@ -652,7 +652,7 @@ export default function Profile() {
          */
         onPurchased={() => {
           void fetchAllowance().then(setAllowance);
-          setToast("Welcome to aduro Pro.");
+          setToast("Welcome to Duro Pro.");
         }}
       />
 

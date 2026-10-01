@@ -189,7 +189,7 @@ export function ItineraryView({
     const who = partyLabel(inputs.partySize);
     const message =
       `Hello ${stop.name}! I would like to reserve a table for ${who} on ${when}. ` +
-      `Please confirm availability. (sent via aduro)`;
+      `Please confirm availability. (sent via Duro)`;
 
     /*
      * The event's own link first, then the venue's.
@@ -467,8 +467,8 @@ export function ItineraryView({
       Alert.alert(
         "Calendar access needed",
         (canAskAgain
-          ? "aduro needs permission to add your plan to your calendar."
-          : "Turn on Calendars for aduro in Settings, then try again.") + `\n\n(status: ${status})`,
+          ? "Duro needs permission to add your plan to your calendar."
+          : "Turn on Calendars for Duro in Settings, then try again.") + `\n\n(status: ${status})`,
         [
           { text: "Not now", style: "cancel" },
           ...(canAskAgain

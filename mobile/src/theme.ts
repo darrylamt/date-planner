@@ -1,5 +1,5 @@
 /**
- * aduro design tokens, near-monochrome, one accent, eight occasion hues.
+ * Duro design tokens, near-monochrome, one accent, eight occasion hues.
  *
  * Ported from the Gavel system. The visual language is a printed itinerary:
  * cool off-white paper, near-black type, hierarchy built from size and space

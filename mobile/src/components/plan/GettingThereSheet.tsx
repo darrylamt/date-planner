@@ -84,7 +84,7 @@ export function GettingThereSheet({
     setBusy(true);
     const at = await currentPlace();
     setBusy(false);
-    if (at === "denied") return setNote("Location is off for aduro. You can turn it on in Settings, or use a ride app below.");
+    if (at === "denied") return setNote("Location is off for Duro. You can turn it on in Settings, or use a ride app below.");
     if (at === "unavailable") return setNote("We could not find your location just now.");
     setOrigin({ kind: "here", at });
   }
@@ -157,7 +157,7 @@ export function GettingThereSheet({
           </View>
           {!previous && !locationAvailable() ? (
             <Text variant="footnote" tone="secondary">
-              Trotro directions from where you are need the latest version of aduro from the App Store.
+              Trotro directions from where you are need the latest version of Duro from the App Store.
             </Text>
           ) : null}
 

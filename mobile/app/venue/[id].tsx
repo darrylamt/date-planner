@@ -368,7 +368,7 @@ export default function VenuePage() {
             <View style={{ padding: space.lg, borderRadius: radius.card, backgroundColor: c.backgroundElement, gap: space.sm }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
                 <Symbol name="lock.fill" size={15} color={c.accent} />
-                <Text variant="headline">The full page is part of aduro Pro</Text>
+                <Text variant="headline">The full page is part of Duro Pro</Text>
               </View>
               {[
                 "The whole menu, with prices and what is in each dish",

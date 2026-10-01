@@ -18,7 +18,7 @@ const GOLD_DEEP = "#C98E1E";
  * gives it a soft glow, and pins a gold star to the top right corner, which
  * pops in when the account is known to be Pro and twinkles now and then.
  *
- * It used to wear the adurobot bar's four colours, which made two loud
+ * It used to wear the Durobot bar's four colours, which made two loud
  * things side by side; the bar keeps the colour and this keeps its place.
  */
 export function Avatar({

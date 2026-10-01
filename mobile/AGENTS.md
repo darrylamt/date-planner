@@ -1,4 +1,4 @@
-# aduro mobile, working notes
+# Duro! mobile, working notes
 
 Expo SDK 57 / React Native 0.86 / expo-router. Read the versioned Expo docs at
 https://docs.expo.dev/versions/v57.0.0/ before writing native code.
