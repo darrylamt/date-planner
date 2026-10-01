@@ -26,7 +26,7 @@ export function Field({
    */
   const glow = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(glow, { toValue: focused ? 1 : 0, duration: 180, useNativeDriver: true }).start();
+    Animated.timing(glow, { toValue: focused ? 1 : 0, duration: 180, useNativeDriver: false }).start();
   }, [focused, glow]);
 
   return (
@@ -102,7 +102,10 @@ export function StepHeading({ title, subtitle }: { title: string; subtitle?: str
   const rise = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     rise.setValue(0);
-    Animated.spring(rise, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 6 }).start();
+    Animated.spring(rise, { toValue: 1, useNativeDriver: false, speed: 14, bounciness: 6 }).start();
+    // A question must never stay invisible because its entrance did not run.
+    const safety = setTimeout(() => rise.setValue(1), 1500);
+    return () => clearTimeout(safety);
   }, [title, rise]);
 
   return (

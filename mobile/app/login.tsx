@@ -421,14 +421,14 @@ function Character({ occasion, small, reduced }: { occasion: Occasion; small: bo
   useEffect(() => {
     if (reduced) return;
     pop.setValue(0.5);
-    Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 14 }).start();
+    Animated.spring(pop, { toValue: 1, useNativeDriver: false, speed: 12, bounciness: 14 }).start();
   }, [occasion, reduced, pop]);
   useEffect(() => {
     if (reduced) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(bob, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+        Animated.timing(bob, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
       ])
     );
     loop.start();
@@ -493,11 +493,11 @@ function Bit({
   const bob = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (reduced) return;
-    Animated.spring(inV, { toValue: 1, delay: 150 + index * 140, useNativeDriver: true, speed: 12, bounciness: 12 }).start();
+    Animated.spring(inV, { toValue: 1, delay: 150 + index * 140, useNativeDriver: false, speed: 12, bounciness: 12 }).start();
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(bob, { toValue: 0, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 1, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(bob, { toValue: 0, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
       ])
     );
     loop.start();
@@ -544,7 +544,10 @@ function Sheet({ children, bottom }: { children: React.ReactNode; bottom: number
       up.setValue(1);
       return;
     }
-    Animated.spring(up, { toValue: 1, useNativeDriver: true, speed: 9, bounciness: 6 }).start();
+    Animated.spring(up, { toValue: 1, useNativeDriver: false, speed: 9, bounciness: 6 }).start();
+    // Never left half off the screen if the slide does not run.
+    const safety = setTimeout(() => up.setValue(1), 1800);
+    return () => clearTimeout(safety);
   }, [up, reduced]);
   return (
     <Animated.View
@@ -719,10 +722,10 @@ function TurningWord({ word, reduced }: { word: string; reduced: boolean }) {
       setShown(word);
       return;
     }
-    Animated.timing(v, { toValue: 0, duration: 160, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
+    Animated.timing(v, { toValue: 0, duration: 160, easing: Easing.in(Easing.quad), useNativeDriver: false }).start(() => {
       setShown(word);
       v.setValue(-1);
-      Animated.spring(v, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 8 }).start();
+      Animated.spring(v, { toValue: 1, useNativeDriver: false, speed: 16, bounciness: 8 }).start();
     });
   }, [word, shown, reduced, v]);
 
@@ -746,7 +749,7 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
   const [width, setWidth] = useState(0);
   const x = useRef(new Animated.Value(mode === "signup" ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(x, { toValue: mode === "signup" ? 1 : 0, useNativeDriver: true, speed: 18, bounciness: 6 }).start();
+    Animated.spring(x, { toValue: mode === "signup" ? 1 : 0, useNativeDriver: false, speed: 18, bounciness: 6 }).start();
   }, [mode, x]);
 
   const half = Math.max(0, (width - 8) / 2);
@@ -799,7 +802,7 @@ function Shake({ trigger, children }: { trigger: unknown; children: React.ReactN
   useEffect(() => {
     x.setValue(0);
     Animated.sequence(
-      [10, -8, 6, -4, 0].map((to) => Animated.timing(x, { toValue: to, duration: 55, useNativeDriver: true }))
+      [10, -8, 6, -4, 0].map((to) => Animated.timing(x, { toValue: to, duration: 55, useNativeDriver: false }))
     ).start();
   }, [trigger, x]);
   return <Animated.View style={{ transform: [{ translateX: x }] }}>{children}</Animated.View>;

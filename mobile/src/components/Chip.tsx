@@ -30,7 +30,7 @@ export function Chip({
   const on = useRef(new Animated.Value(selected ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.spring(on, { toValue: selected ? 1 : 0, useNativeDriver: true, speed: 18, bounciness: 9 }).start();
+    Animated.spring(on, { toValue: selected ? 1 : 0, useNativeDriver: false, speed: 18, bounciness: 9 }).start();
   }, [selected, on]);
 
   const springTo = (v: number) =>

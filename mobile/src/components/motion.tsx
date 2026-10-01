@@ -51,7 +51,14 @@ export function Rise({
       return;
     }
     v.setValue(0);
-    Animated.spring(v, { toValue: 1, delay, useNativeDriver: true, speed: 12, bounciness: 5 }).start();
+    Animated.spring(v, { toValue: 1, delay, useNativeDriver: false, speed: 12, bounciness: 5 }).start();
+    /*
+     * Content must never stay hidden because an animation did not run. On
+     * the phone, in the sign-in modal, native-driven entrances never started
+     * and the whole screen stayed invisible; this lands it regardless.
+     */
+    const safety = setTimeout(() => v.setValue(1), delay + 1500);
+    return () => clearTimeout(safety);
   }, [trigger, delay, v, reduced]);
 
   return (

@@ -225,7 +225,7 @@ function Radio({ on }: { on: boolean }) {
   const c = useTheme();
   const fill = useRef(new Animated.Value(on ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(fill, { toValue: on ? 1 : 0, useNativeDriver: true, speed: 16, bounciness: 12 }).start();
+    Animated.spring(fill, { toValue: on ? 1 : 0, useNativeDriver: false, speed: 16, bounciness: 12 }).start();
   }, [on, fill]);
 
   return (

@@ -108,7 +108,8 @@ function RootShell() {
               headerRight: () => <Text style={{ fontSize: 26 }}>🤖</Text>,
             }}
           />
-          <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in" }} />
+          {/* No bar: the screen draws its own close button over its own stage. */}
+          <Stack.Screen name="login" options={{ presentation: "modal", title: "Sign in", headerShown: false }} />
           {/*
             Out of the tab bar and behind the avatar on Home. Settings is
             somewhere people go a few times ever, and its slot now holds
