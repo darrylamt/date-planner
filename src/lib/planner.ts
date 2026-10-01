@@ -1,4 +1,5 @@
 import type { Candidates } from "./matching";
+import { chargesOn, chargesTotal } from "./budget";
 import { dishMatchesCuisine } from "./cuisineDishes";
 import { isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
@@ -26,7 +27,7 @@ import type {
   PriceBand,
   Venue,
   VenueSchedule,
-  VenueType, NarrowFocus } from "./types";
+  VenueType, NarrowFocus, StopCharge } from "./types";
 
 /**
  * Deterministic itinerary planning.
@@ -1104,7 +1105,9 @@ export interface PlannedStop {
    * orders and cost the planner computed for it, re-deriving a price at the
    * point of swap is how a venue with no menu ends up shown as free.
    */
-  alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number }[];
+  alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[] }[];
+  /** What the venue adds to the bill, already counted in cost. */
+  charges: StopCharge[];
 }
 
 export interface PlannedItinerary {
@@ -1314,7 +1317,9 @@ function planWith(
     venue: Venue;
     tier: OrderTier;
     orders: ItineraryOrder[];
+    /** Charges included: what the evening actually costs at this venue. */
     cost: number;
+    charges: StopCharge[];
     score: number;
     /** Weekly fixtures on while the party is here. Usually none. */
     fixtures: VenueSchedule[];
@@ -1458,6 +1463,7 @@ function planWith(
             item: doorTotal > 0 ? doorLabel : `${doorLabel}, free`,
             qty: inputs.partySize,
             price_ghs: doorTotal,
+            door: true,
           },
         ]
       : [];
@@ -1481,11 +1487,21 @@ function planWith(
       // Nothing to order and nothing to pay at the door is a free stop, and
       // only a venue recorded as free may be one.
       if (planned.cost <= 0 && doorTotal <= 0 && !venue.is_free) continue;
+      /*
+       * What the venue adds to the bill, counted before the budget is
+       * checked, so "fits your budget" is what the till says and not the
+       * menu. Nothing recorded adds nothing.
+       */
+      const charges = chargesOn(planned.cost, {
+        service_pct: venue.service_charge_pct,
+        tax_pct: venue.tax_added_pct,
+      });
       priced.push({
         venue,
         tier,
         orders: [...planned.orders, ...doorLine],
-        cost: planned.cost + doorTotal,
+        cost: planned.cost + chargesTotal(charges) + doorTotal,
+        charges,
         fixtures,
         // Within a focus every venue is allowed, so nudge the slot towards
         // its own role to keep the evening varied rather than three of the
@@ -1513,6 +1529,8 @@ function planWith(
         tier: 0,
         orders: doorLine,
         cost: doorTotal,
+        // A cover at the door has nothing added to it.
+        charges: [],
         fixtures,
         score: score + (roleTypes.includes(venue.type) ? 2 : 0),
       });
@@ -2068,6 +2086,7 @@ function planWith(
           arrivalMinutes: 0,
           orders: p.orders,
           cost: p.cost,
+          charges: p.charges,
           // Runners-up this slot could have had, for an instant swap. Only
           // ones that fit what is left of the budget, so a swap can never
           // push the plan over.
@@ -2077,7 +2096,7 @@ function planWith(
               (o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx
             )
             .slice(0, 2)
-            .map((o) => ({ venue: o.venue, orders: o.orders, cost: o.cost })),
+            .map((o) => ({ venue: o.venue, orders: o.orders, cost: o.cost, charges: o.charges })),
         };
       });
     }

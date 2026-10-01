@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { chargeableSubtotal, chargesOn, chargesTotal } from "./budget";
 import { estimateHop } from "./transport";
 import { clockFromMinutes, type PlannedItinerary } from "./planner";
 import { describeSchedule } from "./schedules";
 import type {
+  ChargeRates,
   Itinerary,
   ItineraryStop,
   PlanInputs,
@@ -60,6 +62,13 @@ export async function coordsForStops(
   return map;
 }
 
+/** A venue's charges as a stop carries them, or null when none are recorded. */
+function ratesOf(v: Venue): ChargeRates | null {
+  return v.service_charge_pct != null || v.tax_added_pct != null
+    ? { service_pct: v.service_charge_pct ?? null, tax_pct: v.tax_added_pct ?? null }
+    : null;
+}
+
 export function recomputeItinerary(
   itinerary: Itinerary,
   coords: Map<string, Coord>
@@ -85,8 +94,10 @@ export function recomputeItinerary(
 
   const foodTotal = stops.reduce((sum, s) => {
     const orderSum = s.orders.reduce((o, x) => o + Number(x.price_ghs), 0);
+    // The venue's charges, recomputed on what is ordered now.
+    if (s.charge_rates) s.charges = chargesOn(chargeableSubtotal(s.orders), s.charge_rates);
     // Trust order math when present; otherwise the model's stop estimate.
-    const stopCost = orderSum > 0 ? Math.max(orderSum, 0) : Number(s.est_cost_ghs);
+    const stopCost = orderSum > 0 ? Math.max(orderSum, 0) + chargesTotal(s.charges) : Number(s.est_cost_ghs);
     s.est_cost_ghs = Math.round(s.kind === "event" ? Number(s.est_cost_ghs) : stopCost);
     return sum + s.est_cost_ghs;
   }, 0);
@@ -183,6 +194,8 @@ export function assembleItinerary(
       instagram_handle: a.venue.instagram_handle,
       reservation_required: a.venue.reservation_required,
       orders: a.orders,
+      charges: a.charges,
+      charge_rates: ratesOf(a.venue),
       est_cost_ghs: a.cost,
       why_this_fits: "",
     }));
@@ -204,6 +217,8 @@ export function assembleItinerary(
       whats_on: (s.fixtures ?? []).map(describeSchedule),
       what_to_do: words?.what_to_do ?? "",
       orders: s.orders,
+      charges: s.charges,
+      charge_rates: ratesOf(s.venue),
       est_cost_ghs: s.cost,
       why_this_fits: words?.why_this_fits ?? "",
       image_url: s.venue.image_url,

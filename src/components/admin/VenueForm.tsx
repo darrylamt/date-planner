@@ -173,6 +173,9 @@ export function VenueForm({
     lng: venue?.lng != null ? String(venue.lng) : "",
     minimum_spend_ghs:
       venue?.minimum_spend_ghs != null ? String(venue.minimum_spend_ghs) : "",
+    service_charge_pct: venue?.service_charge_pct != null ? String(venue.service_charge_pct) : "",
+    tax_added_pct: venue?.tax_added_pct != null ? String(venue.tax_added_pct) : "",
+    charges_note: venue?.charges_note ?? "",
     // "" is "not recorded", which is deliberately not the same as "both".
     cuisine: venue?.cuisine ?? "",
   });
@@ -343,6 +346,18 @@ export function VenueForm({
         // Null, not zero: "no floor" and "the floor is nothing" differ.
         minimum_spend_ghs:
           v.minimum_spend_ghs === "" ? null : Number(v.minimum_spend_ghs),
+        /*
+         * Sent once migration 0068 is in (the venue row then carries the
+         * keys) or when somebody filled them; naming a column the database
+         * lacks fails the whole save. Blank is "not recorded", never zero.
+         */
+        ...(venue && "service_charge_pct" in venue) || v.service_charge_pct !== "" || v.tax_added_pct !== "" || v.charges_note.trim()
+          ? {
+              service_charge_pct: v.service_charge_pct === "" ? null : Number(v.service_charge_pct),
+              tax_added_pct: v.tax_added_pct === "" ? null : Number(v.tax_added_pct),
+              charges_note: v.charges_note.trim() || null,
+            }
+          : {},
         cuisine: v.cuisine === "" ? null : v.cuisine,
         opening_periods: hours.periods ?? null,
         opening_hours_text: hours.text ?? null,
@@ -946,6 +961,42 @@ export function VenueForm({
               placeholder="none"
             />
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-mutedbrown">Service charge %</span>
+            <input
+              className="inp h-[38px] max-w-[90px] font-mono"
+              type="number"
+              min={0}
+              max={30}
+              step="0.5"
+              value={v.service_charge_pct}
+              onChange={(e) => setV({ ...v, service_charge_pct: e.target.value })}
+              placeholder="?"
+            />
+            <span className="text-[13px] text-mutedbrown">Tax added %</span>
+            <input
+              className="inp h-[38px] max-w-[90px] font-mono"
+              type="number"
+              min={0}
+              max={40}
+              step="0.1"
+              value={v.tax_added_pct}
+              onChange={(e) => setV({ ...v, tax_added_pct: e.target.value })}
+              placeholder="?"
+            />
+          </div>
+          <input
+            className="inp mt-2 h-[38px] w-full text-[13px]"
+            maxLength={200}
+            value={v.charges_note}
+            onChange={(e) => setV({ ...v, charges_note: e.target.value })}
+            placeholder={'What the menu says, e.g. "Prices subject to 10% service charge and applicable taxes"'}
+          />
+          <span className="mt-1 block text-[12px] text-mutedbrown">
+            From the menu, not a guess. Blank is not recorded and adds nothing; 0 is recorded as
+            none. Tax added only when the menu says its prices exclude VAT and levies. Both go
+            into plans, so a budget holds at the till.
+          </span>
           <span className="mt-1 block text-[12px] text-mutedbrown">
             Leave blank unless the venue really has a floor. Bliss sells arcade
             play only as a GHS 100 bag of ten tokens, so quoting its GHS 10

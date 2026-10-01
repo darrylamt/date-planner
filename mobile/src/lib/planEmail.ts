@@ -44,6 +44,9 @@ export function planEmail(
 
     // A genuinely free stop should say so rather than show nothing at all.
     if (!stop.orders.length) lines.push("   · Free to enter");
+    for (const ch of stop.charges ?? []) {
+      if (ch.ghs > 0) lines.push(`   + ${ch.label}, ${ghs(ch.ghs)}`);
+    }
 
     const hop = itinerary.hops[i];
     if (hop && i < itinerary.stops.length - 1) {
@@ -143,6 +146,17 @@ export function planEmailHtml(
             )
             .join("")
         : `<tr><td colspan="2" style="padding:4px 0;font:15px ${font};color:${soft};">Free to enter</td></tr>`;
+      // The venue's service charge and tax, under the dishes they are charged on.
+      const charged = (stop.charges ?? [])
+        .filter((ch) => ch.ghs > 0)
+        .map(
+          (ch) => `
+                <tr>
+                  <td style="padding:4px 0;font:14px ${font};color:${soft};">${esc(ch.label)}</td>
+                  <td align="right" valign="top" style="padding:4px 0 4px 14px;font:14px ${font};color:${soft};white-space:nowrap;">${esc(ghs(ch.ghs))}</td>
+                </tr>`
+        )
+        .join("");
 
       const hop = itinerary.hops[i];
       const ride =
@@ -170,7 +184,7 @@ export function planEmailHtml(
                     <div style="font:14px ${font};color:${soft};margin-top:2px;">${esc(stop.area)}</div>
                     ${stop.what_to_do ? `<div style="font:15px/1.5 ${font};color:${ink};margin-top:10px;">${esc(stop.what_to_do)}</div>` : ""}
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid ${line};padding-top:6px;">
-                      ${orders}
+                      ${orders}${charged}
                     </table>
                   </td>
                 </tr>

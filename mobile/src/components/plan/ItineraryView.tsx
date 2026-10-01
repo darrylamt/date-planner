@@ -36,7 +36,7 @@ import { StopCard } from "./StopCard";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, instagramUrl, longDate } from "../../lib/format";
-import { isDriving } from "../../lib/budget";
+import { chargeableSubtotal, chargesOn, chargesTotal, isDriving } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
@@ -130,9 +130,16 @@ export function ItineraryView({
 
   /** Menu edits recompute food and overall totals locally, no round trip. */
   function handleOrdersChange(index: number, orders: ItineraryOrder[]) {
-    const stopCost = Math.round(orders.reduce((sum, o) => sum + Number(o.price_ghs), 0));
+    const stop = itinerary.stops[index];
+    /*
+     * The venue's service charge and tax follow the order: add a dish and
+     * they grow with it. A plan from before charges were recorded carries no
+     * rates and keeps whatever charges it was given, which is none.
+     */
+    const charges = stop?.charge_rates ? chargesOn(chargeableSubtotal(orders), stop.charge_rates) : (stop?.charges ?? []);
+    const stopCost = Math.round(orders.reduce((sum, o) => sum + Number(o.price_ghs), 0) + chargesTotal(charges));
     const stops = itinerary.stops.map((s, i) =>
-      i === index ? { ...s, orders, est_cost_ghs: stopCost } : s
+      i === index ? { ...s, orders, charges, est_cost_ghs: stopCost } : s
     );
     const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_ghs), 0));
     const est = Math.round(food + Number(itinerary.transport_total_ghs));

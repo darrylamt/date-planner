@@ -91,6 +91,15 @@ export interface Venue {
    */
   minimum_spend_ghs?: number | null;
   /**
+   * What the venue adds to the bill, in percent: a service charge, and tax
+   * when its menu prices leave it out. Null is "nobody recorded one" and adds
+   * nothing. Absent before migration 0068.
+   */
+  service_charge_pct?: number | null;
+  tax_added_pct?: number | null;
+  /** What the menu says about charges, in its own words. */
+  charges_note?: string | null;
+  /**
    * local, continental, or both. Null means nobody has recorded it, which is
    * deliberately not the same as both and is never read as either.
    */
@@ -449,10 +458,24 @@ export interface PlanInputs {
 
 /* ── Itinerary shape returned by the model (also embedded in the prompt) ── */
 
+/** A venue's charges, carried on a stop so an edited order can be recharged. */
+export interface ChargeRates {
+  service_pct?: number | null;
+  tax_pct?: number | null;
+}
+
+/** One line a venue adds to the bill: "Service charge 10%", GHS 45. */
+export interface StopCharge {
+  label: string;
+  ghs: number;
+}
+
 export interface ItineraryOrder {
   item: string;
   qty: number;
   price_ghs: number; // total for qty, from real menu_items
+  /** The cover at the door, which no service charge or tax is added to. */
+  door?: boolean;
   /**
    * What the menu says about the dish, quoted, where it says anything.
    *
@@ -508,7 +531,14 @@ export interface ItineraryStop {
   label: string; // e.g. "DINNER", "MUSIC & DESSERT"
   what_to_do: string; // one sentence, for activities/events
   orders: ItineraryOrder[]; // [] for pure activities
-  /** Total for the whole party at this stop. */
+  /**
+   * What the venue adds on top of the orders, and the rates they came from.
+   * Absent on plans made before charges were recorded, and on venues with
+   * none recorded.
+   */
+  charges?: StopCharge[];
+  charge_rates?: ChargeRates | null;
+  /** Total for the whole party at this stop, charges included. */
   est_cost_ghs: number;
   why_this_fits: string;
   image_url: string | null;
@@ -605,6 +635,8 @@ export interface StopAlternate {
   lng?: number | null;
   reservation_required: boolean;
   orders: ItineraryOrder[];
+  charges?: StopCharge[];
+  charge_rates?: ChargeRates | null;
   est_cost_ghs: number;
   why_this_fits: string;
 }

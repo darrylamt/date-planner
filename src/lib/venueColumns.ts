@@ -55,6 +55,10 @@ export const PUBLIC_VENUE_COLUMNS = [
   "pricing_mode",
   "unit_price_ghs",
   "minimum_spend_ghs",
+  // 0068. Granted in the same migration; before it, the query drops them.
+  "service_charge_pct",
+  "tax_added_pct",
+  "charges_note",
   "cuisine",
   // 0033. The specific kitchen, where cuisine is only local/continental/both.
   "cuisines",

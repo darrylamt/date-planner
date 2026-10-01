@@ -57,3 +57,42 @@ export function isPlaceholderAvg(
 export function isDriving(inputs: { driving?: boolean; budget: number }): boolean {
   return inputs.driving === true || inputs.budget <= 0;
 }
+
+/* ── what a venue adds to the bill ────────────────────────────────────── */
+
+const pct = (n: number) => String(Math.round(n * 100) / 100);
+
+/** What the orders come to, leaving out the door, which nothing is added to. */
+export function chargeableSubtotal(orders: { price_ghs: number; door?: boolean }[]): number {
+  return orders.filter((o) => !o.door).reduce((sum, o) => sum + Number(o.price_ghs), 0);
+}
+
+/**
+ * The lines a venue adds to a bill of this size.
+ *
+ * Service on the subtotal, then tax on the subtotal and the service together,
+ * the way bills in Accra are written. Nothing recorded adds nothing, so a
+ * venue nobody has checked costs exactly what it did before.
+ */
+export function chargesOn(
+  subtotal: number,
+  rates: { service_pct?: number | null; tax_pct?: number | null } | null | undefined
+): { label: string; ghs: number }[] {
+  const out: { label: string; ghs: number }[] = [];
+  const service = Number(rates?.service_pct ?? 0);
+  const tax = Number(rates?.tax_pct ?? 0);
+  if (!(subtotal > 0)) return out;
+  let serviceGhs = 0;
+  if (service > 0) {
+    serviceGhs = Math.round((subtotal * service) / 100);
+    out.push({ label: `Service charge ${pct(service)}%`, ghs: serviceGhs });
+  }
+  if (tax > 0) {
+    out.push({ label: `VAT and levies ${pct(tax)}%`, ghs: Math.round(((subtotal + serviceGhs) * tax) / 100) });
+  }
+  return out;
+}
+
+export function chargesTotal(charges: { ghs: number }[] | null | undefined): number {
+  return (charges ?? []).reduce((sum, c) => sum + Number(c.ghs), 0);
+}

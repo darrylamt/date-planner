@@ -44,6 +44,8 @@ export function swapStopLocally(
       lng: stop.lng ?? null,
       reservation_required: stop.reservation_required ?? false,
       orders: stop.orders,
+      charges: stop.charges,
+      charge_rates: stop.charge_rates ?? null,
       est_cost_ghs: stop.est_cost_ghs,
       why_this_fits: stop.why_this_fits,
     },
@@ -66,6 +68,9 @@ export function swapStopLocally(
     reservation_required: next.reservation_required,
     reservation_requested: false,
     orders: next.orders,
+    // The new venue's charges, never the old one's.
+    charges: next.charges ?? [],
+    charge_rates: next.charge_rates ?? null,
     est_cost_ghs: next.est_cost_ghs,
     why_this_fits: next.why_this_fits,
     alternates: rotated,

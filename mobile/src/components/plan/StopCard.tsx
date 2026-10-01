@@ -383,6 +383,22 @@ export function StopCard({
           <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one" onPress={() => setMenuOpen(true)} />
         ) : null}
 
+        {/*
+          What the venue adds to the bill, under what is ordered and above the
+          total it is part of. Not editable: it follows the order.
+        */}
+        {(stop.charges ?? []).filter((ch) => ch.ghs > 0).map((ch) => (
+          <View key={ch.label} style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            <Symbol name="percent" size={12} color={c.textSecondary} />
+            <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+              {ch.label}
+            </Text>
+            <Text variant="footnote" tone="secondary" tabular>
+              {ghs(ch.ghs)}
+            </Text>
+          </View>
+        ))}
+
         {/* Stop subtotal */}
         <View
           style={{
