@@ -34,4 +34,7 @@ next-env.d.ts
 .vercel
 venues-to-research.csv
 venues-to-research-instagram.csv
+venues-to-research-place.csv
+# Batches of 25 cut from the lists above by research:list.
+research/
 venues-to-verify.txt

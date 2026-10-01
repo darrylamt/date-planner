@@ -31,8 +31,13 @@ import { instagramProfileTwice } from "./instagram";
 const VIBES = [
   "casual", "calm", "chill", "fun", "lively", "romantic", "foodie", "upscale",
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
+  "family_friendly",
 ];
-const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
+// Every occasion the app plans for, and casual_hangout, which the catalogue holds.
+const BEST_FOR = [
+  "date_night", "first_date", "anniversary", "birthday", "graduation", "celebration",
+  "friend_outing", "solo_day", "business_meeting", "family_day", "casual_hangout",
+];
 /*
  * evidence_url is read and never written.
  *
@@ -44,8 +49,25 @@ const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout",
  */
 const KNOWN = [
   "name", "description", "vibe_tags", "best_for", "cuisines", "dress_code",
-  "instagram_handle", "evidence_url",
+  "instagram_handle", "evidence_url", "google_maps_url", "lat", "lng", "phone",
 ];
+
+/*
+ * Where a venue is and how to reach it, from its map listing.
+ *
+ * A pin prices every ride to and from the venue, so one outside Ghana is a
+ * transcription slip rather than a place, and a phone is only ever proposed:
+ * the reservation flow dials it under our name, so it waits at /admin/phones
+ * for a person, like every other number read off the internet.
+ */
+const MAPS_URL = /^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps|google\.com\/maps|maps\.app\.goo\.gl\/|goo\.gl\/maps)/i;
+function inGhana(lat: number, lng: number): boolean {
+  return lat >= 4.5 && lat <= 11.2 && lng >= -3.3 && lng <= 1.3;
+}
+function phoneDigits(raw: string): string {
+  return raw.replace(/[^\d+]/g, "");
+}
+
 
 /** Spellings that would split one kitchen in two. Extend as they turn up. */
 const CUISINE_ALIASES: Record<string, string> = {
@@ -107,10 +129,12 @@ async function main() {
     vibe_tags: string[] | null; best_for: string[] | null;
     cuisines: string[] | null; cuisine: string | null;
     dress_code: string | null; instagram_handle: string | null;
+    google_maps_url: string | null; lat: number | null; lng: number | null;
+    phone: string | null; phone_pending: string | null;
   };
   const { data } = await db
     .from("venues")
-    .select("id, name, description, vibe_tags, best_for, cuisines, cuisine, dress_code, instagram_handle")
+    .select("id, name, description, vibe_tags, best_for, cuisines, cuisine, dress_code, instagram_handle, google_maps_url, lat, lng, phone, phone_pending")
     .eq("is_active", true);
   const venues = (data ?? []) as unknown as V[];
   const byName = new Map(venues.map((v) => [v.name.trim().toLowerCase(), v]));
@@ -232,6 +256,36 @@ async function main() {
         delete values.instagram_handle;
       } else {
         why.push(`handle is "${found.displayName}"`);
+      }
+    }
+
+    // Where it is and how to reach it, each only over nothing.
+    const maps = get("google_maps_url").replace(/^\[|\]$/g, "").replace(/^.*\]\((https?:[^)]+)\)\s*$/, "$1").trim();
+    if (maps) {
+      if (v.google_maps_url) why.push("google_maps_url already set, left alone");
+      else if (!MAPS_URL.test(maps)) why.push(`google_maps_url "${maps}" is not a Google Maps link, skipped`);
+      else values.google_maps_url = maps;
+    }
+    const [la, ln] = [get("lat"), get("lng")];
+    if (la && ln) {
+      const [lat, lng] = [Number(la), Number(ln)];
+      if (v.lat != null && v.lng != null) why.push("pin already set, left alone");
+      else if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inGhana(lat, lng)) why.push(`pin ${la}, ${ln} is not in Ghana, skipped`);
+      else {
+        values.lat = lat;
+        values.lng = lng;
+      }
+    }
+    const ph = get("phone");
+    if (ph) {
+      if (v.phone || v.phone_pending) why.push("phone already on file or awaiting approval, left alone");
+      else if (phoneDigits(ph).replace(/^\+/, "").length < 9) why.push(`phone "${ph}" too short, skipped`);
+      else {
+        // Proposed, never live: it waits at /admin/phones for a person.
+        values.phone_pending = ph;
+        values.phone_status = "pending";
+        values.phone_source = "Research batch, unreviewed";
+        why.push("phone goes to /admin/phones for approval");
       }
     }
 

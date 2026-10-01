@@ -7,8 +7,9 @@ admin's **Import CSV → Fill in venues** mode takes directly.
 ## How to run it
 
 1. `npm run research:list` writes `venues-to-research.csv` — the active venues
-   missing a description, vibe tags or best_for. 141 of 194 at last count.
-2. Paste the prompt, then **20–30 names at a time**. More than that and models
+   missing a description, vibe tags, best_for or (for restaurants and cafes) a
+   cuisine — and cuts it into batches of 25 at `research/venues-01.csv` on.
+2. Paste the prompt, then **one batch (20–30 names) at a time**. More than that and models
    start padding the tail of the list with plausible-sounding filler, which is
    the one failure this whole exercise cannot absorb.
 3. Save what it returns as a `.csv` and run `npm run research:check -- that.csv`.
@@ -73,9 +74,10 @@ RULES
    no plurals, no variations:
 
    casual, calm, chill, fun, lively, romantic, foodie, upscale, adventurous,
-   outdoorsy, dancing, sporty, scenic, beach, artsy
+   outdoorsy, dancing, sporty, scenic, beach, artsy, family_friendly
 
-   Two to four is normal. Blank if unsure. Never invent a tag: a word outside
+   family_friendly only where children are plainly welcome: a play area, a
+   kids' menu, families in the photos. Two to four is normal. Blank if unsure. Never invent a tag: a word outside
    this list is silently dropped and the venue ends up with fewer tags than if
    you had picked carefully.
 
@@ -86,11 +88,13 @@ RULES
 
 6. best_for — semicolon-separated, ONLY from this exact list:
 
-   date_night, first_date, friend_outing, casual_hangout, anniversary
+   date_night, first_date, anniversary, birthday, graduation, celebration,
+   friend_outing, casual_hangout, solo_day, business_meeting, family_day
 
    Think about who would actually enjoy being taken there. A loud sports bar is
-   friend_outing and not first_date. A quiet place with good lighting is
-   first_date. Blank if unsure.
+   friend_outing and birthday, not first_date. A quiet place with good
+   lighting is first_date. A calm cafe with wifi is solo_day and
+   business_meeting. One to four; blank if unsure.
 
 7. cuisines — semicolon-separated, lowercase, only for places that serve food,
    and only where you found the actual cuisine.

@@ -23,7 +23,7 @@ export function CsvImporter({
   venues,
 }: {
   areas: Area[];
-  venues: { id: string; name: string }[];
+  venues: { id: string; name: string; hasPin?: boolean; hasPhone?: boolean }[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -127,6 +127,7 @@ export function CsvImporter({
       const byName = new Map(
         venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
       );
+      const known = new Map(venues.map((v) => [v.id, v]));
 
       /** Only the columns a research pass is allowed to touch. */
       const TEXT = ["description", "dress_code", "instagram_handle", "google_maps_url"] as const;
@@ -156,6 +157,33 @@ export function CsvImporter({
             .map((x) => x.trim().toLowerCase())
             .filter(Boolean);
           if (parts.length) values[key] = parts;
+        }
+        /*
+         * A pin, only where there is none. A pin prices every ride to and
+         * from the venue, so a researched one never replaces one somebody
+         * placed, and one outside Ghana is a transcription slip, not a place.
+         */
+        const lat = Number((r.lat ?? "").trim());
+        const lng = Number((r.lng ?? "").trim());
+        if ((r.lat ?? "").trim() && (r.lng ?? "").trim() && !known.get(id)?.hasPin) {
+          if (lat >= 4.5 && lat <= 11.2 && lng >= -3.3 && lng <= 1.3) {
+            values.lat = lat;
+            values.lng = lng;
+          } else {
+            log.push(`Row ${i + 2} (${r.name}): pin ${r.lat}, ${r.lng} is not in Ghana, left out`);
+          }
+        }
+        /*
+         * A number, only where there is none, and into the approval queue
+         * rather than live: the reservation flow dials it under our name, so
+         * a person checks it at /admin/phones first, as with every other
+         * number read off the internet.
+         */
+        const phone = (r.phone ?? "").trim();
+        if (phone && !known.get(id)?.hasPhone) {
+          values.phone_pending = phone;
+          values.phone_status = "pending";
+          values.phone_source = "Research import, unreviewed";
         }
         /*
          * aesthetics is ours, not the researcher's, and price_band decides
@@ -475,14 +503,15 @@ export function CsvImporter({
             <>
               <b>Headers:</b>{" "}
               <code className="font-mono text-[12.5px]">
-                name,description,vibe_tags,best_for,cuisines,dress_code,instagram_handle,google_maps_url
+                name,description,vibe_tags,best_for,cuisines,dress_code,instagram_handle,google_maps_url,lat,lng,phone
               </code>
               <br />
               <span className="text-mutedbrown">
                 Matches venues by exact name and updates only the columns you include. An empty
                 cell is left alone, never written as blank, so a research pass that found nothing
-                about a venue changes nothing. Price band and aesthetics are deliberately not
-                accepted here.
+                about a venue changes nothing. lat and lng fill only a venue with no pin, and a
+                phone only one with no number, into the queue at Phones for approval. Price band
+                and aesthetics are deliberately not accepted here.
               </span>
             </>
           ) : mode === "venues" ? (

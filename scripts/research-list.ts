@@ -1,8 +1,12 @@
 /**
  * The venues worth researching, as a CSV to paste names from.
  *
- *   npm run research:list                 # missing description / tags / best_for
+ *   npm run research:list                 # missing description / tags / best_for / cuisines
  *   npm run research:list -- --instagram  # missing an Instagram handle
+ *   npm run research:list -- --place      # missing a map link, a pin or a phone
+ *
+ * Each list is also cut into batches of 25 under research/, the size a model
+ * answers without padding the tail with filler.
  *
  * Writes venues-to-research.csv in the project root: every active venue
  * missing a description, vibe tags or best_for, with its area for context and
@@ -36,7 +40,7 @@ async function main() {
 
   const { data, error } = await db
     .from("venues")
-    .select("name, description, vibe_tags, best_for, cuisines, instagram_handle, areas(name)")
+    .select("name, type, description, vibe_tags, best_for, cuisines, instagram_handle, google_maps_url, lat, lng, phone, phone_pending, areas(name)")
     .eq("is_active", true)
     .order("name");
 
@@ -47,6 +51,12 @@ async function main() {
 
   type Row = {
     name: string;
+    type: string;
+    google_maps_url: string | null;
+    lat: number | null;
+    lng: number | null;
+    phone: string | null;
+    phone_pending: string | null;
     description: string | null;
     vibe_tags: string[] | null;
     best_for: string[] | null;
@@ -67,18 +77,32 @@ async function main() {
    * and no handle is finished for one job and untouched for the other.
    */
   const wantInstagram = process.argv.includes("--instagram");
+  /*
+   * A third job: where the venue is and how to reach it. One map listing
+   * answers all three, the link, the pin and the number, so they are asked
+   * together, and none of them is anything a description pass would find.
+   */
+  const wantPlace = process.argv.includes("--place");
 
   const rows = ((data ?? []) as unknown as Row[])
     .map((v) => {
-      const missing = wantInstagram
-        ? bare(v.instagram_handle)
-          ? ["instagram_handle"]
-          : []
-        : ([
-            bare(v.description) ? "description" : null,
-            bare(v.vibe_tags) ? "vibe_tags" : null,
-            bare(v.best_for) ? "best_for" : null,
-          ].filter(Boolean) as string[]);
+      const missing = wantPlace
+        ? ([
+            bare(v.google_maps_url) ? "google_maps_url" : null,
+            v.lat == null || v.lng == null ? "lat;lng" : null,
+            bare(v.phone) && bare(v.phone_pending) ? "phone" : null,
+          ].filter(Boolean) as string[])
+        : wantInstagram
+          ? bare(v.instagram_handle)
+            ? ["instagram_handle"]
+            : []
+          : ([
+              bare(v.description) ? "description" : null,
+              bare(v.vibe_tags) ? "vibe_tags" : null,
+              bare(v.best_for) ? "best_for" : null,
+              // Only a kitchen has a cuisine.
+              (v.type === "restaurant" || v.type === "cafe") && bare(v.cuisines) ? "cuisines" : null,
+            ].filter(Boolean) as string[]);
       return { name: v.name, area: v.areas?.name ?? "", missing };
     })
     .filter((r) => r.missing.length)
@@ -89,19 +113,33 @@ async function main() {
     .concat(rows.map((r) => `${q(r.name)},${q(r.area)},${q(r.missing.join(" "))}`))
     .join("\n");
 
+  const job = wantPlace ? "place" : wantInstagram ? "instagram" : "venues";
   const out = path.join(
     process.cwd(),
-    wantInstagram ? "venues-to-research-instagram.csv" : "venues-to-research.csv"
+    wantPlace ? "venues-to-research-place.csv" : wantInstagram ? "venues-to-research-instagram.csv" : "venues-to-research.csv"
   );
   fs.writeFileSync(out, csv + "\n", "utf8");
 
-  if (wantInstagram) {
+  // The same list in batches of 25, replacing any earlier batches of this job.
+  const dir = path.join(process.cwd(), "research");
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of fs.readdirSync(dir)) if (f.startsWith(`${job}-`)) fs.unlinkSync(path.join(dir, f));
+  const lines = csv.split("\n");
+  for (let i = 1, b = 1; i < lines.length; i += 25, b++) {
+    fs.writeFileSync(path.join(dir, `${job}-${String(b).padStart(2, "0")}.csv`), [lines[0], ...lines.slice(i, i + 25)].join("\n") + "\n", "utf8");
+  }
+
+  if (wantPlace) {
+    console.log(`${rows.length} venues are missing a map link, a pin or a phone.`);
+    console.log(`Wrote ${out}, and batches of 25 in research/place-*.csv`);
+    console.log("Paste one batch at a time into docs/place-research-prompt.md.");
+  } else if (wantInstagram) {
     console.log(`${rows.length} venues have no Instagram handle.`);
     console.log(`Wrote ${out}`);
     console.log("Paste 15-20 names at a time into docs/instagram-research-prompt.md.");
   } else {
-    const all3 = rows.filter((r) => r.missing.length === 3).length;
-    console.log(`${rows.length} venues need something (${all3} need all three).`);
+    const most = rows.filter((r) => r.missing.length >= 3).length;
+    console.log(`${rows.length} venues need something (${most} need three or more).`);
     console.log(`Wrote ${out}`);
     console.log("Paste 20-30 names at a time into docs/venue-research-prompt.md.");
   }

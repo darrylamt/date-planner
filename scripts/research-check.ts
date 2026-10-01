@@ -18,8 +18,13 @@ import { instagramProfileTwice } from "./instagram";
 const VIBES = [
   "casual", "calm", "chill", "fun", "lively", "romantic", "foodie", "upscale",
   "adventurous", "outdoorsy", "dancing", "sporty", "scenic", "beach", "artsy",
+  "family_friendly",
 ];
-const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout", "anniversary"];
+// Every occasion the app plans for, and casual_hangout, which the catalogue holds.
+const BEST_FOR = [
+  "date_night", "first_date", "anniversary", "birthday", "graduation", "celebration",
+  "friend_outing", "solo_day", "business_meeting", "family_day", "casual_hangout",
+];
 /*
  * evidence_url is read and never written.
  *
@@ -31,8 +36,25 @@ const BEST_FOR = ["date_night", "first_date", "friend_outing", "casual_hangout",
  */
 const KNOWN = [
   "name", "description", "vibe_tags", "best_for", "cuisines", "dress_code",
-  "instagram_handle", "evidence_url",
+  "instagram_handle", "evidence_url", "google_maps_url", "lat", "lng", "phone",
 ];
+
+/*
+ * Where a venue is and how to reach it, from its map listing.
+ *
+ * A pin prices every ride to and from the venue, so one outside Ghana is a
+ * transcription slip rather than a place, and a phone is only ever proposed:
+ * the reservation flow dials it under our name, so it waits at /admin/phones
+ * for a person, like every other number read off the internet.
+ */
+const MAPS_URL = /^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps|google\.com\/maps|maps\.app\.goo\.gl\/|goo\.gl\/maps)/i;
+function inGhana(lat: number, lng: number): boolean {
+  return lat >= 4.5 && lat <= 11.2 && lng >= -3.3 && lng <= 1.3;
+}
+function phoneDigits(raw: string): string {
+  return raw.replace(/[^\d+]/g, "");
+}
+
 
 /**
  * A URL, however it arrived.
@@ -274,6 +296,24 @@ async function main() {
         `Row ${n} "${name}": dress_code is "${dc}", which is a handle or a link. ` +
           `The dress_code column was skipped and the handle shifted into it. Realign this row.`
       );
+    }
+
+    const maps = plainUrl(get("google_maps_url"));
+    if (maps && !MAPS_URL.test(maps)) {
+      problems.push(`Row ${n} "${name}": google_maps_url "${maps}" is not a Google Maps link.`);
+    }
+    const [la, ln] = [get("lat"), get("lng")];
+    if (la || ln) {
+      const [lat, lng] = [Number(la), Number(ln)];
+      if (!la || !ln || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        problems.push(`Row ${n} "${name}": lat and lng come as a pair of numbers, got "${la}", "${ln}".`);
+      } else if (!inGhana(lat, lng)) {
+        problems.push(`Row ${n} "${name}": pin ${lat}, ${lng} is not in Ghana. Swapped lat and lng?`);
+      }
+    }
+    const ph = get("phone");
+    if (ph && phoneDigits(ph).replace(/^\+/, "").length < 9) {
+      problems.push(`Row ${n} "${name}": phone "${ph}" is too short to be a number.`);
     }
 
     const anything = KNOWN.slice(1).some((k) => get(k));
