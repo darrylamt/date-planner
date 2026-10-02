@@ -750,7 +750,7 @@ function SignedOut({ onSignIn, onContinue }: { onSignIn: () => void; onContinue:
     >
       <Symbol name="bubble.left.and.bubble.right.fill" size={40} color={c.textSecondary} />
       <Text variant="title3" center>
-        Ask Duro
+        Ask Duro!
       </Text>
       <Text variant="footnote" tone="secondary" center>
         No account needed. Sign in if you want your chats and any subscription on your other

@@ -18,7 +18,7 @@ const RING = 2;
  */
 // Short enough to fit beside the avatar on the narrowest iPhone.
 const LINES = [
-  "Ask Duro",
+  "Ask Duro!",
   "“Quiet dinner in Osu?”",
   "“Plan Saturday for four”",
   "“Best jollof under 100?”",
@@ -98,7 +98,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Ask Duro"
+      accessibilityLabel="Ask Duro!"
       onPressIn={() => springTo(0.97)}
       onPressOut={() => springTo(1)}
       onPress={() => {
