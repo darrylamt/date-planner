@@ -2,6 +2,15 @@
 
 import { useRef, useState } from "react";
 
+/*
+ * The venue portal's own upload on its pages, the admin's everywhere else.
+ * This field is shared by both, and the portal used to post to the admin
+ * route, which refuses anybody who is not an admin: a venue or planner could
+ * paste a link but never upload a file.
+ */
+const uploadEndpoint = () =>
+  typeof window !== "undefined" && window.location.pathname.startsWith("/venue") ? "/api/venue/upload" : "/api/admin/upload";
+
 /**
  * A picture, entered either way.
  *
@@ -46,7 +55,7 @@ export function ImageField({
       const body = new FormData();
       body.append("file", file);
       body.append("folder", folder);
-      const res = await fetch("/api/admin/upload", { method: "POST", body });
+      const res = await fetch(uploadEndpoint(), { method: "POST", body });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "That did not upload.");
@@ -179,7 +188,7 @@ export function ImageListField({
         const body = new FormData();
         body.append("file", file);
         body.append("folder", folder);
-        const res = await fetch("/api/admin/upload", { method: "POST", body });
+        const res = await fetch(uploadEndpoint(), { method: "POST", body });
         const data = await res.json();
         if (!res.ok) {
           setError(data.error ?? "One of those did not upload.");

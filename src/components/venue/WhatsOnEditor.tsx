@@ -8,6 +8,16 @@ import { DAY_NAMES, describeSchedule } from "@/lib/schedules";
 import { longDate } from "@/lib/format";
 import type { Audience, EventRow, VenueSchedule } from "@/lib/types";
 
+/** A venue a planner can hold a night at: one of their own, or any on Duro. */
+export interface EventPlace {
+  id: string;
+  name: string;
+  area_id: string;
+  area: string;
+  /** One of their own locations, listed first. */
+  mine: boolean;
+}
+
 const CATEGORIES = [
   "live_music",
   "sip_and_paint",
@@ -45,13 +55,20 @@ export function WhatsOnEditor({
   schedules: initialSchedules,
   events: initialEvents,
   organiser = null,
+  places = null,
 }: {
+  /** The venue whose weekly nights these are. Empty for a planner with no place of their own. */
   venueId: string;
   areaId: string;
   schedules: VenueSchedule[];
   events: EventRow[];
   /** A planner's name and logo, stamped on each event they add (0071). */
   organiser?: { name: string; logoUrl: string | null } | null;
+  /**
+   * Set for a planner (0072): every venue a night of theirs can be at, so
+   * each event says where it is rather than all being at one location.
+   */
+  places?: EventPlace[] | null;
 }) {
   const supabase = createClient();
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -82,6 +99,9 @@ export function WhatsOnEditor({
   const [eImage, setEImage] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eWho, setEWho] = useState<Audience>("everyone");
+  // Where a planner's night is: their current place by default, else nothing chosen yet.
+  const [eWhere, setEWhere] = useState(places ? (venueId || places.find((x) => x.mine)?.id || "") : venueId);
+  const [whereSearch, setWhereSearch] = useState("");
 
   async function addWeekly() {
     if (!wTitle.trim()) return say("Give it a name.");
@@ -121,6 +141,8 @@ export function WhatsOnEditor({
 
   async function addEvent() {
     if (!eTitle.trim() || !eDate) return say("An event needs a name and a date.");
+    const where = places ? places.find((x) => x.id === eWhere) : null;
+    if (places && !where) return say("Choose where it is happening.");
     setBusy("event");
     const { data, error } = await supabase
       .from("events")
@@ -129,8 +151,9 @@ export function WhatsOnEditor({
         // Only when written: before migration 0058 the column does not exist.
         ...(eDesc.trim() ? { description: eDesc.trim() } : {}),
         ...(eWho !== "everyone" ? { audience: eWho } : {}),
-        venue_id: venueId,
-        area_id: areaId,
+        // A planner's night is wherever they said; a venue's is at the venue.
+        venue_id: where ? where.id : venueId,
+        area_id: where ? where.area_id : areaId,
         event_date: eDate,
         start_time: eTime || null,
         cost_ghs: eCost.trim() === "" ? null : Number(eCost),
@@ -182,9 +205,16 @@ export function WhatsOnEditor({
     .filter((e) => e.event_date >= today)
     .sort((a, b) => a.event_date.localeCompare(b.event_date));
 
+  const placeName = new Map((places ?? []).map((x) => [x.id, x.name]));
+  const needle = whereSearch.trim().toLowerCase();
+  const shown = (places ?? []).filter(
+    (x) => x.id === eWhere || !needle || x.name.toLowerCase().includes(needle) || x.area.toLowerCase().includes(needle)
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Every week ── */}
+      {/* ── Every week ── A property of a place, so only where there is one of theirs. */}
+      {venueId ? (
       <section className="card p-5">
         <h2 className="font-display text-[18px] font-bold">Every week</h2>
         <p className="mb-4 mt-1 text-[14px] text-mutedbrown">
@@ -284,6 +314,7 @@ export function WhatsOnEditor({
           not surprised at the door.
         </p>
       </section>
+      ) : null}
 
       {/* ── One-off ── */}
       <section className="card p-5">
@@ -304,6 +335,7 @@ export function WhatsOnEditor({
                     · {longDate(e.event_date)}
                     {e.start_time ? ` at ${e.start_time.slice(0, 5)}` : ""}
                     {e.cost_ghs ? ` · GHS ${Math.round(Number(e.cost_ghs))} in` : ""}
+                    {places && e.venue_id ? ` · at ${placeName.get(e.venue_id) ?? "a venue"}` : ""}
                   </span>
                 </span>
                 <button
@@ -315,6 +347,49 @@ export function WhatsOnEditor({
                 </button>
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {places ? (
+          <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr] md:items-end">
+            <label className="flex flex-col">
+              <span className="flbl">Where is it happening</span>
+              <select className="inp" value={eWhere} onChange={(e) => setEWhere(e.target.value)}>
+                <option value="">Choose a venue</option>
+                {shown.some((x) => x.mine) ? (
+                  <optgroup label="Your places">
+                    {shown.filter((x) => x.mine).map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.name} — {x.area}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <optgroup label="Venues on Duro">
+                  {shown.filter((x) => !x.mine).map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name} — {x.area}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+            <label className="flex flex-col">
+              <span className="flbl">Find a venue</span>
+              <input
+                className="inp"
+                value={whereSearch}
+                placeholder="Type a name or part of town"
+                onChange={(e) => setWhereSearch(e.target.value)}
+              />
+            </label>
+            <p className="text-[12.5px] text-mutedbrown md:col-span-2">
+              Each night can be somewhere different. Not in the list?{" "}
+              <a href="/venue/locations" className="font-semibold text-flame underline">
+                Add the place
+              </a>{" "}
+              and it will be here.
+            </p>
           </div>
         ) : null}
 

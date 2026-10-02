@@ -43,12 +43,12 @@ export default async function VenueLocationsPage({
 
       <main className="admin-main mx-auto w-full max-w-[1080px] px-5 py-7">
         <h1 className="font-display text-[24px] font-bold">
-          {session.venues.length ? "Locations" : `Welcome, ${session.planner.displayName}`}
+          {session.venues.length ? "Locations" : "Add a place"}
         </h1>
         <p className="mb-6 mt-1 text-[14px] text-mutedbrown">
           {session.venues.length
-            ? "The places you run things. Add one for anywhere new."
-            : "You plan the night; we need somewhere to put it. Add the place first."}
+            ? "Places you added that were not on Duro yet. Your nights can also be at any venue we list, chosen on What's on."
+            : "Most nights can go at a venue Duro already lists, chosen on What's on. Add a place here only if it is not on Duro yet."}
         </p>
 
         <LocationsEditor

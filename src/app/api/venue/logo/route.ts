@@ -66,15 +66,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Logos are not switched on yet. Try again later." }, { status: 503 });
   }
 
-  // Every event at their locations, so the next plan built around one carries it.
+  // Every event of theirs, so the next plan built around one carries it: the
+  // ones they made anywhere (0072), and any at their own locations.
+  const stamp = url ? { organiser_name: planner.display_name, organiser_logo_url: url } : { organiser_logo_url: null };
   const { data: places } = await db.from("venue_users").select("venue_id").eq("user_id", user.id);
   const venueIds = (places ?? []).map((p) => p.venue_id as string);
-  if (venueIds.length) {
-    await db
-      .from("events")
-      .update(url ? { organiser_name: planner.display_name, organiser_logo_url: url } : { organiser_logo_url: null })
-      .in("venue_id", venueIds);
-  }
+  // Before 0072 there is no created_by, and this one fails harmlessly.
+  await db.from("events").update(stamp).eq("created_by", user.id);
+  if (venueIds.length) await db.from("events").update(stamp).in("venue_id", venueIds);
 
   return NextResponse.json({ ok: true, url });
 }

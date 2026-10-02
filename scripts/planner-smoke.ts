@@ -44,6 +44,7 @@ async function main() {
   let userId: string | null = null;
   let venueId: string | null = null;
   let eventId: string | null = null;
+  const extraEvents: string[] = [];
   const results: { name: string; pass: boolean; detail: string }[] = [];
   const ok = (name: string, pass: boolean, detail: unknown = "") =>
     results.push({ name, pass, detail: String(detail).slice(0, 160) });
@@ -140,6 +141,76 @@ async function main() {
       .eq("id", eventId)
       .maybeSingle();
     ok("the number is public straight away", seen?.contact_phone === "+233 55 000 0000", seen?.contact_phone ?? "null");
+
+  // ── 6b. A night at somebody else's venue (0072) ───────────────────────
+  //
+  // A planner's nights move between clubs already on Duro, so they may write
+  // their own events at any active venue, filed under that venue's own area,
+  // and nobody else's events anywhere.
+  const probe0072 = await admin.from("events").select("created_by").limit(1);
+  if (probe0072.error) {
+    ok("0072 applied (events anywhere)", false, "not run yet: " + probe0072.error.message);
+  } else {
+    const { data: theirs } = await admin
+      .from("venues")
+      .select("id, area_id")
+      .eq("is_active", true)
+      .neq("id", venueId)
+      .not("area_id", "is", null)
+      .limit(1)
+      .single();
+    const wrongArea = (await admin.from("areas").select("id").neq("id", theirs.area_id).limit(1).single()).data;
+
+    const { data: away, error: awayErr } = await as
+      .from("events")
+      .insert({
+        title: "ZZ Test Away Night " + stamp,
+        venue_id: theirs.id,
+        area_id: theirs.area_id,
+        event_date: date,
+        start_time: "21:00",
+        cost_ghs: 50,
+        category: "other",
+      })
+      .select("id, created_by")
+      .single();
+    ok("planner adds a night at a venue they do not run", !awayErr, awayErr?.message ?? "");
+    if (away) extraEvents.push(away.id);
+    ok("it is recorded as theirs", away?.created_by === userId, String(away?.created_by));
+
+    const { data: misfiled } = await as
+      .from("events")
+      .insert({
+        title: "ZZ Test Misfiled " + stamp,
+        venue_id: theirs.id,
+        area_id: wrongArea!.id,
+        event_date: date,
+        category: "other",
+      })
+      .select("id");
+    for (const r of misfiled ?? []) extraEvents.push((r as { id: string }).id);
+    ok("planner cannot file it under another area", (misfiled ?? []).length === 0, (misfiled ?? []).length ? "WROTE IT" : "refused");
+
+    if (away) {
+      await as.from("events").update({ title: "ZZ Test Away Night renamed " + stamp }).eq("id", away.id);
+      const { data: renamed } = await admin.from("events").select("title").eq("id", away.id).single();
+      ok("planner edits their own night there", renamed?.title === "ZZ Test Away Night renamed " + stamp, renamed?.title ?? "null");
+    }
+
+    // An event that is not theirs, at that same venue: hands off.
+    const { data: notTheirs } = await admin
+      .from("events")
+      .insert({ title: "ZZ Test Admin Night " + stamp, venue_id: theirs.id, area_id: theirs.area_id, event_date: date, category: "other" })
+      .select("id")
+      .single();
+    if (notTheirs) {
+      extraEvents.push(notTheirs.id);
+      await as.from("events").update({ title: "ZZ hijacked " + stamp }).eq("id", notTheirs.id);
+      await as.from("events").delete().eq("id", notTheirs.id);
+      const { data: still } = await admin.from("events").select("title").eq("id", notTheirs.id).maybeSingle();
+      ok("planner cannot edit or delete somebody else's event", still?.title === "ZZ Test Admin Night " + stamp, still ? still.title : "DELETED");
+    }
+  }
 
   // ── 7. The columns 0038 and 0046 say are withheld ──────────────────────
   //
@@ -292,6 +363,7 @@ async function main() {
   } finally {
     // ── Clean up, whatever happened ────────────────────────────────────────
     if (eventId) await admin.from("events").delete().eq("id", eventId);
+    for (const id of extraEvents) await admin.from("events").delete().eq("id", id);
     if (venueId) {
       await admin.from("venue_users").delete().eq("venue_id", venueId);
       await admin.from("venues").delete().eq("id", venueId);
