@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { consumeMessage } from "@/lib/entitlements";
 import { buildToolContext, todayInAccra } from "@/lib/chat/tools";
 import { getProvider, type ChatTurn, type ModelUsage } from "@/lib/chat/model";
-import { SYSTEM, buildOpeningContext } from "@/lib/chat/system";
+import { SYSTEM, buildOpeningContext, seasonNote } from "@/lib/chat/system";
 import { runChat } from "@/lib/chat/run";
 
 /**
@@ -114,9 +114,13 @@ export async function POST(req: Request) {
     byCity.size > 1 ? `${c}: ${names.join(", ")}` : names.join(", ")
   );
 
+  const halloween = body.season === "halloween" || halloweenNow();
+  const note = history.length ? seasonNote(JSON.stringify(history), halloween) : null;
   const userContent = history.length
-    ? body.message
-    : `${buildOpeningContext(today, areaNames, { halloween: body.season === "halloween" || halloweenNow() })}\n\n${body.message}`;
+    ? note
+      ? `${note}\n\n${body.message}`
+      : body.message
+    : `${buildOpeningContext(today, areaNames, { halloween })}\n\n${body.message}`;
 
   const provider = getProvider();
   const encoder = new TextEncoder();

@@ -19,7 +19,7 @@ const PROVIDER_TOKEN = "129316181";
 const CAMPAIGN_BASE = "https://apps.apple.com/app/apple-store/id6809005685";
 
 /** Where on the web an App Store tap came from, as App Store Connect will list it. */
-export type StoreCampaign = "shared_plan" | "get_page" | "name_poll";
+export type StoreCampaign = "shared_plan" | "get_page" | "home_page" | "name_poll";
 
 /**
  * The App Store link tagged with where it was tapped, so downloads can be

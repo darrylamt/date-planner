@@ -25,9 +25,9 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Duro, a date planned with intention · Accra",
+  title: "Duro! · Plan outings in Ghana",
   description:
-    "Tell us your budget, the vibe, and a little about them, we'll build a back-to-back evening in Accra with real menus and real prices.",
+    "Dates, birthdays, a night out with friends or a day on your own, planned stop by stop from real menus and real prices in Accra and Kumasi.",
 };
 
 export const viewport: Viewport = {

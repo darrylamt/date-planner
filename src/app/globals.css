@@ -561,3 +561,23 @@ input[type="range"].budget-slider::-moz-range-thumb {
 
 /* Long forms read better bounded than full-bleed on a wide monitor. */
 .admin-main { max-width: 1240px; }
+
+/*
+ * The home page's row of places, drifting left. The track holds the photos
+ * twice, so sliding it by half lands exactly where it started. It stands still
+ * for anyone who asked for less motion, and pauses under a pointer so a name
+ * can be read.
+ */
+@keyframes duro-marquee {
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .marquee-track { animation: duro-marquee 70s linear infinite; }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+}
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; }
+}

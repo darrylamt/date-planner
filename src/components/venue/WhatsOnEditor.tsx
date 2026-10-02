@@ -7,6 +7,7 @@ import { ImageField } from "@/components/admin/ImageField";
 import { DAY_NAMES, describeSchedule } from "@/lib/schedules";
 import { longDate } from "@/lib/format";
 import type { Audience, EventRow, VenueSchedule } from "@/lib/types";
+import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 
 /** A venue a planner can hold a night at: one of their own, or any on Duro. */
 export interface EventPlace {
@@ -18,15 +19,29 @@ export interface EventPlace {
   mine: boolean;
 }
 
-const CATEGORIES = [
-  "live_music",
-  "sip_and_paint",
-  "festival",
-  "run_club",
-  "workshop",
-  "film_night",
-  "other",
+/*
+ * What kind of night, in the words a planner would use. The keys the admin
+ * has always stored are kept, so nothing already saved changes meaning, and
+ * "Something else" takes whatever they type: no list is ever complete, and a
+ * night forced into the nearest wrong box reads wrong on the card.
+ */
+const KINDS: { id: string; label: string }[] = [
+  { id: "live_music", label: "Live music" },
+  { id: "party", label: "Party or DJ night" },
+  { id: "sip_and_paint", label: "Sip and paint" },
+  { id: "festival", label: "Festival" },
+  { id: "comedy", label: "Comedy" },
+  { id: "karaoke", label: "Karaoke" },
+  { id: "brunch_party", label: "Brunch party" },
+  { id: "run_club", label: "Run club" },
+  { id: "workshop", label: "Workshop or class" },
+  { id: "film_night", label: "Film night" },
+  { id: "custom", label: "Something else…" },
 ];
+
+/** How many vibes a night may claim: past three it stops saying anything. */
+const MAX_VIBES = 3;
+const vibeLabel = (v: string) => v.replace(/_/g, " ").replace(/^./, (ch) => ch.toUpperCase());
 
 function minutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
@@ -99,6 +114,9 @@ export function WhatsOnEditor({
   const [eTime, setETime] = useState("19:00");
   const [eCost, setECost] = useState("");
   const [eCategory, setECategory] = useState("live_music");
+  const [eCustomKind, setECustomKind] = useState("");
+  // What the night is like, which the planner weighs over the venue's usual feel (0048).
+  const [eVibes, setEVibes] = useState<string[]>([]);
   const [eImage, setEImage] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eWho, setEWho] = useState<Audience>("everyone");
@@ -153,6 +171,12 @@ export function WhatsOnEditor({
     if (!eTitle.trim() || !eDate) return say("An event needs a name and a date.");
     const where = places ? places.find((x) => x.id === eWhere) : null;
     if (places && !where) return say("Choose where it is happening.");
+    if (eCategory === "custom" && !eCustomKind.trim()) return say("Type what kind of night it is.");
+    // Their own words, kept as a short key like the listed kinds.
+    const category =
+      eCategory === "custom"
+        ? eCustomKind.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) || "other"
+        : eCategory;
     setBusy("event");
     const { data, error } = await supabase
       .from("events")
@@ -167,7 +191,9 @@ export function WhatsOnEditor({
         event_date: eDate,
         start_time: eTime || null,
         cost_ghs: eCost.trim() === "" ? null : Number(eCost),
-        category: eCategory,
+        category,
+        // Only when chosen: an empty list means nobody said, and the planner falls back to the venue's.
+        ...(eVibes.length ? { vibe_tags: eVibes } : {}),
         image_url: eImage.trim() || null,
         /*
          * Straight in, with no approval step.
@@ -199,6 +225,8 @@ export function WhatsOnEditor({
     setECost("");
     setEImage("");
     setEPhone("");
+    setEVibes([]);
+    setECustomKind("");
     say("Added");
   }
 
@@ -403,7 +431,7 @@ export function WhatsOnEditor({
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-[1fr_150px_110px_120px_150px] md:items-end">
+        <div className="grid gap-3 md:grid-cols-[1fr_160px_120px_130px] md:items-end">
           <label className="flex flex-col">
             <span className="flbl">What</span>
             <input
@@ -442,32 +470,43 @@ export function WhatsOnEditor({
               placeholder="0 if free"
               onChange={(e) => setECost(e.target.value)}
             />
-            {/*
-              The placeholder used to say "free", and it was wrong in the way
-              that costs you the booking. Blank writes null, and null means
-              nobody knows -- matching.ts only treats an event as priced when
-              the figure is a real number, so a place with no menu and a blank
-              entry price is withheld from every evening it could have been
-              in. A free event has to say 0 to be free.
-            */}
-            <span className="mt-1.5 text-[12px] text-mutedbrown">
-              Type 0 for free. Left blank we do not know the price, and we
-              leave you out of plans with a budget rather than guess.
-            </span>
           </label>
+        </div>
+        {/*
+          Under the row rather than inside the price's own column, where it
+          stretched that column and pushed the rest of the row out of line.
+
+          The placeholder used to say "free", and it was wrong in the way
+          that costs you the booking. Blank writes null, and null means
+          nobody knows -- matching.ts only treats an event as priced when
+          the figure is a real number, so a place with no menu and a blank
+          entry price is withheld from every evening it could have been in.
+          A free event has to say 0 to be free.
+        */}
+        <p className="mt-1.5 text-[12px] text-mutedbrown md:text-right">
+          Entry: type 0 for free. Left blank we do not know the price, and we leave you out of plans with a budget rather than guess.
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 md:items-start">
           <label className="flex flex-col">
-            <span className="flbl">Kind</span>
-            <select
-              className="inp"
-              value={eCategory}
-              onChange={(e) => setECategory(e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c.replace(/_/g, " ")}
+            <span className="flbl">What kind of night</span>
+            <select className="inp" value={eCategory} onChange={(e) => setECategory(e.target.value)}>
+              {KINDS.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.label}
                 </option>
               ))}
             </select>
+            {eCategory === "custom" ? (
+              <input
+                className="inp mt-2"
+                value={eCustomKind}
+                maxLength={40}
+                placeholder="Say what it is, in a few words"
+                onChange={(e) => setECustomKind(e.target.value)}
+                autoFocus
+              />
+            ) : null}
           </label>
           <label className="flex flex-col">
             <span className="flbl">Who can come</span>
@@ -480,6 +519,32 @@ export function WhatsOnEditor({
               Only if nobody else can come. Free entry for ladies is still Everyone.
             </span>
           </label>
+        </div>
+
+        <div className="mt-4">
+          <span className="flbl">What it&apos;s like, up to {MAX_VIBES}</span>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {VENUE_VIBE_TAGS.map((v) => {
+              const on = eVibes.includes(v);
+              const full = !on && eVibes.length >= MAX_VIBES;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  disabled={full}
+                  onClick={() => setEVibes((cur) => (on ? cur.filter((x) => x !== v) : [...cur, v]))}
+                  className={`rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 transition-colors disabled:opacity-40 ${
+                    on ? "bg-flame text-blush ring-flame" : "bg-white text-cocoa ring-black/10 hover:ring-flame"
+                  }`}
+                >
+                  {vibeLabel(v)}
+                </button>
+              );
+            })}
+          </div>
+          <span className="mt-1.5 block text-[12px] text-mutedbrown">
+            How the night feels, which can differ from the venue on any other evening. We match it to what people ask for.
+          </span>
         </div>
 
         <label className="mt-4 flex flex-col">

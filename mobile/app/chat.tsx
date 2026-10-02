@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -201,8 +202,15 @@ export default function ChatScreen() {
     // An easter egg for the season: sweets from the send button, then Durobot plays along.
     if (season === "halloween" && TRICK_OR_TREAT.test(message)) {
       const { width, height } = Dimensions.get("window");
+      /*
+       * From above the keyboard when it is up. The burst layer is in the app's
+       * window and the keyboard is in its own, over it, so sweets thrown from
+       * where the send button sits with the keyboard down landed under it and
+       * nobody saw a thing.
+       */
+      const floor = Keyboard.metrics()?.height ?? insets.bottom;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      burst(width - 44, height - insets.bottom - 70, SWEETS, 14);
+      burst(width - 44, height - floor - 60, SWEETS, 18, 30);
     }
 
     /*

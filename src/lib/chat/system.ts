@@ -129,8 +129,21 @@ export function buildOpeningContext(today: string, areaNames: string[], opts: { 
    * date: it changes, and the cached prefix must not. Facts still win: a
    * spooky word is welcome, an invented Halloween party is not.
    */
-  const season = opts.halloween
-    ? ' It is Halloween season (Halloween is 31 October). When someone wants something for Halloween, look for events on those dates and say plainly if the catalogue has none. A light spooky touch in your words is welcome, never at the expense of the facts. If someone says "trick or treat", answer with one playful line, then offer to plan something.'
-    : "";
+  const season = opts.halloween ? ` ${HALLOWEEN_NOTE}` : "";
   return `[Context: today is ${today}. The areas Duro covers are: ${areas}. Use these names when searching; anywhere else in Accra is not in the catalogue.${season}]`;
+}
+
+const HALLOWEEN_NOTE =
+  'It is Halloween season (Halloween is 31 October). When someone wants something for Halloween, look for events on those dates and say plainly if the catalogue has none. A light spooky touch in your words is welcome, never at the expense of the facts. If someone says "trick or treat", answer with one playful line, then offer to plan something.';
+
+/**
+ * The season for a conversation that began before it, or before the preview
+ * was turned on. The opening context rides only on a conversation's first
+ * message, so without this Durobot learned it was Halloween in new chats and
+ * nowhere else: "trick or treat" in last week's thread got a straight answer.
+ * Added once, and again only if history trimming has dropped the first.
+ */
+export function seasonNote(historyText: string, halloween: boolean): string | null {
+  if (!halloween || historyText.includes("Halloween season")) return null;
+  return `[Context: ${HALLOWEEN_NOTE}]`;
 }
