@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Easing, Linking, Pressable, View } from "react-native";
+import { Animated, Easing, Linking, Pressable, View } from "react-native";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -18,6 +18,7 @@ import {
   type Offer,
 } from "../../lib/purchases";
 import type { SymbolViewProps } from "expo-symbols";
+import { SkeletonOffer } from "../Skeleton";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -260,7 +261,7 @@ export function Paywall({
         </View>
 
         {loading ? (
-          <ActivityIndicator color={c.accent} style={{ marginTop: space.xl }} />
+          <SkeletonOffer />
         ) : offer ? (
           <>
             {/* The price as the store states it, large, with what follows it. */}

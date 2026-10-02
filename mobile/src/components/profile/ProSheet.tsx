@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
+import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
@@ -7,6 +7,7 @@ import { AccountlessNote, Paywall } from "../chat/Paywall";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { configurePurchases, restore, purchasesAvailable } from "../../lib/purchases";
+import { NativeSheet } from "../native/NativeSheet";
 
 /** Where iOS keeps subscriptions. The only place one can be cancelled. */
 const MANAGE_URL = "itms-apps://apps.apple.com/account/subscriptions";
@@ -76,7 +77,7 @@ export function ProSheet({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <NativeSheet visible={visible} onClose={onClose} detents={["large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
@@ -163,6 +164,6 @@ export function ProSheet({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

@@ -9,6 +9,7 @@ import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
 // The phone's own wheel where the build has SwiftUI, the drawn one where it does not.
 import { NativeWheel } from "../native/NativeWheel";
+import { CityMenu } from "./CityMenu";
 import { DayStrip } from "./DayStrip";
 import type { WellnessFloors } from "../../lib/data";
 import { GUTTER, Spacing } from "../../theme";
@@ -186,16 +187,15 @@ export function PlanSteps({
         />
 
         {cities.length > 1 ? (
-          <View style={{ paddingHorizontal: GUTTER, marginBottom: Spacing.three }}>
-            <Segmented
-              options={cities.map((c) => ({ value: c, label: c }))}
-              value={city}
-              onChange={(c) =>
-                // A new city means none of the areas already picked still apply.
-                update({ city: c, areaIds: [], areaNames: [] })
-              }
-            />
-          </View>
+          <CityMenu
+            cities={cities}
+            city={city}
+            chosen={Boolean(inputs.city)}
+            onChange={(c) =>
+              // A new city means none of the areas already picked still apply.
+              update({ city: c, areaIds: [], areaNames: [] })
+            }
+          />
         ) : null}
 
         {/*

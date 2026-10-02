@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Constants from "expo-constants";
@@ -9,6 +9,7 @@ import { Button } from "./Button";
 import { GUTTER, HAIRLINE, radius, space, type as typeScale } from "../theme";
 import { useTheme } from "../lib/useTheme";
 import { reportIssue, type IssueArea } from "../lib/api";
+import { NativeSheet } from "./native/NativeSheet";
 
 /**
  * Tell us Duro is broken.
@@ -123,7 +124,7 @@ export function IssueSheet({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <NativeSheet visible={visible} onClose={onClose} detents={["large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
@@ -253,6 +254,6 @@ export function IssueSheet({
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

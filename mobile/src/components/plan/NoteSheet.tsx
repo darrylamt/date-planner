@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { Button } from "../Button";
 import { GUTTER, HAIRLINE, radius, space, type as typeScale } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
+import { NativeSheet } from "../native/NativeSheet";
 
 const MAX = 400;
 
@@ -45,12 +46,7 @@ export function NoteSheet({
   }, [visible, initial]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <NativeSheet visible={visible} onClose={onClose} detents={["large"]}>
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: c.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -126,6 +122,6 @@ export function NoteSheet({
 
         <View style={{ height: insets.bottom }} />
       </KeyboardAvoidingView>
-    </Modal>
+    </NativeSheet>
   );
 }

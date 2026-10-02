@@ -1,10 +1,10 @@
-import { Modal, Pressable, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, View } from "react-native";
 import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { Button } from "./Button";
 import { GUTTER, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
+import { NativeSheet } from "./native/NativeSheet";
 
 /**
  * Asking before anything is sent to a third-party AI.
@@ -30,7 +30,6 @@ export function AiConsentSheet({
   onAnswer: (allowed: boolean) => void;
 }) {
   const c = useTheme();
-  const insets = useSafeAreaInsets();
 
   const what =
     purpose === "chat"
@@ -38,16 +37,9 @@ export function AiConsentSheet({
       : "Duro can use Claude, an AI model made by Anthropic, to write your plan's description. To do that, your answers are sent to Anthropic, including any names or preferences you gave us.";
 
   return (
-    <Modal visible={purpose !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => onAnswer(false)}>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: c.background,
-          paddingHorizontal: GUTTER,
-          paddingTop: space.xxl,
-          paddingBottom: insets.bottom + space.lg,
-        }}
-      >
+    <NativeSheet visible={purpose !== null} onClose={() => onAnswer(false)}>
+      {/* Its own height now: what is sent, to whom, and the two answers, without a screen of space between them. */}
+      <View style={{ paddingHorizontal: GUTTER, paddingTop: space.md, paddingBottom: space.md }}>
         <Symbol name="sparkles" size={34} color={c.accent} />
         <Text variant="title2" style={{ marginTop: space.md }}>
           Use AI for this?
@@ -69,7 +61,7 @@ export function AiConsentSheet({
           You can change this any time under You.
         </Text>
 
-        <View style={{ flex: 1 }} />
+        <View style={{ height: space.xl }} />
 
         <Button title="Allow" onPress={() => onAnswer(true)} />
         <Pressable onPress={() => onAnswer(false)} style={{ marginTop: space.md, paddingVertical: space.sm }}>
@@ -78,6 +70,6 @@ export function AiConsentSheet({
           </Text>
         </Pressable>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

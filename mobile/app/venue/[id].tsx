@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Animated, LayoutAnimation, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
 import { PressScale, Rise } from "../../src/components/motion";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -22,6 +22,7 @@ import { useAuth } from "../../src/lib/useAuth";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
 import type { MenuItem } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
+import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -197,9 +198,7 @@ export default function VenuePage() {
 
   if (venue === undefined) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SkeletonVenue />
     );
   }
   if (venue === null) {
@@ -361,7 +360,7 @@ export default function VenuePage() {
         ) : null}
 
         {pro === null ? (
-          <ActivityIndicator color={c.accent} style={{ marginTop: space.xl }} />
+          <SkeletonMenu rows={5} />
         ) : !pro ? (
           <View style={{ paddingHorizontal: GUTTER, gap: space.md, marginTop: space.xl }}>
             {/* The paywall lists what is behind it, because "Unlock" alone asks somebody to pay for a surprise. */}
@@ -399,7 +398,7 @@ export default function VenuePage() {
               </View>
 
               {menu === null ? (
-                <ActivityIndicator color={c.accent} style={{ marginTop: space.lg }} />
+                <SkeletonMenu />
               ) : menu.length === 0 ? (
                 <Text variant="body" tone="secondary" style={{ paddingHorizontal: GUTTER, marginTop: space.sm }}>
                   We do not hold their menu yet.

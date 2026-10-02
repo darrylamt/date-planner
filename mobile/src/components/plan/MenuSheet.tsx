@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
@@ -10,6 +10,8 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
 import { fetchMenu } from "../../lib/data";
 import type { ItineraryOrder, MenuItem } from "../../lib/types";
+import { NativeSheet } from "../native/NativeSheet";
+import { SkeletonMenu } from "../Skeleton";
 
 /*
  * "activity" is its own category, not a kind of "other".
@@ -125,7 +127,7 @@ export function MenuSheet({
   const searchable = inScope.length > 8;
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <NativeSheet visible={visible} onClose={onClose} detents={["medium", "large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         {/* Sheet header */}
         <View
@@ -188,7 +190,7 @@ export function MenuSheet({
           contentContainerStyle={{ paddingVertical: space.lg, paddingBottom: insets.bottom + space.xxxl }}
         >
           {loading ? (
-            <ActivityIndicator style={{ marginTop: space.xxxl }} color={c.accent} />
+            <SkeletonMenu rows={8} />
           ) : failed ? (
             <Text variant="body" tone="secondary" center style={{ marginTop: space.xxxl }}>
               We could not load the menu. Check your connection and try again.
@@ -276,6 +278,6 @@ export function MenuSheet({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

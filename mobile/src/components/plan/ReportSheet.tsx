@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
@@ -8,6 +8,7 @@ import { Button } from "../Button";
 import { GUTTER, HAIRLINE, radius, space, type as typeScale } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { reportVenue, type ReportType } from "../../lib/api";
+import { NativeSheet } from "../native/NativeSheet";
 
 /**
  * Tell us something is wrong with a venue, from the evening itself.
@@ -117,7 +118,7 @@ export function ReportSheet({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <NativeSheet visible={visible} onClose={onClose} detents={["large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
@@ -301,6 +302,6 @@ export function ReportSheet({
           </Text>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

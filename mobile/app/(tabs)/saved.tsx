@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Share, View } from "react-native";
+import { RefreshControl, ScrollView, Share, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
@@ -15,6 +15,7 @@ import { useAuth } from "../../src/lib/useAuth";
 import { deletePlan, listPlans } from "../../src/lib/data";
 import { ghs, longDate } from "../../src/lib/format";
 import type { SavedPlan } from "../../src/lib/types";
+import { SkeletonSaved } from "../../src/components/Skeleton";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -73,9 +74,7 @@ export default function Plans() {
 
   if (authLoading || plans === null) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SkeletonSaved />
     );
   }
 

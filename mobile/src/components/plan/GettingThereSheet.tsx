@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
@@ -10,6 +10,7 @@ import { uberRideLink, yangoRideLink } from "../../lib/format";
 import { planTrip, type TripOption } from "../../lib/api";
 import { currentPlace, locationAvailable, type Here } from "../../lib/location";
 import type { ItineraryStop } from "../../lib/types";
+import { NativeSheet } from "../native/NativeSheet";
 
 type Origin =
   | { kind: "previous"; stop: ItineraryStop }
@@ -98,7 +99,7 @@ export function GettingThereSheet({
   const end = stop.lat != null && stop.lng != null ? { lat: stop.lat, lng: stop.lng } : null;
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <NativeSheet visible={visible} onClose={onClose} detents={["medium", "large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
@@ -179,7 +180,7 @@ export function GettingThereSheet({
           </Text>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }
 

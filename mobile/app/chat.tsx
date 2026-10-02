@@ -37,6 +37,7 @@ import {
   fetchLatestConversation,
   streamChat,
 } from "../src/lib/chat";
+import { SkeletonChat } from "../src/components/Skeleton";
 
 /**
  * The concierge.
@@ -299,9 +300,7 @@ export default function ChatScreen() {
 
   if (authLoading || loadingHistory) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SkeletonChat />
     );
   }
 

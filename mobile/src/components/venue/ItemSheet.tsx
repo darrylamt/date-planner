@@ -1,6 +1,6 @@
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { Button } from "../Button";
@@ -9,6 +9,7 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
 import type { MenuItem } from "../../lib/types";
 import type { SymbolViewProps } from "expo-symbols";
+import { NativeSheet } from "../native/NativeSheet";
 
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -59,7 +60,7 @@ export function availability(item: MenuItem): string | null {
  * recorded says nothing, never "alcohol-free".
  */
 export function ItemSheet({
-  item,
+  item: chosen,
   venueName,
   onClose,
   recommended = false,
@@ -77,7 +78,16 @@ export function ItemSheet({
   onRecommend?: (on: boolean) => void;
 }) {
   const c = useTheme();
-  const insets = useSafeAreaInsets();
+  /*
+   * Kept through the closing slide. The screen lets go of the item the
+   * moment the sheet is dismissed, and the sheet is still on its way down;
+   * without this it would empty itself in front of you as it went.
+   */
+  const [last, setLast] = useState<MenuItem | null>(chosen);
+  useEffect(() => {
+    if (chosen) setLast(chosen);
+  }, [chosen]);
+  const item = chosen ?? last;
   if (!item) return null;
 
   const facts: { icon: SymbolViewProps["name"]; text: string }[] = [];
@@ -100,8 +110,8 @@ export function ItemSheet({
   if (item.is_alcoholic === true) facts.push({ icon: "wineglass", text: "Contains alcohol" });
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: c.background }}>
+    <NativeSheet visible={chosen != null} onClose={onClose}>
+      <View>
         <View
           style={{
             flexDirection: "row",
@@ -119,7 +129,7 @@ export function ItemSheet({
           <Button title="Done" kind="plain" size="medium" onPress={onClose} />
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: space.xl }}>
           {item.image_url ? (
             <Image
               source={{ uri: item.image_url }}
@@ -226,7 +236,7 @@ export function ItemSheet({
           </Text>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }
 

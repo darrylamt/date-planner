@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -47,6 +46,7 @@ import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
 import { AiConsentSheet } from "../../src/components/AiConsentSheet";
 import { supabase } from "../../src/lib/supabase";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
+import { SkeletonRows, SkeletonSteps } from "../../src/components/Skeleton";
 
 /**
  * The step progress rail.
@@ -414,9 +414,7 @@ export default function PlanNew() {
 
   if (!hydrated) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.background, justifyContent: "center" }}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SkeletonSteps />
     );
   }
 
@@ -541,13 +539,13 @@ export default function PlanNew() {
         keyboardDismissMode="interactive"
       >
         {stepId === "area" && areas.length === 0 ? (
-          <View style={{ paddingTop: space.xxxl, paddingHorizontal: GUTTER }}>
+          <View style={{ paddingTop: space.xxxl, paddingHorizontal: areasFailed ? GUTTER : 0 }}>
             {areasFailed ? (
               <Text variant="body" tone="secondary" center>
                 We could not load areas. Check your connection and try again.
               </Text>
             ) : (
-              <ActivityIndicator color={c.accent} />
+              <SkeletonRows rows={7} thumb={0} />
             )}
           </View>
         ) : (

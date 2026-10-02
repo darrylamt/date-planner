@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
 import { nativeOptional } from "../lib/nativeOptional";
+import { NativeSheet } from "./native/NativeSheet";
 
 /**
  * Change the icon on the home screen to one of the mascots.
@@ -72,7 +72,6 @@ export function AppIconPicker({
   onChanged: (message: string) => void;
 }) {
   const c = useTheme();
-  const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -106,13 +105,8 @@ export function AppIconPicker({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={{ flex: 1, backgroundColor: c.background }}>
+    <NativeSheet visible={visible} onClose={onClose}>
+      <View>
         <View
           style={{
             flexDirection: "row",
@@ -133,7 +127,7 @@ export function AppIconPicker({
         <ScrollView
           contentContainerStyle={{
             padding: GUTTER,
-            paddingBottom: insets.bottom + space.xl,
+            paddingBottom: space.xl, // the sheet pads for the home indicator
           }}
         >
           <Text variant="footnote" tone="secondary" style={{ marginBottom: space.md }}>
@@ -170,7 +164,7 @@ export function AppIconPicker({
           </View>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 
   function IconTile({

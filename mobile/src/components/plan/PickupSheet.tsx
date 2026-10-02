@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   TextInput,
@@ -19,6 +18,7 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs } from "../../lib/format";
 import { fetchPickups } from "../../lib/api";
 import { leadTimeLabel, type GiftVendor, type PickupChoice } from "../../lib/pickups";
+import { NativeSheet } from "../native/NativeSheet";
 
 /**
  * Pick up flowers or a cake on the way.
@@ -109,12 +109,7 @@ export function PickupSheet({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <NativeSheet visible={visible} onClose={onClose} detents={["medium", "large"]}>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
@@ -422,7 +417,7 @@ export function PickupSheet({
           ) : null}
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }
 

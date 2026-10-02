@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, TextInput, View } from "react-native";
+import { FlatList, Pressable, ScrollView, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import { ghs } from "../../src/lib/format";
 import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { listVenues, type VenueListing } from "../../src/lib/data";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
+import { SkeletonRows } from "../../src/components/Skeleton";
 
 /*
  * Kinds as people browse them, which is not quite how they are stored:
@@ -152,7 +153,7 @@ export default function Venues() {
       )}
       ListEmptyComponent={
         !venues && !failed ? (
-          <ActivityIndicator color={c.accent} style={{ marginTop: space.xl }} />
+          <SkeletonRows rows={8} />
         ) : (
           <Text variant="body" tone="secondary" center style={{ marginTop: space.xl, paddingHorizontal: GUTTER }}>
             {failed

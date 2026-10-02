@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
@@ -10,6 +10,7 @@ import { fetchPlan, updateSavedItinerary } from "../../src/lib/data";
 import { draftFromPlan } from "../../src/lib/repeatPlan";
 import { GUTTER, space } from "../../src/theme";
 import type { Itinerary, SavedPlan } from "../../src/lib/types";
+import { SkeletonPlan } from "../../src/components/Skeleton";
 
 /**
  * A saved plan, opened.
@@ -92,9 +93,7 @@ export default function SavedPlanScreen() {
 
   if (!plan || !itinerary) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={c.accent} />
-      </View>
+      <SkeletonPlan />
     );
   }
 
