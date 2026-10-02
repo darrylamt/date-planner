@@ -4,6 +4,9 @@ import { SmartImage } from "@/components/SmartImage";
 import { AuthErrorNotice } from "@/components/AuthErrorNotice";
 import { ReturnToApp } from "@/components/ReturnToApp";
 
+// Rebuilt hourly, so a seasonal logo (see Logo) arrives and leaves on its dates.
+export const revalidate = 3600;
+
 /**
  * Landing page, mobile-first at 390px per the design's "home / hero" frame,
  * with a photo collage added per the "more pictures, lively" brief.

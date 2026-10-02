@@ -6,6 +6,7 @@ import { instagramUrl, longDate, time12 } from "@/lib/format";
 import { AUDIENCE_BADGE, OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors, occasionEntrance } from "@/lib/occasionCard";
 import type { ItineraryStop, SavedPlan } from "@/lib/types";
+import { isHalloween } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +160,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
       glyphs={OCCASION_GLYPHS[inputs.occasion] ?? OCCASION_GLYPHS.date_night}
       entrance={occasionEntrance(inputs.occasion)}
       slug={params.slug}
+      halloween={isHalloween()}
     />
   );
 }

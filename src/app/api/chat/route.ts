@@ -25,7 +25,16 @@ export const maxDuration = 120;
 const bodySchema = z.object({
   message: z.string().min(1).max(2000),
   conversation_id: z.string().uuid().optional(),
+  /** The app is dressed for a season: its dates, or a preview from Profile. */
+  season: z.enum(["halloween"]).optional(),
 });
+
+/** 20 October to 1 November, on Accra's clock, which is UTC all year. */
+function halloweenNow(at = new Date()): boolean {
+  const m = at.getUTCMonth() + 1;
+  const d = at.getUTCDate();
+  return (m === 10 && d >= 20) || (m === 11 && d <= 1);
+}
 
 export async function POST(req: Request) {
   /*
@@ -107,7 +116,7 @@ export async function POST(req: Request) {
 
   const userContent = history.length
     ? body.message
-    : `${buildOpeningContext(today, areaNames)}\n\n${body.message}`;
+    : `${buildOpeningContext(today, areaNames, { halloween: body.season === "halloween" || halloweenNow() })}\n\n${body.message}`;
 
   const provider = getProvider();
   const encoder = new TextEncoder();

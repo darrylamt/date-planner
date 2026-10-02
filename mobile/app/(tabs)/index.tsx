@@ -23,6 +23,8 @@ import { AskBar } from "../../src/components/home/AskBar";
 import { Avatar } from "../../src/components/home/Avatar";
 import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
+import { useSeason } from "../../src/lib/season";
+import { HalloweenBanner, SpookyDrift } from "../../src/components/home/Halloween";
 import { fetchProfile } from "../../src/lib/account";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
@@ -41,6 +43,7 @@ const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
 
 export default function Home() {
   const c = useTheme();
+  const { season } = useSeason();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
   const [pro, setPro] = useState(false);
@@ -86,6 +89,7 @@ export default function Home() {
       contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
       showsVerticalScrollIndicator={false}
     >
+      {season === "halloween" ? <SpookyDrift /> : null}
       <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.five }}>
         {/*
           The concierge, as a bar rather than a button in the corner.
@@ -138,6 +142,8 @@ export default function Home() {
           think the app is for. The table scene went with it: a picture of a
           dinner for two argues with every other kind of plan.
         */}
+        {season === "halloween" ? <HalloweenBanner onPlan={() => void startNewPlan()} /> : null}
+
         <Text variant="display" style={{ marginTop: Spacing.four }}>
           Where to next?
         </Text>

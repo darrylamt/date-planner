@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -16,6 +17,8 @@ import { Text } from "../src/components/Text";
 import { Symbol } from "../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
+import { useSeason } from "../src/lib/season";
+import { SWEETS, useBurst } from "../src/components/Burst";
 import { ensureSession, useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
@@ -66,8 +69,20 @@ const OPENERS = [
 ];
 const AT_THE_TABLE = "I'm at ";
 
+/** At Halloween, openers for the season: still things the catalogue can answer. */
+const HALLOWEEN_OPENERS = [
+  "Anything on for Halloween this weekend?",
+  "A spooky night out for four, under 1,500",
+  "Somewhere lively in Osu for Halloween",
+  "Dessert somewhere after a scary film?",
+];
+/** "Trick or treat", and the ways people actually type it. */
+const TRICK_OR_TREAT = /trick\s*(or|'?r|n|&)\s*treat/i;
+
 export default function ChatScreen() {
   const c = useTheme();
+  const { season } = useSeason();
+  const burst = useBurst();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, loading: authLoading } = useAuth();
@@ -183,6 +198,13 @@ export default function ChatScreen() {
     const message = text.trim();
     if (!message || busy) return;
 
+    // An easter egg for the season: sweets from the send button, then Durobot plays along.
+    if (season === "halloween" && TRICK_OR_TREAT.test(message)) {
+      const { width, height } = Dimensions.get("window");
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      burst(width - 44, height - insets.bottom - 70, SWEETS, 14);
+    }
+
     /*
      * Every send until it is allowed, unlike plans. The assistant is the
      * model, so a "no" here means the message is not sent at all, and asking
@@ -224,7 +246,7 @@ export default function ChatScreen() {
     };
 
     try {
-      for await (const ev of streamChat({ message, conversationId })) {
+      for await (const ev of streamChat({ message, conversationId, season })) {
         if (ev.type === "conversation") {
           setConversationId(ev.id);
           if (ev.tier === "free") {
@@ -322,7 +344,7 @@ export default function ChatScreen() {
 
         {empty ? (
           <View style={{ gap: space.sm }}>
-            {OPENERS.map((o) => (
+            {(season === "halloween" ? HALLOWEEN_OPENERS : OPENERS).map((o) => (
               <Pressable
                 key={o}
                 onPress={() => void send(o)}

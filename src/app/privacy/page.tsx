@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
+// Rebuilt hourly, so a seasonal logo (see Logo) arrives and leaves on its dates.
+export const revalidate = 3600;
+
 export const metadata = {
   title: "Privacy, Duro",
   description: "What Duro collects, why, and how to get rid of it.",

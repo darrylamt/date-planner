@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
@@ -23,6 +24,7 @@ import { Mascot } from "../src/components/Mascot";
 import { PressScale, Rise, useReducedMotion } from "../src/components/motion";
 import { GUTTER, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
+import { useSeason } from "../src/lib/season";
 import { adoptPurchases } from "../src/lib/purchases";
 import {
   MIN_PASSWORD,
@@ -81,6 +83,7 @@ export default function Login() {
   const insets = useSafeAreaInsets();
   const isDark = useIsDark();
   const reduced = useReducedMotion();
+  const { season } = useSeason();
   const { height } = useWindowDimensions();
 
   const [mode, setMode] = useState<Mode>("signin");
@@ -212,6 +215,15 @@ export default function Login() {
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: stageH + 40, overflow: "hidden" }}>
         <Mesh reduced={reduced} dark={isDark} />
         <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: 40, alignItems: "center", justifyContent: "center" }}>
+          {/* The season's logo above the character, while there is room for it. */}
+          {season === "halloween" && !showEmail ? (
+            <Image
+              source={require("../assets/halloween/logo.png")}
+              style={{ width: 230, aspectRatio: 920 / 365, borderRadius: 16, marginBottom: space.md }}
+              contentFit="cover"
+              accessibilityLabel="Duro! Halloween"
+            />
+          ) : null}
           {!showEmail ? <Bits key={now.word} bits={now.bits} reduced={reduced} /> : null}
           <Character occasion={showEmail ? "date_night" : now.occasion} small={showEmail} reduced={reduced} />
         </View>

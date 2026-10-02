@@ -68,6 +68,8 @@ export async function* streamChat(opts: {
   message: string;
   conversationId?: string;
   signal?: AbortSignal;
+  /** The season the app is dressed for, so Durobot can be too. */
+  season?: "halloween" | null;
 }): AsyncGenerator<ChatEvent> {
   if (!BASE) throw new Error("EXPO_PUBLIC_API_URL is unset, so chat cannot reach the server.");
 
@@ -87,6 +89,7 @@ export async function* streamChat(opts: {
     body: JSON.stringify({
       message: opts.message,
       ...(opts.conversationId ? { conversation_id: opts.conversationId } : {}),
+      ...(opts.season ? { season: opts.season } : {}),
     }),
     signal: opts.signal,
   });

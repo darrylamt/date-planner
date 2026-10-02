@@ -122,7 +122,15 @@ If what they want cannot be built from the catalogue, say which part failed. "We
  * returns nothing, which reads to the user as an empty catalogue rather than a
  * bad guess. Cheaper than a tool call and it removes a whole class of wrong.
  */
-export function buildOpeningContext(today: string, areaNames: string[]): string {
+export function buildOpeningContext(today: string, areaNames: string[], opts: { halloween?: boolean } = {}): string {
   const areas = areaNames.length ? areaNames.join(", ") : "none recorded yet";
-  return `[Context: today is ${today}. The areas Duro covers are: ${areas}. Use these names when searching; anywhere else in Accra is not in the catalogue.]`;
+  /*
+   * The season, here and not in the system prompt, for the same reason as the
+   * date: it changes, and the cached prefix must not. Facts still win: a
+   * spooky word is welcome, an invented Halloween party is not.
+   */
+  const season = opts.halloween
+    ? ' It is Halloween season (Halloween is 31 October). When someone wants something for Halloween, look for events on those dates and say plainly if the catalogue has none. A light spooky touch in your words is welcome, never at the expense of the facts. If someone says "trick or treat", answer with one playful line, then offer to plan something.'
+    : "";
+  return `[Context: today is ${today}. The areas Duro covers are: ${areas}. Use these names when searching; anywhere else in Accra is not in the catalogue.${season}]`;
 }

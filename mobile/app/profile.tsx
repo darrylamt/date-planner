@@ -40,6 +40,7 @@ import {
 } from "../src/lib/account";
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
+import { useSeason } from "../src/lib/season";
 
 /*
  * Added after the build on TestFlight, so it is resolved defensively. An
@@ -104,6 +105,7 @@ export default function Profile() {
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const { preview: seasonPreview, setPreview: setSeasonPreview } = useSeason();
 
   useFocusEffect(
     useCallback(() => {
@@ -618,6 +620,13 @@ export default function Profile() {
       */}
       <Pressable
         onPress={() => setShowBuild((v) => !v)}
+        // Hidden: hold to preview the Halloween look outside its dates.
+        onLongPress={() => {
+          const on = !seasonPreview;
+          setSeasonPreview(on);
+          setToast(on ? "Halloween preview on 🎃" : "Halloween preview off");
+        }}
+        delayLongPress={800}
         style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}
       >
         <Text variant="caption1" tone="tertiary" center>

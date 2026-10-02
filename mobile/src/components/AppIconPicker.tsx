@@ -35,7 +35,27 @@ export const APP_ICONS: { name: string; label: string; source: number }[] = [
   { name: "Celebration", label: "Celebration", source: require("../../assets/app-icons/celebration.png") },
   { name: "Friends", label: "Friends", source: require("../../assets/app-icons/friend_outing.png") },
   { name: "SoloDay", label: "Solo day", source: require("../../assets/app-icons/solo_day.png") },
+  // The witch-hat pumpkin, from the Halloween logo. In the binary from build 24.
+  { name: "Halloween", label: "Halloween", source: require("../../assets/app-icons/halloween.png") },
 ];
+
+/** What to say when an icon will not set: Halloween's is only in builds from 24 on. */
+const failure = (name: string) =>
+  name === "Halloween" ? "The Halloween icon comes with the next update of the app." : "That icon could not be set.";
+
+/**
+ * Put the Halloween icon on the home screen, for the banner's one tap. iOS
+ * confirms the change with its own alert. Answers with what to tell them.
+ */
+export async function setHalloweenIcon(): Promise<string> {
+  if (!Icons?.supportsAlternateIcons) return "This phone cannot change the app's icon.";
+  try {
+    await Icons.setAlternateAppIcon("Halloween" as never);
+    return "Spooky. Check your home screen 🎃";
+  } catch {
+    return failure("Halloween");
+  }
+}
 
 /** False on a build without the module, so Profile can hide the row entirely. */
 export function appIconsAvailable(): boolean {
@@ -79,7 +99,7 @@ export function AppIconPicker({
       }
       onChanged("Icon changed. Check your home screen.");
     } catch {
-      onChanged("That icon could not be set.");
+      onChanged(failure(name ?? ""));
     } finally {
       setBusy(false);
     }

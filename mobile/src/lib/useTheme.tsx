@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useAppearance } from "./appearance";
+import { useSeason } from "./season";
 import {
   Colors,
   OCCASION_HUES,
@@ -39,10 +40,34 @@ export function useColorSchemeName(): ColorSchemeName {
   return useAppearance().scheme;
 }
 
+/** Halloween's colours: the pumpkin of the logo, on a night-purple dark mode. */
+const PUMPKIN = "#D9480F";
+const PUMPKIN_DARK = "#FF922B";
+const NIGHT = "#0F0A17";
+
 export function useTheme(): ThemeColors {
   const scheme = useColorSchemeName();
   const occasion = useContext(OccasionContext);
+  const { season } = useSeason();
   const base = Colors[scheme];
+
+  /*
+   * Halloween recolours the app the way an occasion does, accent and page,
+   * and gives way to an occasion inside a pathway: a birthday being planned
+   * in late October is still a birthday.
+   */
+  if (!occasion && season === "halloween") {
+    const dark = scheme === "dark";
+    const accent = dark ? PUMPKIN_DARK : PUMPKIN;
+    return {
+      ...base,
+      ...(dark ? { background: NIGHT } : {}),
+      brand: accent,
+      accent,
+      accentSoft: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.82 : 0.9),
+      accentBorder: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.66 : 0.74),
+    };
+  }
 
   if (!occasion) return base;
 

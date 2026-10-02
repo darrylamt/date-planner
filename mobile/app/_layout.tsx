@@ -18,6 +18,8 @@ import { Figtree_700Bold } from "@expo-google-fonts/figtree/700Bold";
 import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
+import { SeasonProvider } from "../src/lib/season";
+import { BurstProvider } from "../src/components/Burst";
 import {
   configureNotificationHandler,
   subscribeToNotificationTaps,
@@ -38,7 +40,10 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <AppearanceProvider>
-      <RootShell />
+      {/* The season sits inside the appearance, because its colours depend on light or dark. */}
+      <SeasonProvider>
+        <RootShell />
+      </SeasonProvider>
     </AppearanceProvider>
   );
 }
@@ -102,6 +107,8 @@ function RootShell() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        {/* Emoji bursts thrown from buttons, over every screen. See Burst. */}
+        <BurstProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
         <Stack
           screenOptions={{
@@ -146,6 +153,7 @@ function RootShell() {
             options={{ headerShown: false, gestureEnabled: false, animation: "fade" }}
           />
         </Stack>
+        </BurstProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

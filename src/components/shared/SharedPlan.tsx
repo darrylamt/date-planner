@@ -47,6 +47,8 @@ export interface SharedPlanProps {
   entrance: "confetti" | "hearts" | "calm";
   /** The plan's share slug, to count what this page leads to (0070). */
   slug: string;
+  /** Halloween season: the logo is the season's own. */
+  halloween?: boolean;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -226,10 +228,17 @@ export function SharedPlan(p: SharedPlanProps) {
         <header className={s.nav}>
           <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-5">
             <Link href="/" className="flex h-full min-w-0 items-center gap-3 overflow-hidden pr-3" aria-label="Duro!">
-              <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                D
-              </span>
-              <FlipText name="Duro!" />
+              {p.halloween ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src="/halloween-logo.png" alt="Duro!" className="h-10 w-auto rounded-md" />
+              ) : (
+                <>
+                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
+                    D
+                  </span>
+                  <FlipText name="Duro!" />
+                </>
+              )}
             </Link>
             <Link
               href={`/get?from=plan&p=${p.slug}`}
@@ -362,14 +371,21 @@ export function SharedPlan(p: SharedPlanProps) {
             <div className={`${s.rise} mt-10 text-center`} style={{ animationDelay: `${900 + p.stops.length * 280}ms` }}>
               <p className="mx-auto max-w-[420px] text-[20px] font-bold leading-snug">{p.closing}</p>
               <p className="mt-4 text-[15px] italic text-white/55">planned with care on</p>
-              <div className="mt-2 flex items-center justify-center gap-2.5">
-                <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                  D
-                </span>
-                <span className="text-[24px] font-extrabold tracking-[-0.02em]">
-                  Du<span style={{ color: c2 }}>ro!</span>
-                </span>
-              </div>
+              {p.halloween ? (
+                <div className="mt-2 flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/halloween-logo.png" alt="Duro!" className="h-16 w-auto rounded-lg" />
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center justify-center gap-2.5">
+                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
+                    D
+                  </span>
+                  <span className="text-[24px] font-extrabold tracking-[-0.02em]">
+                    Du<span style={{ color: c2 }}>ro!</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             <GetTheApp

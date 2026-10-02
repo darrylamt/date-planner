@@ -164,6 +164,14 @@
               "foregroundImage": "./assets/app-icons/solo_day.png",
               "backgroundColor": "#FFFFFF"
             }
+          },
+          {
+            "name": "Halloween",
+            "ios": "./assets/app-icons/halloween.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/halloween.png",
+              "backgroundColor": "#0D0015"
+            }
           }
         ]
       ],

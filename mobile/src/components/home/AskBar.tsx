@@ -7,8 +7,11 @@ import { Glow } from "./Glow";
 import { useReducedMotion } from "../motion";
 import { Radius, Spacing } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
+import { useSeason } from "../../lib/season";
 
 const PALETTE = ["#7C5CFF", "#FF5CA8", "#FFB020", "#33D6C7"];
+/** Halloween's ring: pumpkin and night purple, the logo's two colours. */
+const HALLOWEEN_PALETTE = ["#FF7A00", "#6B2FA0", "#FFB347", "#3D1B5B"];
 const HEIGHT = 54;
 const RING = 2;
 
@@ -26,6 +29,15 @@ const LINES = [
   "“Open late on Monday?”",
 ];
 
+/** At Halloween: things Durobot can actually answer from the catalogue. */
+const HALLOWEEN_LINES = [
+  "Ask Duro! 🎃",
+  "“Halloween plans Saturday?”",
+  "“A spooky night for four?”",
+  "“Late dessert after a film?”",
+  "“Anything on for Halloween?”",
+];
+
 /** Blend two hex colours, t from 0 to 1. */
 function mix(a: string, b: string, t: number): string {
   const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -33,12 +45,15 @@ function mix(a: string, b: string, t: number): string {
   return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(",")})`;
 }
 
-/** The wheel of colour that turns behind the ring: 24 slices blending round the palette. */
-const SLICES = Array.from({ length: 24 }, (_, i) => {
-  const at = (i / 24) * PALETTE.length;
-  const from = Math.floor(at) % PALETTE.length;
-  return mix(PALETTE[from], PALETTE[(from + 1) % PALETTE.length], at - Math.floor(at));
-});
+/** The wheel of colour that turns behind the ring: 24 slices blending round a palette. */
+const slicesOf = (palette: string[]) =>
+  Array.from({ length: 24 }, (_, i) => {
+    const at = (i / 24) * palette.length;
+    const from = Math.floor(at) % palette.length;
+    return mix(palette[from], palette[(from + 1) % palette.length], at - Math.floor(at));
+  });
+const SLICES = slicesOf(PALETTE);
+const HALLOWEEN_SLICES = slicesOf(HALLOWEEN_PALETTE);
 
 /**
  * The way to Durobot on Home.
@@ -52,6 +67,10 @@ const SLICES = Array.from({ length: 24 }, (_, i) => {
 export function AskBar({ onPress }: { onPress: () => void }) {
   const c = useTheme();
   const reduced = useReducedMotion();
+  const { season } = useSeason();
+  const spooky = season === "halloween";
+  const slices = spooky ? HALLOWEEN_SLICES : SLICES;
+  const palette = spooky ? HALLOWEEN_PALETTE : PALETTE;
   const [width, setWidth] = useState(0);
 
   const spin = useRef(new Animated.Value(0)).current;
@@ -108,10 +127,10 @@ export function AskBar({ onPress }: { onPress: () => void }) {
       style={{ flex: 1 }}
     >
       <Animated.View style={{ transform: [{ scale: press }] }}>
-        <Glow colors={["#7C5CFF", "#FF5CA8"]}>
+        <Glow colors={[palette[0], palette[1]]}>
           <View
             onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-            style={{ height: HEIGHT, borderRadius: Radius.pill, overflow: "hidden", padding: RING, backgroundColor: PALETTE[0] }}
+            style={{ height: HEIGHT, borderRadius: Radius.pill, overflow: "hidden", padding: RING, backgroundColor: palette[0] }}
           >
             {/* ── the turning ring ── */}
             {width ? (
@@ -126,7 +145,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
                   transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }],
                 }}
               >
-                {SLICES.map((color, i) => (
+                {slices.map((color, i) => (
                   <View
                     key={i}
                     style={{
@@ -188,7 +207,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
               </Animated.View>
 
               <View style={{ flex: 1, height: HEIGHT - RING * 2, justifyContent: "center", overflow: "hidden" }}>
-                <TurningLine reduced={reduced} />
+                <TurningLine reduced={reduced} lines={spooky ? HALLOWEEN_LINES : LINES} />
               </View>
 
               <Symbol name="chevron.right" size={14} color={c.textTertiary} />
@@ -205,7 +224,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
  * the next rises in. On the JS driver with a safety, because these are the
  * button's words and must never be left invisible.
  */
-function TurningLine({ reduced }: { reduced: boolean }) {
+function TurningLine({ reduced, lines = LINES }: { reduced: boolean; lines?: string[] }) {
   const c = useTheme();
   const [i, setI] = useState(0);
   const v = useRef(new Animated.Value(1)).current;
@@ -219,7 +238,7 @@ function TurningLine({ reduced }: { reduced: boolean }) {
     let safety: ReturnType<typeof setTimeout> | undefined;
     const t = setInterval(() => {
       Animated.timing(v, { toValue: 0, duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: false }).start(() => {
-        setI((n) => (n + 1) % LINES.length);
+        setI((n) => (n + 1) % lines.length);
         v.setValue(-1);
         Animated.spring(v, { toValue: 1, useNativeDriver: false, speed: 16, bounciness: 6 }).start();
       });
@@ -247,7 +266,7 @@ function TurningLine({ reduced }: { reduced: boolean }) {
         numberOfLines={1}
         style={{ color: quote ? c.textSecondary : c.text, fontStyle: quote ? "italic" : "normal" }}
       >
-        {LINES[i]}
+        {lines[i % lines.length]}
       </Text>
     </Animated.View>
   );
