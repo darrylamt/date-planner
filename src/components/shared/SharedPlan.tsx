@@ -7,6 +7,7 @@ import { FlipText } from "@/components/fx/FlipText";
 import { GetTheApp } from "@/components/fx/GetTheApp";
 import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
 import { SmartImage } from "@/components/SmartImage";
+import { DuroMark, Logo } from "@/components/Logo";
 import { storeLink } from "@/lib/links";
 import { trackShare } from "@/lib/shareEvents";
 
@@ -233,10 +234,11 @@ export function SharedPlan(p: SharedPlanProps) {
                 <img src="/halloween-logo.png" alt="Duro!" className="h-10 w-auto rounded-md" />
               ) : (
                 <>
-                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                    D
+                  {/* The logo itself now, not "Duro!" set in the page's font. */}
+                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                    <DuroMark size={24} className="" style={{ color: ink }} />
                   </span>
-                  <FlipText name="Duro!" />
+                  <Logo size={20} href={null} />
                 </>
               )}
             </Link>
@@ -378,12 +380,11 @@ export function SharedPlan(p: SharedPlanProps) {
                 </div>
               ) : (
                 <div className="mt-2 flex items-center justify-center gap-2.5">
-                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                    D
+                  {/* The icon's D, in the occasion's colours, beside the wordmark. */}
+                  <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                    <DuroMark size={24} className="" style={{ color: ink }} />
                   </span>
-                  <span className="text-[24px] font-extrabold tracking-[-0.02em]">
-                    Du<span style={{ color: c2 }}>ro!</span>
-                  </span>
+                  <Logo size={22} href={null} />
                 </div>
               )}
             </div>

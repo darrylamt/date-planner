@@ -4,6 +4,7 @@ import { longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors } from "@/lib/occasionCard";
 import type { Occasion, SavedPlan } from "@/lib/types";
+import { OG_MARK, OG_WORDMARK } from "@/lib/brandImages";
 
 export const alt = "A plan made with Duro!";
 
@@ -89,7 +90,8 @@ export default async function Image({ params }: { params: { slug: string } }) {
             fontFamily: family,
           }}
         >
-          Duro!
+          {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+          <img src={OG_WORDMARK} width={360} height={131} />
         </div>
       ),
       { ...size, fonts }
@@ -179,16 +181,13 @@ export default async function Image({ params }: { params: { slug: string } }) {
                 height: 54,
                 borderRadius: 16,
                 background: `linear-gradient(135deg, ${c1}, ${c2})`,
-                fontSize: 28,
-                fontWeight: 800,
-                color: "#1A0D14",
               }}
             >
-              D
+              {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+              <img src={OG_MARK} width={34} height={34} />
             </div>
-            <div style={{ display: "flex", fontSize: 34, fontWeight: 800, marginLeft: 14, letterSpacing: -1 }}>
-              Du<span style={{ color: c2 }}>ro!</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
+            <img src={OG_WORDMARK} width={126} height={46} style={{ marginLeft: 14 }} />
             {/*
               The total used to sit here, and a preview is the worst place for
               it: it shows in the chat before anyone taps, so a plan made for
