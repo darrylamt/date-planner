@@ -7,6 +7,8 @@ import { FlipText } from "@/components/fx/FlipText";
 import { GetTheApp } from "@/components/fx/GetTheApp";
 import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
 import { SmartImage } from "@/components/SmartImage";
+import { storeLink } from "@/lib/links";
+import { trackShare } from "@/lib/shareEvents";
 
 export interface SharedStop {
   key: string;
@@ -43,6 +45,8 @@ export interface SharedPlanProps {
   page: string;
   glyphs: string[];
   entrance: "confetti" | "hearts" | "calm";
+  /** The plan's share slug, to count what this page leads to (0070). */
+  slug: string;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -145,6 +149,14 @@ export function SharedPlan(p: SharedPlanProps) {
   const [hearts, setHearts] = useState<{ id: number; left: number; delay: number; size: number }[]>([]);
   const played = useRef(false);
 
+  // Opened in a browser, which a link preview fetching the page is not.
+  const counted = useRef(false);
+  useEffect(() => {
+    if (counted.current) return;
+    counted.current = true;
+    trackShare("view", "shared_plan", p.slug);
+  }, [p.slug]);
+
   useEffect(() => {
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -219,7 +231,12 @@ export function SharedPlan(p: SharedPlanProps) {
               </span>
               <FlipText name="Duro!" />
             </Link>
-            <Link href="/get" className={`${s.pill} shrink-0 rounded-full px-4 py-2 text-[13px] font-extrabold`} style={{ color: ink }}>
+            <Link
+              href={`/get?from=plan&p=${p.slug}`}
+              onClick={() => trackShare("plan_your_own", "shared_plan", p.slug)}
+              className={`${s.pill} shrink-0 rounded-full px-4 py-2 text-[13px] font-extrabold`}
+              style={{ color: ink }}
+            >
               Plan your own
             </Link>
           </div>
@@ -355,7 +372,15 @@ export function SharedPlan(p: SharedPlanProps) {
               </div>
             </div>
 
-            <GetTheApp reduced={reduced} ink={ink} eyebrow="Want one of these?" className="mt-10" prices={false} />
+            <GetTheApp
+              reduced={reduced}
+              ink={ink}
+              eyebrow="Want one of these?"
+              className="mt-10"
+              prices={false}
+              storeHref={storeLink("shared_plan")}
+              onStore={() => trackShare("app_store", "shared_plan", p.slug)}
+            />
           </section>
         </main>
       </div>

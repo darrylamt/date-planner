@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { APP_STORE_URL } from "@/lib/links";
+import { storeLink } from "@/lib/links";
+import { StoreButton } from "@/components/StoreButton";
 
 /**
  * Where "plan a date" goes now.
@@ -39,7 +40,10 @@ const STEPS = [
   },
 ];
 
-export default function GetTheAppPage() {
+export default function GetTheAppPage({ searchParams }: { searchParams: { from?: string; p?: string } }) {
+  // Sent by "Plan your own" on a shared plan: the download belongs to sharing.
+  const fromPlan = searchParams.from === "plan";
+  const slug = searchParams.p && /^[a-z2-9]{10}$/.test(searchParams.p) ? searchParams.p : undefined;
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col">
       <div className="px-6 pt-[22px]">
@@ -61,9 +65,9 @@ export default function GetTheAppPage() {
 
       <div className="mt-6 px-6">
         {/* noopener without noreferrer, so App Store Connect can see where installs came from. */}
-        <a href={APP_STORE_URL} className="btn" target="_blank" rel="noopener">
+        <StoreButton href={storeLink(fromPlan ? "shared_plan" : "get_page")} page="get" slug={slug} className="btn">
           Get the app
-        </a>
+        </StoreButton>
         <p className="mt-2.5 text-center text-caption text-mutedbrown">
           Free on the App Store, listed as Duro!
         </p>

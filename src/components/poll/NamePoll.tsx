@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import s from "./NamePoll.module.css";
 import { NAME_OPTIONS, POLL_CLOSES_AT, colorsFor, nameKey, type Choice, type PollResults } from "@/lib/namePoll";
-import { APP_STORE_URL } from "@/lib/links";
+import { storeLink } from "@/lib/links";
+import { trackShare } from "@/lib/shareEvents";
 import { FlipText } from "@/components/fx/FlipText";
 import { GetTheApp } from "@/components/fx/GetTheApp";
 import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
@@ -394,7 +395,8 @@ export function NamePoll({ initialClosed = false }: { initialClosed?: boolean })
                 {closed ? "The vote is in" : phase === "done" ? "Thanks for voting" : "Name poll · live"}
               </span>
               <a
-                href={APP_STORE_URL}
+                href={storeLink("name_poll")}
+                onClick={() => trackShare("app_store", "name_poll")}
                 target="_blank"
                 rel="noopener"
                 className={`${s.submit} shrink-0 rounded-full px-3.5 py-2 text-[12px] font-extrabold sm:px-4 sm:text-[13px]`}
@@ -633,7 +635,14 @@ export function NamePoll({ initialClosed = false }: { initialClosed?: boolean })
               </div>
             )}
 
-            <GetTheApp reduced={reduced} ink={buttonInk} eyebrow={closed ? undefined : "Still aduro, for now"} className="mt-6" />
+            <GetTheApp
+              reduced={reduced}
+              ink={buttonInk}
+              eyebrow={closed ? undefined : "Still aduro, for now"}
+              className="mt-6"
+              storeHref={storeLink("name_poll")}
+              onStore={() => trackShare("app_store", "name_poll")}
+            />
           </section>
 
           {/* ── the name, tried on ── */}

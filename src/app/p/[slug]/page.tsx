@@ -158,6 +158,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
       page={theme.pageDark}
       glyphs={OCCASION_GLYPHS[inputs.occasion] ?? OCCASION_GLYPHS.date_night}
       entrance={occasionEntrance(inputs.occasion)}
+      slug={params.slug}
     />
   );
 }

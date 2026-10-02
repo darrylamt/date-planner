@@ -124,6 +124,12 @@ export default function PrivacyPage() {
           A plan you share is readable by anyone with the link. That is the point
           of a share link, so only send it to people you mean to.
         </p>
+        <p>
+          When somebody opens a shared plan, we count it, and whether they then
+          tap to get the app, so we can tell whether sharing brings people in.
+          The count holds which plan and its occasion, and nothing about the
+          person: no account, no address, and nothing stored on their device.
+        </p>
       </Section>
 
       <Section title="Deleting your account">

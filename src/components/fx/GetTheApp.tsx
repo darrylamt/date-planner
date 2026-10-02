@@ -32,6 +32,8 @@ export function GetTheApp({
   eyebrow = "Duro! for iPhone",
   className = "",
   prices = true,
+  storeHref = APP_STORE_URL,
+  onStore,
 }: {
   reduced: boolean;
   ink: string;
@@ -42,6 +44,10 @@ export function GetTheApp({
    * beside somebody's own date reads as what their evening cost.
    */
   prices?: boolean;
+  /** The App Store link, tagged with a campaign where the page has one. */
+  storeHref?: string;
+  /** Called on the tap, to count it. */
+  onStore?: () => void;
 }) {
   const [i, setI] = useState(0);
   useEffect(() => {
@@ -105,7 +111,8 @@ export function GetTheApp({
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
         {/* noopener without noreferrer, so App Store Connect can see where installs came from. */}
         <a
-          href={APP_STORE_URL}
+          href={storeHref}
+          onClick={onStore}
           target="_blank"
           rel="noopener"
           className="inline-block rounded-[9px] outline-none focus-visible:ring-2 focus-visible:ring-white/70"
