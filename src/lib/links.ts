@@ -11,11 +11,12 @@ export const APP_STORE_URL = "https://apps.apple.com/app/id6809005685";
 
 /*
  * Apple's provider token for this developer account, which a campaign link
- * needs before App Store Connect will count it. Shown when generating one under
- * App Analytics → Acquisition → Campaigns; a wrong one only loses the count,
- * the link itself still opens the app's page.
+ * needs before App Store Connect will count it. Confirmed against a link App
+ * Store Connect generated (App Analytics → Acquisition → Campaigns), whose
+ * shape the campaign links below copy exactly.
  */
 const PROVIDER_TOKEN = "129316181";
+const CAMPAIGN_BASE = "https://apps.apple.com/app/apple-store/id6809005685";
 
 /** Where on the web an App Store tap came from, as App Store Connect will list it. */
 export type StoreCampaign = "shared_plan" | "get_page" | "name_poll";
@@ -24,4 +25,4 @@ export type StoreCampaign = "shared_plan" | "get_page" | "name_poll";
  * The App Store link tagged with where it was tapped, so downloads can be
  * counted per place: App Store Connect → App Analytics → Acquisition → Campaigns.
  */
-export const storeLink = (campaign: StoreCampaign) => `${APP_STORE_URL}?pt=${PROVIDER_TOKEN}&ct=${campaign}&mt=8`;
+export const storeLink = (campaign: StoreCampaign) => `${CAMPAIGN_BASE}?pt=${PROVIDER_TOKEN}&ct=${campaign}&mt=8`;

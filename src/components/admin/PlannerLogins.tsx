@@ -29,11 +29,14 @@ export interface PlannerRow {
  * So the verification is the conversation you have before clicking Issue.
  * That is the entire control, and it is why this is not a sign-up form.
  *
- * ── suspend, not delete ─────────────────────────────────────────────────
- * Turning an account off stops it creating anything new and leaves every
- * location and event it already made exactly where they are. Deleting the
- * account would orphan them. Use the venues and events screens to take down
- * anything specific.
+ * ── suspend or delete ───────────────────────────────────────────────────
+ * Turning an account off stops it creating anything new and keeps the login
+ * for later. Deleting removes the login for good. Either way every location
+ * and event it made stays where it is, editable by admins: use the venues and
+ * events screens to take down anything specific.
+ *
+ * The number is optional, at issue and after: it is for reaching them, and
+ * plenty of planners are issued a login before anybody has it.
  */
 export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
   const [planners, setPlanners] = useState(rows);
@@ -42,6 +45,9 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  /** The row being edited, and what its boxes hold. */
+  const [editing, setEditing] = useState<{ userId: string; name: string; phone: string } | null>(null);
 
   /** The one password currently on screen, and who it belongs to. */
   const [issued, setIssued] = useState<{ username: string; password: string } | null>(null);
@@ -132,6 +138,42 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
     say(turningOff ? "Suspended" : "Back on");
   }
 
+  async function saveEdit() {
+    if (!editing) return;
+    if (editing.name.trim().length < 2) return say("They need a name to appear under.");
+    setBusy(true);
+    const { res, data } = await post({
+      action: "update",
+      userId: editing.userId,
+      displayName: editing.name.trim(),
+      contactPhone: editing.phone.trim() || null,
+    });
+    setBusy(false);
+    if (!res.ok) return say(data.error ?? "Could not save that.");
+    setPlanners((p) =>
+      p.map((x) =>
+        x.user_id === editing.userId
+          ? { ...x, display_name: editing.name.trim(), contact_phone: editing.phone.trim() || null }
+          : x
+      )
+    );
+    setEditing(null);
+    say("Saved");
+  }
+
+  async function remove(row: PlannerRow) {
+    const kept = row.locations
+      ? ` Their ${row.locations} location${row.locations === 1 ? "" : "s"} and the events at them stay up, and only admins can edit them after this.`
+      : "";
+    if (!confirm(`Delete ${row.display_name}'s login (${row.username})? This cannot be undone.${kept}`)) return;
+    setBusy(true);
+    const { res, data } = await post({ action: "delete", userId: row.user_id });
+    setBusy(false);
+    if (!res.ok) return say(data.error ?? "Could not delete that login.");
+    setPlanners((p) => p.filter((x) => x.user_id !== row.user_id));
+    say("Deleted");
+  }
+
   function copy(text: string) {
     void navigator.clipboard.writeText(text).then(
       () => say("Copied"),
@@ -220,12 +262,12 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
           />
         </label>
         <label className="flex flex-col">
-          <span className="flbl">Their number</span>
+          <span className="flbl">Their number, optional</span>
           <input
             className="inp font-mono"
             value={phone}
             inputMode="tel"
-            placeholder="+233 ..."
+            placeholder="Add it now or later"
             onChange={(e) => setPhone(e.target.value)}
           />
         </label>
@@ -252,7 +294,15 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
               {paged.pageRows.map((r) => (
                 <tr key={r.user_id} className={r.is_active ? "" : "opacity-50"}>
                   <td className="font-semibold">
-                    {r.display_name}
+                    {editing?.userId === r.user_id ? (
+                      <input
+                        className="inp h-[36px]"
+                        value={editing.name}
+                        onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                      />
+                    ) : (
+                      r.display_name
+                    )}
                     {r.is_active ? null : (
                       <span className="ml-2 rounded-full bg-staletext px-1.5 text-[11px] text-white">
                         off
@@ -260,10 +310,40 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
                     )}
                   </td>
                   <td className="font-mono text-[13px]">{r.username}</td>
-                  <td className="font-mono text-[13px]">{r.contact_phone ?? "—"}</td>
+                  <td className="font-mono text-[13px]">
+                    {editing?.userId === r.user_id ? (
+                      <input
+                        className="inp h-[36px] font-mono"
+                        value={editing.phone}
+                        inputMode="tel"
+                        placeholder="+233 ..."
+                        onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
+                      />
+                    ) : (
+                      r.contact_phone ?? "—"
+                    )}
+                  </td>
                   <td className="text-right tabular-nums">{r.locations}</td>
                   <td className="text-right">
-                    <button className="btn2 btnsm" onClick={() => void reset(r)} disabled={busy}>
+                    {editing?.userId === r.user_id ? (
+                      <>
+                        <button className="btn btnsm" onClick={() => void saveEdit()} disabled={busy}>
+                          Save
+                        </button>
+                        <button className="btn2 btnsm ml-2" onClick={() => setEditing(null)} disabled={busy}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="btn2 btnsm"
+                        onClick={() => setEditing({ userId: r.user_id, name: r.display_name, phone: r.contact_phone ?? "" })}
+                        disabled={busy}
+                      >
+                        Edit
+                      </button>
+                    )}
+                    <button className="btn2 btnsm ml-2" onClick={() => void reset(r)} disabled={busy}>
                       New password
                     </button>
                     <button
@@ -272,6 +352,13 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
                       disabled={busy}
                     >
                       {r.is_active ? "Suspend" : "Turn back on"}
+                    </button>
+                    <button
+                      className="btn2 btnsm ml-2 !text-staletext"
+                      onClick={() => void remove(r)}
+                      disabled={busy}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

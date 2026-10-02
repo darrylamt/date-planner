@@ -49,7 +49,28 @@ const suspendSchema = z.object({
   active: z.boolean(),
 });
 
-const bodySchema = z.union([createSchema, resetSchema, suspendSchema]);
+/** The name on their posters and their number, either of which can come later. */
+const updateSchema = z.object({
+  action: z.literal("update"),
+  userId: z.string().uuid(),
+  displayName: z.string().min(2).max(80),
+  contactPhone: z.string().max(40).nullable(),
+});
+
+/**
+ * Gone, login and all.
+ *
+ * For an account issued by mistake or never used. Their locations and the
+ * events at them do not belong to the account, only the right to edit them
+ * does, so deleting it leaves them up and editable by admins alone. Only ever
+ * a planner's account: this endpoint must not be able to delete an app user.
+ */
+const deleteSchema = z.object({
+  action: z.literal("delete"),
+  userId: z.string().uuid(),
+});
+
+const bodySchema = z.union([createSchema, resetSchema, suspendSchema, updateSchema, deleteSchema]);
 
 /** Readable aloud, and still hard to guess. See the venue-login route. */
 function generatePassword(): string {
@@ -78,6 +99,30 @@ export async function POST(req: Request) {
       .update({ is_active: body.active })
       .eq("user_id", body.userId)
       .select("user_id");
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "update") {
+    const { data, error } = await supabase
+      .from("event_planners")
+      .update({ display_name: body.displayName.trim(), contact_phone: body.contactPhone?.trim() || null })
+      .eq("user_id", body.userId)
+      .select("user_id");
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (!data?.length) return NextResponse.json({ error: "No planner with that account." }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "delete") {
+    const { data: planner } = await supabase
+      .from("event_planners")
+      .select("user_id")
+      .eq("user_id", body.userId)
+      .maybeSingle();
+    if (!planner) return NextResponse.json({ error: "That is not a planner's account." }, { status: 404 });
+    // Cascades their planner row and location grants; the locations stay.
+    const { error } = await supabase.auth.admin.deleteUser(body.userId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   }
