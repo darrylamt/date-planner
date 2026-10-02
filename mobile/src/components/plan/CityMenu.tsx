@@ -35,7 +35,7 @@ export function CityMenu({
 }: {
   cities: string[];
   city: string;
-  /** Whether this plan has a city of its own yet, or is showing the default. */
+  /** Whether anywhere has been picked in this plan yet; until then the city is only the default. */
   chosen: boolean;
   onChange: (city: string) => void;
 }) {

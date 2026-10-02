@@ -190,7 +190,12 @@ export function PlanSteps({
           <CityMenu
             cities={cities}
             city={city}
-            chosen={Boolean(inputs.city)}
+            /*
+              Every new plan starts with city set (to Accra), so having one
+              says nothing. Somewhere picked in it does: until then the city
+              is the default, and the one chosen last time can replace it.
+            */
+            chosen={inputs.areaIds.length > 0 || inputs.surpriseMe || Boolean(inputs.near)}
             onChange={(c) =>
               // A new city means none of the areas already picked still apply.
               update({ city: c, areaIds: [], areaNames: [] })
