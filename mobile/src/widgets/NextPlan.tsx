@@ -1,5 +1,15 @@
 import { HStack, Image, Spacer, Text, VStack } from "@expo/ui/swift-ui";
-import { containerBackground, font, foregroundStyle, frame, lineLimit, widgetURL } from "@expo/ui/swift-ui/modifiers";
+import {
+  aspectRatio,
+  containerBackground,
+  font,
+  foregroundStyle,
+  frame,
+  lineLimit,
+  resizable,
+  widgetAccentedRenderingMode,
+  widgetURL,
+} from "@expo/ui/swift-ui/modifiers";
 import { createWidget, type WidgetEnvironment } from "expo-widgets";
 
 /**
@@ -23,6 +33,12 @@ export type NextPlanProps = {
   /** The occasion's colour, for light and dark. */
   accent: string;
   accentDark: string;
+  /**
+   * The character in the occasion's costume, as a data: URI (see
+   * scripts/widget-mascots.ts). Empty to draw none; a picture that will not
+   * load draws nothing too, so it can never break the widget.
+   */
+  mascot: string;
 };
 
 /**
@@ -31,6 +47,8 @@ export type NextPlanProps = {
  * Small: the countdown, the plan's name and its first stop. Medium: the same
  * with up to three stops and their times. Lock screen: one or three lines,
  * drawn in the system's tint. With nothing coming up, an invitation to plan.
+ * The home screen sizes carry the character in the occasion's costume, the
+ * one the app's cards wear; the lock screen, drawn in a single tint, does not.
  *
  * Everything inside this function runs in the widget's own runtime: only
  * Expo UI's SwiftUI components and modifiers, no module-scope values, no
@@ -79,7 +97,14 @@ const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
         spacing={4}
         modifiers={[containerBackground(bg, "widget"), widgetURL(props.url), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
       >
-        <Image systemName="sparkles" size={22} color={accent} />
+        {props.mascot ? (
+          <Image
+            uiImage={props.mascot}
+            modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 52, height: 52 }), widgetAccentedRenderingMode("desaturated")]}
+          />
+        ) : (
+          <Image systemName="sparkles" size={22} color={accent} />
+        )}
         <Spacer />
         <Text modifiers={[font({ size: 16, weight: "bold" }), foregroundStyle(ink), lineLimit(2)]}>Plan your next outing</Text>
         <Text modifiers={[font({ size: 12 }), foregroundStyle(soft), lineLimit(2)]}>
@@ -100,7 +125,16 @@ const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
           </HStack>
           <Text modifiers={[font({ size: 17, weight: "bold" }), foregroundStyle(ink), lineLimit(3)]}>{props.title}</Text>
           <Spacer />
-          <Text modifiers={[font({ size: 12, weight: "medium" }), foregroundStyle(soft)]}>{props.when}</Text>
+          <HStack alignment="bottom" modifiers={[frame({ maxWidth: 1000, alignment: "leading" })]}>
+            <Text modifiers={[font({ size: 12, weight: "medium" }), foregroundStyle(soft)]}>{props.when}</Text>
+            <Spacer />
+            {props.mascot ? (
+              <Image
+                uiImage={props.mascot}
+                modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 50, height: 50 }), widgetAccentedRenderingMode("desaturated")]}
+              />
+            ) : null}
+          </HStack>
         </VStack>
         <VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}>
           {props.stops.map((s, i) => (
@@ -127,8 +161,19 @@ const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
       </HStack>
       <Text modifiers={[font({ size: 15, weight: "bold" }), foregroundStyle(ink), lineLimit(3)]}>{props.title}</Text>
       <Spacer />
-      <Text modifiers={[font({ size: 11, weight: "bold" }), foregroundStyle(accent)]}>{props.firstTime}</Text>
-      <Text modifiers={[font({ size: 13, weight: "semibold" }), foregroundStyle(ink), lineLimit(1)]}>{props.firstName}</Text>
+      <HStack alignment="bottom" spacing={4} modifiers={[frame({ maxWidth: 1000, alignment: "leading" })]}>
+        <VStack alignment="leading" spacing={1}>
+          <Text modifiers={[font({ size: 11, weight: "bold" }), foregroundStyle(accent)]}>{props.firstTime}</Text>
+          <Text modifiers={[font({ size: 13, weight: "semibold" }), foregroundStyle(ink), lineLimit(1)]}>{props.firstName}</Text>
+        </VStack>
+        <Spacer />
+        {props.mascot ? (
+          <Image
+            uiImage={props.mascot}
+            modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 42, height: 42 }), widgetAccentedRenderingMode("desaturated")]}
+          />
+        ) : null}
+      </HStack>
     </VStack>
   );
 };

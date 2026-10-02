@@ -3,6 +3,7 @@ import { requireOptionalNativeModule } from "expo-modules-core";
 import { listPlans } from "./data";
 import { supabase } from "./supabase";
 import { OCCASION_THEME } from "./planConstants";
+import { WIDGET_MASCOTS } from "../widgets/mascots";
 import type { SavedPlan } from "./types";
 import type { NextPlanProps } from "../widgets/NextPlan";
 
@@ -60,6 +61,8 @@ const EMPTY: NextPlanProps = {
   stops: [],
   accent: OCCASION_THEME.date_night.accent,
   accentDark: OCCASION_THEME.date_night.accentDark,
+  // Waving, with sparkles: an invitation rather than an empty box.
+  mascot: WIDGET_MASCOTS.celebration ?? "",
 };
 
 /**
@@ -109,6 +112,8 @@ export async function refreshWidgets(): Promise<void> {
     stops,
     accent: theme.accent,
     accentDark: theme.accentDark,
+    // In the occasion's costume, as on the app's own cards.
+    mascot: WIDGET_MASCOTS[p.inputs.occasion] ?? WIDGET_MASCOTS.celebration ?? "",
   };
 
   // Now, every midnight until the day, the start, and the end.

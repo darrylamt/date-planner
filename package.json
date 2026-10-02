@@ -28,6 +28,7 @@
     "tokens": "tsx scripts/token-report.ts",
     "route:check": "tsx scripts/route-check.ts",
     "reach:check": "tsx scripts/reach-check.ts",
+    "widget:mascots": "tsx scripts/widget-mascots.ts",
     "transit:import": "tsx scripts/import-route-map.ts",
     "journey:check": "tsx scripts/journey-check.ts",
     "mascots": "tsx scripts/build-mascots.ts",
