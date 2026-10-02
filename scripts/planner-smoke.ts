@@ -142,6 +142,24 @@ async function main() {
       .maybeSingle();
     ok("the number is public straight away", seen?.contact_phone === "+233 55 000 0000", seen?.contact_phone ?? "null");
 
+  // ── 6a. Their logo, and nothing else on their row (0071) ──────────────
+  const probe0071 = await admin.from("event_planners").select("logo_url").limit(1);
+  if (probe0071.error) {
+    ok("0071 applied (planner logos)", false, "not run yet: " + probe0071.error.message);
+  } else {
+    await as.from("event_planners").update({ logo_url: "https://example.com/zz-logo.png" }).eq("user_id", userId);
+    await as.from("event_planners").update({ display_name: "ZZ Renamed " + stamp }).eq("user_id", userId);
+    await as.from("event_planners").update({ is_active: false }).eq("user_id", userId);
+    const { data: row } = await admin
+      .from("event_planners")
+      .select("logo_url, display_name, is_active")
+      .eq("user_id", userId)
+      .single();
+    ok("planner sets their own logo", row?.logo_url === "https://example.com/zz-logo.png", row?.logo_url ?? "null");
+    ok("planner cannot rename themselves", row?.display_name === "Test Planner " + stamp, row?.display_name ?? "null");
+    ok("planner cannot switch their account back on or off", row?.is_active === true, String(row?.is_active));
+  }
+
   // ── 6b. A night at somebody else's venue (0072) ───────────────────────
   //
   // A planner's nights move between clubs already on Duro, so they may write
