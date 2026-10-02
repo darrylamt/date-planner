@@ -683,7 +683,16 @@ export interface Itinerary {
 }
 
 export type GenerateResponse =
-  | { status: "ok"; itinerary: Itinerary }
+  | {
+      status: "ok";
+      itinerary: Itinerary;
+      /**
+       * Set when the chosen areas could not fill the plan alone and the
+       * planner reached further: how far, and which areas it used. The plan
+       * says so in its budget note; this is for the demand log.
+       */
+      reached?: { km: number; areas: string[] };
+    }
   | {
       status: "no_match";
       headline: string;

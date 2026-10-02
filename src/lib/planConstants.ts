@@ -166,6 +166,13 @@ export function focusesOf(inputs: Pick<PlanInputs, "focus" | "focuses">): Narrow
 export const DEFAULT_RADIUS_KM = 2;
 /** How far "near me" reaches when nobody has said. */
 export const DEFAULT_NEAR_KM = 5;
+/**
+ * How far past the chosen areas a plan reaches when they alone cannot fill
+ * it: into the next neighbourhood or two, never across town. Not one of the
+ * questionnaire's choices, so a request logged at this reach is one that had
+ * to borrow from next door.
+ */
+export const REACH_FALLBACK_KM = 8;
 /** The reach choices the questionnaire offers under the areas. */
 export const RADIUS_OPTIONS: { km: number; label: string }[] = [
   { km: 0, label: "Only these" },

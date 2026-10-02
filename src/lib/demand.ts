@@ -33,7 +33,8 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse)
       answer.status === "ok"
         ? [...new Set(answer.itinerary.stops.map((s) => s.venue_id).filter((id): id is string => Boolean(id)))]
         : [];
-    await db.from("plan_demand").insert({
+    const reached = answer.status === "ok" && answer.reached ? answer.reached : null;
+    const row = {
       plan_date: inputs.date,
       weekday: weekdayOf(inputs.date),
       start_minute: minutesOf(inputs.startTime),
@@ -42,17 +43,26 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse)
       area_ids: inputs.near || inputs.surpriseMe ? [] : inputs.areaIds,
       cell_lat: inputs.near ? Math.round(inputs.near.lat * 100) / 100 : null,
       cell_lng: inputs.near ? Math.round(inputs.near.lng * 100) / 100 : null,
-      radius_km: inputs.radiusKm ?? null,
+      // How far the plan actually reached, which is wider than asked when it had to be.
+      radius_km: reached?.km ?? inputs.radiusKm ?? null,
       occasion: inputs.occasion,
       party_size: inputs.partySize,
       budget_band: budgetBand(inputs.budget),
       focuses: focusesOf(inputs),
       vibes: inputs.vibes ?? [],
       cuisines: inputs.cuisines ?? [],
-      outcome: answer.status === "ok" ? "ok" : "no_match",
+      /*
+       * "reached" is demand the chosen areas could not meet on their own:
+       * the plan worked, but only by borrowing from next door, which makes
+       * it as much a reason to sign venues there as "nothing fitted".
+       */
+      outcome: answer.status === "no_match" ? "no_match" : reached ? "reached" : "ok",
       no_match_reason: answer.status === "no_match" ? answer.headline.slice(0, 200) : null,
       venue_ids: venueIds,
-    });
+    };
+    const { error } = await db.from("plan_demand").insert(row);
+    // Before migration 0069 the table knows only ok and no_match.
+    if (error && row.outcome === "reached") await db.from("plan_demand").insert({ ...row, outcome: "ok" });
   } catch {
     /* statistics are never worth a failed plan */
   }

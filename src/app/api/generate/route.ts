@@ -13,12 +13,76 @@ import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand } from "@/lib/demand";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_MAX } from "@/lib/budget";
-import { DEFAULT_WELLNESS_KIND, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
+import { DEFAULT_RADIUS_KM, DEFAULT_WELLNESS_KIND, REACH_FALLBACK_KM, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
   GenerateResponse,
   Itinerary,
   PlanInputs,
 } from "@/lib/types";
+
+const listOf = (names: string[]) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+
+/**
+ * One more try, reaching further, before telling somebody nothing fitted.
+ *
+ * A thin area failed every plan outright: a first date in Aburi came back as
+ * "we couldn't fill the whole evening", with a button to widen that cost a
+ * tap and a second wait to reach an answer the app could have reached itself.
+ * So the planner widens on its own, once, and the plan says so in the note
+ * the app already shows under the total, which every build displays.
+ *
+ * Only for areas somebody picked. "Only these" (a reach of 0) is a choice and
+ * is kept; "near me" and "anywhere" already reach as far as they mean to.
+ * Null when the wider search cannot fill it either, and the caller then
+ * explains the original failure as before.
+ */
+async function reachFurther(
+  supabase: ReturnType<typeof createClient>,
+  inputs: PlanInputs
+): Promise<NextResponse<GenerateResponse> | null> {
+  if (inputs.surpriseMe || inputs.near || !inputs.areaIds.length) return null;
+  const chosen = inputs.radiusKm ?? DEFAULT_RADIUS_KM;
+  if (chosen === 0 || chosen >= REACH_FALLBACK_KM) return null;
+
+  const wider: PlanInputs = { ...inputs, radiusKm: REACH_FALLBACK_KM };
+  let candidates;
+  try {
+    candidates = await fetchCandidates(supabase, wider);
+  } catch {
+    return null;
+  }
+  if (candidates.venues.length < 2) return null;
+  const plan = planItinerary(wider, candidates);
+  if (!plan) return null;
+
+  const outside = [
+    ...new Set(
+      plan.stops
+        .map((s) => s.venue.areas?.name ?? "")
+        .filter((name) => name && !inputs.areaNames.includes(name))
+    ),
+  ];
+
+  const written = inputs.ai === false ? null : await writePlanCopy(wider, plan);
+  const copy = written?.ok ? written.copy : fallbackCopy(wider, plan);
+  const itinerary = assembleItinerary(wider, plan, copy);
+  if (outside.length) {
+    // "Also" only when the plan still has a stop where they asked: a thin area
+    // can end up with none of its own, and saying so is the honest version.
+    const anyInside = plan.stops.some((s) => inputs.areaNames.includes(s.venue.areas?.name ?? ""));
+    const here = listOf(inputs.areaNames);
+    const note = anyInside
+      ? `There was not enough in ${here} alone, so this plan also uses ${listOf(outside)}.`
+      : `There was not enough in ${here} for this one, so it is in ${listOf(outside)}, the nearest that could fill it.`;
+    itinerary.budget_note = itinerary.budget_note ? `${note} ${itinerary.budget_note}` : note;
+  }
+  return NextResponse.json({
+    status: "ok",
+    itinerary,
+    reached: { km: REACH_FALLBACK_KM, areas: outside },
+  });
+}
 
 /**
  * Build a plan.
@@ -110,6 +174,8 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   if (inputs.budget <= 0) {
     const free = candidates.venues.filter((v) => v.is_free === true).length;
     if (free < 2) {
+      const reached = await reachFurther(supabase, inputs);
+      if (reached) return reached;
       return NextResponse.json({
         status: "no_match",
         headline:
@@ -129,6 +195,8 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   }
 
   if (candidates.venues.length < 2) {
+    const reached = await reachFurther(supabase, inputs);
+    if (reached) return reached;
     const widerAreas = candidates.allAreaNames
       .filter((n) => !inputs.areaNames.includes(n))
       .slice(0, 2);
@@ -151,8 +219,10 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   const plan = planItinerary(inputs, candidates);
 
   // No arrangement of real venues fits, so say so rather than trimming into
-  // something nobody would want.
+  // something nobody would want. First, the next neighbourhood over.
   if (!plan) {
+    const reached = await reachFurther(supabase, inputs);
+    if (reached) return reached;
     /*
      * A floor under the nudge, because half again of nothing is nothing.
      * A zero budget used to be offered only "widen the area", which cannot

@@ -1,6 +1,8 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { haversineKm } from "@/lib/transport";
+import { COVERAGE_KINDS, areaCoverage, type AreaCoverage } from "@/lib/coverage";
+import { REACH_FALLBACK_KM } from "@/lib/planConstants";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +14,21 @@ interface DemandRow {
   cell_lng: number | null;
   occasion: string | null;
   budget_band: string | null;
-  outcome: "ok" | "no_match";
+  outcome: "ok" | "reached" | "no_match";
   no_match_reason: string | null;
   weekday: number | null;
+  radius_km: number | null;
+  party_size: number | null;
+  plan_date: string | null;
 }
+
+/*
+ * Met, but only by reaching past the areas asked for. Logged as its own
+ * outcome since 0069; before that as "ok" at the fallback reach, which no
+ * questionnaire choice produces, so both read the same here.
+ */
+const reachedFar = (r: DemandRow) =>
+  r.outcome === "reached" || (r.outcome === "ok" && r.source === "areas" && Number(r.radius_km) === REACH_FALLBACK_KM);
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const pct = (n: number, of: number) => (of ? `${Math.round((100 * n) / of)}%` : "–");
@@ -47,7 +60,7 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
     rows = await fetchAllRows<DemandRow>((a, b) =>
       supabase
         .from("plan_demand")
-        .select("created_at, source, area_ids, cell_lat, cell_lng, occasion, budget_band, outcome, no_match_reason, weekday")
+        .select("created_at, source, area_ids, cell_lat, cell_lng, occasion, budget_band, outcome, no_match_reason, weekday, radius_km, party_size, plan_date")
         .gte("created_at", since)
         .range(a, b)
     );
@@ -55,9 +68,10 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
     missing = true;
   }
 
-  const [{ data: areas }, { data: venues }] = await Promise.all([
+  const [{ data: areas }, { data: venues }, coverage] = await Promise.all([
     supabase.from("areas").select("id, name"),
     supabase.from("venues").select("id, area_id, lat, lng").eq("is_active", true),
+    areaCoverage(supabase as never).catch(() => [] as AreaCoverage[]),
   ]);
   const areaName = new Map((areas ?? []).map((a: { id: string; name: string }) => [a.id, a.name]));
   const vs = (venues ?? []) as { id: string; area_id: string; lat: number | null; lng: number | null }[];
@@ -82,12 +96,13 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
   const venuesIn = new Map<string, number>();
   for (const v of vs) venuesIn.set(v.area_id, (venuesIn.get(v.area_id) ?? 0) + 1);
 
-  type AreaStat = { asked: number; unmet: number; near: number };
+  type AreaStat = { asked: number; unmet: number; reached: number; near: number };
   const byArea = new Map<string, AreaStat>();
   const bump = (id: string, row: DemandRow, near: boolean) => {
-    const s = byArea.get(id) ?? { asked: 0, unmet: 0, near: 0 };
+    const s = byArea.get(id) ?? { asked: 0, unmet: 0, reached: 0, near: 0 };
     s.asked++;
     if (row.outcome === "no_match") s.unmet++;
+    if (reachedFar(row)) s.reached++;
     if (near) s.near++;
     byArea.set(id, s);
   };
@@ -105,6 +120,47 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
 
   const total = rows.length;
   const unmet = rows.filter((r) => r.outcome === "no_match").length;
+  const reachedTotal = rows.filter(reachedFar).length;
+
+  /*
+   * What to add next.
+   *
+   * Every area that is too thin to fill an outing alone, or where somebody
+   * asked and was not met there, ranked by how much one more venue would
+   * matter. Demand counts for most once there is some: a request that found
+   * nothing is worth three, one that had to borrow from next door two, any
+   * request one. Thinness counts on its own, because a neighbourhood with
+   * nowhere to go after dinner fails people whether or not they have asked
+   * yet, and early on there are too few requests to rank anything by.
+   */
+  const demandIn = new Map(areaRows.map((a) => [a.id, a]));
+  const nextUp = coverage
+    .map((c) => {
+      const d = demandIn.get(c.id);
+      const asked = d?.asked ?? 0;
+      const short = d?.unmet ?? 0;
+      const borrowed = d?.reached ?? 0;
+      // The kinds to look for: whatever it has none of, and food when there is barely any.
+      const look = COVERAGE_KINDS.filter((k) => c.byKind[k.id] === 0 || (k.id === "eat" && c.byKind.eat < 2));
+      return { ...c, asked, short, borrowed, look, score: 3 * short + 2 * borrowed + asked + (c.thin ? 3 : 0) + look.length };
+    })
+    .filter((c) => (c.held > 0 || c.asked > 0) && (c.thin || c.short > 0 || c.borrowed > 0))
+    .sort((a, b) => b.score - a.score || a.plannable - b.plannable)
+    .slice(0, 12);
+
+  // While requests are few, each one is worth reading rather than counting.
+  const shortfalls = rows
+    .filter((r) => r.outcome === "no_match" || reachedFar(r))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 15);
+  const whereOf = (r: DemandRow) => {
+    if (r.source === "anywhere") return "anywhere";
+    if (r.source === "near" && r.cell_lat != null && r.cell_lng != null) {
+      const id = nearestArea(Number(r.cell_lat), Number(r.cell_lng));
+      return `near me${id ? `, around ${areaName.get(id)}` : ""}`;
+    }
+    return r.area_ids.map((id) => areaName.get(id) ?? "?").join(" & ") || "?";
+  };
   const reasons = tally(rows.filter((r) => r.outcome === "no_match").map((r) => r.no_match_reason)).slice(0, 8);
   const occasions = tally(rows.map((r) => r.occasion)).slice(0, 8);
   const budgets = tally(rows.map((r) => r.budget_band));
@@ -141,12 +197,93 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
         </div>
       ) : (
         <>
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
             <Stat label="Plan requests" value={String(total)} />
             <Stat label="Nothing fitted" value={`${unmet} (${pct(unmet, total)})`} />
+            <Stat label="Had to reach" value={`${reachedTotal} (${pct(reachedTotal, total)})`} />
             <Stat label="Chose areas" value={pct(rows.filter((r) => r.source === "areas").length, total)} />
             <Stat label="Near me" value={pct(rows.filter((r) => r.source === "near").length, total)} />
           </div>
+
+          <div className="card mt-5 p-4">
+            <h2 className="text-[16px] font-bold">What to add next</h2>
+            <p className="mt-0.5 text-[13px] text-mutedbrown">
+              Areas too thin to fill an outing on their own, or where people asked and were not met there. Plannable
+              counts only venues with a price: the planner leaves the rest out.
+            </p>
+            {nextUp.length ? (
+              <ul className="mt-3 grid gap-2.5">
+                {nextUp.map((c) => (
+                  <li key={c.id} className="rounded-xl bg-cream/60 p-3 ring-1 ring-black/5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <span className="text-[15px] font-bold">{c.name}</span>
+                      <span className="text-[12px] text-mutedbrown">
+                        {c.asked
+                          ? `${c.asked} asked${c.short ? `, ${c.short} found nothing` : ""}${c.borrowed ? `, ${c.borrowed} had to reach` : ""}`
+                          : "no requests yet"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[13px]">
+                      {c.plannable} plannable
+                      {c.waiting ? (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <a href="/admin/unpriced" className="font-semibold text-flame underline">
+                            {c.waiting} waiting for a price
+                          </a>
+                        </>
+                      ) : null}
+                      <span className="text-mutedbrown">
+                        {" "}
+                        ·{" "}
+                        {COVERAGE_KINDS.map((k) => `${c.byKind[k.id]} ${k.label}`).join(", ")}
+                      </span>
+                    </div>
+                    {c.look.length ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {c.look.map((k) => (
+                          <a
+                            key={k.id}
+                            href={`/admin/discover?area=${encodeURIComponent(c.name)}&what=${encodeURIComponent(k.discover)}`}
+                            className="rounded-full bg-white px-3 py-1 text-[12px] font-semibold ring-1 ring-black/10 hover:ring-flame"
+                          >
+                            Find {k.label} on Google
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-[13px] text-mutedbrown">Every area with venues can fill an outing, and nobody went unmet.</p>
+            )}
+          </div>
+
+          {shortfalls.length ? (
+            <div className="card mt-5 p-4">
+              <h2 className="text-[16px] font-bold">Requests not met where they asked</h2>
+              <ul className="mt-2 grid gap-1.5 text-[13px]">
+                {shortfalls.map((r, i) => (
+                  <li key={i} className="flex flex-wrap gap-x-2">
+                    <span className="w-[52px] shrink-0 font-mono text-mutedbrown">
+                      {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </span>
+                    <span className="font-semibold">{whereOf(r)}</span>
+                    <span>
+                      {(r.occasion ?? "plan").replace(/_/g, " ")}
+                      {r.party_size ? ` for ${r.party_size}` : ""}
+                      {r.budget_band === "free" ? ", free" : `, GHS ${r.budget_band ?? "?"}`}
+                    </span>
+                    <span className={r.outcome === "no_match" ? "text-staletext" : "text-mutedbrown"}>
+                      {r.outcome === "no_match" ? (r.no_match_reason ?? "nothing fitted") : "had to reach further"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="card mt-5 overflow-x-auto p-4">
             <h2 className="mb-2 text-[16px] font-bold">By area</h2>
@@ -156,6 +293,7 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
                   <th>Area</th>
                   <th>Requests</th>
                   <th>Nothing fitted</th>
+                  <th>Had to reach</th>
                   <th>Venues we hold</th>
                   <th>Requests per venue</th>
                 </tr>
@@ -171,13 +309,14 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
                     <td className={`font-mono ${a.unmet ? "text-staletext" : ""}`}>
                       {a.unmet} ({pct(a.unmet, a.asked)})
                     </td>
+                    <td className="font-mono">{a.reached}</td>
                     <td className="font-mono">{a.held}</td>
                     <td className="font-mono">{(a.asked / Math.max(1, a.held)).toFixed(1)}</td>
                   </tr>
                 ))}
                 {!areaRows.length ? (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-mutedbrown">
+                    <td colSpan={6} className="py-6 text-center text-mutedbrown">
                       No requests in this window yet.
                     </td>
                   </tr>

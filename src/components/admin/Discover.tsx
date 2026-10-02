@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
@@ -45,10 +45,19 @@ interface Result {
   already: boolean;
 }
 
-export function Discover({ areas }: { areas: Area[] }) {
+export function Discover({
+  areas,
+  initial,
+}: {
+  areas: Area[];
+  /** A search to start with, from a link: the demand page sends the gap it found. */
+  initial?: { area?: string; what?: string };
+}) {
   const router = useRouter();
-  const [what, setWhat] = useState(KINDS[0]);
-  const [area, setArea] = useState(areas[0]?.name ?? "Osu");
+  const [what, setWhat] = useState(KINDS.find((k) => k === initial?.what) ?? KINDS[0]);
+  const [area, setArea] = useState(
+    areas.find((a) => a.name === initial?.area)?.name ?? areas[0]?.name ?? "Osu"
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Result[] | null>(null);
@@ -80,6 +89,19 @@ export function Discover({ areas }: { areas: Area[] }) {
       setBusy(false);
     }
   }
+
+  /*
+   * Arriving from "What to add next" with both named, the search is the
+   * whole reason for the visit, so it runs rather than waiting for a tap.
+   * Once: a ref, because development renders effects twice.
+   */
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || !initial?.area || !initial?.what) return;
+    started.current = true;
+    void search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function add() {
     const chosen = (results ?? []).filter((r) => picked.has(r.id));
