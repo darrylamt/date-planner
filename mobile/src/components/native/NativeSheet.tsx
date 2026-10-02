@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Modal, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppearance } from "../../lib/appearance";
@@ -63,6 +63,17 @@ export function NativeSheet({
     open.current = visible;
   }, [visible]);
 
+  /*
+   * Which height it is at, said outright. Given only the set, iOS opened
+   * these at full height, and "half, pulled up to full" was only ever full.
+   * Back to the first each time it opens, wherever it was left last time.
+   */
+  const first: SheetDetent = detents?.[0] ?? "large";
+  const [detent, setDetent] = useState<SheetDetent>(first);
+  useEffect(() => {
+    if (visible) setDetent(first);
+  }, [visible, first]);
+
   const ui = swiftUI;
   const m = swiftMods;
   const fit = !detents || detents.length === 0;
@@ -96,7 +107,14 @@ export function NativeSheet({
             ...(fit
               ? // Makes an iPad sheet the content's size too, instead of nearly full height.
                 [m.presentationSizing("fitted")]
-              : [m.presentationDetents(detents)]),
+              : [
+                  m.presentationDetents(detents, {
+                    selection: detent,
+                    onSelectionChange: (d) => {
+                      if (d === "medium" || d === "large") setDetent(d);
+                    },
+                  }),
+                ]),
             m.presentationDragIndicator("visible"),
             ...(preference === "system" ? [] : [m.presentationBackground(c.background)]),
           ]}
