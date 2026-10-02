@@ -296,10 +296,10 @@ export const GUTTER = Spacing.gutter;
 export const HAIRLINE = 0.5;
 
 /**
- * The floating nav sits over content rather than reserving space, so every
- * scroll view has to pad past it by `clearance`.
+ * The system tab bar floats over content rather than reserving space, so a
+ * tab's scroll view that manages its own insets pads past it by `clearance`.
  */
-export const TAB_BAR = { height: 66, clearance: 128 } as const;
+export const TAB_BAR = { clearance: 128 } as const;
 
 /**
  * Named spacing kept from the previous scale, remapped onto the new rhythm,

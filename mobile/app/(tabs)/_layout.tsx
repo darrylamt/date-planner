@@ -1,17 +1,32 @@
 import { useEffect, useState } from "react";
-import { Redirect, Tabs } from "expo-router";
-import { TabBar } from "../../src/components/TabBar";
+import { Platform } from "react-native";
+import { Redirect } from "expo-router";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { hasOnboarded } from "../../src/lib/onboarding";
+import { useTheme } from "../../src/lib/useTheme";
+
+/*
+ * iOS 26 puts a tab with the search role in its own circle of glass at the
+ * end of the bar, which is exactly where New plan belongs. Before 26 that
+ * role would label it "Search", so there it is an ordinary last tab.
+ */
+const OWN_CIRCLE = Platform.OS === "ios" && parseInt(String(Platform.Version), 10) >= 26;
 
 /**
- * Four destinations, plus the create action as a peer of the bar rather than
- * a tab, it starts a task, it does not switch destination.
+ * Four destinations in the system's own tab bar, which on iOS 26 is Apple's
+ * Liquid Glass with Apple's own motion, and on earlier versions the standard
+ * bar. Drawing a lookalike over a glass view never moved like the real one.
+ *
+ * New plan sits beside them as its own circle. It starts a task rather than
+ * switching destination, so it never becomes the selected tab: the native
+ * tap is refused and the press opens the planner instead.
  *
  * The planner flow itself stays outside this group: it is a focused linear
  * task, and a persistent nav mid-questionnaire invites abandonment.
  */
 export default function TabsLayout() {
+  const c = useTheme();
   // undefined while the flag is being read, rendering the tabs first and
   // redirecting after would flash the home screen behind the intro.
   const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
@@ -28,16 +43,36 @@ export default function TabsLayout() {
   if (!onboarded) return <Redirect href="/onboarding" />;
 
   return (
-    <Tabs
-      tabBar={(props) => <TabBar {...props} onCreate={() => void startNewPlan()} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
+    <NativeTabs tintColor={c.accent}>
+      {/* Home lets iOS inset its scroll view; the others pad for the status bar themselves. */}
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Icon sf={{ default: "house", selected: "house.fill" }} />
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       {/* Second, beside Home: finding a place is the thing people do between plans. */}
-      <Tabs.Screen name="venues" options={{ title: "Venues" }} />
-      <Tabs.Screen name="calendar" options={{ title: "Calendar" }} />
-      <Tabs.Screen name="saved" options={{ title: "Saved" }} />
+      <NativeTabs.Trigger name="venues" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "map", selected: "map.fill" }} />
+        <NativeTabs.Trigger.Label>Venues</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="calendar" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf="calendar" />
+        <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="saved" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
+        <NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       {/* Settings lives behind the avatar on Home, not in the bar. */}
-    </Tabs>
+      <NativeTabs.Trigger
+        name="create"
+        role={OWN_CIRCLE ? "search" : undefined}
+        disabled
+        accessibilityLabel="New plan"
+        listeners={{ tabPress: () => void startNewPlan() }}
+      >
+        <NativeTabs.Trigger.Icon sf="plus" />
+        <NativeTabs.Trigger.Label>New plan</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
