@@ -364,24 +364,8 @@ export default function VenuePage() {
           <ActivityIndicator color={c.accent} style={{ marginTop: space.xl }} />
         ) : !pro ? (
           <View style={{ paddingHorizontal: GUTTER, gap: space.md, marginTop: space.xl }}>
-            {/* The list of what is behind it, because "Unlock" alone asks somebody to pay for a surprise. */}
-            <View style={{ padding: space.lg, borderRadius: radius.card, backgroundColor: c.backgroundElement, gap: space.sm }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-                <Symbol name="lock.fill" size={15} color={c.accent} />
-                <Text variant="headline">The full page is part of Duro Pro</Text>
-              </View>
-              {[
-                "The whole menu, with prices and what is in each dish",
-                "Call, book or message them in a tap",
-                "Opening hours for the week",
-                "Who it suits, the dress code, group sizes",
-              ].map((line) => (
-                <Text key={line} variant="footnote" tone="secondary">
-                  • {line}
-                </Text>
-              ))}
-            </View>
-            <Paywall tier="free" reason="browse" onPurchased={() => void checkPro()} />
+            {/* The paywall lists what is behind it, because "Unlock" alone asks somebody to pay for a surprise. */}
+            <Paywall tier="free" reason="venue" onPurchased={() => void checkPro()} />
           </View>
         ) : (
           <>

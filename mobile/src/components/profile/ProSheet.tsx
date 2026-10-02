@@ -89,7 +89,8 @@ export function ProSheet({
             borderBottomColor: c.border,
           }}
         >
-          <Text variant="headline">Duro Pro</Text>
+          {/* Not subscribed, the paywall's own header says it, and two would be one too many. */}
+          <Text variant="headline">{tier === "pro" ? "Duro Pro" : ""}</Text>
           <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close">
             <Symbol name="xmark.circle.fill" size={28} color={c.textTertiary} />
           </Pressable>
