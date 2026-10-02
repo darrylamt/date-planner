@@ -12,6 +12,8 @@ interface Row {
   area: string;
   /** Switched off while it had no price; saving a price switches it back on. */
   inactive?: boolean;
+  /** Why it is here when that is not simply "no price": what to fix instead. */
+  note?: string;
 }
 
 /**
@@ -179,6 +181,11 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                       </div>
                       {row.inactive ? (
                         <span className="badge b-stale mt-1 normal-case">Switched off, saving turns it on</span>
+                      ) : null}
+                      {row.note ? (
+                        <a href={`/admin/venues/${row.id}`} className="mt-1 block text-[12px] font-semibold normal-case text-flame underline">
+                          {row.note}
+                        </a>
                       ) : null}
                     </td>
                     <td>{row.area}</td>

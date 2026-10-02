@@ -4,8 +4,12 @@ import { isPlaceholderAvg } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
 
-/** Venues the planner is currently withholding because they have no price. */
-export default async function AdminUnpricedPage() {
+/**
+ * Venues the planner is currently withholding because they have no price.
+ * `?area=Osu` narrows it to one area, for the demand page's "waiting for a
+ * price" links.
+ */
+export default async function AdminUnpricedPage({ searchParams }: { searchParams: { area?: string } }) {
   const supabase = await adminDataClient();
 
   const { data: venues } = await supabase
@@ -38,6 +42,11 @@ export default async function AdminUnpricedPage() {
        * different: no price brings back a place that has shut.
        */
       if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
+      /*
+       * Marked "unknown" is withheld by the planner whatever else the row
+       * holds, so it belongs here even with a figure or a menu on file.
+       */
+      if (v.price_source === "unknown") return true;
       const hasMenu = ownIds.has((v.menu_shared_from as string | null) || v.id);
       // The GHS 100 import default counts as no price: see PLACEHOLDER_AVG_GHS.
       if (isPlaceholderAvg(v, hasMenu)) return true;
@@ -50,11 +59,24 @@ export default async function AdminUnpricedPage() {
       type: v.type,
       area: v.areas?.name ?? "no area",
       inactive: !v.is_active,
-    }));
+      // A menu marked "unknown" needs its price source fixing, not a new price.
+      note:
+        v.price_source === "unknown" && ownIds.has((v.menu_shared_from as string | null) || v.id)
+          ? "Has a menu but its price is marked unknown: set How sure is the price to menu"
+          : undefined,
+    }))
+    .filter((r) => !searchParams.area || r.area === searchParams.area);
 
   return (
     <div>
-      <h1 className="font-display text-[24px] font-bold">Unpriced venues</h1>
+      <h1 className="font-display text-[24px] font-bold">
+        Unpriced venues{searchParams.area ? ` in ${searchParams.area}` : ""}
+      </h1>
+      {searchParams.area ? (
+        <a href="/admin/unpriced" className="text-[13px] font-semibold text-flame underline">
+          Show every area
+        </a>
+      ) : null}
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
         Bowling, padel, sip and paint, places with no menu to itemise. They are
         withheld from planning until they have a price, because a venue with no

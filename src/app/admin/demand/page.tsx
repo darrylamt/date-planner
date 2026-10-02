@@ -142,11 +142,19 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
       const borrowed = d?.reached ?? 0;
       // The kinds to look for: whatever it has none of, and food when there is barely any.
       const look = COVERAGE_KINDS.filter((k) => c.byKind[k.id] === 0 || (k.id === "eat" && c.byKind.eat < 2));
-      return { ...c, asked, short, borrowed, look, score: 3 * short + 2 * borrowed + asked + (c.thin ? 3 : 0) + look.length };
+      // An area that pricing alone would fix ranks up: nobody has to go and find anything.
+      const score = 3 * short + 2 * borrowed + asked + (c.thin ? 3 : 0) + (c.fixedByPricing ? 2 : 0) + look.length;
+      return { ...c, asked, short, borrowed, look, score };
     })
     .filter((c) => (c.held > 0 || c.asked > 0) && (c.thin || c.short > 0 || c.borrowed > 0))
     .sort((a, b) => b.score - a.score || a.plannable - b.plannable)
     .slice(0, 12);
+
+  const waitingByArea = coverage
+    .filter((c) => c.waiting > 0)
+    .sort((a, b) => (demandIn.get(b.id)?.asked ?? 0) - (demandIn.get(a.id)?.asked ?? 0) || b.waiting - a.waiting);
+  const waitingTotal = coverage.reduce((n, c) => n + c.waiting, 0);
+  const heldTotal = coverage.reduce((n, c) => n + c.held, 0);
 
   // While requests are few, each one is worth reading rather than counting.
   const shortfalls = rows
@@ -223,22 +231,40 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
                           : "no requests yet"}
                       </span>
                     </div>
-                    <div className="mt-1 text-[13px]">
-                      {c.plannable} plannable
-                      {c.waiting ? (
-                        <>
-                          {" "}
-                          ·{" "}
-                          <a href="/admin/unpriced" className="font-semibold text-flame underline">
-                            {c.waiting} waiting for a price
-                          </a>
-                        </>
-                      ) : null}
-                      <span className="text-mutedbrown">
-                        {" "}
-                        ·{" "}
-                        {COVERAGE_KINDS.map((k) => `${c.byKind[k.id]} ${k.label}`).join(", ")}
-                      </span>
+                    {/*
+                      Pricing first. About half the active catalogue is withheld
+                      for want of a price, and pricing a venue already on file
+                      is quicker than finding, adding and then pricing a new one.
+                    */}
+                    {c.waiting ? (
+                      <div className="mt-1.5 text-[13px]">
+                        <span className="font-semibold">Price these first:</span>{" "}
+                        {c.waitingVenues.slice(0, 4).map((w, i) => (
+                          <span key={w.id}>
+                            {i ? ", " : ""}
+                            <a href={`/admin/venues/${w.id}`} className="text-flame underline">
+                              {w.name}
+                            </a>
+                          </span>
+                        ))}
+                        {c.waiting > 4 ? (
+                          <>
+                            {" "}
+                            <a href={`/admin/unpriced?area=${encodeURIComponent(c.name)}`} className="font-semibold text-flame underline">
+                              and {c.waiting - 4} more
+                            </a>
+                          </>
+                        ) : null}
+                        {c.fixedByPricing ? (
+                          <span className="badge b-ok ml-2 normal-case">
+                            pricing these is enough to fill outings here
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 text-[13px] text-mutedbrown">
+                      {c.plannable} plannable here, {c.reach} within reach ·{" "}
+                      {COVERAGE_KINDS.map((k) => `${c.byKind[k.id]} ${k.label}`).join(", ")}
                     </div>
                     {c.look.length ? (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -260,6 +286,27 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
               <p className="mt-3 text-[13px] text-mutedbrown">Every area with venues can fill an outing, and nobody went unmet.</p>
             )}
           </div>
+
+          {waitingByArea.length ? (
+            <div className="card mt-5 p-4">
+              <h2 className="text-[16px] font-bold">Waiting for a price, by area</h2>
+              <p className="mt-0.5 text-[13px] text-mutedbrown">
+                {waitingTotal} of {heldTotal} active venues are left out of every plan until they have one. Busiest areas first.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {waitingByArea.map((c) => (
+                  <a
+                    key={c.id}
+                    href={`/admin/unpriced?area=${encodeURIComponent(c.name)}`}
+                    className="rounded-full bg-white px-3 py-1 text-[13px] ring-1 ring-black/10 hover:ring-flame"
+                  >
+                    <b>{c.name}</b> {c.waiting}
+                    {c.fixedByPricing ? <span className="badge b-ok ml-1.5 normal-case">fixes it</span> : null}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {shortfalls.length ? (
             <div className="card mt-5 p-4">

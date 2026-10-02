@@ -28,6 +28,8 @@ export interface AreaCoverage {
   plannable: number;
   /** Active but withheld from every plan until somebody gives them a price. */
   waiting: number;
+  /** Those venues, so the page can name them rather than only count them. */
+  waitingVenues: { id: string; name: string; type: string }[];
   byKind: Record<CoverageKind, number>;
   /** Kinds with nothing plannable here at all. */
   missing: CoverageKind[];
@@ -45,6 +47,11 @@ export interface AreaCoverage {
    * to after eating, fails an evening however many restaurants it has.
    */
   thin: boolean;
+  /**
+   * Thin now, and pricing what it already holds would be enough to fill an
+   * outing: the cheapest fix there is, since nobody has to find anything.
+   */
+  fixedByPricing: boolean;
 }
 
 /**
@@ -58,6 +65,7 @@ export interface AreaCoverage {
 export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCoverage[]> {
   type V = {
     id: string;
+    name: string;
     area_id: string | null;
     type: string;
     is_free: boolean | null;
@@ -72,7 +80,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
     fetchAllRows<V>((a, b) =>
       supabase
         .from("venues")
-        .select("id, area_id, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, lat, lng")
+        .select("id, name, area_id, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, lat, lng")
         .eq("is_active", true)
         .range(a, b)
     ),
@@ -101,11 +109,13 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
       held: 0,
       plannable: 0,
       waiting: 0,
+      waitingVenues: [],
       byKind: { eat: 0, drinks: 0, do: 0, sweet: 0 },
       missing: [],
       reach: 0,
       reachByKind: { eat: 0, drinks: 0, do: 0, sweet: 0 },
       thin: true,
+      fixedByPricing: false,
     });
   }
   for (const v of venues) {
@@ -114,6 +124,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
     c.held++;
     if (!plannable(v)) {
       c.waiting++;
+      c.waitingVenues.push({ id: v.id, name: v.name, type: v.type });
       continue;
     }
     c.plannable++;
@@ -135,25 +146,32 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
     const s = areaId ? sums.get(areaId) : undefined;
     return s ? { lat: s.lat / s.n, lng: s.lng / s.n } : null;
   };
-  const usable = venues
-    .filter(plannable)
-    .map((v) => ({
-      area: v.area_id,
-      kind: COVERAGE_KINDS.find((k) => (k.types as readonly string[]).includes(v.type))?.id ?? null,
-      at: v.lat != null && v.lng != null ? { lat: Number(v.lat), lng: Number(v.lng) } : middle(v.area_id),
-    }));
+  const placed = venues.map((v) => ({
+    area: v.area_id,
+    priced: plannable(v),
+    kind: COVERAGE_KINDS.find((k) => (k.types as readonly string[]).includes(v.type))?.id ?? null,
+    at: v.lat != null && v.lng != null ? { lat: Number(v.lat), lng: Number(v.lng) } : middle(v.area_id),
+  }));
+  const thinGiven = (n: number, k: Record<CoverageKind, number>) =>
+    n <= 5 || k.eat === 0 || k.drinks + k.do + k.sweet === 0;
 
   for (const c of out.values()) {
     c.missing = COVERAGE_KINDS.filter((k) => c.byKind[k.id] === 0).map((k) => k.id);
     const here = middle(c.id);
-    for (const u of usable) {
+    // What it could reach with everything it holds priced, beside what it reaches now.
+    let ifPriced = 0;
+    const ifPricedByKind: Record<CoverageKind, number> = { eat: 0, drinks: 0, do: 0, sweet: 0 };
+    for (const u of placed) {
       const inReach = u.area === c.id || (here != null && u.at != null && haversineKm(here, u.at) <= DEFAULT_RADIUS_KM);
       if (!inReach) continue;
+      ifPriced++;
+      if (u.kind) ifPricedByKind[u.kind]++;
+      if (!u.priced) continue;
       c.reach++;
       if (u.kind) c.reachByKind[u.kind]++;
     }
-    const after = c.reachByKind.drinks + c.reachByKind.do + c.reachByKind.sweet;
-    c.thin = c.reach <= 5 || c.reachByKind.eat === 0 || after === 0;
+    c.thin = thinGiven(c.reach, c.reachByKind);
+    c.fixedByPricing = c.thin && !thinGiven(ifPriced, ifPricedByKind);
   }
   return [...out.values()];
 }
