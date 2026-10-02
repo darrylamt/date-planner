@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Share, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Share, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { draftFromPlan } from "../../src/lib/repeatPlan";
+import { chooseAction } from "../../src/lib/actionSheet";
 import { Symbol } from "../../src/components/Symbol";
 import { Mascot, SpeechBubble } from "../../src/components/Mascot";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
@@ -50,21 +51,24 @@ export default function Plans() {
   );
 
   function confirmDelete(plan: SavedPlan) {
-    Alert.alert("Delete this plan?", "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setPlans((cur) => (cur ?? []).filter((p) => p.id !== plan.id));
-          try {
-            await deletePlan(plan.id);
-          } catch {
-            void load(); // put it back if the delete failed
-          }
+    chooseAction({
+      title: "Delete this plan?",
+      message: "This cannot be undone.",
+      actions: [
+        {
+          text: "Delete plan",
+          destructive: true,
+          onPress: async () => {
+            setPlans((cur) => (cur ?? []).filter((p) => p.id !== plan.id));
+            try {
+              await deletePlan(plan.id);
+            } catch {
+              void load(); // put it back if the delete failed
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   if (authLoading || plans === null) {

@@ -6,6 +6,7 @@ import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { GUTTER, radius, space } from "../../theme";
 import { useIsDark, useTheme } from "../../lib/useTheme";
+import { swiftMods, swiftUI } from "../../lib/swiftUI";
 
 const DAYS_AHEAD = 21;
 const ITEM_WIDTH = 52;
@@ -15,6 +16,12 @@ function toIso(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 /**
@@ -98,17 +105,40 @@ export function DayStrip({
             alignItems: "center",
           }}
         >
-          <DateTimePicker
-            value={new Date(`${value}T12:00:00`)}
-            mode="date"
-            display="inline"
-            minimumDate={new Date()}
-            accentColor={c.accent}
-            themeVariant={isDark ? "dark" : "light"}
-            onChange={(_e, picked) => {
-              if (picked) onChange(toIso(picked));
-            }}
-          />
+          {swiftUI && swiftMods ? (
+            /*
+              SwiftUI's calendar where the build has it, so this matches the
+              wheels and sheets around it. Days before today are greyed by
+              the range itself, from midnight, so today stays pickable late
+              in the evening.
+            */
+            <swiftUI.Host
+              matchContents={{ vertical: true }}
+              colorScheme={isDark ? "dark" : "light"}
+              seedColor={c.accent}
+              style={{ alignSelf: "stretch", marginHorizontal: space.sm }}
+            >
+              <swiftUI.DatePicker
+                selection={new Date(`${value}T12:00:00`)}
+                range={{ start: startOfToday() }}
+                displayedComponents={["date"]}
+                onDateChange={(picked) => onChange(toIso(picked))}
+                modifiers={[swiftMods.datePickerStyle("graphical"), swiftMods.labelsHidden()]}
+              />
+            </swiftUI.Host>
+          ) : (
+            <DateTimePicker
+              value={new Date(`${value}T12:00:00`)}
+              mode="date"
+              display="inline"
+              minimumDate={new Date()}
+              accentColor={c.accent}
+              themeVariant={isDark ? "dark" : "light"}
+              onChange={(_e, picked) => {
+                if (picked) onChange(toIso(picked));
+              }}
+            />
+          )}
         </View>
       ) : (
         <ScrollView

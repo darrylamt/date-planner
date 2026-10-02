@@ -7,7 +7,8 @@ import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
-import { WheelPicker } from "../WheelPicker";
+// The phone's own wheel where the build has SwiftUI, the drawn one where it does not.
+import { NativeWheel } from "../native/NativeWheel";
 import { DayStrip } from "./DayStrip";
 import type { WellnessFloors } from "../../lib/data";
 import { GUTTER, Spacing } from "../../theme";
@@ -406,14 +407,14 @@ export function PlanSteps({
         />
 
         <GroupLabel>Start time</GroupLabel>
-        <WheelPicker
+        <NativeWheel
           options={startTimeOptions().map((t) => ({ value: t, label: time12(t) }))}
           value={inputs.startTime}
           onChange={(startTime) => update({ startTime })}
         />
 
         <GroupLabel>How long are you out for?</GroupLabel>
-        <WheelPicker
+        <NativeWheel
           options={DURATIONS.map((d) => ({ value: d.hours, label: d.label }))}
           value={inputs.hours}
           onChange={(hours) => update({ hours })}
@@ -442,7 +443,7 @@ export function PlanSteps({
           title="How many places?"
           subtitle="Dinner and one more, or a proper crawl. We will fit them to the time you have."
         />
-        <WheelPicker
+        <NativeWheel
           options={STOP_OPTIONS.map((o) => ({ value: o.stops, label: o.label }))}
           value={inputs.stops ?? 0}
           onChange={(stops) => update({ stops: stops || undefined })}
@@ -759,7 +760,7 @@ export function PlanSteps({
             </Text>
           </View>
         ) : (
-          <WheelPicker
+          <NativeWheel
             options={partySizeOptions(inputs.occasion).map((n) => ({
               value: n,
               label: n === 1 ? "Just me" : String(n),

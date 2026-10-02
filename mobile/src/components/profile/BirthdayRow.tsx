@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Modal, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Text } from "../Text";
 import { Button } from "../Button";
-import { WheelPicker } from "../WheelPicker";
+import { NativeSheet } from "../native/NativeSheet";
+import { NativeWheel } from "../native/NativeWheel";
 import { GUTTER, radius, space } from "../../theme";
-import { useTheme } from "../../lib/useTheme";
 import { updateBirthday } from "../../lib/account";
 
 const MONTHS = [
@@ -37,7 +37,6 @@ export function BirthdayRow({
   month: number | null;
   onSaved: (day: number | null, month: number | null) => void;
 }) {
-  const c = useTheme();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [draftDay, setDraftDay] = useState(day ?? 1);
@@ -91,8 +90,12 @@ export function BirthdayRow({
         </Text>
       </Pressable>
 
-      <Modal visible={open} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: c.background, paddingTop: space.xxl }}>
+      {/*
+        Sized to what is in it: a title, two wheels and the buttons, where a
+        page sheet put them at the top of a screen of empty background.
+      */}
+      <NativeSheet visible={open} onClose={() => setOpen(false)}>
+        <View style={{ paddingTop: space.md }}>
           <Text variant="title2" style={{ paddingHorizontal: GUTTER }}>
             Your birthday
           </Text>
@@ -107,14 +110,14 @@ export function BirthdayRow({
 
           <View style={{ flexDirection: "row", gap: space.md, marginTop: space.xl }}>
             <View style={{ flex: 1 }}>
-              <WheelPicker
+              <NativeWheel
                 options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
                 value={draftMonth}
                 onChange={setDraftMonth}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <WheelPicker
+              <NativeWheel
                 options={Array.from({ length: daysInMonth }, (_, i) => ({
                   value: i + 1,
                   label: String(i + 1),
@@ -127,9 +130,9 @@ export function BirthdayRow({
 
           <View
             style={{
-              marginTop: "auto",
+              marginTop: space.xl,
               paddingHorizontal: GUTTER,
-              paddingBottom: space.xxl,
+              paddingBottom: space.md,
               gap: space.sm,
             }}
           >
@@ -151,7 +154,7 @@ export function BirthdayRow({
             <Button title="Cancel" kind="plain" onPress={() => setOpen(false)} disabled={busy} />
           </View>
         </View>
-      </Modal>
+      </NativeSheet>
     </>
   );
 }

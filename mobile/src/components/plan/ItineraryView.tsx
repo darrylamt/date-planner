@@ -41,6 +41,7 @@ import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
 import { nativeOptional } from "../../lib/nativeOptional";
+import { chooseAction } from "../../lib/actionSheet";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -246,14 +247,13 @@ export function ItineraryView({
       return;
     }
 
-    Alert.alert(
-      "Request a table?",
-      `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.`,
-      [
-        ...channels.map((ch) => ({ text: ch.text, onPress: () => void reserveVia(index, ch) })),
-        { text: "Not yet", style: "cancel" as const },
-      ]
-    );
+    // How to reach them is a choice of what to do next, so it is asked the way the phone asks those.
+    chooseAction({
+      title: "Request a table?",
+      message: `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.`,
+      actions: channels.map((ch) => ({ text: ch.text, onPress: () => void reserveVia(index, ch) })),
+      cancel: "Not yet",
+    });
   }
 
   /** Log the request (our system of record), then hand over to the channel they picked. */

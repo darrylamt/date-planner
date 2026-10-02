@@ -29,6 +29,7 @@ import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
 import { ProSheet } from "../src/components/profile/ProSheet";
 import { fetchAllowance } from "../src/lib/chat";
 import { clearDraft, loadDraft } from "../src/lib/draft";
+import { chooseAction } from "../src/lib/actionSheet";
 import { resetOnboarding } from "../src/lib/onboarding";
 import {
   countSavedPlans,
@@ -140,28 +141,37 @@ export default function Profile() {
    * inside the app, so it asks twice: once for intent, once for certainty.
    */
   function confirmDelete() {
-    Alert.alert(
-      "Delete account?",
+    chooseAction({
+      title: "Delete account?",
+      message:
       /*
        * Apple's account-deletion guidance, for apps that sell subscriptions:
        * say that billing continues through Apple until it is cancelled.
        * Deleting the row here stops nothing at Apple, and somebody who
        * assumed it did would be charged again next month.
        */
-      "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to Duro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
-      [
-        { text: "Cancel", style: "cancel" },
+        "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to Duro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
+      actions: [
         {
-          text: "Delete",
-          style: "destructive",
+          text: "Delete account",
+          destructive: true,
+          /*
+           * The second question stays an alert: certainty is a yes or no,
+           * and it should look different from the first. A beat first, so
+           * it is not presented while the sheet is still leaving.
+           */
           onPress: () =>
-            Alert.alert("Are you sure?", "There is no way back from this.", [
-              { text: "Keep my account", style: "cancel" },
-              { text: "Delete for good", style: "destructive", onPress: () => void runDelete() },
-            ]),
+            setTimeout(
+              () =>
+                Alert.alert("Are you sure?", "There is no way back from this.", [
+                  { text: "Keep my account", style: "cancel" },
+                  { text: "Delete for good", style: "destructive", onPress: () => void runDelete() },
+                ]),
+              350
+            ),
         },
-      ]
-    );
+      ],
+    });
   }
 
   async function runDelete() {
@@ -508,17 +518,20 @@ export default function Profile() {
           destructive
           disabled={!hasDraft}
           onPress={() =>
-            Alert.alert("Clear in-progress plan?", "Saved plans are not affected.", [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Clear",
-                style: "destructive",
-                onPress: async () => {
-                  await clearDraft();
-                  setHasDraft(false);
+            chooseAction({
+              title: "Clear in-progress plan?",
+              message: "Saved plans are not affected.",
+              actions: [
+                {
+                  text: "Clear plan",
+                  destructive: true,
+                  onPress: async () => {
+                    await clearDraft();
+                    setHasDraft(false);
+                  },
                 },
-              },
-            ])
+              ],
+            })
           }
         />
       </Group>
