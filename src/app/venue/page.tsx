@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { chosenVenue, requireVenueUser } from "@/lib/venueAuth";
@@ -21,6 +22,8 @@ export default async function VenueDashboard({
   searchParams: { venue?: string };
 }) {
   const session = await requireVenueUser();
+  // A planner has no bookings to show: what they open the portal for is What's on.
+  if (session.planner) redirect(searchParams.venue ? `/venue/whats-on?venue=${searchParams.venue}` : "/venue/whats-on");
   const venue = chosenVenue(session, searchParams.venue);
   const supabase = createClient();
 

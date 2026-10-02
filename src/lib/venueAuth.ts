@@ -41,7 +41,7 @@ export interface VenueSession {
    * arrive owning nothing. A restaurant with no venue is a bug; a planner
    * with no location is their first day.
    */
-  planner: { username: string; displayName: string } | null;
+  planner: { username: string; displayName: string; logoUrl: string | null } | null;
 }
 
 /**
@@ -69,17 +69,15 @@ export async function requireVenueUser(): Promise<VenueSession> {
      * planner's row says who they are, and venue_users says what they have
      * made so far. A planner on day one has the first and none of the second.
      */
-    supabase
-      .from("event_planners")
-      .select("username, display_name")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+    // Every column, so the logo (0071) arrives once it exists and nothing breaks before.
+    supabase.from("event_planners").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
   const planner = plannerRow
     ? {
         username: (plannerRow as { username: string }).username,
         displayName: (plannerRow as { display_name: string }).display_name,
+        logoUrl: (plannerRow as { logo_url?: string | null }).logo_url ?? null,
       }
     : null;
 
@@ -101,7 +99,8 @@ export async function requireVenueUser(): Promise<VenueSession> {
    * works with nothing on the account yet.
    */
   if (!venues.length) {
-    redirect(planner ? "/venue/locations?first=1" : "/venue/login?as=not-a-venue");
+    // What's on handles a planner with nothing yet: it is where they land anyway.
+    redirect(planner ? "/venue/whats-on" : "/venue/login?as=not-a-venue");
   }
 
   return { userId: user.id, venues, planner };
@@ -126,17 +125,15 @@ export async function requirePortalUser(): Promise<VenueSession> {
       .from("venue_users")
       .select("venue_id, venues(id, name, areas(name))")
       .eq("user_id", user.id),
-    supabase
-      .from("event_planners")
-      .select("username, display_name")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+    // Every column, so the logo (0071) arrives once it exists and nothing breaks before.
+    supabase.from("event_planners").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
   const planner = plannerRow
     ? {
         username: (plannerRow as { username: string }).username,
         displayName: (plannerRow as { display_name: string }).display_name,
+        logoUrl: (plannerRow as { logo_url?: string | null }).logo_url ?? null,
       }
     : null;
 

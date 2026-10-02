@@ -268,6 +268,12 @@ export interface EventRow {
    */
   contact_phone?: string | null;
   /**
+   * Who is running it and their logo, copied from the event planner (0071).
+   * Optional: absent before that migration, and on events nobody organises.
+   */
+  organiser_name?: string | null;
+  organiser_logo_url?: string | null;
+  /**
    * What this night is like, as distinct from what the venue usually is. A
    * warehouse is not "loud" on a Tuesday and is on the night of the rave.
    * Empty falls back to the venue's own tags rather than to nothing.
@@ -590,6 +596,9 @@ export interface ItineraryStop {
      * app says which is which rather than offering two identical buttons.
      */
     contact_phone?: string | null;
+    /** Who is running the night and their logo, for the card (0071). */
+    organiser_name?: string | null;
+    organiser_logo_url?: string | null;
     /** Where this night is booked, when it is booked somewhere of its own. */
     booking_url?: string | null;
     /** What the night is, a sentence or two. Absent on plans made before 0058. */

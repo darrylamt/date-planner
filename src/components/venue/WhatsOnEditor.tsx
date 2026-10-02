@@ -44,11 +44,14 @@ export function WhatsOnEditor({
   areaId,
   schedules: initialSchedules,
   events: initialEvents,
+  organiser = null,
 }: {
   venueId: string;
   areaId: string;
   schedules: VenueSchedule[];
   events: EventRow[];
+  /** A planner's name and logo, stamped on each event they add (0071). */
+  organiser?: { name: string; logoUrl: string | null } | null;
 }) {
   const supabase = createClient();
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -144,6 +147,12 @@ export function WhatsOnEditor({
          * with no way to reach anybody about it.
          */
         contact_phone: ePhone.trim() || null,
+        /*
+         * Who is running it, for the card in a plan. Only once they have a
+         * logo: that needs migration 0071, and naming its columns before it
+         * has run would fail the whole insert.
+         */
+        ...(organiser?.logoUrl ? { organiser_name: organiser.name, organiser_logo_url: organiser.logoUrl } : {}),
       })
       .select("*")
       .single();
@@ -278,7 +287,7 @@ export function WhatsOnEditor({
 
       {/* ── One-off ── */}
       <section className="card p-5">
-        <h2 className="font-display text-[18px] font-bold">On one date</h2>
+        <h2 id="add-event" className="scroll-mt-6 font-display text-[18px] font-bold">On one date</h2>
         <p className="mb-4 mt-1 text-[14px] text-mutedbrown">
           A single night: a block party, a guest DJ, a launch. If it happens every week, use the
           box above instead rather than entering it fifty-two times.

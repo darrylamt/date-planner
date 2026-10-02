@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Easing, Linking, Pressable, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { StopGallery } from "./StopGallery";
@@ -206,6 +207,27 @@ export function StopCard({
             <Text variant="footnote" tone="tint" weight="600">
               On this date only
               {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
+            </Text>
+          </View>
+        ) : null}
+
+        {/*
+          Who is running the night, with their logo when they have added one
+          (migration 0071). A planner's mark is half of why people go back to a
+          night they have been to before.
+        */}
+        {stop.event?.organiser_name ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            {stop.event.organiser_logo_url ? (
+              <Image
+                source={{ uri: stop.event.organiser_logo_url }}
+                style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: "#FFFFFF", borderWidth: HAIRLINE, borderColor: c.border }}
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
+              />
+            ) : null}
+            <Text variant="footnote" tone="secondary">
+              Hosted by <Text variant="footnote" weight="700">{stop.event.organiser_name}</Text>
             </Text>
           </View>
         ) : null}

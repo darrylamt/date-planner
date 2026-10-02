@@ -2070,6 +2070,8 @@ function planWith(
                 description: onTonight.description ?? null,
                 reservation_required: onTonight.reservation_required ?? false,
                 audience: onTonight.audience ?? "everyone",
+                organiser_name: onTonight.organiser_name ?? null,
+                organiser_logo_url: onTonight.organiser_logo_url ?? null,
               }
             : null,
           // Calling a restaurant "SOMETHING TO DO" because the activity slot
