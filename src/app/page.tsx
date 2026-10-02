@@ -157,9 +157,9 @@ export default async function LandingPage() {
           <nav className="flex items-center gap-1 sm:gap-3">
             <Link
               href="#venues"
-              className="hidden rounded-chip px-3 py-2 text-[14px] font-semibold text-cocoa hover:text-ink sm:block"
+              className="whitespace-nowrap rounded-chip px-2.5 py-2 text-[13px] font-semibold text-cocoa hover:text-ink sm:px-3 sm:text-[14px]"
             >
-              For venues
+              List your venue
             </Link>
             <StoreButton
               href={store}
