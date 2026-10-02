@@ -70,6 +70,12 @@ export default async function VenueWhatsOnPage({
     : null;
   const setUp = Boolean(planner?.logoUrl) && events.length > 0;
 
+  // The venue a planner uses most, over their latest nights; ties go to the most recent.
+  const recent = [...events].sort((x, y) => y.event_date.localeCompare(x.event_date)).slice(0, 12);
+  const uses = new Map<string, number>();
+  for (const e of recent) if (e.venue_id) uses.set(e.venue_id, (uses.get(e.venue_id) ?? 0) + 1);
+  const usualPlace = [...uses.entries()].sort((x, y) => y[1] - x[1])[0]?.[0] ?? null;
+
   return (
     <>
       <Suspense>
@@ -99,6 +105,7 @@ export default async function VenueWhatsOnPage({
           events={events}
           organiser={planner ? { name: planner.displayName, logoUrl: planner.logoUrl } : null}
           places={places}
+          usualPlace={planner ? usualPlace : null}
         />
       </main>
     </>

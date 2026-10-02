@@ -56,6 +56,7 @@ export function WhatsOnEditor({
   events: initialEvents,
   organiser = null,
   places = null,
+  usualPlace = null,
 }: {
   /** The venue whose weekly nights these are. Empty for a planner with no place of their own. */
   venueId: string;
@@ -69,6 +70,8 @@ export function WhatsOnEditor({
    * each event says where it is rather than all being at one location.
    */
   places?: EventPlace[] | null;
+  /** Where this planner usually holds their nights, to start the Where box on. */
+  usualPlace?: string | null;
 }) {
   const supabase = createClient();
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -99,8 +102,15 @@ export function WhatsOnEditor({
   const [eImage, setEImage] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eWho, setEWho] = useState<Audience>("everyone");
-  // Where a planner's night is: their current place by default, else nothing chosen yet.
-  const [eWhere, setEWhere] = useState(places ? (venueId || places.find((x) => x.mine)?.id || "") : venueId);
+  /*
+   * Where a planner's night is. Most hold theirs at one place most of the
+   * time, so it starts on the venue they use most, then their current place,
+   * then their own first one, and stays on whatever they pick while they add
+   * several nights in a row.
+   */
+  const [eWhere, setEWhere] = useState(
+    places ? (usualPlace && places.some((x) => x.id === usualPlace) ? usualPlace : venueId || places.find((x) => x.mine)?.id || "") : venueId
+  );
   const [whereSearch, setWhereSearch] = useState("");
 
   async function addWeekly() {
