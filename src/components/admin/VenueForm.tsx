@@ -347,17 +347,15 @@ export function VenueForm({
         minimum_spend_ghs:
           v.minimum_spend_ghs === "" ? null : Number(v.minimum_spend_ghs),
         /*
-         * Sent once migration 0068 is in (the venue row then carries the
-         * keys) or when somebody filled them; naming a column the database
-         * lacks fails the whole save. Blank is "not recorded", never zero.
+         * Always written, and always converted. These once went only when
+         * the venue already had them, to survive a database without 0068,
+         * but `...fields` above had already copied the raw boxes in, so a new
+         * venue with them blank sent "" to a numeric column and could not be
+         * saved at all. Blank is "not recorded", never zero.
          */
-        ...(venue && "service_charge_pct" in venue) || v.service_charge_pct !== "" || v.tax_added_pct !== "" || v.charges_note.trim()
-          ? {
-              service_charge_pct: v.service_charge_pct === "" ? null : Number(v.service_charge_pct),
-              tax_added_pct: v.tax_added_pct === "" ? null : Number(v.tax_added_pct),
-              charges_note: v.charges_note.trim() || null,
-            }
-          : {},
+        service_charge_pct: v.service_charge_pct === "" ? null : Number(v.service_charge_pct),
+        tax_added_pct: v.tax_added_pct === "" ? null : Number(v.tax_added_pct),
+        charges_note: v.charges_note.trim() || null,
         cuisine: v.cuisine === "" ? null : v.cuisine,
         opening_periods: hours.periods ?? null,
         opening_hours_text: hours.text ?? null,
