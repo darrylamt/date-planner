@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/adminAuth";
  * The only path by which a number becomes dialable. Everything else, CSV
  * import, the ingest tool, an admin edit, the verifier, can only ever write
  * `phone_pending`, because the reservation flow hands a user to this number
- * over WhatsApp with a message signed "sent via aduro". A hijacked listing
+ * over WhatsApp with a message signed "sent via Duro". A hijacked listing
  * that propagates automatically would be fraud committed under our name.
  */
 const bodySchema = z.object({

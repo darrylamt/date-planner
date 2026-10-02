@@ -67,7 +67,7 @@ export function ReservationsInbox({ rows }: { rows: ReservationRequest[] }) {
     return (
       <p className="rounded-bar border border-line bg-cream/60 p-5 text-[14px] text-mutedbrown">
         No bookings yet. They will appear here the moment somebody asks for a table at your place
-        through aduro.
+        through Duro.
       </p>
     );
   }

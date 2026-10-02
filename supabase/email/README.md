@@ -8,10 +8,10 @@ template below, paste the subject into *Subject* and the whole file into
 
 | Template in Supabase | Subject | File |
 | --- | --- | --- |
-| Confirm signup | Confirm your email for aduro | `confirm-signup.html` |
-| Reset password | Reset your aduro password | `reset-password.html` |
-| Magic link | Your aduro sign-in link | `magic-link.html` |
-| Change email address | Confirm your new email for aduro | `change-email.html` |
+| Confirm signup | Confirm your email for Duro | `confirm-signup.html` |
+| Reset password | Reset your Duro password | `reset-password.html` |
+| Magic link | Your Duro sign-in link | `magic-link.html` |
+| Change email address | Confirm your new email for Duro | `change-email.html` |
 
 The `{{ .ConfirmationURL }}`, `{{ .Email }}` and `{{ .NewEmail }}` tags are
 Supabase's own and are filled in when each email is sent.
@@ -19,6 +19,6 @@ Supabase's own and are filled in when each email is sent.
 ## Who it comes from
 
 Supabase's built-in sender sends as "Supabase Auth" from its own address, and
-only a few emails an hour for the whole project. To send as aduro, set up
+only a few emails an hour for the whole project. To send as Duro, set up
 custom SMTP under **Authentication > Emails > SMTP settings** (Resend has a free
-tier) with a sender like `aduro <hello@yourdomain>`.
+tier) with a sender like `Duro <hello@yourdomain>`.

@@ -1,4 +1,4 @@
-# aduro, a date planned with intention · Accra
+# Duro, a date planned with intention · Accra
 
 A date & activity planner for the Ghanaian market. Tell it your budget, the vibe, the date, and a little about the person you're planning for, it builds a back-to-back itinerary across Accra with real menus, real prices, and transport estimates, all kept inside your budget.
 

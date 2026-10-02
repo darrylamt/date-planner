@@ -25,7 +25,7 @@ export function buildIcs(inputs: PlanInputs, itinerary: Itinerary): string {
     `DTSTART;TZID=Africa/Accra:${dtStart}`,
     `DTEND;TZID=Africa/Accra:${dtEnd}`,
     `SUMMARY:${itinerary.title.replace(/,/g, "\\,")}`,
-    `DESCRIPTION:${agenda}\\n\\nPlanned with aduro · est. GHS ${itinerary.est_total_ghs}`,
+    `DESCRIPTION:${agenda}\\n\\nPlanned with Duro · est. GHS ${itinerary.est_total_ghs}`,
     `LOCATION:${itinerary.summary_route.replace(/,/g, "\\,")}`,
     "END:VEVENT",
     "END:VCALENDAR",

@@ -6,7 +6,7 @@ import { FlipText } from "./FlipText";
 import { APP_STORE_URL } from "@/lib/links";
 
 /*
- * What aduro plans, one turning into the next, each with the shape of the
+ * What Duro plans, one turning into the next, each with the shape of the
  * outing it would hand back. Illustrations: no venue is named.
  */
 const NEXT = [
@@ -20,7 +20,7 @@ const NEXT = [
 
 /**
  * The way to the app. The word after "Plan your next" turns over through
- * what aduro plans, and a small plan for each rises under it. Apple's badge
+ * what Duro plans, and a small plan for each rises under it. Apple's badge
  * is left exactly as Apple draws it; everything around it moves instead.
  *
  * Takes its colours from --c1 and --c2 on whatever it sits in; `ink` is the
@@ -29,7 +29,7 @@ const NEXT = [
 export function GetTheApp({
   reduced,
   ink,
-  eyebrow = "Still aduro, for now",
+  eyebrow = "Duro! for iPhone",
   className = "",
   prices = true,
 }: {
@@ -114,7 +114,7 @@ export function GetTheApp({
           <img src="/app-store-badge.svg" alt="Download on the App Store" width={150} height={50} className="block h-[50px] w-auto" />
         </a>
         <span className="text-[13px] text-white/55">
-          Free on iPhone. Listed as <b className="text-white/80">AduroGH</b>.
+          Free on iPhone. Search <b className="text-white/80">Duro!</b> on the App Store.
         </span>
       </div>
     </div>

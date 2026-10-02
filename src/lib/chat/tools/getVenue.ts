@@ -138,7 +138,7 @@ export const getVenue: ChatTool<GetVenueArgs> = {
             : `no, per ${venue.dietary_source ?? "a call to the venue"}`,
       menu: summarise(menu, args.category),
       /*
-       * What aduro users have recommended here, most first. Counts from real
+       * What Duro users have recommended here, most first. Counts from real
        * accounts, one per person per dish; empty is the common case and means
        * nobody has yet, not that nothing is good.
        */

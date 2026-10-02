@@ -9,7 +9,7 @@ import { emailForUsername, normaliseUsername } from "@/lib/venueUsername";
  * The venue version of this route hands a login to a place that already
  * exists. This one hands out the right to invent places, which is why there
  * is no self-service version of it anywhere and never should be: the only
- * verification aduro performs on a planner happens in a conversation before
+ * verification Duro performs on a planner happens in a conversation before
  * this endpoint is called. Nothing downstream reviews what they write.
  *
  * Same synthetic domain as a venue's, deliberately. The two share one

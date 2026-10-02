@@ -1144,7 +1144,7 @@ export function VenueForm({
             {/*
               No approval queue on this one, and the reason is worth knowing:
               the queue exists because `phone` is dialled under our name from
-              a reservation signed "sent via aduro". A WhatsApp number is the
+              a reservation signed "sent via Duro". A WhatsApp number is the
               same promise, so only put one here you would stand behind.
             */}
             Used live, with no approval step. A booking sent to an account

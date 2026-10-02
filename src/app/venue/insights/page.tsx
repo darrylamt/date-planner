@@ -37,7 +37,7 @@ interface Insights {
 const top = (o: Record<string, number>, n = 5) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
 
 /**
- * What aduro is doing for this venue, and what would make it do more.
+ * What Duro is doing for this venue, and what would make it do more.
  *
  * Three kinds of number, all counts, none about a person: how often plans
  * put the venue in front of somebody, how many of those people kept the plan
@@ -146,7 +146,7 @@ export default async function VenueInsightsPage({
           </div>
         </div>
         <p className="mb-6 mt-1 text-[14px] text-mutedbrown">
-          How aduro is putting you in front of people, and what would put you in front of more. All counts; nothing here
+          How Duro is putting you in front of people, and what would put you in front of more. All counts; nothing here
           identifies a guest.
         </p>
 
@@ -157,7 +157,7 @@ export default async function VenueInsightsPage({
         ) : (
           <>
             <div className="grid gap-3 md:grid-cols-4">
-              <Stat label="In plans" value={ins.in_plans} note={`times aduro put you in an outing, last ${days} days`} />
+              <Stat label="In plans" value={ins.in_plans} note={`times Duro put you in an outing, last ${days} days`} />
               <Stat label="Kept" value={ins.saved} note="plans with you in them that people saved" />
               <Stat label="Table requests" value={ins.table_requests} note="sent to you from a plan" />
               <Stat label={`Outings planned in ${areaName}`} value={ins.area_plans} note={`${ins.area_unmet} found nothing that fitted`} />

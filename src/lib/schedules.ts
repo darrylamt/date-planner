@@ -86,7 +86,7 @@ function clock(minute: number): string {
 /** "Karaoke, Thursdays 19:00 to 22:00", for a card or an admin table. */
 export function describeSchedule(s: VenueSchedule): string {
   const cover = s.cover_ghs ? `, GHS ${Math.round(Number(s.cover_ghs))} in` : "";
-  // Said in the line itself, so the card, the shared link and adurobot all carry it.
+  // Said in the line itself, so the card, the shared link and Durobot all carry it.
   const who = s.audience === "women" ? ", ladies only" : s.audience === "men" ? ", men only" : "";
   return `${s.title}, ${DAY_NAMES[s.weekday]}s ${clock(s.starts_minute)} to ${clock(s.ends_minute)}${cover}${who}`;
 }

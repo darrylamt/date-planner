@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { NamePoll } from "@/components/poll/NamePoll";
+import { pollClosed } from "@/lib/namePoll";
 
 export const metadata: Metadata = {
-  title: "Help rename aduro",
-  description: "Aduro is getting renamed. Try each name on and vote for your favourite.",
+  title: "Aduro is now Duro!",
+  description: "The vote is in. Same app, same plans, new name.",
   openGraph: {
-    title: "Help rename aduro",
-    description: "Try each name on and vote for your favourite.",
+    title: "Aduro is now Duro!",
+    description: "The vote is in. Same app, same plans, new name.",
   },
 };
 
 export default function NamePollPage() {
-  return <NamePoll />;
+  return <NamePoll initialClosed={pollClosed()} />;
 }

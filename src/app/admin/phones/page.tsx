@@ -45,7 +45,7 @@ export default async function AdminPhonesPage() {
       <h1 className="font-display text-[24px] font-bold">Phone review</h1>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
         A number here gets dialled by a real person over WhatsApp with a message
-        signed &ldquo;sent via aduro&rdquo;. Scammers create fake listings and edit
+        signed &ldquo;sent via Duro&rdquo;. Scammers create fake listings and edit
         real ones to swap their own number in, so nothing goes live automatically, an import, the menu reader and the verifier can only ever propose.
       </p>
       <PhoneReview

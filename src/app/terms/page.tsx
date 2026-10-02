@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 
 export const metadata = {
-  title: "Terms, aduro",
-  description: "The short version of what aduro promises and what it does not.",
+  title: "Terms, Duro",
+  description: "The short version of what Duro promises and what it does not.",
 };
 
 const UPDATED = "21 September 2026";
@@ -18,7 +18,7 @@ export default function TermsPage() {
       <h1 className="mt-8 font-display text-[30px] font-bold">Terms of use</h1>
       <p className="mt-1 text-[14px] text-mutedbrown">Last updated {UPDATED}</p>
 
-      <Section title="What aduro does">
+      <Section title="What Duro does">
         <p>
           It plans an evening out in Accra from venues in our catalogue, and
           tells you what it should cost. It is a suggestion, not a booking.
@@ -71,14 +71,14 @@ export default function TermsPage() {
         mentions the subscription is a fair question for a reviewer, and it was
         the reason this page was rejected before a human ever opened the app.
       */}
-      <Section title="aduro Pro">
+      <Section title="Duro Pro">
         <p>
           Planning is free and stays free. The questionnaire, the plans it
           builds, saving and sharing them cost nothing and are not part of any
           subscription.
         </p>
         <p>
-          <strong>aduro Pro</strong> is an auto-renewable subscription that adds
+          <strong>Duro Pro</strong> is an auto-renewable subscription that adds
           the assistant: the chat that plans with you and answers questions
           about the catalogue. It runs for <strong>one month</strong> and renews
           monthly.
@@ -116,7 +116,7 @@ export default function TermsPage() {
         <p>
           You can manage the subscription or turn off auto-renew in your Apple
           ID settings, under <strong>Settings, your name, Subscriptions</strong>
-          . There is a link straight to it from <strong>aduro Pro</strong> in
+          . There is a link straight to it from <strong>Duro Pro</strong> in
           the app.
         </p>
         <p>
@@ -130,7 +130,7 @@ export default function TermsPage() {
             does will be charged again next month and be right to be annoyed.
           */}
           Refunds are handled by Apple rather than by us, through
-          reportaproblem.apple.com. Deleting your aduro account does not cancel
+          reportaproblem.apple.com. Deleting your Duro account does not cancel
           the subscription, because the subscription is held by Apple and not by
           us. Cancel it first, then delete the account.
         </p>
@@ -145,7 +145,7 @@ export default function TermsPage() {
 
       <Section title="Liability">
         <p>
-          aduro is provided as is. We are not responsible for your experience at
+          Duro is provided as is. We are not responsible for your experience at
           a venue, for money you spend there, or for getting between places
           safely.
         </p>

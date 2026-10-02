@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // A test page, not a public one yet: kept out of search until it has earned it.
 export const metadata: Metadata = {
-  title: "Getting there, aduro",
+  title: "Getting there, Duro",
   robots: { index: false, follow: false },
 };
 

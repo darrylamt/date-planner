@@ -183,7 +183,7 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
                 // The origin this page is served from, never a domain written
                 // down here: a hardcoded one is correct until the day it is
                 // not, and then it sends people to a site that does not exist.
-                `Your aduro planner login\n\nGo to ${window.location.origin}/venue\nUsername: ${issued.username}\nPassword: ${issued.password}\n\nAdd your location first, then put your event at it.`
+                `Your Duro planner login\n\nGo to ${window.location.origin}/venue\nUsername: ${issued.username}\nPassword: ${issued.password}\n\nAdd your location first, then put your event at it.`
               )
             }
           >

@@ -3,12 +3,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Report that aduro itself is broken.
+ * Report that Duro itself is broken.
  *
  * Its sibling at /api/reports takes reports about a venue: the price moved,
  * the door was locked. This takes reports about the app, which until now had
  * nowhere to go. Chat spent an unknown stretch telling paying subscribers they
- * were out of messages, and it was found because the person who runs aduro hit
+ * were out of messages, and it was found because the person who runs Duro hit
  * it himself.
  *
  * Public for the same reason that one is: a broken sign-in or a failed

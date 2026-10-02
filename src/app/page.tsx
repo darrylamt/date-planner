@@ -98,7 +98,7 @@ export default function LandingPage() {
               Plan a date
             </Link>
             <p className="text-center text-caption text-mutedbrown">
-              aduro is an iPhone app, free on the App Store
+              Duro is an iPhone app, free on the App Store
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function LandingPage() {
       <div className="mt-7 grid gap-3 px-6 md:grid-cols-2">
         <figure className="rounded-btn bg-sand p-5">
           <div className="text-caption font-bold uppercase tracking-[0.08em] text-mutedbrown">
-            Planned with aduro
+            Planned with Duro
           </div>
           <blockquote className="mt-1.5 text-[16px] italic leading-relaxed">
             &ldquo;She still talks about that rooftop. I just answered six questions.&rdquo;
@@ -148,7 +148,7 @@ export default function LandingPage() {
         </figure>
         <figure className="rounded-btn bg-sand p-5">
           <div className="text-caption font-bold uppercase tracking-[0.08em] text-mutedbrown">
-            Planned with aduro
+            Planned with Duro
           </div>
           <blockquote className="mt-1.5 text-[16px] italic leading-relaxed">
             &ldquo;He thought I&apos;d hired a planner. It was one lunch break and my phone.&rdquo;
@@ -161,7 +161,7 @@ export default function LandingPage() {
       <div className="mt-auto px-6 pb-7 pt-8">
         <div className="kente" />
         <div className="mt-1.5 flex justify-between text-caption text-mutedbrown">
-          <span>aduro · Accra first</span>
+          <span>Duro · Accra first</span>
           <span className="flex gap-3">
             <Link href="/privacy" className="hover:text-flame">
               Privacy

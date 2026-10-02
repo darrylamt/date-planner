@@ -213,11 +213,11 @@ export function SharedPlan(p: SharedPlanProps) {
       <div className={s.content}>
         <header className={s.nav}>
           <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-5">
-            <Link href="/" className="flex h-full min-w-0 items-center gap-3 overflow-hidden pr-3" aria-label="aduro">
+            <Link href="/" className="flex h-full min-w-0 items-center gap-3 overflow-hidden pr-3" aria-label="Duro!">
               <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                A
+                D
               </span>
-              <FlipText name="aduro" />
+              <FlipText name="Duro!" />
             </Link>
             <Link href="/get" className={`${s.pill} shrink-0 rounded-full px-4 py-2 text-[13px] font-extrabold`} style={{ color: ink }}>
               Plan your own
@@ -347,10 +347,10 @@ export function SharedPlan(p: SharedPlanProps) {
               <p className="mt-4 text-[15px] italic text-white/55">planned with care on</p>
               <div className="mt-2 flex items-center justify-center gap-2.5">
                 <span className={s.tile} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, color: ink }}>
-                  A
+                  D
                 </span>
                 <span className="text-[24px] font-extrabold tracking-[-0.02em]">
-                  adu<span style={{ color: c2 }}>ro</span>
+                  Du<span style={{ color: c2 }}>ro!</span>
                 </span>
               </div>
             </div>

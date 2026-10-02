@@ -51,7 +51,7 @@ export async function GET() {
       {
         licence: "Open Database License (ODbL) 1.0, https://opendatacommons.org/licenses/odbl/1-0/",
         attribution:
-          "© OpenStreetMap contributors. Based on the 2019 Accra route map by OpenStreetMap Ghana and Digital Transport for Africa, with corrections by aduro.",
+          "© OpenStreetMap contributors. Based on the 2019 Accra route map by OpenStreetMap Ghana and Digital Transport for Africa, with corrections by Duro.",
         notes:
           "Lines with status 'unchecked' are as the 2019 map had them. 'confirmed' lines were checked on the date given. Minutes are estimates.",
         generated_at: new Date().toISOString(),

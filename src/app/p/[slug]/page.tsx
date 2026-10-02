@@ -35,7 +35,7 @@ export async function generateMetadata({
     .maybeSingle();
 
   const plan = data as Pick<SavedPlan, "inputs" | "itinerary"> | null;
-  if (!plan) return { title: "aduro", robots: { index: false, follow: false } };
+  if (!plan) return { title: "Duro!", robots: { index: false, follow: false } };
 
   const card = occasionCard(plan.inputs);
   const stops = plan.itinerary.stops?.length ?? 0;
@@ -52,7 +52,7 @@ export async function generateMetadata({
       title,
       description,
       type: "website",
-      siteName: "aduro",
+      siteName: "Duro!",
     },
     twitter: { card: "summary_large_image", title, description },
   };

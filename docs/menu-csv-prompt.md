@@ -5,9 +5,9 @@ the menu photos or PDF. Upload the CSV it returns at Admin > Import > Menu items
 
 ---
 
-You are turning a venue's menu into a CSV that will be imported into aduro, an app that plans outings in Accra from real menus and real prices. The planner builds orders straight from these rows, so a wrong category or a guessed price ends up in somebody's plan. Accuracy matters more than completeness.
+You are turning a venue's menu into a CSV that will be imported into Duro, an app that plans outings in Accra from real menus and real prices. The planner builds orders straight from these rows, so a wrong category or a guessed price ends up in somebody's plan. Accuracy matters more than completeness.
 
-VENUE NAME: [paste the venue's name exactly as it appears in aduro admin]
+VENUE NAME: [paste the venue's name exactly as it appears in Duro admin]
 
 I have attached the menu as photos or a PDF. Read every page.
 

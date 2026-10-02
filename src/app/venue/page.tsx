@@ -121,7 +121,7 @@ export default async function VenueDashboard({
 
         <h2 className="mt-8 font-display text-[19px] font-bold">Bookings</h2>
         <p className="mt-1 text-[14px] text-mutedbrown">
-          People who asked for a table at your place through aduro. Marking one confirmed is only
+          People who asked for a table at your place through Duro. Marking one confirmed is only
           for your own record, it does not message them.
         </p>
 

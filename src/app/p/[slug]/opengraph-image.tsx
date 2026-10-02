@@ -5,7 +5,7 @@ import { OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors } from "@/lib/occasionCard";
 import type { Occasion, SavedPlan } from "@/lib/types";
 
-export const alt = "A plan made with aduro";
+export const alt = "A plan made with Duro!";
 
 /*
  * The card's ornaments are typographic (✦, ❦, ◈), which the page draws from
@@ -89,7 +89,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             fontFamily: family,
           }}
         >
-          aduro
+          Duro!
         </div>
       ),
       { ...size, fonts }
@@ -184,10 +184,10 @@ export default async function Image({ params }: { params: { slug: string } }) {
                 color: "#1A0D14",
               }}
             >
-              A
+              D
             </div>
             <div style={{ display: "flex", fontSize: 34, fontWeight: 800, marginLeft: 14, letterSpacing: -1 }}>
-              adu<span style={{ color: c2 }}>ro</span>
+              Du<span style={{ color: c2 }}>ro!</span>
             </div>
             {/*
               The total used to sit here, and a preview is the worst place for

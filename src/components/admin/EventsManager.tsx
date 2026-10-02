@@ -118,7 +118,7 @@ export function EventsManager({
        * venues.phone earns its queue: migrations 0013, 0014 and 0028 exist
        * because those numbers were read off Instagram and Google Maps, and a
        * wrong one sends somebody to a stranger with a message signed "sent
-       * via aduro". A number attached to a single event is given by whoever
+       * via Duro". A number attached to a single event is given by whoever
        * is running it, and expires with the event, so there is no queue for
        * it to sit in and no listing for it to leak onto.
        */
