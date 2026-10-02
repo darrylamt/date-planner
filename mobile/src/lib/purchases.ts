@@ -33,6 +33,8 @@ const Purchases = nativeOptional<typeof import("react-native-purchases")>(() =>
  * paywall again to somebody who has just paid.
  */
 const ENTITLEMENT = "aduro_pro";
+/** INTRO_ELIGIBILITY_STATUS_ELIGIBLE, written out because the module is loaded optionally. */
+const ELIGIBLE = 2;
 
 /**
  * Public, and safe to ship in the bundle.
@@ -128,6 +130,12 @@ export interface Offer {
   period: string;
   /** Days of free trial, 0 when there is none. Shown before the price. */
   trialDays: number;
+  /**
+   * A cheaper start that is not free: "$3.99 for the first month". Null when
+   * there is none, or when this Apple ID has already used it, which is when
+   * Apple's sheet shows the full price instead.
+   */
+  intro: { priceString: string; span: string } | null;
   /** Handed straight back to purchase(); never reconstructed. */
   raw: unknown;
 }
@@ -148,24 +156,50 @@ export async function fetchOffer(): Promise<Offer | null> {
     if (!pkg) return null;
 
     const product = pkg.product as {
+      identifier: string;
       priceString: string;
       subscriptionPeriod?: string | null;
-      introPrice?: { periodNumberOfUnits?: number; periodUnit?: string; price?: number } | null;
+      introPrice?: {
+        periodNumberOfUnits?: number;
+        periodUnit?: string;
+        price?: number;
+        priceString?: string;
+        cycles?: number;
+      } | null;
     };
 
-    const intro = product.introPrice;
     /*
-     * Only a genuinely free introductory period counts as a trial. A
-     * discounted first month is an offer, not a trial, and calling it one on
-     * the paywall is the sort of thing App Review reads as misleading.
+     * Whatever the paywall says must be what Apple's sheet then says. With an
+     * introductory offer on the product, the sheet showed "$3.99 for the
+     * first month" under a paywall promising $4.99, because a paid offer was
+     * left out here. And an offer is only Apple's to give once: somebody who
+     * has used it is charged the full price, so it is shown only to an Apple
+     * ID that is still eligible. Unknown counts as not, so a doubt shows the
+     * regular price, never a cheaper one that would not be charged.
      */
-    const trialDays =
-      intro && Number(intro.price ?? -1) === 0 ? daysIn(intro.periodUnit, intro.periodNumberOfUnits) : 0;
+    let intro = product.introPrice ?? null;
+    if (intro) {
+      try {
+        const eligibility = await Purchases.default.checkTrialOrIntroductoryPriceEligibility([product.identifier]);
+        if (eligibility[product.identifier]?.status !== ELIGIBLE) intro = null;
+      } catch {
+        intro = null;
+      }
+    }
+
+    // A free start is a trial; a cheaper one is an offer, said as one.
+    const free = intro != null && Number(intro.price ?? -1) === 0;
+    const trialDays = free ? daysIn(intro!.periodUnit, intro!.periodNumberOfUnits) : 0;
+    const paid =
+      intro && !free && intro.priceString
+        ? { priceString: intro.priceString, span: introSpan(intro.periodUnit, (intro.periodNumberOfUnits ?? 1) * (intro.cycles ?? 1)) }
+        : null;
 
     return {
       priceString: product.priceString,
       period: describePeriod(product.subscriptionPeriod),
       trialDays,
+      intro: paid,
       raw: pkg,
     };
   } catch {
@@ -219,6 +253,12 @@ function daysIn(unit: string | undefined, count: number | undefined): number {
     default:
       return 0;
   }
+}
+
+/** How long a cheaper start lasts, for "for the first month" or "for the first 3 months". */
+function introSpan(unit: string | undefined, count: number): string {
+  const word = { DAY: "day", WEEK: "week", MONTH: "month", YEAR: "year" }[unit ?? "MONTH"] ?? "month";
+  return count === 1 ? word : `${count} ${word}s`;
 }
 
 /** "P1M" → "month", for a sentence rather than a label. */

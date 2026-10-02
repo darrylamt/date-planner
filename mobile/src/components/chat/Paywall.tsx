@@ -215,7 +215,9 @@ export function Paywall({
                 ? "One moment…"
                 : offer.trialDays > 0
                   ? `Try ${offer.trialDays} day${offer.trialDays === 1 ? "" : "s"} free`
-                  : `Subscribe, ${offer.priceString}`}
+                  : offer.intro
+                    ? `Subscribe, ${offer.intro.priceString} for the first ${offer.intro.span}`
+                    : `Subscribe, ${offer.priceString}`}
             </Text>
           </Pressable>
 
@@ -227,7 +229,9 @@ export function Paywall({
           <Text variant="caption1" tone="tertiary" center style={{ marginTop: space.sm }}>
             {offer.trialDays > 0
               ? `${offer.trialDays} day${offer.trialDays === 1 ? "" : "s"} free, then ${offer.priceString} per ${offer.period}. `
-              : `${offer.priceString} per ${offer.period}. `}
+              : offer.intro
+                ? `${offer.intro.priceString} for the first ${offer.intro.span}, then ${offer.priceString} per ${offer.period}. `
+                : `${offer.priceString} per ${offer.period}. `}
             Renews automatically until cancelled. Cancel any time in your Apple ID settings.
           </Text>
         </>
