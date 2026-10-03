@@ -7,7 +7,6 @@ import { useBurst } from "../Burst";
 import { appIconsAvailable, setHalloweenIcon } from "../AppIconPicker";
 import { useReducedMotion } from "../motion";
 import { radius, space } from "../../theme";
-import { MeshBackground } from "../native/MeshBackground";
 
 const NIGHT = "#0D0015";
 const LOGO = require("../../../assets/halloween/logo.png");
@@ -43,10 +42,6 @@ export function HalloweenBanner({ onPlan }: { onPlan: () => void }) {
 
   return (
     <View style={{ marginTop: space.lg, borderRadius: radius.card, backgroundColor: NIGHT, overflow: "hidden" }}>
-      <MeshBackground
-        period={6000}
-        colors={[NIGHT, "#2A0B45", NIGHT, "#D9480F40", NIGHT, "#4A1475", NIGHT, "#FF922B30", NIGHT]}
-      />
       <Pressable
         onPress={(e) => poke(e.nativeEvent.pageX, e.nativeEvent.pageY)}
         accessibilityLabel="Duro! Halloween logo"
