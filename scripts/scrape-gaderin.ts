@@ -216,8 +216,14 @@ function venueFor(rec: GaderinRecord, venues: Venue[]): Venue | null {
   const host = norm(rec.host?.name);
   const where = norm(rec.location);
   const title = ` ${norm(rec.title)} `;
+  /*
+   * The host places it only when the activity does not name somewhere else:
+   * Accra Art District hosts a painting session at Lake Club Resort, and
+   * putting that at the Art District sends people to the wrong door.
+   */
+  const hostCounts = !where || /(various|multiple|tbd|tba|to be announced)/.test(where) || where.includes(host);
   return (
-    venues.find((v) => norm(v.name) === host || norm(v.name) === where) ??
+    venues.find((v) => norm(v.name) === where || (hostCounts && host && norm(v.name) === host)) ??
     venues.find((v) => norm(v.name).length >= 6 && (title.includes(` ${norm(v.name)} `) || ` ${where} `.includes(` ${norm(v.name)} `))) ??
     null
   );
