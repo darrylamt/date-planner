@@ -9,6 +9,7 @@ import { Chip } from "../src/components/Chip";
 import { ChipRow, Segmented } from "../src/components/Segmented";
 import { NextSpotSheet } from "../src/components/plan/NextSpotSheet";
 import { useReducedMotion } from "../src/components/motion";
+import { MeshBackground } from "../src/components/native/MeshBackground";
 import { GUTTER, radius, space, Spacing } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { chooseAction } from "../src/lib/actionSheet";
@@ -244,9 +245,14 @@ export default function WhereNext() {
             backgroundColor: c.accentSoft,
             alignItems: "center",
             gap: space.md,
+            overflow: "hidden",
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
+          <MeshBackground
+            period={5000}
+            colors={[c.accentSoft, c.background, c.accentSoft, c.background, `${c.accent}33`, c.accentSoft, c.accentSoft, c.background, `${c.accent}22`]}
+          />
           <Animated.View
             style={{ transform: [{ rotate: rock.interpolate({ inputRange: [-1, 1], outputRange: ["-14deg", "14deg"] }) }] }}
           >

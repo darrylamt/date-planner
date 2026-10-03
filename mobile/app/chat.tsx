@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
@@ -20,6 +21,7 @@ import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useSeason } from "../src/lib/season";
 import { SWEETS, useBurst } from "../src/components/Burst";
+import { startListening, voiceAvailable } from "../src/lib/voice";
 import { ensureSession, useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
@@ -498,6 +500,7 @@ export default function ChatScreen() {
         busy={busy}
         disabled={paywalled}
         remaining={allowance?.tier === "free" ? allowance.remaining : null}
+        onVoiceError={setToast}
       />
 
       <IssueSheet
@@ -677,6 +680,7 @@ function Composer({
   disabled,
   remaining,
   inputRef,
+  onVoiceError,
 }: {
   inputRef?: React.RefObject<TextInput | null>;
   value: string;
@@ -685,10 +689,68 @@ function Composer({
   busy: boolean;
   disabled: boolean;
   remaining: number | null;
+  onVoiceError: (message: string) => void;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const ready = value.trim().length > 0 && !busy && !disabled;
+
+  /*
+   * Hold to talk, where the send arrow is while the box is empty, as
+   * Messages does it. The words land in the box as they are said and stay
+   * there when the mic is let go, to be read and sent, or corrected first:
+   * a message is a Durobot message spent, and a mishearing should not cost
+   * one. Anything already typed stays, with the speech after it.
+   */
+  const [listening, setListening] = useState(false);
+  const stopRef = useRef<(() => void) | null>(null);
+  const heldRef = useRef(false);
+  const pulse = useRef(new Animated.Value(1)).current;
+  const showMic = voiceAvailable() && !disabled && !busy && (listening || value.trim().length === 0);
+
+  useEffect(() => {
+    if (!listening) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.15, duration: 420, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 420, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [listening, pulse]);
+
+  async function holdToTalk() {
+    heldRef.current = true;
+    const before = value.trim();
+    const stop = await startListening({
+      onText: (said) => onChange(before ? `${before} ${said}` : said),
+      onEnd: () => setListening(false),
+      onError: (m) => {
+        setListening(false);
+        onVoiceError(m);
+      },
+    });
+    if (!stop) return;
+    // Let go while permission was still being asked: stop at once.
+    if (!heldRef.current) {
+      stop();
+      return;
+    }
+    stopRef.current = stop;
+    setListening(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }
+
+  function letGo() {
+    heldRef.current = false;
+    stopRef.current?.();
+    stopRef.current = null;
+    setListening(false);
+  }
 
   return (
     <View
@@ -707,7 +769,7 @@ function Composer({
           value={value}
           onChangeText={onChange}
           editable={!disabled}
-          placeholder={disabled ? "You have used your free messages" : "Ask about a place, a dish, a plan…"}
+          placeholder={disabled ? "You have used your free messages" : listening ? "Listening…" : "Ask about a place, a dish, a plan…"}
           placeholderTextColor={c.textSecondary}
           multiline
           style={{
@@ -723,6 +785,29 @@ function Composer({
             fontSize: 17,
           }}
         />
+        {showMic ? (
+          <Pressable
+            onPressIn={() => void holdToTalk()}
+            onPressOut={letGo}
+            accessibilityLabel="Hold to talk to Durobot"
+            accessibilityHint="Keep holding while you speak, then let go"
+            hitSlop={6}
+          >
+            <Animated.View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: listening ? c.danger : c.backgroundSunken,
+                transform: [{ scale: pulse }],
+              }}
+            >
+              <Symbol name={listening ? "waveform" : "mic.fill"} size={19} color={listening ? "#FFFFFF" : c.textSecondary} />
+            </Animated.View>
+          </Pressable>
+        ) : (
         <Pressable
           onPress={onSend}
           disabled={!ready}
@@ -742,6 +827,7 @@ function Composer({
             <Symbol name="arrow.up" size={20} color={ready ? c.textOnBrand : c.textSecondary} />
           )}
         </Pressable>
+        )}
       </View>
 
       {remaining !== null && (

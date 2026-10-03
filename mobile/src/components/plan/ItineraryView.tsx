@@ -47,6 +47,7 @@ import { whenWord, whereTheNightIs } from "../../lib/nightClock";
 import { shakeAvailable, useShake } from "../../lib/shake";
 import { fetchNextSpots, type NextSpot } from "../../lib/api";
 import { NextSpotSheet } from "./NextSpotSheet";
+import { afterSharing } from "../../lib/review";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -511,9 +512,11 @@ export function ItineraryView({
        * ignores `url` entirely, so leaving it out there would send a sentence
        * with nothing to tap.
        */
-      await Share.share(
+      const result = await Share.share(
         Platform.OS === "ios" ? { message: said, url } : { message: `${said}, ${url}` }
       );
+      // Sent, not just opened: the moment to perhaps ask for a rating (see review.ts).
+      if (result.action === Share.sharedAction) void afterSharing();
     } catch {
       setToast("Could not open the share sheet.");
     }

@@ -25,6 +25,7 @@ import { PressScale, Rise, useReducedMotion } from "../src/components/motion";
 import { GUTTER, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { useSeason } from "../src/lib/season";
+import { MeshBackground, meshAvailable } from "../src/components/native/MeshBackground";
 import { adoptPurchases } from "../src/lib/purchases";
 import {
   MIN_PASSWORD,
@@ -395,6 +396,23 @@ function Mesh({ reduced, dark }: { reduced: boolean; dark: boolean }) {
     loop.start();
     return () => loop.stop();
   }, [reduced, t]);
+
+  /*
+   * SwiftUI's mesh, on build 24 and iOS 18: the same accent, coral and gold,
+   * blended as one surface instead of four blurred circles drifting under a
+   * frosted pane. Everywhere else, the circles.
+   */
+  if (meshAvailable()) {
+    const base = dark ? "#0A1715" : "#FFF6EC";
+    const a = (hex: string, alpha: string) => (dark ? `${hex}${alpha}` : hex);
+    return (
+      <View style={{ flex: 1, backgroundColor: base }}>
+        <MeshBackground
+          colors={[a(c.accent, "B3"), base, a(CORAL, "99"), base, a(GOLD, "80"), base, a(GOLD, "99"), a(c.accent, "99"), base]}
+        />
+      </View>
+    );
+  }
 
   const blob = (color: string, size: number, x: number, y: number, dx: number, dy: number) => (
     <Animated.View

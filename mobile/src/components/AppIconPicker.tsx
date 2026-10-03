@@ -39,9 +39,32 @@ export const APP_ICONS: { name: string; label: string; source: number }[] = [
   { name: "Halloween", label: "Halloween", source: require("../../assets/app-icons/halloween.png") },
 ];
 
-/** What to say when an icon will not set: Halloween's is only in builds from 24 on. */
-const failure = (name: string) =>
-  name === "Halloween" ? "The Halloween icon comes with the next update of the app." : "That icon could not be set.";
+/**
+ * What to say when an icon will not set, with iOS's own reason on the end:
+ * "could not be set" alone left nothing to go on, twice.
+ */
+const failure = (e: unknown) => {
+  const why = (e as { message?: string } | null)?.message?.replace(/\.$/, "");
+  return why ? `That icon could not be set (${why}).` : "That icon could not be set.";
+};
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Set the icon, and once more if iOS was busy. It answers a change it cannot
+ * make yet with "Resource temporarily unavailable" rather than waiting, and a
+ * second asking a moment later is usually all it needed.
+ */
+async function setIcon(name: string | null): Promise<void> {
+  if (!Icons) throw new Error("not supported on this build");
+  const once = () => (name === null ? Icons.resetAppIcon() : Icons.setAlternateAppIcon(name as never).then(() => undefined));
+  try {
+    await once();
+  } catch {
+    await wait(900);
+    await once();
+  }
+}
 
 /**
  * Put the Halloween icon on the home screen, for the banner's one tap. iOS
@@ -50,10 +73,10 @@ const failure = (name: string) =>
 export async function setHalloweenIcon(): Promise<string> {
   if (!Icons?.supportsAlternateIcons) return "This phone cannot change the app's icon.";
   try {
-    await Icons.setAlternateAppIcon("Halloween" as never);
+    await setIcon("Halloween");
     return "Spooky. Check your home screen 🎃";
-  } catch {
-    return failure("Halloween");
+  } catch (e) {
+    return failure(e);
   }
 }
 
@@ -88,17 +111,23 @@ export function AppIconPicker({
     if (!Icons || busy) return;
     setBusy(true);
     void Haptics.selectionAsync();
+    /*
+     * Out of the sheet first, then the change.
+     *
+     * iOS will not change an app's icon while the app is presenting
+     * something, and this picker is a sheet: every tap was asking at the one
+     * moment it is refused, which is why no icon ever set, in any build. So
+     * the sheet goes, the change waits for it to finish leaving, and iOS's
+     * own confirmation appears over the screen underneath.
+     */
+    onClose();
+    await wait(650);
     try {
-      if (name === null) {
-        await Icons.resetAppIcon();
-        setCurrent(null);
-      } else {
-        await Icons.setAlternateAppIcon(name as never);
-        setCurrent(name);
-      }
+      await setIcon(name);
+      setCurrent(name);
       onChanged("Icon changed. Check your home screen.");
-    } catch {
-      onChanged(failure(name ?? ""));
+    } catch (e) {
+      onChanged(failure(e));
     } finally {
       setBusy(false);
     }

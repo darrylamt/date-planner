@@ -83,6 +83,14 @@ export default function PrivacyPage() {
           Yango. Duro never reads your location in the background.
         </p>
         <p>
+          <strong>When you talk to Durobot instead of typing:</strong> the app
+          asks for the microphone and speech recognition, and listens only
+          while you hold the mic button. Apple&apos;s speech recognition turns
+          what you say into text, on your phone or on Apple&apos;s servers. Duro
+          never receives or keeps the recording, only the words, which go
+          wherever a typed message would.
+        </p>
+        <p>
           <strong>To decide where to add venues:</strong> a rough, anonymous
           record of each plan request: the area chosen (or, for &ldquo;near
           me&rdquo;, a square about a kilometre across, never your exact
@@ -122,8 +130,9 @@ export default function PrivacyPage() {
           details are not sent.
         </p>
         <p>
-          Venue facts come from Google Places. Data is stored with Supabase, and
-          subscriptions are managed through Apple and RevenueCat. Nobody else.
+          Venue facts come from Google Places. Data is stored with Supabase,
+          subscriptions are managed through Apple and RevenueCat, and speaking
+          to Durobot is turned into text by Apple. Nobody else.
         </p>
         <p>
           A plan you share is readable by anyone with the link. That is the point
