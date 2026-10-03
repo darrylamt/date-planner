@@ -193,7 +193,8 @@ function recordFor(flight: string, slug: string): GaderinRecord | null {
  */
 function textOf(value: string | undefined, flight: string): string | undefined {
   const ref = value?.match(/^\$([0-9a-f]+)$/i)?.[1];
-  if (!ref) return value;
+  // Inline descriptions can be HTML too ("<p>Glaze Art Studio — …</p>"), so every one is made plain.
+  if (!ref) return value == null ? value : plain(value);
   const head = new RegExp(`(?:^|[^0-9a-f])${ref}:T([0-9a-f]+),`, "i").exec(flight);
   if (!head) return undefined;
   const bytes = Buffer.from(flight.slice(head.index + head[0].length), "utf8").subarray(0, parseInt(head[1], 16));

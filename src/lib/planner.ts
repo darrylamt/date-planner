@@ -1305,9 +1305,22 @@ function planWith(
           // stays in rather than being ruled out by a blank.
           (x.at === null || (x.at >= startMinutes - 30 && x.at < endMinutes))
       )
-      // Earliest first, so a night with two of them anchors on the one the
-      // evening reaches first rather than doubling back.
-      .sort((a, b) => (a.at ?? startMinutes) - (b.at ?? startMinutes));
+      /*
+       * The one that fits best, then the earliest.
+       *
+       * It was earliest alone, which was right when a day had one event. A
+       * Friday with Gaderin's listings has fourteen, and a sporty plan from
+       * eleven got the 11:00 pottery class while the 18:00 social padel it
+       * was asked for never came up. So an event's own vibes and its venue's
+       * are matched against what the plan wants first; time only breaks ties,
+       * so between two that fit equally the evening still reaches the first
+       * without doubling back.
+       */
+      .map((x) => {
+        const tags = new Set([...((x.event as EventRow & { vibe_tags?: string[] }).vibe_tags ?? []), ...x.venue.vibe_tags]);
+        return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length };
+      })
+      .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
 
     return placeable[0] ?? null;
   })();

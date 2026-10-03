@@ -105,7 +105,8 @@ export function swapStopLocally(
     event: next.event,
     what_to_do: next.what_to_do ?? "",
     whats_on: next.whats_on ?? [],
-    label: next.label ?? (stop.event && next.venue_type ? KIND_LABEL[next.venue_type] : stop.label),
+    // Never the event's own heading on a venue that is not the event.
+    label: next.label ?? (stop.event ? (next.venue_type ? KIND_LABEL[next.venue_type] : "NEXT STOP") : stop.label),
     alternates: rotated,
   };
 
