@@ -28,6 +28,7 @@
     "tokens": "tsx scripts/token-report.ts",
     "route:check": "tsx scripts/route-check.ts",
     "reach:check": "tsx scripts/reach-check.ts",
+    "gaderin": "tsx scripts/scrape-gaderin.ts",
     "widget:mascots": "tsx scripts/widget-mascots.ts",
     "brand:assets": "tsx scripts/brand-assets.ts",
     "transit:import": "tsx scripts/import-route-map.ts",

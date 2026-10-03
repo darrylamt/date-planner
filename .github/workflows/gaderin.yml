@@ -1,0 +1,30 @@
+# Gaderin activities into Duro!, once a day (scripts/scrape-gaderin.ts).
+# Here rather than a Vercel cron: reading 500-odd pages 1.5 s apart takes
+# longer than a serverless function is allowed to run.
+name: Gaderin
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 Accra (UTC), before anybody is planning
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Fetch every page, changed or not"
+        type: boolean
+        default: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsx scripts/scrape-gaderin.ts ${{ (github.event_name == 'workflow_dispatch' && inputs.full) && '--full' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
