@@ -11,9 +11,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.darrylamt.aduro",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
-        "NSCalendarsFullAccessUsageDescription": "Duro adds your date plan to your calendar so you don't lose track of the evening.",
+        "NSCalendarsUsageDescription": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it.",
+        "NSCalendarsFullAccessUsageDescription": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it.",
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": [
           "whatsapp",
@@ -79,7 +79,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Duro adds your date plan to your calendar so you don't lose track of the evening."
+          "calendarPermission": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it."
         }
       ],
       "expo-font",
@@ -87,7 +87,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Duro uses this to set your profile picture."
+          "photosPermission": "Duro uses this to set your profile picture.",
+          "cameraPermission": false
         }
       ],
       [
@@ -208,22 +209,47 @@
       "expo-maps",
       [
         "expo-sensors",
-        { "motionPermission": "Duro notices when you shake your phone on the Where next screen, to find you somewhere to go." }
+        {
+          "motionPermission": "Duro notices when you shake your phone on the Where next screen, to find you somewhere to go."
+        }
       ],
       [
         "expo-quick-actions",
         {
           "iosActions": [
-            { "id": "new-plan", "title": "New plan", "icon": "symbol:plus", "params": { "href": "/plan/new" } },
+            {
+              "id": "new-plan",
+              "title": "New plan",
+              "icon": "symbol:plus",
+              "params": {
+                "href": "/plan/new"
+              }
+            },
             {
               "id": "where-next",
               "title": "Where next?",
               "subtitle": "Somewhere near you, now",
               "icon": "symbol:iphone.radiowaves.left.and.right",
-              "params": { "href": "/where-next" }
+              "params": {
+                "href": "/where-next"
+              }
             },
-            { "id": "ask", "title": "Ask Duro!", "icon": "symbol:bubble.left.fill", "params": { "href": "/chat" } },
-            { "id": "saved", "title": "Your plans", "icon": "symbol:bookmark.fill", "params": { "href": "/saved" } }
+            {
+              "id": "ask",
+              "title": "Ask Duro!",
+              "icon": "symbol:bubble.left.fill",
+              "params": {
+                "href": "/chat"
+              }
+            },
+            {
+              "id": "saved",
+              "title": "Your plans",
+              "icon": "symbol:bookmark.fill",
+              "params": {
+                "href": "/saved"
+              }
+            }
           ]
         }
       ],
@@ -233,7 +259,8 @@
           "microphonePermission": "Duro listens through the microphone only while you hold the mic button to talk to Durobot.",
           "speechRecognitionPermission": "Duro turns what you say to Durobot into text, so you can ask without typing."
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

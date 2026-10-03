@@ -8,7 +8,8 @@ import { Bone, Skeleton } from "../Skeleton";
 import { NativeSheet } from "../native/NativeSheet";
 import { GUTTER, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { ghs, yangoRideLink } from "../../lib/format";
+import { ghs, uberRideLink, yangoRideLink } from "../../lib/format";
+import { RideButton } from "./GettingThereSheet";
 import type { NextSpot, SpotPrice } from "../../lib/api";
 
 /** What it costs, as precisely as it is known: an estimate stays a range. */
@@ -115,14 +116,24 @@ export function NextSpotSheet({
                   router.push(`/venue/${spot.id}`);
                 }}
               />
-              {from && spot.lat != null && spot.lng != null ? (
-                <Button
-                  title="Get a Yango there"
-                  kind="gray"
-                  icon="car.fill"
-                  onPress={() => void Linking.openURL(yangoRideLink(from, { lat: spot.lat!, lng: spot.lng! }))}
+              {/*
+                Both ride apps, side by side, as on Getting there. Uber finds
+                the pickup itself; Yango needs a start, which is where the
+                search was made from.
+              */}
+              <View style={{ flexDirection: "row", gap: space.sm }}>
+                <RideButton
+                  label="Uber"
+                  dark
+                  onPress={() => void Linking.openURL(uberRideLink({ name: spot.name, area: spot.area, lat: spot.lat, lng: spot.lng }))}
                 />
-              ) : null}
+                {from && spot.lat != null && spot.lng != null ? (
+                  <RideButton
+                    label="Yango"
+                    onPress={() => void Linking.openURL(yangoRideLink(from, { lat: spot.lat!, lng: spot.lng! }))}
+                  />
+                ) : null}
+              </View>
             </View>
           </>
         )}

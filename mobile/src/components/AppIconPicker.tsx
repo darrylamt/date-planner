@@ -137,20 +137,12 @@ export function AppIconPicker({
           <View
             style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}
           >
-            {/*
-              The original first, so getting back is never a puzzle.
-
-              Drawn from a copy of the flame, not assets/icon.png: that file
-              is the new D now, which only reaches the home screen with build
-              24, and an update over the air would otherwise show every build
-              23 phone an "Original" it does not have. Point this back at
-              assets/icon.png in the commit build 24 is made from.
-            */}
+            {/* The original first, so getting back is never a puzzle. */}
             <IconTile
               label="Original"
               selected={current === null}
               onPress={() => void choose(null)}
-              source={require("../../assets/app-icons/original-flame.png")}
+              source={require("../../assets/icon.png")}
             />
             {APP_ICONS.map((icon) => (
               <IconTile

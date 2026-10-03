@@ -184,7 +184,8 @@ export function GettingThereSheet({
   );
 }
 
-function RideButton({ label, onPress, dark }: { label: string; onPress: () => void; dark?: boolean }) {
+/** A ride app's own colours, half the width of a row, so two sit side by side. Shared with Where next. */
+export function RideButton({ label, onPress, dark }: { label: string; onPress: () => void; dark?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
