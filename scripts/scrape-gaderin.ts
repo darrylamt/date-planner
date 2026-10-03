@@ -183,6 +183,40 @@ function recordFor(flight: string, slug: string): GaderinRecord | null {
   return null;
 }
 
+/**
+ * Text Next.js wrote somewhere else and pointed at.
+ *
+ * A long field arrives as "$17": a reference to row 17 of the page's data,
+ * written as `17:T86d,` followed by 0x86d bytes of text. Read as it stood,
+ * 129 descriptions came through as "$16" or "$17" and showed on cards as a
+ * dollar price. Followed, they are the host's own HTML, made plain here.
+ */
+function textOf(value: string | undefined, flight: string): string | undefined {
+  const ref = value?.match(/^\$([0-9a-f]+)$/i)?.[1];
+  if (!ref) return value;
+  const head = new RegExp(`(?:^|[^0-9a-f])${ref}:T([0-9a-f]+),`, "i").exec(flight);
+  if (!head) return undefined;
+  const bytes = Buffer.from(flight.slice(head.index + head[0].length), "utf8").subarray(0, parseInt(head[1], 16));
+  return plain(bytes.toString("utf8"));
+}
+
+/** HTML to the plain text a card shows: paragraphs kept, tags and entities gone. */
+function plain(html: string): string {
+  return html
+    .replace(/<\s*(br|\/p|\/h[1-6]|\/li|\/div)\s*\/?>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function meta(html: string, key: string): string | null {
   return html.match(new RegExp(`<meta[^>]+property="${key}"[^>]+content="([^"]*)"`))?.[1] ?? null;
 }
@@ -229,6 +263,19 @@ function venueFor(rec: GaderinRecord, venues: Venue[]): Venue | null {
   );
 }
 
+/**
+ * Gaderin's description, when it says something. Hosts sometimes put a price
+ * in the box ("$17" on Bliss's bowling), which on a Duro card read as a
+ * dollar charge; the real price is in the tiers. Anything that is only a
+ * price, or too short to describe a night, is left out.
+ */
+function describes(text: string | undefined): string | null {
+  const s = (text ?? "").trim();
+  if (s.length < 20) return null;
+  if (/^[\s$€£₵]*(ghs|usd|gh₵)?\s*[\d.,]+\s*(ghs|usd|cedis?)?[\s.]*$/i.test(s)) return null;
+  return s;
+}
+
 const VIBES: Record<string, string[]> = {
   outdoor: ["outdoorsy", "adventurous"],
   adventure: ["adventurous", "outdoorsy"],
@@ -245,7 +292,7 @@ const VIBES: Record<string, string[]> = {
   party: ["lively", "dancing"],
 };
 
-function toActivity(slug: string, html: string, rec: GaderinRecord, lastmod: string | null, areas: Area[], venues: Venue[]): Activity {
+function toActivity(slug: string, html: string, rec: GaderinRecord, lastmod: string | null, areas: Area[], venues: Venue[], flight = ""): Activity {
   const tiers = (rec.priceTiers ?? [])
     .filter((t) => typeof t.price === "number" && t.price >= 0)
     .map((t) => ({ name: String(t.name ?? "Ticket"), price: Number(t.price) }));
@@ -256,7 +303,7 @@ function toActivity(slug: string, html: string, rec: GaderinRecord, lastmod: str
     slug,
     url: `${BASE}/activities/${slug}`,
     title: rec.title?.trim() ?? null,
-    description: rec.description?.trim() ?? null,
+    description: describes(textOf(rec.description, flight)),
     category: rec.category?.toLowerCase() ?? null,
     price_ghs: tiers.length ? Math.min(...tiers.map((t) => t.price)) : null,
     price_tiers: tiers.length ? tiers : null,
@@ -381,12 +428,13 @@ async function main() {
     await sleep(DELAY_MS);
     try {
       const html = await fetchText(`${BASE}/activities/${slug}`);
-      const rec = recordFor(flightOf(html), slug);
+      const flight = flightOf(html);
+      const rec = recordFor(flight, slug);
       if (!rec) {
         console.warn(`SKIP ${slug}: no record on the page`);
         continue;
       }
-      read.push(toActivity(slug, html, rec, map.get(slug) ?? null, areas, venues));
+      read.push(toActivity(slug, html, rec, map.get(slug) ?? null, areas, venues, flight));
       console.log(`OK   ${slug}`);
     } catch (err) {
       console.warn(`SKIP ${slug}: ${err}`);

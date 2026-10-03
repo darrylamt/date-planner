@@ -1375,6 +1375,8 @@ function planWith(
        * not the absence of one.
        */
       ticket?: number | null;
+      /** This slot is a dated event's: priced by its door alone (see below). */
+      event?: boolean;
     } = {}
   ): Option[] => {
     const roleTypes = ROLE_TYPES[role];
@@ -1467,6 +1469,33 @@ function planWith(
           },
         ]
       : [];
+
+    /*
+     * An event is its ticket, and nothing from the venue's menu.
+     *
+     * Bowling at Bliss came out as arcade tokens, mini-bowling and the entry:
+     * the venue's own list, priced on top of the event's door. But a night
+     * somebody organises is not the venue's ordinary evening. Organisers bring
+     * their own menu as often as not, what people buy once inside is theirs
+     * to decide, and none of it is anything Duro can put on a bill. So the
+     * plan says what the event costs to get into, free or paid, and stops.
+     * With no price recorded at all it falls through to the venue as before,
+     * rather than vanishing from the evening.
+     */
+    if (opts.event && doorKnown) {
+      return [
+        {
+          venue,
+          tier: 0,
+          orders: doorLine,
+          cost: doorTotal,
+          // Nothing is added to a ticket.
+          charges: [],
+          fixtures,
+          score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+        },
+      ];
+    }
 
     const priced: Option[] = [];
 
@@ -1738,6 +1767,7 @@ function planWith(
            * saying entry is free, which is a price.
            */
           ticket: pin.event.cost_ghs == null ? null : Number(pin.event.cost_ghs),
+          event: true,
         }
       );
       if (!built.length) return null;

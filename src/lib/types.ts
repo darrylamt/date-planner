@@ -643,6 +643,16 @@ export interface StopAlternate {
   charge_rates?: ChargeRates | null;
   est_cost_ghs: number;
   why_this_fits: string;
+  /*
+   * What belongs to this venue alone on the card, carried so a swap changes
+   * all of it. Set when a stop rotates into the queue; absent on the
+   * planner's own alternates, which have no event, no written lines and no
+   * label of their own yet.
+   */
+  label?: string;
+  what_to_do?: string;
+  whats_on?: string[];
+  event?: ItineraryStop["event"];
 }
 
 /**

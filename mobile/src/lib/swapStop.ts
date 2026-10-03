@@ -4,7 +4,18 @@
  * Run `npm run mirror` after changing the web copy.
  */
 import { ghs } from "./format";
-import type { Itinerary, StopAlternate } from "./types";
+import type { Itinerary, StopAlternate, VenueType } from "./types";
+
+/** A slot's heading for a venue with none of its own, by what kind of place it is. */
+const KIND_LABEL: Record<VenueType, string> = {
+  restaurant: "FOOD",
+  lounge: "DRINKS",
+  cafe: "CAFÉ",
+  dessert: "DESSERT",
+  activity: "ACTIVITY",
+  outdoor: "OUTDOORS",
+  wellness: "WELLNESS",
+};
 
 /**
  * Swap one stop for its next runner-up, locally.
@@ -53,6 +64,11 @@ export function swapStopLocally(
       charge_rates: stop.charge_rates ?? null,
       est_cost_ghs: stop.est_cost_ghs,
       why_this_fits: stop.why_this_fits,
+      // Its own words, label and event, so cycling back restores the stop whole.
+      label: stop.label,
+      what_to_do: stop.what_to_do,
+      whats_on: stop.whats_on,
+      event: stop.event,
     },
   ];
 
@@ -78,6 +94,18 @@ export function swapStopLocally(
     charge_rates: next.charge_rates ?? null,
     est_cost_ghs: next.est_cost_ghs,
     why_this_fits: next.why_this_fits,
+    /*
+     * Everything on the card that belonged to the old venue goes with it.
+     * A swap kept the old stop's event, written lines and "what's on", so a
+     * card swapped away from an event still carried the event's title and
+     * description over the new venue's pictures and prices. An alternate the
+     * planner made has none of its own: no event, no lines, and the slot's
+     * label unless the old one was the event's.
+     */
+    event: next.event,
+    what_to_do: next.what_to_do ?? "",
+    whats_on: next.whats_on ?? [],
+    label: next.label ?? (stop.event && next.venue_type ? KIND_LABEL[next.venue_type] : stop.label),
     alternates: rotated,
   };
 
