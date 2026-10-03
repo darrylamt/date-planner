@@ -216,6 +216,8 @@ export interface NextSpot {
   mins: number;
   fare_ghs: number;
   price: SpotPrice;
+  /** What a visit of this kind costs (drinks at a bar). Absent from an older server. */
+  visit?: { what: string; ghs: number } | null;
   open: "open" | "unknown";
   hours: string;
   lat: number | null;

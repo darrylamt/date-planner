@@ -243,9 +243,17 @@ export default function Login() {
           accessibilityLabel="Close"
           style={{ position: "absolute", top: insets.top + space.sm, right: GUTTER, zIndex: 3, borderRadius: 18, overflow: "hidden" }}
         >
-          <BlurView intensity={40} tint={isDark ? "dark" : "light"} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: isDark ? "rgba(10,20,19,0.6)" : "rgba(255,255,255,0.75)",
+            }}
+          >
             <Symbol name="xmark" size={14} weight="bold" color={c.text} />
-          </BlurView>
+          </View>
         </Pressable>
       ) : null}
 
@@ -453,12 +461,21 @@ function Character({ occasion, small, reduced }: { occasion: Occasion; small: bo
     pop.setValue(0.5);
     Animated.spring(pop, { toValue: 1, useNativeDriver: false, speed: 12, bounciness: 14 }).start();
   }, [occasion, reduced, pop]);
+  /*
+   * The bob never stops, so it runs on the native driver. On the JS driver
+   * it, and one more for each pill, asked the JavaScript thread for a frame
+   * sixty times a second for as long as the screen was open, which is the
+   * same thread that answers taps and finishes a sign-in: the screen felt
+   * slow and, under Apple's sheet, frozen. The pop stays on the JS driver: it
+   * reveals the character, and a native-driven entrance once left this
+   * screen blank on a phone.
+   */
   useEffect(() => {
     if (reduced) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
-        Animated.timing(bob, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+        Animated.timing(bob, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -468,10 +485,11 @@ function Character({ occasion, small, reduced }: { occasion: Occasion; small: bo
   const size = small ? 110 : 170;
   return (
     <View style={{ alignItems: "center" }}>
-      <Animated.View
-        style={{ transform: [{ scale: pop }, { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }}
-      >
-        <Mascot occasion={occasion} size={size} animate={!reduced} />
+      {/* Two layers, one driver each: a value cannot be driven from both sides. */}
+      <Animated.View style={{ transform: [{ scale: pop }] }}>
+        <Animated.View style={{ transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }}>
+          <Mascot occasion={occasion} size={size} animate={!reduced} />
+        </Animated.View>
       </Animated.View>
       {/* The shadow tightens as the character rises, so it reads as floating. */}
       <Animated.View
@@ -524,14 +542,19 @@ function Bit({
   useEffect(() => {
     if (reduced) return;
     Animated.spring(inV, { toValue: 1, delay: 150 + index * 140, useNativeDriver: false, speed: 12, bounciness: 12 }).start();
+    // Shown whatever happens to the spring, as every entrance on this screen is.
+    const safety = setTimeout(() => inV.setValue(1), 1500 + index * 140);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-        Animated.timing(bob, { toValue: 0, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(bob, { toValue: 1, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 1900 + index * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ])
     );
     loop.start();
-    return () => loop.stop();
+    return () => {
+      loop.stop();
+      clearTimeout(safety);
+    };
   }, [reduced, index, inV, bob]);
 
   return (
@@ -540,24 +563,36 @@ function Bit({
         position: "absolute",
         ...(spot as object),
         opacity: inV,
-        transform: [
-          { scale: inV.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) },
-          { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, index % 2 ? 6 : -6] }) },
-          { rotate: index === 1 ? "3deg" : "-3deg" },
-        ],
+        transform: [{ scale: inV.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
       }}
     >
-      <View style={{ borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: c.glassBorder }}>
-        <BlurView
-          intensity={50}
-          tint={isDark ? "dark" : "light"}
-          style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: isDark ? "rgba(10,20,19,0.35)" : "rgba(255,255,255,0.72)" }}
+      <Animated.View
+        style={{
+          transform: [
+            { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, index % 2 ? 6 : -6] }) },
+            { rotate: index === 1 ? "3deg" : "-3deg" },
+          ],
+        }}
+      >
+        {/*
+          A frosted fill, not a live blur: three blurs over a background that
+          never stops moving were three views redrawn every frame.
+        */}
+        <View
+          style={{
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: c.glassBorder,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            backgroundColor: isDark ? "rgba(10,20,19,0.72)" : "rgba(255,255,255,0.86)",
+          }}
         >
           <Text variant="footnote" weight="700">
             {text}
           </Text>
-        </BlurView>
-      </View>
+        </View>
+      </Animated.View>
     </Animated.View>
   );
 }

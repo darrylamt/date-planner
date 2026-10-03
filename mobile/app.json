@@ -207,6 +207,7 @@
         }
       ],
       "expo-maps",
+      "./plugins/withAllAppIcons",
       [
         "expo-sensors",
         {

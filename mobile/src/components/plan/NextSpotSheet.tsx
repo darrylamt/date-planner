@@ -48,7 +48,8 @@ export function NextSpotSheet({
   onAnother: () => void;
 }) {
   const c = useTheme();
-  const price = spot ? priceLine(spot.price) : null;
+  // What this visit costs (drinks at a bar), before what the place costs in general.
+  const price = spot ? (spot.visit ? `${spot.visit.what} around ${ghs(spot.visit.ghs)}` : priceLine(spot.price)) : null;
 
   return (
     <NativeSheet visible={visible} onClose={onClose}>

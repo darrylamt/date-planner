@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { VENUE_SELECT } from "@/lib/venueColumns";
 import { expandVibes } from "@/lib/catalog";
 import { estimateHop, haversineKm } from "@/lib/transport";
-import { describePrice, hoursOn, isPriced, menusFor, openStateAt, type PriceNote } from "@/lib/chat/tools/shared";
-import type { Venue, VenueType } from "@/lib/types";
+import { describePrice, hoursOn, isPriced, medianPrice, menusFor, openStateAt, type PriceNote } from "@/lib/chat/tools/shared";
+import type { MenuItem, Venue, VenueType } from "@/lib/types";
 
 /**
  * Where next: one more place for a night that is already under way.
@@ -51,6 +51,8 @@ export type NextSpot = {
   mins: number;
   fare_ghs: number;
   price: PriceNote;
+  /** What a visit of this kind costs: drinks at a bar, a dessert at a dessert place. Null when the menu cannot say. */
+  visit: { what: string; ghs: number } | null;
   open: "open" | "unknown";
   hours: string;
   lat: number | null;
@@ -58,6 +60,30 @@ export type NextSpot = {
 };
 
 const ROMANTIC = new Set(["first_date", "anniversary", "date_night"]);
+
+/*
+ * What somebody orders on a "one more place" visit, by kind of place, in the
+ * order to look for it. A bar is drinks, or small plates where it lists no
+ * drinks, never its dinner: a late stop priced at its mains read as GHS 725
+ * a head for a lounge. The figure is the median of that part of the menu.
+ */
+const VISIT: Record<VenueType, [MenuItem["category"], string][]> = {
+  lounge: [["drink", "Drinks"], ["starter", "Small plates"], ["main", "Food"]],
+  dessert: [["dessert", "Desserts"], ["drink", "Drinks"]],
+  cafe: [["drink", "Drinks"], ["dessert", "Desserts and pastries"], ["main", "Food"]],
+  activity: [["activity", "A go"], ["other", "Entry"]],
+  outdoor: [["activity", "Entry"], ["other", "Entry"]],
+  wellness: [["activity", "Treatments"], ["other", "Treatments"]],
+  restaurant: [["main", "Mains"], ["starter", "Small plates"]],
+};
+
+function visitPrice(type: VenueType, menu: MenuItem[]): { what: string; ghs: number } | null {
+  for (const [category, what] of VISIT[type] ?? []) {
+    const ghs = medianPrice(menu, category);
+    if (ghs != null) return { what, ghs };
+  }
+  return null;
+}
 
 /**
  * The kinds of place that fit the hour and the night.
@@ -156,6 +182,7 @@ export async function POST(req: Request) {
       mins: hop.mins,
       fare_ghs: hop.cost_ghs,
       price: describePrice(v, menus.get(v.id) ?? []),
+      visit: visitPrice(v.type, menus.get(v.id) ?? []),
       open: open === "open" ? "open" : "unknown",
       hours: hoursOn(v, b.date),
       lat: v.lat == null ? null : Number(v.lat),

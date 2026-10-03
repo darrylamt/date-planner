@@ -131,7 +131,9 @@ function friendlyAuthError(message: string): string {
   if (/rate limit|too many/i.test(message)) {
     return "Too many attempts. Wait a minute and try again.";
   }
-  return message || "Something went wrong. Try again.";
+  // Anything not mapped above stays in the logs, not on the screen.
+  console.warn("auth", message);
+  return "Something went wrong. Check your connection and try again.";
 }
 
 /**

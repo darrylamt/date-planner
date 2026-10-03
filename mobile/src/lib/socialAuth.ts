@@ -39,6 +39,23 @@ export function googleSignInAvailable(): boolean {
   return Boolean(AuthSession && WebBrowser);
 }
 
+/*
+ * What a person reads when sign-in fails: never an exception's own text.
+ * "RequestUnknownException ... (at ExpoAppleAuthentication/...swift:61)" is
+ * true and useless, and it read like the app breaking. The codes are kept
+ * for the logs; the words say what to try.
+ */
+const APPLE_SAYS: Record<string, string> = {
+  ERR_REQUEST_UNKNOWN:
+    "Apple sign-in did not go through. Check you are signed in to iCloud in Settings, then try again, or use Google or email.",
+  ERR_REQUEST_FAILED: "Apple sign-in did not work just now. Try again, or use Google or email.",
+  ERR_REQUEST_NOT_HANDLED: "Apple sign-in did not work just now. Try again, or use Google or email.",
+  ERR_REQUEST_NOT_INTERACTIVE: "Apple sign-in did not work just now. Try again, or use Google or email.",
+  ERR_INVALID_RESPONSE: "Apple sent back something we could not use. Try again, or use Google or email.",
+};
+const FINISH_FAILED = "We could not finish signing you in. Check your connection and try again.";
+const GOOGLE_FAILED = "Google sign-in did not work just now. Try again, or use Apple or email.";
+
 export interface SocialResult {
   ok: boolean;
   /** Set when the person backed out. Not an error worth showing. */
@@ -81,7 +98,7 @@ export async function signInWithApple(): Promise<SocialResult> {
     });
 
     if (!credential.identityToken) {
-      return { ok: false, error: "Apple did not return a sign-in token." };
+      return { ok: false, error: APPLE_SAYS.ERR_INVALID_RESPONSE };
     }
 
     const { error } = await supabase.auth.signInWithIdToken({
@@ -89,7 +106,10 @@ export async function signInWithApple(): Promise<SocialResult> {
       token: credential.identityToken,
       nonce: rawNonce,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      console.warn("apple sign-in: supabase", error.message);
+      return { ok: false, error: FINISH_FAILED };
+    }
 
     /*
      * Apple sends the name exactly once, on the very first authorisation, and
@@ -118,7 +138,8 @@ export async function signInWithApple(): Promise<SocialResult> {
   } catch (e) {
     const err = e as { code?: string; message?: string };
     if (err.code === "ERR_REQUEST_CANCELED") return { ok: false, cancelled: true };
-    return { ok: false, error: err.message ?? "Apple sign-in failed." };
+    console.warn("apple sign-in", err.code, err.message);
+    return { ok: false, error: (err.code && APPLE_SAYS[err.code]) || APPLE_SAYS.ERR_REQUEST_FAILED };
   }
 }
 
@@ -138,15 +159,17 @@ export async function signInWithGoogle(): Promise<SocialResult> {
         skipBrowserRedirect: true,
       },
     });
-    if (error) return { ok: false, error: error.message };
-    if (!data?.url) return { ok: false, error: "Google sign-in is not configured." };
+    if (error || !data?.url) {
+      console.warn("google sign-in: start", error?.message);
+      return { ok: false, error: GOOGLE_FAILED };
+    }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type === "cancel" || result.type === "dismiss") {
       return { ok: false, cancelled: true };
     }
     if (result.type !== "success") {
-      return { ok: false, error: "Google sign-in did not complete." };
+      return { ok: false, error: GOOGLE_FAILED };
     }
 
     /*
@@ -158,18 +181,22 @@ export async function signInWithGoogle(): Promise<SocialResult> {
     const refresh_token = params.get("refresh_token");
 
     if (!access_token || !refresh_token) {
-      const described = params.get("error_description");
-      return { ok: false, error: described ?? "Google did not return a session." };
+      console.warn("google sign-in: no session", params.get("error_description"));
+      return { ok: false, error: GOOGLE_FAILED };
     }
 
     const { error: sessionError } = await supabase.auth.setSession({
       access_token,
       refresh_token,
     });
-    if (sessionError) return { ok: false, error: sessionError.message };
+    if (sessionError) {
+      console.warn("google sign-in: session", sessionError.message);
+      return { ok: false, error: FINISH_FAILED };
+    }
 
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: (e as Error).message ?? "Google sign-in failed." };
+    console.warn("google sign-in", (e as Error).message);
+    return { ok: false, error: GOOGLE_FAILED };
   }
 }

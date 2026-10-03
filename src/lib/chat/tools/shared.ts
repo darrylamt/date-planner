@@ -119,13 +119,41 @@ export function describePrice(v: Venue, menu: MenuItem[]): PriceNote {
       : { basis: "menu", typical_per_person_ghs: avg };
   }
   if (mains) {
+    /*
+     * The middle plate, not the middle of the range. Halfway between the
+     * cheapest and the dearest put Mood Bar at GHS 725 a head, because its
+     * dearest "main" is a GHS 1,300 platter for the table: one item moved
+     * the whole figure. The median moves for nobody.
+     */
     return {
       basis: "menu",
-      typical_per_person_ghs: Math.round((mains[0] + mains[1]) / 2),
+      typical_per_person_ghs: typicalPlate(menu) ?? Math.round((mains[0] + mains[1]) / 2),
       mains_ghs: mains,
     };
   }
   return { basis: "unknown" };
+}
+
+/** The median price in the first category mainsRange would use. */
+export function typicalPlate(menu: MenuItem[]): number | null {
+  const order: MenuItem["category"][] = ["main", "other", "starter", "activity", "drink", "dessert"];
+  for (const category of order) {
+    const median = medianPrice(menu, category);
+    if (median != null) return median;
+  }
+  return null;
+}
+
+/** The median of one category's prices, one per person, or null with none. */
+export function medianPrice(menu: MenuItem[], category: MenuItem["category"]): number | null {
+  const prices = menu
+    .filter((m) => m.category === category && Math.max(1, Number(m.covers_people ?? 1)) === 1)
+    .map((m) => Number(m.price_ghs))
+    .filter((p) => p > 0)
+    .sort((a, b) => a - b);
+  if (!prices.length) return null;
+  const mid = Math.floor(prices.length / 2);
+  return Math.round(prices.length % 2 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2);
 }
 
 /**

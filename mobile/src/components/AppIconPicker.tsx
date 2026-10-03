@@ -40,12 +40,14 @@ export const APP_ICONS: { name: string; label: string; source: number }[] = [
 ];
 
 /**
- * What to say when an icon will not set, with iOS's own reason on the end:
- * "could not be set" alone left nothing to go on, twice.
+ * What to say when an icon will not set. iOS's own reason goes to the logs,
+ * not the screen: "Resource temporarily unavailable (at ExpoModulesCore/
+ * Promise.swift:56)" is no use to anybody holding the phone. Restarting is
+ * the one thing that has cleared this error for other apps on iOS 26.
  */
 const failure = (e: unknown) => {
-  const why = (e as { message?: string } | null)?.message?.replace(/\.$/, "");
-  return why ? `That icon could not be set (${why}).` : "That icon could not be set.";
+  console.warn("app icon", (e as { message?: string } | null)?.message);
+  return "Your iPhone did not let Duro change its icon just now. Restart your phone and try again.";
 };
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
