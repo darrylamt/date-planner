@@ -150,6 +150,37 @@ export default function Home() {
         <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two, marginBottom: Spacing.three }}>
           Dates, days out, meetings and trips, planned to your budget with real prices.
         </Text>
+
+        {/*
+          For somebody already out: no plan, no questions, one place. Under
+          the headline because it answers it more literally than anything else
+          on the screen does.
+        */}
+        <Pressable
+          onPress={() => router.push("/where-next")}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: Spacing.three,
+            padding: Spacing.three,
+            marginBottom: Spacing.three,
+            borderRadius: Radius.xl,
+            backgroundColor: c.accentSoft,
+            opacity: pressed ? 0.75 : 1,
+          })}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
+            <Symbol name="iphone.radiowaves.left.and.right" size={20} color={c.textOnBrand} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="headline">Out already?</Text>
+            <Text variant="footnote" tone="secondary">
+              Pick a mood and shake your phone for somewhere near you.
+            </Text>
+          </View>
+          <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
+        </Pressable>
       </View>
 
       {/* In progress */}

@@ -93,7 +93,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Duro uses your location only when you ask for directions, to find the trotro stop or taxi pickup nearest you. It is not stored.",
+          "locationWhenInUsePermission": "Duro uses your location only when you ask: for directions from where you are, or for places near you. It is read once and not stored.",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
@@ -194,10 +194,44 @@
               "displayName": "Your next plan",
               "description": "Your next outing at a glance, and a countdown to it.",
               "ios": {
-                "supportedFamilies": ["systemSmall", "systemMedium", "accessoryRectangular", "accessoryInline"]
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular",
+                  "accessoryInline"
+                ]
               }
             }
           ]
+        }
+      ],
+      "expo-maps",
+      [
+        "expo-sensors",
+        { "motionPermission": "Duro notices when you shake your phone on the Where next screen, to find you somewhere to go." }
+      ],
+      [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            { "id": "new-plan", "title": "New plan", "icon": "symbol:plus", "params": { "href": "/plan/new" } },
+            {
+              "id": "where-next",
+              "title": "Where next?",
+              "subtitle": "Somewhere near you, now",
+              "icon": "symbol:iphone.radiowaves.left.and.right",
+              "params": { "href": "/where-next" }
+            },
+            { "id": "ask", "title": "Ask Duro!", "icon": "symbol:bubble.left.fill", "params": { "href": "/chat" } },
+            { "id": "saved", "title": "Your plans", "icon": "symbol:bookmark.fill", "params": { "href": "/saved" } }
+          ]
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Duro listens through the microphone only while you hold the mic button to talk to Durobot.",
+          "speechRecognitionPermission": "Duro turns what you say to Durobot into text, so you can ask without typing."
         }
       ]
     ],

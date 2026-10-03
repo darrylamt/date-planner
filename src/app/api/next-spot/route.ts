@@ -10,8 +10,10 @@ import type { Venue, VenueType } from "@/lib/types";
 /**
  * Where next: one more place for a night that is already under way.
  *
- * Asked for by a shake (or the "Where next?" button) on a plan's own screen.
- * Near the stop the night has reached, open at the time they would get there,
+ * Asked two ways. On a plan's own screen, by a shake or the button, from the
+ * stop the night has reached. And with no plan at all, from the "Where
+ * next?" screen: a mood picked, the phone shaken, from where they are
+ * standing or an area they chose. Either way: near there, open at the time they would get there,
  * the kind of place that suits the hour and the night, not one already in the
  * plan, and priced: the same rule as every other answer, so an unpriced place
  * is never offered as though it were cheap.
@@ -23,11 +25,15 @@ import type { Venue, VenueType } from "@/lib/types";
 
 const bodySchema = z.object({
   anchor_venue_id: z.string().uuid().nullable().optional(),
+  /** No plan and no location: the middle of an area's venues. */
+  area_id: z.string().uuid().optional(),
+  /** A mood picked on the screen that names its own kinds of place ("something sweet"). */
+  kinds: z.array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert", "wellness"])).max(7).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{1,2}:\d{2}$/),
-  occasion: z.string().max(40),
+  occasion: z.string().max(40).default("friend_outing"),
   vibes: z.array(z.string().max(40)).max(12).default([]),
   party_size: z.number().int().min(1).max(50).default(2),
   city: z.string().max(60).optional(),
@@ -85,9 +91,19 @@ export async function POST(req: Request) {
     const { data } = await supabase.from("venues").select("lat,lng").eq("id", b.anchor_venue_id).maybeSingle();
     if (data?.lat != null && data?.lng != null) anchor = { lat: Number(data.lat), lng: Number(data.lng) };
   }
+  if (!anchor && b.area_id) {
+    const { data } = await supabase.from("venues").select("lat,lng").eq("area_id", b.area_id).eq("is_active", true);
+    const pts = ((data ?? []) as { lat: number | null; lng: number | null }[]).filter((v) => v.lat != null && v.lng != null);
+    if (pts.length) {
+      anchor = {
+        lat: pts.reduce((s, v) => s + Number(v.lat), 0) / pts.length,
+        lng: pts.reduce((s, v) => s + Number(v.lng), 0) / pts.length,
+      };
+    }
+  }
   if (!anchor) return NextResponse.json({ spots: [], reason: "no_anchor" });
 
-  const kinds = kindsFor(b.occasion, b.vibes, b.time);
+  const kinds = b.kinds?.length ? b.kinds : kindsFor(b.occasion, b.vibes, b.time);
   let q = supabase.from("venues").select(VENUE_SELECT).eq("is_active", true).in("type", kinds);
   const { data: cityAreas } = await supabase.from("areas").select("id").eq("city", b.city?.trim() || "Accra");
   const areaIds = ((cityAreas ?? []) as { id: string }[]).map((a) => a.id);

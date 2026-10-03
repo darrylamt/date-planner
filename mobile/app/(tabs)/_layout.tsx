@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { Redirect } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useQuickActionRouting } from "expo-quick-actions/router";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { hasOnboarded } from "../../src/lib/onboarding";
 import { useTheme } from "../../src/lib/useTheme";
@@ -26,6 +27,13 @@ const OWN_CIRCLE = Platform.OS === "ios" && parseInt(String(Platform.Version), 1
  * task, and a persistent nav mid-questionnaire invites abandonment.
  */
 export default function TabsLayout() {
+  /*
+   * Long-press the icon: New plan, Where next?, Ask Duro!, Your plans (app.json,
+   * expo-quick-actions). Each carries the screen to open; this opens it. Here
+   * and not in the root layout, which navigates before the tabs exist. On a
+   * build without the module it does nothing.
+   */
+  useQuickActionRouting();
   const c = useTheme();
   // undefined while the flag is being read, rendering the tabs first and
   // redirecting after would flash the home screen behind the intro.

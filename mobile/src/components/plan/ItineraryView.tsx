@@ -43,7 +43,7 @@ import { planEmailHtml, planMailto } from "../../lib/planEmail";
 import { nativeOptional } from "../../lib/nativeOptional";
 import { chooseAction } from "../../lib/actionSheet";
 import { canFollow, follow, followingSlug, refreshLiveActivity, unfollow } from "../../lib/liveActivity";
-import { whereTheNightIs } from "../../lib/nightClock";
+import { whenWord, whereTheNightIs } from "../../lib/nightClock";
 import { shakeAvailable, useShake } from "../../lib/shake";
 import { fetchNextSpots, type NextSpot } from "../../lib/api";
 import { NextSpotSheet } from "./NextSpotSheet";
@@ -834,7 +834,8 @@ export function ItineraryView({
           ) : null}
           {followable ? (
             <Button
-              title={following ? "Stop following on Lock Screen" : "Follow tonight on Lock Screen"}
+              // A morning plan is not "tonight".
+              title={following ? "Stop following on Lock Screen" : `Follow ${whenWord(inputs, itinerary)} on Lock Screen`}
               kind="gray"
               icon="lock.iphone"
               onPress={() => void toggleFollow()}

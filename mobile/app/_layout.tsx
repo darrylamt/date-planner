@@ -130,6 +130,8 @@ function RootShell() {
               button borrows, which otherwise reads "(tabs)". */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
           <Stack.Screen name="plan/new" options={{ title: "" }} />
+          {/* Pick a mood, shake, go: the night with no plan, or past the end of one. */}
+          <Stack.Screen name="where-next" options={{ title: "" }} />
           {/* A focused task rather than a destination, so it is pushed like
               the planner instead of sitting in the tab bar. */}
           {/*

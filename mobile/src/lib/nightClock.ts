@@ -40,8 +40,10 @@ export function stopTimes(inputs: PlanInputs, itinerary: Itinerary): TimedStop[]
 /**
  * Where the night is at `now`, for "Where next?": the stop it has reached
  * (or is about to), and the time they would be setting off from it. Null
- * outside the night: from three hours before the first stop until three
- * hours after the last one ends.
+ * outside the night: from six hours before the first stop, the same as
+ * following it on the Lock Screen, until three hours after the last one
+ * ends. It was three hours before, and a plan could offer to be followed
+ * without offering "Where next?" beside it.
  */
 export function whereTheNightIs(
   inputs: PlanInputs,
@@ -52,7 +54,7 @@ export function whereTheNightIs(
   if (!stops) return null;
   const first = stops[0];
   const last = stops[stops.length - 1];
-  if (now < first.arrive - 3 * 3_600_000 || now > last.leave + 3 * 3_600_000) return null;
+  if (now < first.arrive - 6 * 3_600_000 || now > last.leave + 3 * 3_600_000) return null;
   // The stop under way, or the last one reached; before the night, the first.
   const reached = [...stops].reverse().find((s) => s.arrive <= now) ?? first;
   const setOff = Math.max(now, reached.leave);
@@ -63,4 +65,13 @@ export function whereTheNightIs(
     date: `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`,
     time: `${pad(at.getHours())}:${pad(at.getMinutes())}`,
   };
+}
+
+/** "tonight", "today" or "this plan": what to call it, from when it starts. */
+export function whenWord(inputs: PlanInputs, itinerary: Itinerary, now = new Date()): string {
+  const first = stopTimes(inputs, itinerary)?.[0];
+  if (!first) return "this plan";
+  const start = new Date(first.arrive);
+  if (start.getHours() >= 17) return "tonight";
+  return start.toDateString() === now.toDateString() ? "today" : "this plan";
 }

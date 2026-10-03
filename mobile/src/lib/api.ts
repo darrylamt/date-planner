@@ -227,10 +227,15 @@ export interface NextSpot {
  * empty list when it was, and nothing open and priced is near.
  */
 export async function fetchNextSpots(input: {
-  anchorVenueId: string | null;
+  /** Where to look from: a stop of the plan, where the phone is, or an area. One is enough. */
+  anchorVenueId?: string | null;
+  near?: { lat: number; lng: number };
+  areaId?: string;
+  /** Kinds of place, when the mood picked names them. */
+  kinds?: string[];
   date: string;
   time: string;
-  occasion: string;
+  occasion?: string;
   vibes: string[];
   partySize: number;
   city?: string;
@@ -238,7 +243,10 @@ export async function fetchNextSpots(input: {
 }): Promise<{ spots: NextSpot[]; from: { lat: number; lng: number } | null } | null> {
   try {
     const res = await postJson<{ spots?: NextSpot[]; from?: { lat: number; lng: number } | null }>("/api/next-spot", {
-      anchor_venue_id: input.anchorVenueId,
+      anchor_venue_id: input.anchorVenueId ?? null,
+      ...(input.near ? { lat: input.near.lat, lng: input.near.lng } : {}),
+      ...(input.areaId ? { area_id: input.areaId } : {}),
+      ...(input.kinds?.length ? { kinds: input.kinds } : {}),
       date: input.date,
       time: input.time,
       occasion: input.occasion,

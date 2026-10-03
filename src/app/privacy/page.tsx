@@ -9,7 +9,7 @@ export const metadata = {
   description: "What Duro collects, why, and how to get rid of it.",
 };
 
-const UPDATED = "30 September 2026";
+const UPDATED = "3 October 2026";
 const CONTACT = "planbyaduro@gmail.com";
 
 /**
@@ -73,10 +73,12 @@ export default function PrivacyPage() {
           from. Notifications need a device token so reminders reach your phone.
         </p>
         <p>
-          <strong>When you ask for directions from where you are:</strong> the
-          app asks permission, then reads your phone&apos;s location once, while
-          the app is open, and sends it to our server to find the trotro stops
-          and taxi routes near you. It is used for that one answer and not
+          <strong>When you ask for directions from where you are, or for
+          somewhere near you:</strong> the app asks permission, then reads your
+          phone&apos;s location once, while the app is open, at the moment you
+          ask (a tap, or shaking your phone on the Where next screen), and
+          sends it to our server to find the trotro stops and taxi routes, or
+          the places, near you. It is used for that one answer and not
           stored. If you open Yango from a plan, the start point is passed to
           Yango. Duro never reads your location in the background.
         </p>
