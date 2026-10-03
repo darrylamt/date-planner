@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import { AppState, Text } from "react-native";
 import { refreshWidgets } from "../src/lib/widgets";
+import { refreshLiveActivity, unfollow } from "../src/lib/liveActivity";
 import { supabase } from "../src/lib/supabase";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -89,12 +90,18 @@ function RootShell() {
    */
   useEffect(() => {
     void refreshWidgets();
+    // Tonight's Live Activity moves along only when the app runs, so every opening moves it.
+    void refreshLiveActivity();
     const sub = AppState.addEventListener("change", (s) => {
-      if (s === "active") void refreshWidgets();
+      if (s === "active") {
+        void refreshWidgets();
+        void refreshLiveActivity();
+      }
     });
-    // Signing out must take the last person's plan off the home screen.
+    // Signing out must take the last person's plan off the home screen, and off the Lock Screen.
     const { data: auth } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") void refreshWidgets();
+      if (event === "SIGNED_OUT") void unfollow();
     });
     return () => {
       sub.remove();

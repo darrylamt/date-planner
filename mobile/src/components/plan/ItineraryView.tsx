@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   Alert,
   InteractionManager,
@@ -9,7 +9,7 @@ import {
   Share,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 /*
  * The legacy entry point, deliberately.
  *
@@ -42,6 +42,11 @@ import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
 import { nativeOptional } from "../../lib/nativeOptional";
 import { chooseAction } from "../../lib/actionSheet";
+import { canFollow, follow, followingSlug, refreshLiveActivity, unfollow } from "../../lib/liveActivity";
+import { whereTheNightIs } from "../../lib/nightClock";
+import { shakeAvailable, useShake } from "../../lib/shake";
+import { fetchNextSpots, type NextSpot } from "../../lib/api";
+import { NextSpotSheet } from "./NextSpotSheet";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -98,6 +103,95 @@ export function ItineraryView({
   const [pickupOpen, setPickupOpen] = useState(false);
   const [pickup, setPickup] = useState<PickupChoice | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  /*
+   * Tonight on the Lock Screen. Offered from six hours before the first stop
+   * until the last one ends, on a saved plan (the activity opens it by its
+   * link), and kept in step when a stop is swapped while it is followed.
+   */
+  const followable = canFollow(shareSlug, inputs, itinerary);
+  const [following, setFollowing] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void followingSlug().then((s) => live && setFollowing(Boolean(shareSlug) && s === shareSlug));
+    return () => {
+      live = false;
+    };
+  }, [shareSlug]);
+  useEffect(() => {
+    if (following && shareSlug) void refreshLiveActivity({ slug: shareSlug, inputs, itinerary });
+  }, [following, shareSlug, inputs, itinerary]);
+
+  /*
+   * Where next: on the night, from the stop it has reached. Shaking the phone
+   * asks (from build 24, which can feel it), and so does the button, so it
+   * is never only a hidden gesture. One request brings a short list; each
+   * shake after moves along it, and the end of it asks again for more.
+   */
+  const nightOn = whereTheNightIs(inputs, itinerary) != null;
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, [])
+  );
+  const [nextOpen, setNextOpen] = useState(false);
+  const [nextLoading, setNextLoading] = useState(false);
+  const [spots, setSpots] = useState<NextSpot[]>([]);
+  const [spotIndex, setSpotIndex] = useState(0);
+  const [rideFrom, setRideFrom] = useState<{ lat: number; lng: number } | null>(null);
+
+  async function whereNext() {
+    if (nextLoading) return;
+    setNextOpen(true);
+    if (spotIndex + 1 < spots.length && nextOpen) {
+      void Haptics.selectionAsync();
+      setSpotIndex((i) => i + 1);
+      return;
+    }
+    const at = whereTheNightIs(inputs, itinerary);
+    if (!at) return;
+    setNextLoading(true);
+    const res = await fetchNextSpots({
+      anchorVenueId: itinerary.stops[at.anchor]?.venue_id ?? null,
+      date: at.date,
+      time: at.time,
+      occasion: inputs.occasion,
+      vibes: inputs.vibes ?? [],
+      partySize: inputs.partySize,
+      city: inputs.city,
+      // Not anywhere already in the plan, nor anywhere already shown tonight.
+      exclude: [
+        ...itinerary.stops.map((s) => s.venue_id).filter((id): id is string => Boolean(id)),
+        ...spots.map((s) => s.id),
+      ].slice(0, 40),
+    });
+    setNextLoading(false);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (res && res.spots.length) {
+      setSpots(res.spots);
+      setSpotIndex(0);
+      setRideFrom(res.from);
+    } else {
+      setSpots([]);
+      setSpotIndex(0);
+    }
+  }
+
+  useShake(() => void whereNext(), focused && nightOn);
+
+  async function toggleFollow() {
+    if (!shareSlug) return;
+    if (following) {
+      await unfollow();
+      setFollowing(false);
+      setToast("Off your Lock Screen.");
+      return;
+    }
+    const said = await follow(shareSlug, inputs, itinerary);
+    setFollowing((await followingSlug()) === shareSlug);
+    setToast(said);
+  }
 
   const over = itinerary.est_total_ghs > inputs.budget;
   // Read from the inputs rather than inferred from a zero hop cost: an old
@@ -735,6 +829,17 @@ export function ItineraryView({
         </View>
 
         <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl, gap: space.sm }}>
+          {nightOn ? (
+            <Button title="Where next?" kind="tinted" icon="sparkles" onPress={() => void whereNext()} />
+          ) : null}
+          {followable ? (
+            <Button
+              title={following ? "Stop following on Lock Screen" : "Follow tonight on Lock Screen"}
+              kind="gray"
+              icon="lock.iphone"
+              onPress={() => void toggleFollow()}
+            />
+          ) : null}
           <Button title="Add to calendar" kind="gray" icon="calendar" onPress={handleAddToCalendar} />
           <Button title="Edit my answers" kind="plain" onPress={onEdit} />
           {/* A second way out. The header back button is the primary one, but
@@ -783,6 +888,16 @@ export function ItineraryView({
           setPickup(choice);
           setToast(`Added. ${pickupLine(choice)}.`);
         }}
+      />
+
+      <NextSpotSheet
+        visible={nextOpen}
+        onClose={() => setNextOpen(false)}
+        spot={spots[spotIndex] ?? null}
+        loading={nextLoading}
+        from={rideFrom}
+        shakeHint={shakeAvailable()}
+        onAnother={() => void whereNext()}
       />
 
       <NoteSheet

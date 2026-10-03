@@ -196,3 +196,59 @@ export async function planTrip(
     return { error: "Could not reach the route planner. Check your connection." };
   }
 }
+
+/** What a place costs, as precisely as it is known (the server's PriceNote). */
+export type SpotPrice =
+  | { basis: "free" }
+  | { basis: "menu"; typical_per_person_ghs: number; mains_ghs?: [number, number] }
+  | { basis: "estimated"; per_person_range_ghs: [number, number] }
+  | { basis: "unknown" };
+
+/** One answer to "Where next?" (see /api/next-spot). */
+export interface NextSpot {
+  id: string;
+  name: string;
+  area: string;
+  type: string;
+  image_url: string | null;
+  blurb: string | null;
+  km: number;
+  mins: number;
+  fare_ghs: number;
+  price: SpotPrice;
+  open: "open" | "unknown";
+  hours: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+/**
+ * A few places to go next, best first. Null when it could not be asked; an
+ * empty list when it was, and nothing open and priced is near.
+ */
+export async function fetchNextSpots(input: {
+  anchorVenueId: string | null;
+  date: string;
+  time: string;
+  occasion: string;
+  vibes: string[];
+  partySize: number;
+  city?: string;
+  exclude: string[];
+}): Promise<{ spots: NextSpot[]; from: { lat: number; lng: number } | null } | null> {
+  try {
+    const res = await postJson<{ spots?: NextSpot[]; from?: { lat: number; lng: number } | null }>("/api/next-spot", {
+      anchor_venue_id: input.anchorVenueId,
+      date: input.date,
+      time: input.time,
+      occasion: input.occasion,
+      vibes: input.vibes,
+      party_size: input.partySize,
+      city: input.city,
+      exclude: input.exclude,
+    });
+    return res.spots ? { spots: res.spots, from: res.from ?? null } : null;
+  } catch {
+    return null;
+  }
+}

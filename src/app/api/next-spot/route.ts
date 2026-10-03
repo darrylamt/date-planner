@@ -1,0 +1,160 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { VENUE_SELECT } from "@/lib/venueColumns";
+import { expandVibes } from "@/lib/catalog";
+import { estimateHop, haversineKm } from "@/lib/transport";
+import { describePrice, hoursOn, isPriced, menusFor, openStateAt, type PriceNote } from "@/lib/chat/tools/shared";
+import type { Venue, VenueType } from "@/lib/types";
+
+/**
+ * Where next: one more place for a night that is already under way.
+ *
+ * Asked for by a shake (or the "Where next?" button) on a plan's own screen.
+ * Near the stop the night has reached, open at the time they would get there,
+ * the kind of place that suits the hour and the night, not one already in the
+ * plan, and priced: the same rule as every other answer, so an unpriced place
+ * is never offered as though it were cheap.
+ *
+ * A short list, not one place, so shaking again shows the next without
+ * another request, and with a little chance in the order so two shakes on the
+ * same street do not always agree.
+ */
+
+const bodySchema = z.object({
+  anchor_venue_id: z.string().uuid().nullable().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{1,2}:\d{2}$/),
+  occasion: z.string().max(40),
+  vibes: z.array(z.string().max(40)).max(12).default([]),
+  party_size: z.number().int().min(1).max(50).default(2),
+  city: z.string().max(60).optional(),
+  exclude: z.array(z.string().uuid()).max(40).default([]),
+});
+
+export type NextSpot = {
+  id: string;
+  name: string;
+  area: string;
+  type: VenueType;
+  image_url: string | null;
+  blurb: string | null;
+  km: number;
+  mins: number;
+  fare_ghs: number;
+  price: PriceNote;
+  open: "open" | "unknown";
+  hours: string;
+  lat: number | null;
+  lng: number | null;
+};
+
+const ROMANTIC = new Set(["first_date", "anniversary", "date_night"]);
+
+/**
+ * The kinds of place that fit the hour and the night.
+ *
+ * After dinner is drinks and dessert, not another dinner, which is why there
+ * is no restaurant here at night. Late and lively is a bar or a lounge. A
+ * family's evening never ends in one. Daytime is a café, dessert, something
+ * to do, or somewhere outside.
+ */
+function kindsFor(occasion: string, vibes: string[], time: string): VenueType[] {
+  const hour = Number(time.split(":")[0]);
+  const tags = expandVibes(vibes);
+  const lively = tags.includes("dancing") || tags.includes("lively");
+  if (occasion === "family_day") return hour >= 17 ? ["dessert", "activity"] : ["dessert", "activity", "cafe", "outdoor"];
+  if (occasion === "business_meeting") return ["cafe", "lounge"];
+  if (hour >= 21 || hour < 5) return lively ? ["lounge"] : ["lounge", "dessert"];
+  if (hour >= 17) return ROMANTIC.has(occasion) ? ["dessert", "lounge", "activity"] : ["lounge", "dessert", "activity"];
+  return ["cafe", "dessert", "activity", "outdoor"];
+}
+
+export async function POST(req: Request) {
+  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  const b = parsed.data;
+  const supabase = createClient();
+
+  // Where the night is: the stop it has reached, or a point the phone sent.
+  let anchor: { lat: number; lng: number } | null =
+    b.lat != null && b.lng != null ? { lat: b.lat, lng: b.lng } : null;
+  if (!anchor && b.anchor_venue_id) {
+    const { data } = await supabase.from("venues").select("lat,lng").eq("id", b.anchor_venue_id).maybeSingle();
+    if (data?.lat != null && data?.lng != null) anchor = { lat: Number(data.lat), lng: Number(data.lng) };
+  }
+  if (!anchor) return NextResponse.json({ spots: [], reason: "no_anchor" });
+
+  const kinds = kindsFor(b.occasion, b.vibes, b.time);
+  let q = supabase.from("venues").select(VENUE_SELECT).eq("is_active", true).in("type", kinds);
+  const { data: cityAreas } = await supabase.from("areas").select("id").eq("city", b.city?.trim() || "Accra");
+  const areaIds = ((cityAreas ?? []) as { id: string }[]).map((a) => a.id);
+  if (areaIds.length) q = q.in("area_id", areaIds);
+  const { data, error } = await q;
+  if (error) return NextResponse.json({ error: "catalogue" }, { status: 502 });
+
+  const excluded = new Set(b.exclude);
+  const near = ((data ?? []) as unknown as Venue[])
+    .filter((v) => !excluded.has(v.id) && v.lat != null && v.lng != null)
+    .filter((v) => {
+      const min = Number(v.min_party_size ?? 1);
+      const max = v.max_party_size == null ? Infinity : Number(v.max_party_size);
+      return b.party_size >= min && b.party_size <= max;
+    })
+    .map((v) => ({ v, km: haversineKm(anchor!, { lat: Number(v.lat), lng: Number(v.lng) }) }));
+
+  // Close first, and wider only when close has too little: four kilometres, then eight.
+  let pool = near.filter((x) => x.km <= 4);
+  if (pool.length < 4) pool = near.filter((x) => x.km <= 8);
+
+  const menus = await menusFor(supabase, pool.map((x) => x.v));
+  const wanted = expandVibes(b.vibes);
+  const ranked = pool
+    .filter((x) => isPriced(x.v, (menus.get(x.v.id) ?? []).length))
+    .map((x) => ({ ...x, open: openStateAt(x.v, b.date, b.time) }))
+    // Shut is dropped; unknown hours stay, said as unknown, as everywhere else.
+    .filter((x) => x.open !== "closed")
+    .map((x) => ({
+      ...x,
+      score:
+        (x.v.vibe_tags ?? []).filter((t) => wanted.includes(t)).length * 2 +
+        (x.open === "open" ? 1 : 0) -
+        x.km * 0.5 +
+        Math.random() * 1.5,
+    }))
+    .sort((a, c) => c.score - a.score)
+    .slice(0, 6);
+
+  const spots: NextSpot[] = ranked.map(({ v, km, open }) => {
+    const hop = estimateHop(anchor!, v);
+    return {
+      id: v.id,
+      name: v.name,
+      area: v.areas?.name ?? "",
+      type: v.type,
+      image_url: v.image_url ?? null,
+      blurb: firstSentence(v.description),
+      km: Math.round(km * 10) / 10,
+      mins: hop.mins,
+      fare_ghs: hop.cost_ghs,
+      price: describePrice(v, menus.get(v.id) ?? []),
+      open: open === "open" ? "open" : "unknown",
+      hours: hoursOn(v, b.date),
+      lat: v.lat == null ? null : Number(v.lat),
+      lng: v.lng == null ? null : Number(v.lng),
+    };
+  });
+
+  // Where the ride starts, so the app can offer one without asking for location.
+  return NextResponse.json({ spots, from: anchor });
+}
+
+function firstSentence(text: string | null | undefined): string | null {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  const end = t.search(/[.!?](\s|$)/);
+  const one = end === -1 ? t : t.slice(0, end + 1);
+  return one.length > 140 ? `${one.slice(0, 137).trimEnd()}…` : one;
+}
