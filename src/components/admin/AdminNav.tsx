@@ -54,6 +54,7 @@ const GROUPS: {
       { href: "/admin/discover", label: "Discover venues" },
       { href: "/admin/venues/new", label: "Add a venue" },
       { href: "/admin/import", label: "Import CSV" },
+      { href: "/admin/gaderin", label: "Gaderin", badge: "gaderinWaiting" },
     ],
   },
   {

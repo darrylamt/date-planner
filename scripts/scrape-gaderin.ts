@@ -317,7 +317,8 @@ function eventsOf(a: Activity, venueArea: Map<string, string | null>) {
     description: a.description ? a.description.slice(0, 400) : null,
     image_url: a.image_url,
     organiser_name: a.host_name,
-    vibe_tags: VIBES[a.category ?? ""] ?? null,
+    // Empty, never null: events.vibe_tags is not nullable, and an empty list means "the venue's".
+    vibe_tags: VIBES[a.category ?? ""] ?? [],
     is_active: true,
   }));
 }
@@ -405,9 +406,25 @@ async function main() {
   }
 
   // 1. Gaderin, as it is. Anything gone from the sitemap is no longer on sale.
-  for (let i = 0; i < read.length; i += 100) {
-    const { error } = await db.from("gaderin_activities").upsert(read.slice(i, i + 100), { onConflict: "slug" });
-    if (error) throw new Error(`save activities: ${error.message}`);
+  /*
+   * A venue or area is written only when this run found one. A batch upsert
+   * sets every column any row in it names, so rows are grouped by which of
+   * the two they carry: an activity linked by hand in admin, which the
+   * matcher cannot see, keeps its link instead of being reset to nothing.
+   */
+  const groups = new Map<string, Record<string, unknown>[]>();
+  for (const a of read) {
+    const row: Record<string, unknown> = { ...a };
+    if (!a.venue_id) delete row.venue_id;
+    if (!a.area_id) delete row.area_id;
+    const key = `${Boolean(a.venue_id)}:${Boolean(a.area_id)}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  for (const rows of groups.values()) {
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await db.from("gaderin_activities").upsert(rows.slice(i, i + 100), { onConflict: "slug" });
+      if (error) throw new Error(`save activities: ${error.message}`);
+    }
   }
   const gone = known.map((k) => k.slug).filter((s) => !map.has(s));
   for (let i = 0; i < gone.length; i += 100) {
@@ -415,8 +432,11 @@ async function main() {
   }
 
   // 2. Events, from every active activity placed at a venue (this run's and earlier ones').
+  // Without the set-aside filter until 0074 has added its column.
   const placed = await fetchAll<Activity>((f, t) =>
-    db.from("gaderin_activities").select("*").eq("is_active", true).not("venue_id", "is", null).range(f, t)
+    db.from("gaderin_activities").select("*").eq("is_active", true).eq("dismissed", false).not("venue_id", "is", null).range(f, t)
+  ).catch(() =>
+    fetchAll<Activity>((f, t) => db.from("gaderin_activities").select("*").eq("is_active", true).not("venue_id", "is", null).range(f, t))
   );
   const venueArea = new Map(venues.map((v) => [v.id, v.area_id]));
   const rows = placed.flatMap((a) => eventsOf(a, venueArea));

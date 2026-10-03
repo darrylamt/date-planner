@@ -47,6 +47,8 @@ export interface AdminCounts {
    * at needs enough of its menu on file for the choice to mean anything.
    */
   thinMenus: number;
+  /** Gaderin activities still needing a venue (0073, 0074). Zero before those run. */
+  gaderinWaiting: number;
 }
 
 const STALE_DAYS = 90;
@@ -111,7 +113,16 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
 
   const cutoff = Date.now() - STALE_DAYS * 86400000;
 
+  // Null, not an error, before 0073 and 0074 have run: the badge just stays off.
+  const { count: gaderinWaiting } = await supabase
+    .from("gaderin_activities")
+    .select("slug", { count: "exact", head: true })
+    .eq("is_active", true)
+    .eq("dismissed", false)
+    .is("venue_id", null);
+
   return {
+    gaderinWaiting: gaderinWaiting ?? 0,
     venues: rows.length,
     /*
      * `?? false` so this reads correctly before migration 0005 adds the column.
