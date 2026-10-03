@@ -3,10 +3,11 @@ import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
-import { AccountlessNote, Paywall } from "../chat/Paywall";
+import { AccountlessNote, Card, Hero, PERKS, Paywall, PerkRow } from "../chat/Paywall";
+import { useReducedMotion } from "../motion";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { configurePurchases, restore, purchasesAvailable } from "../../lib/purchases";
+import { configurePurchases, membership, restore, purchasesAvailable, type Membership } from "../../lib/purchases";
 import { NativeSheet } from "../native/NativeSheet";
 
 /** Where iOS keeps subscriptions. The only place one can be cancelled. */
@@ -47,6 +48,12 @@ export function ProSheet({
   const insets = useSafeAreaInsets();
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const reduced = useReducedMotion();
+  // Renews, ends, or a payment problem, from Apple via RevenueCat. Null when it cannot be known here.
+  const [member, setMember] = useState<Membership | null>(null);
+  useEffect(() => {
+    if (visible && tier === "pro") void membership().then(setMember);
+  }, [visible, tier]);
 
   useEffect(() => {
     if (visible) void configurePurchases();
@@ -102,34 +109,54 @@ export function ProSheet({
         >
           {tier === "pro" ? (
             <View>
-              <View
-                style={{
-                  alignItems: "center",
-                  paddingVertical: space.lg,
-                  borderRadius: radius.card,
-                  backgroundColor: c.backgroundElement,
-                }}
-              >
-                <Symbol name="checkmark.seal.fill" size={40} color={c.accent} />
-                <Text variant="headline" center style={{ marginTop: space.md }}>
-                  You are subscribed
-                </Text>
-                <Text
-                  variant="footnote"
-                  tone="secondary"
-                  center
-                  style={{ marginTop: space.xs, paddingHorizontal: space.lg }}
-                >
-                  The assistant is yours to use. Planning from the questionnaire is free and
-                  always has been.
-                </Text>
-              </View>
+              {/*
+                Having Pro looks like the thing that was bought: the paywall's
+                own gold header, then what it gives, then where it stands with
+                Apple. It was a grey tick and "You are subscribed", which told
+                a subscriber nothing they were paying for.
+              */}
+              <Card>
+                <Hero title="You have Duro Pro" line={standing(member)} reduced={reduced} />
+                <View style={{ padding: space.lg, gap: space.lg }}>
+                  {member?.billingIssue ? (
+                    <Pressable
+                      onPress={() => void Linking.openURL(MANAGE_URL)}
+                      style={{
+                        flexDirection: "row",
+                        gap: space.sm,
+                        alignItems: "center",
+                        padding: space.md,
+                        borderRadius: radius.row,
+                        backgroundColor: c.dangerSoft,
+                      }}
+                    >
+                      <Symbol name="exclamationmark.triangle.fill" size={16} color={c.danger} />
+                      <Text variant="footnote" style={{ flex: 1, color: c.danger }}>
+                        Apple could not take the last payment. Tap to check your payment details.
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  <PerkRow perk={PERKS.chat} />
+                  <PerkRow perk={PERKS.venue} />
+                  <PerkRow perk={PERKS.order} />
+                  <Text variant="footnote" tone="secondary">
+                    Planning from the questionnaire is free for everyone, and always will be.
+                  </Text>
+                </View>
+              </Card>
 
               <Pressable
                 onPress={() => void Linking.openURL(MANAGE_URL)}
-                style={{ marginTop: space.lg, paddingVertical: space.md }}
+                style={({ pressed }) => ({
+                  marginTop: space.lg,
+                  paddingVertical: space.md,
+                  borderRadius: radius.row,
+                  alignItems: "center",
+                  backgroundColor: c.backgroundElement,
+                  opacity: pressed ? 0.7 : 1,
+                })}
               >
-                <Text variant="body" center style={{ color: c.accent }}>
+                <Text variant="body" weight="600" style={{ color: c.accent }}>
                   Manage or cancel in the App Store
                 </Text>
               </Pressable>
@@ -137,7 +164,7 @@ export function ProSheet({
               <Pressable
                 onPress={() => void restorePurchases()}
                 disabled={busy}
-                style={{ paddingVertical: space.sm }}
+                style={{ paddingVertical: space.md }}
               >
                 <Text variant="footnote" tone="secondary" center>
                   {busy ? "Checking…" : "Restore purchases"}
@@ -166,4 +193,15 @@ export function ProSheet({
       </View>
     </NativeSheet>
   );
+}
+
+const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+
+/** Where the subscription stands, in a line. */
+function standing(m: Membership | null): string {
+  if (!m) return "Thank you for backing Duro!";
+  if (m.billingIssue) return "Apple is retrying your last payment.";
+  if (!m.until) return "Thank you for backing Duro!";
+  if (!m.renews) return `Cancelled. You keep everything until ${day(m.until)}.`;
+  return m.intro ? `Your first period ends ${day(m.until)}, then it renews.` : `Renews ${day(m.until)}.`;
 }

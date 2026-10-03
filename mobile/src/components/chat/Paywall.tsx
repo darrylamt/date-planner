@@ -19,6 +19,7 @@ import {
 } from "../../lib/purchases";
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonOffer } from "../Skeleton";
+import { MENUS_FREE_LABEL, menusFree } from "../../lib/freeMenus";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -79,10 +80,10 @@ export function AccountlessNote() {
 
 type Reason = "limit" | "browse" | "venue";
 
-type Perk = { icon: SymbolViewProps["name"]; title: string; body: string };
+export type Perk = { icon: SymbolViewProps["name"]; title: string; body: string };
 
 /** What Pro unlocks, and nothing it does not. */
-const PERKS: Record<"chat" | "venue" | "order", Perk> = {
+export const PERKS: Record<"chat" | "venue" | "order", Perk> = {
   chat: {
     icon: "bubble.left.and.text.bubble.right.fill",
     title: "Plan by chatting with Durobot",
@@ -91,7 +92,10 @@ const PERKS: Record<"chat" | "venue" | "order", Perk> = {
   venue: {
     icon: "menucard.fill",
     title: "Every venue's full page",
-    body: "The whole menu with prices, the week's hours, and Call, Book or WhatsApp in a tap.",
+    // During the free month the list says so: a perk everybody has is not one to sell.
+    body: menusFree()
+      ? `The whole menu with prices, the week's hours, and booking. Free for everyone until ${MENUS_FREE_LABEL}, then with Pro.`
+      : "The whole menu with prices, the week's hours, and Call, Book or WhatsApp in a tap.",
   },
   order: {
     icon: "fork.knife",
@@ -109,7 +113,7 @@ const COPY: Record<Reason, { title: string; line: string; perks: (keyof typeof P
   },
   browse: {
     title: "Never spend 30 minutes figuring out where to go again",
-    line: "Duro Pro plans with you, and opens every place up.",
+    line: menusFree() ? "Duro Pro plans with you, and keeps every place open after the free month." : "Duro Pro plans with you, and opens every place up.",
     perks: ["chat", "venue", "order"],
   },
   venue: {
@@ -364,7 +368,8 @@ export function Paywall({
  * Pro's header: its colours blurred together, the gold star, the character
  * celebrating, and why this is showing.
  */
-function Hero({ title, line, reduced }: { title: string; line: string; reduced: boolean }) {
+/** Shared with the subscribed page, so having Pro looks like the thing that was bought. */
+export function Hero({ title, line, reduced }: { title: string; line: string; reduced: boolean }) {
   const c = useTheme();
   const dark = useIsDark();
   const drift = useRef(new Animated.Value(0)).current;
@@ -502,7 +507,7 @@ function Star({ reduced }: { reduced: boolean }) {
 }
 
 /** One thing Pro unlocks: an icon in a gold disc, what it is, and what that means. */
-function PerkRow({ perk }: { perk: Perk }) {
+export function PerkRow({ perk }: { perk: Perk }) {
   const c = useTheme();
   const dark = useIsDark();
   return (
@@ -605,7 +610,7 @@ function BuyButton({
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+export function Card({ children }: { children: React.ReactNode }) {
   const c = useTheme();
   return (
     <View

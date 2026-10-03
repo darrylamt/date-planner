@@ -278,3 +278,38 @@ function describePeriod(iso: string | null | undefined): string {
       return "month";
   }
 }
+
+/** What Apple says about a subscription, for the subscribed page. */
+export interface Membership {
+  /** False once it has been cancelled: it runs to `until` and stops. */
+  renews: boolean;
+  until: Date | null;
+  /** In a free trial or a cheaper first period. */
+  intro: boolean;
+  /** Apple could not take the last payment and is retrying. */
+  billingIssue: boolean;
+}
+
+/**
+ * When the subscription renews, or ends if cancelled. Null when it cannot be
+ * known here: no module, no network, or Pro granted on the account rather
+ * than bought (an admin grant has no renewal to speak of).
+ */
+export async function membership(): Promise<Membership | null> {
+  if (!purchasesAvailable() || !Purchases) return null;
+  try {
+    await configurePurchases();
+    const info = await Purchases.default.getCustomerInfo();
+    const e = info.entitlements.active[ENTITLEMENT];
+    if (!e) return null;
+    const period = String(e.periodType ?? "").toUpperCase();
+    return {
+      renews: Boolean(e.willRenew),
+      until: e.expirationDate ? new Date(e.expirationDate) : null,
+      intro: period === "TRIAL" || period === "INTRO",
+      billingIssue: Boolean(e.billingIssueDetectedAt),
+    };
+  } catch {
+    return null;
+  }
+}

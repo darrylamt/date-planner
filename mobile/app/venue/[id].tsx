@@ -23,6 +23,7 @@ import { VENUE_KIND } from "../../src/lib/venueKinds";
 import type { MenuItem } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
+import { MENUS_FREE_LABEL, menusFree } from "../../src/lib/freeMenus";
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -103,8 +104,15 @@ export default function VenuePage() {
     void checkPro();
   }, [checkPro, session?.user.id]);
 
+  /*
+   * Pro, or the free month (see freeMenus): the full page either way. The
+   * paywall below only ever shows to somebody who is neither.
+   */
+  const freeMonth = menusFree();
+  const open = pro === true || freeMonth;
+
   useEffect(() => {
-    if (!pro || menu) return;
+    if (!open || menu) return;
     let active = true;
     fetchMenu(id)
       .then((m) => {
@@ -116,7 +124,7 @@ export default function VenuePage() {
     return () => {
       active = false;
     };
-  }, [pro, id, menu]);
+  }, [open, id, menu]);
 
   /*
    * Shown straight away and put back if the database says no: waiting on a
@@ -359,15 +367,37 @@ export default function VenuePage() {
           </Rise>
         ) : null}
 
-        {pro === null ? (
+        {pro === null && !freeMonth ? (
           <SkeletonMenu rows={5} />
-        ) : !pro ? (
+        ) : !open ? (
           <View style={{ paddingHorizontal: GUTTER, gap: space.md, marginTop: space.xl }}>
             {/* The paywall lists what is behind it, because "Unlock" alone asks somebody to pay for a surprise. */}
             <Paywall tier="free" reason="venue" onPurchased={() => void checkPro()} />
           </View>
         ) : (
           <>
+            {/* Said where it is given, so the end of it is no surprise. */}
+            {freeMonth && pro !== true ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: space.sm,
+                  marginHorizontal: GUTTER,
+                  marginTop: space.lg,
+                  paddingHorizontal: space.md,
+                  paddingVertical: space.sm,
+                  borderRadius: radius.row,
+                  backgroundColor: c.accentSoft,
+                }}
+              >
+                <Symbol name="gift.fill" size={15} color={c.accent} />
+                <Text variant="footnote" style={{ flex: 1, color: c.accent }}>
+                  Menus, hours and booking are free for everyone until {MENUS_FREE_LABEL}. Recommend what you love.
+                </Text>
+              </View>
+            ) : null}
+
             {/* ── What it is like ── */}
             {chips.length ? (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, paddingHorizontal: GUTTER, marginTop: space.lg }}>
