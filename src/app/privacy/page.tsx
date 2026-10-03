@@ -173,8 +173,9 @@ export default function PrivacyPage() {
       */}
       <Section title="If you are in the EU, the UK or Ghana">
         <p>
-          <strong>Who is responsible.</strong> Duro, run from Accra, Ghana, is
-          the controller of the personal data described above. Reach us at{" "}
+          <strong>Who is responsible.</strong> Duro is run by Darryl Amoatey,
+          an individual in Accra, Ghana, who is the controller of the personal
+          data described above. Reach us at{" "}
           <a href={`mailto:${CONTACT}`}>{CONTACT}</a> for anything on this page.
         </p>
         <p>
