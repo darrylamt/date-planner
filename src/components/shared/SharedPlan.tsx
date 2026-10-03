@@ -19,6 +19,8 @@ export interface SharedStop {
   label: string;
   what: string;
   whatsOn: string[];
+  /** The event's organiser, when the stop is an event that names one. */
+  host?: { name: string; logo: string | null } | null;
   /** What is on the order, without prices. */
   dishes: { item: string; qty: number }[];
   image: string | null;
@@ -324,6 +326,17 @@ export function SharedPlan(p: SharedPlanProps) {
                     </div>
                     <h2 className="mt-2 text-[23px] font-extrabold leading-tight tracking-[-0.01em]">{st.name}</h2>
                     <div className="mt-0.5 text-[14px] text-white/55">📍 {st.area}</div>
+                    {st.host ? (
+                      <div className="mt-2 flex items-center gap-2 text-[14px] text-white/70">
+                        {st.host.logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={st.host.logo} alt="" className="h-6 w-6 rounded-full object-cover ring-1 ring-white/20" />
+                        ) : null}
+                        <span>
+                          Hosted by <span className="font-bold text-white/90">{st.host.name}</span>
+                        </span>
+                      </div>
+                    ) : null}
                     {st.what ? <p className="mt-2.5 text-[15px] leading-relaxed text-white/75">{st.what}</p> : null}
                     {st.dishes.length ? (
                       <div className="mt-3 rounded-[16px] border border-white/10 bg-white/[0.04] px-3.5 py-3">

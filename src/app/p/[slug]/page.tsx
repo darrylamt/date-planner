@@ -129,6 +129,8 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
     what: st.what_to_do || "",
     // Without the cover: the guest's copy carries no money anywhere.
     whatsOn: (st.whats_on ?? []).map((line) => line.replace(/, GHS [\d,.]+ in/, "")),
+    // Who is running the night, as the app's stop card shows it (0071).
+    host: st.event?.organiser_name ? { name: st.event.organiser_name, logo: st.event.organiser_logo_url ?? null } : null,
     /*
      * What they will eat and do there, by name and never by price. The door
      * line is left out: without its figure it says nothing.

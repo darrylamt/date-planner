@@ -164,6 +164,53 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      {/*
+        Added 3 Oct 2026, with Duro! on sale in the EU and the UK. The GDPR
+        wants a policy to say who is responsible, on what basis each kind of
+        data is used, how long it is kept, where it goes, and what people can
+        ask for. Everything here repeats facts stated above; it adds the
+        legal frame, not new practice.
+      */}
+      <Section title="If you are in the EU, the UK or Ghana">
+        <p>
+          <strong>Who is responsible.</strong> Duro, run from Accra, Ghana, is
+          the controller of the personal data described above. Reach us at{" "}
+          <a href={`mailto:${CONTACT}`}>{CONTACT}</a> for anything on this page.
+        </p>
+        <p>
+          <strong>Why we may use it.</strong> Your account, saved plans,
+          conversations and subscription: to provide the service you asked for
+          (contract). Sending your words to Anthropic for the assistant and
+          plan descriptions: your consent, which you can withdraw under{" "}
+          <strong>You</strong> at any time. The anonymous record of plan
+          requests, counts of shared plans, and message and cost counts: our
+          legitimate interest in running Duro fairly and deciding where to add
+          venues, using data that does not identify you.
+        </p>
+        <p>
+          <strong>How long we keep it.</strong> Account data, plans and
+          conversations until you delete your account, when they are removed
+          straight away. Location is not stored at all. The anonymous request
+          records and share counts are kept, because they are about no one.
+          Reports about venues are kept with your name detached.
+        </p>
+        <p>
+          <strong>Where it goes.</strong> The services named under{" "}
+          <strong>Who else sees it</strong> may process data outside your
+          country, including in the United States. Where they do, they rely on
+          the safeguards data-protection law provides for that, such as the
+          European Commission&apos;s standard contractual clauses.
+        </p>
+        <p>
+          <strong>Your rights.</strong> You can ask for a copy of your data, to
+          correct it, to delete it, to restrict or object to how it is used, and
+          to have it in a form you can take elsewhere. Most of this you can do
+          in the app; for the rest, email us and we will answer within a month.
+          You can also complain to the data protection authority where you live,
+          or in Ghana to the Data Protection Commission.
+        </p>
+      </Section>
+
       <Section title="Children">
         <p>Duro is not intended for anyone under 13.</p>
       </Section>
