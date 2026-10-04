@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
-/** 20 October to 1 November, on Accra's clock, which is UTC all year. */
+/** A week either side of Halloween, 24 October to 7 November, on Accra's clock (UTC all year). */
 export function isHalloween(at = new Date()): boolean {
   const m = at.getUTCMonth() + 1;
   const d = at.getUTCDate();
-  return (m === 10 && d >= 20) || (m === 11 && d <= 1);
+  return (m === 10 && d >= 24) || (m === 11 && d <= 7);
 }
 
 /** The wordmark's width over its height, from public/brand/duro-wordmark.png. */

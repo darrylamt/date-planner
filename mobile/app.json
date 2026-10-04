@@ -79,7 +79,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it."
+          "calendarPermission": "Duro adds your plan to your calendar, with each stop and its time, so you don't lose track of it.",
+          "remindersPermission": false
         }
       ],
       "expo-font",
@@ -95,6 +96,8 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Duro uses your location only when you ask: for directions from where you are, or for places near you. It is read once and not stored.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
