@@ -29,11 +29,11 @@ const bodySchema = z.object({
   season: z.enum(["halloween"]).optional(),
 });
 
-/** A week either side of Halloween, 24 October to 7 November, on Accra's clock (UTC all year). */
+/** Halloween season, 10 October to 5 November, on Accra's clock (UTC all year). */
 function halloweenNow(at = new Date()): boolean {
   const m = at.getUTCMonth() + 1;
   const d = at.getUTCDate();
-  return (m === 10 && d >= 24) || (m === 11 && d <= 7);
+  return (m === 10 && d >= 10) || (m === 11 && d <= 5);
 }
 
 export async function POST(req: Request) {

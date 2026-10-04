@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 /**
  * The time of year the app is dressed for, if any.
  *
- * Halloween runs from 24 October to 7 November, a week either side of the night itself, on the phone's own calendar,
+ * Halloween runs from 10 October to 5 November on the phone's own calendar,
  * and switches itself on and off with no update. A preview can be turned on
  * from Profile (hold the version line) to see it outside those dates, and is
  * kept on the phone until turned off again.
@@ -17,7 +17,7 @@ const PREVIEW_KEY = "duro.season.preview";
 export function isHalloween(at: Date = new Date()): boolean {
   const m = at.getMonth() + 1;
   const d = at.getDate();
-  return (m === 10 && d >= 24) || (m === 11 && d <= 7);
+  return (m === 10 && d >= 10) || (m === 11 && d <= 5);
 }
 
 const SeasonContext = createContext<{ season: Season; preview: boolean; setPreview: (on: boolean) => void }>({
