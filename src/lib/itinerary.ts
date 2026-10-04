@@ -182,6 +182,7 @@ export function assembleItinerary(
     // from avg_cost here would discard the menu-based price and show an
     // unpriced venue as free.
     const alternates: StopAlternate[] = s.alternates.map((a) => ({
+      label: a.label,
       venue_id: a.venue.id,
       venue_type: a.venue.type,
       name: a.venue.name,

@@ -6,15 +6,19 @@
 import { ghs } from "./format";
 import type { Itinerary, StopAlternate, VenueType } from "./types";
 
-/** A slot's heading for a venue with none of its own, by what kind of place it is. */
+/**
+ * A heading by what kind of place it is, in the planner's own words
+ * (TYPE_LABEL in planner.ts), for an alternate saved before alternates
+ * carried their heading.
+ */
 const KIND_LABEL: Record<VenueType, string> = {
-  restaurant: "FOOD",
+  restaurant: "A TABLE",
   lounge: "DRINKS",
-  cafe: "CAFÉ",
+  cafe: "COFFEE",
   dessert: "DESSERT",
-  activity: "ACTIVITY",
+  activity: "SOMETHING TO DO",
   outdoor: "OUTDOORS",
-  wellness: "WELLNESS",
+  wellness: "SPA",
 };
 
 /**
@@ -105,8 +109,20 @@ export function swapStopLocally(
     event: next.event,
     what_to_do: next.what_to_do ?? "",
     whats_on: next.whats_on ?? [],
-    // Never the event's own heading on a venue that is not the event.
-    label: next.label ?? (stop.event ? (next.venue_type ? KIND_LABEL[next.venue_type] : "NEXT STOP") : stop.label),
+    /*
+     * The heading changes with everything else. A restaurant swapped into a
+     * "SOMETHING TO DO" slot kept that heading. The planner now sends each
+     * alternate's own; an older plan has none, so a different kind of place
+     * takes its kind's heading, and only a like-for-like swap keeps the slot's.
+     * Never the event's own heading on a venue that is not the event.
+     */
+    label:
+      next.label ??
+      (next.venue_type && (stop.event || next.venue_type !== stop.venue_type)
+        ? KIND_LABEL[next.venue_type]
+        : stop.event
+          ? "NEXT STOP"
+          : stop.label),
     alternates: rotated,
   };
 

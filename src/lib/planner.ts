@@ -1105,7 +1105,7 @@ export interface PlannedStop {
    * orders and cost the planner computed for it, re-deriving a price at the
    * point of swap is how a venue with no menu ends up shown as free.
    */
-  alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[] }[];
+  alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[]; label: string }[];
   /** What the venue adds to the bill, already counted in cost. */
   charges: StopCharge[];
 }
@@ -2141,7 +2141,16 @@ function planWith(
               (o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx
             )
             .slice(0, 2)
-            .map((o) => ({ venue: o.venue, orders: o.orders, cost: o.cost, charges: o.charges })),
+            .map((o) => ({
+              venue: o.venue,
+              orders: o.orders,
+              cost: o.cost,
+              charges: o.charges,
+              // The heading this venue would have had in this slot, by the rule above, so a swap changes it too.
+              label: ROLE_TYPES[role].includes(o.venue.type)
+                ? ROLE_LABEL[role]
+                : (TYPE_LABEL[o.venue.type] ?? ROLE_LABEL[role]),
+            })),
         };
       });
     }
