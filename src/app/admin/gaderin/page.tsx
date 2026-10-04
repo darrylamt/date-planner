@@ -41,9 +41,17 @@ export default async function AdminGaderinPage() {
         .order("title")
         .range(from, to)
     ),
-    fetchAllRows<any>((from, to) => supabase.from("venues").select("id,name,areas(name)").eq("is_active", true).order("name").range(from, to)),
+    /*
+     * Switched-off places too, marked: most were switched off for having no
+     * price of their own, and a Gaderin event brings its own. Permanently
+     * closed ones stay out; there is no door to send anybody to.
+     */
+    fetchAllRows<any>((from, to) =>
+      supabase.from("venues").select("id,name,is_active,business_status,areas(name)").order("name").range(from, to)
+    ),
   ]);
 
+  const linkable = venues.filter((v: any) => v.business_status !== "CLOSED_PERMANENTLY");
   const venueName = new Map(venues.map((v: any) => [v.id, v.name as string]));
   const rows: GaderinRow[] = activities.map((a: any) => ({
     slug: a.slug,
@@ -56,7 +64,7 @@ export default async function AdminGaderinPage() {
     when: whenOf(a),
     image: a.image_url,
     venueId: a.venue_id,
-    venueName: a.venue_id ? venueName.get(a.venue_id) ?? "A venue no longer active" : null,
+    venueName: a.venue_id ? venueName.get(a.venue_id) ?? "A venue no longer listed" : null,
     dismissed: Boolean(a.dismissed),
   }));
   const lastRun = activities.reduce((m: string, a: any) => (a.scraped_at > m ? a.scraped_at : m), "");
@@ -68,12 +76,16 @@ export default async function AdminGaderinPage() {
         Activities read from thegaderin.com every night at 03:00. Ones placed at a Duro venue become dated events the
         planner can use, booked on Gaderin: the next two weeks of a weekly one, or the date of a one-off. Link the rest
         to the venue they happen at, or set them aside when Duro cannot use them. Links show up as events after the
-        next nightly run.
+        next nightly run. A switched-off place can be linked too, and linking switches it back on: the event is its
+        price, so without one of its own it still only appears in plans through its events.
         {lastRun ? ` Last read ${new Date(lastRun).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} (Accra).` : " Not read yet."}
       </p>
       <GaderinActivities
         rows={rows}
-        venues={venues.map((v: any) => ({ id: v.id, label: v.areas?.name ? `${v.name} (${v.areas.name})` : v.name }))}
+        venues={linkable.map((v: any) => ({
+          id: v.id,
+          label: `${v.name}${v.areas?.name ? ` (${v.areas.name})` : ""}${v.is_active ? "" : " (switched off)"}`,
+        }))}
       />
     </div>
   );

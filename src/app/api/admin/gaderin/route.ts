@@ -26,8 +26,25 @@ export async function POST(req: Request) {
   const body = parsed.data;
 
   if (body.action === "link") {
-    const { data: venue } = await supabase.from("venues").select("id,area_id").eq("id", body.venueId).maybeSingle();
+    const { data: venue } = await supabase
+      .from("venues")
+      .select("id,area_id,is_active,business_status")
+      .eq("id", body.venueId)
+      .maybeSingle();
     if (!venue) return NextResponse.json({ error: "No such venue." }, { status: 404 });
+    if (venue.business_status === "CLOSED_PERMANENTLY") {
+      return NextResponse.json({ error: "That place is marked permanently closed." }, { status: 409 });
+    }
+    /*
+     * A place switched off for want of a price is switched back on: a Gaderin
+     * event is a price. The planner still withholds an unpriced venue from
+     * ordinary slots, so it appears only through its events until it has a
+     * price of its own.
+     */
+    if (!venue.is_active) {
+      const { error } = await supabase.from("venues").update({ is_active: true }).eq("id", venue.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     const { error } = await supabase
       .from("gaderin_activities")
       .update({ venue_id: venue.id, area_id: venue.area_id, dismissed: false })
