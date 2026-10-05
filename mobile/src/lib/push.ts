@@ -52,6 +52,18 @@ export async function registerForPush(): Promise<PushOutcome> {
   if (Device && !Device.isDevice) return "unavailable";
 
   try {
+    /*
+     * Android 13 shows no permission dialog until the app has a channel to
+     * post in, and before 8 there are no channels at all. One channel: Duro
+     * sends few enough that people need no way to mute some and keep others.
+     */
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "Duro",
+        importance: Notifications.AndroidImportance.DEFAULT,
+      });
+    }
+
     const existing = await Notifications.getPermissionsAsync();
     let status = existing.status;
 

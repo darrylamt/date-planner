@@ -24,6 +24,7 @@ import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
 import { AppIconPicker, appIconsAvailable } from "../src/components/AppIconPicker";
+import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
 import { ProSheet } from "../src/components/profile/ProSheet";
@@ -54,15 +55,6 @@ const ImagePicker = nativeOptional<typeof import("expo-image-picker")>(() =>
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const SUPPORT_EMAIL = "planbyaduro@gmail.com";
-
-/*
- * The numeric App Store ID, from App Store Connect under App Information.
- * It does not exist until the app record is created there, so until it is
- * filled in the Rate row is hidden rather than shipped pointing at
- * id0000000000, which opens the App Store on nothing and reads as a bug to
- * the first person who taps it.
- */
-const APP_STORE_ID = "6809005685";
 
 export default function Profile() {
   const c = useTheme();
@@ -150,7 +142,7 @@ export default function Profile() {
        * Deleting the row here stops nothing at Apple, and somebody who
        * assumed it did would be charged again next month.
        */
-        "Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to Duro Pro, Apple keeps billing until you cancel it in Settings, under your name, then Subscriptions.",
+        `Your account, saved plans and conversations go for good. This cannot be undone.\n\nIf you subscribe to Duro Pro, ${BILLER} keeps billing until you cancel it ${CANCEL_WHERE}.`,
       actions: [
         {
           text: "Delete account",
@@ -559,18 +551,12 @@ export default function Profile() {
             Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Duro")}`)
           }
         />
-        {APP_STORE_ID ? (
-          <Row
-            icon="star"
-            title="Rate Duro"
-            chevron
-            onPress={() =>
-              Linking.openURL(
-                `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
-              )
-            }
-          />
-        ) : null}
+        <Row
+          icon="star"
+          title="Rate Duro"
+          chevron
+          onPress={() => Linking.openURL(REVIEW_URL)}
+        />
       </Group>
 
       <Group header="Legal">

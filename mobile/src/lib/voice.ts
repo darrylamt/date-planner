@@ -9,7 +9,7 @@ import { nativeOptional } from "./nativeOptional";
  */
 type SpeechModule = typeof import("expo-speech-recognition").ExpoSpeechRecognitionModule;
 const Speech: SpeechModule | null =
-  Platform.OS === "ios" && requireOptionalNativeModule("ExpoSpeechRecognition")
+  requireOptionalNativeModule("ExpoSpeechRecognition")
     ? nativeOptional(() => (require("expo-speech-recognition") as typeof import("expo-speech-recognition")).ExpoSpeechRecognitionModule)
     : null;
 
@@ -18,9 +18,10 @@ export const voiceAvailable = (): boolean => Speech != null;
 /**
  * Listen while the mic is held, and hand over the words as they come.
  *
- * Apple's recogniser does the listening, and what reaches Duro is the text,
- * never the audio. British English, the nearest Apple offers to how Accra
- * speaks; punctuation on, so a question arrives as one. Resolves to the
+ * The phone's own recogniser does the listening (Apple's, or Google's on
+ * Android), and what reaches Duro is the text, never the audio. British
+ * English, the nearest either offers to how Accra speaks; punctuation on,
+ * so a question arrives as one. Resolves to the
  * function that stops listening, or null when it could not start (no
  * permission, or no module), having said why through onError.
  */
@@ -32,7 +33,11 @@ export async function startListening(on: {
   if (!Speech) return null;
   const perm = await Speech.requestPermissionsAsync().catch(() => null);
   if (!perm?.granted) {
-    on.onError("Duro needs the microphone and speech recognition for this. Turn them on in Settings, under Duro.");
+    on.onError(
+      Platform.OS === "android"
+        ? "Duro needs the microphone for this. Turn it on in Settings, under Apps, Duro, Permissions."
+        : "Duro needs the microphone and speech recognition for this. Turn them on in Settings, under Duro."
+    );
     return null;
   }
 

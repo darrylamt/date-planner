@@ -1,15 +1,15 @@
-import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { requireOptionalNativeModule } from "expo-modules-core";
 import { nativeOptional } from "./nativeOptional";
 
 /*
- * Apple's rating prompt, from build 24. expo-store-review asks for its native
+ * The store's own rating prompt (Apple's, or Google Play's in-app review),
+ * from build 24. expo-store-review asks for its native
  * half the moment it is imported, so it is looked for first.
  */
 type ReviewModule = typeof import("expo-store-review");
 const Review: ReviewModule | null =
-  Platform.OS === "ios" && requireOptionalNativeModule("ExpoStoreReview")
+  requireOptionalNativeModule("ExpoStoreReview")
     ? nativeOptional<ReviewModule>(() => require("expo-store-review"))
     : null;
 

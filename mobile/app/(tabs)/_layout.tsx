@@ -54,20 +54,20 @@ export default function TabsLayout() {
     <NativeTabs tintColor={c.accent}>
       {/* Home lets iOS inset its scroll view; the others pad for the status bar themselves. */}
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon sf={{ default: "house", selected: "house.fill" }} />
+        <NativeTabs.Trigger.Icon sf={{ default: "house", selected: "house.fill" }} md="home" />
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       {/* Second, beside Home: finding a place is the thing people do between plans. */}
       <NativeTabs.Trigger name="venues" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf={{ default: "map", selected: "map.fill" }} />
+        <NativeTabs.Trigger.Icon sf={{ default: "map", selected: "map.fill" }} md="map" />
         <NativeTabs.Trigger.Label>Venues</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="calendar" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf="calendar" />
+        <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
         <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
+        <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
         <NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       {/* Settings lives behind the avatar on Home, not in the bar. */}
@@ -78,7 +78,7 @@ export default function TabsLayout() {
         accessibilityLabel="New plan"
         listeners={{ tabPress: () => void startNewPlan() }}
       >
-        <NativeTabs.Trigger.Icon sf="plus" />
+        <NativeTabs.Trigger.Icon sf="plus" md="add" />
         <NativeTabs.Trigger.Label>New plan</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>

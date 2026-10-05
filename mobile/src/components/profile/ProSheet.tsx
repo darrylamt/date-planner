@@ -9,9 +9,8 @@ import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { configurePurchases, membership, restore, purchasesAvailable, type Membership } from "../../lib/purchases";
 import { NativeSheet } from "../native/NativeSheet";
+import { BILLER, MANAGE_URL, STORE, STORE_ACCOUNT } from "../../lib/store";
 
-/** Where iOS keeps subscriptions. The only place one can be cancelled. */
-const MANAGE_URL = "itms-apps://apps.apple.com/account/subscriptions";
 
 /**
  * Duro Pro, reachable on purpose rather than by running out.
@@ -79,7 +78,7 @@ export function ProSheet({
       setNote("Restored.");
       onPurchased();
     } else {
-      setNote("No subscription found on this Apple ID.");
+      setNote(`No subscription found on this ${STORE_ACCOUNT}.`);
     }
   }
 
@@ -132,7 +131,7 @@ export function ProSheet({
                     >
                       <Symbol name="exclamationmark.triangle.fill" size={16} color={c.danger} />
                       <Text variant="footnote" style={{ flex: 1, color: c.danger }}>
-                        Apple could not take the last payment. Tap to check your payment details.
+                        {BILLER} could not take the last payment. Tap to check your payment details.
                       </Text>
                     </Pressable>
                   ) : null}
@@ -157,7 +156,7 @@ export function ProSheet({
                 })}
               >
                 <Text variant="body" weight="600" style={{ color: c.accent }}>
-                  Manage or cancel in the App Store
+                  Manage or cancel in {STORE}
                 </Text>
               </Pressable>
 
@@ -200,7 +199,7 @@ const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: 
 /** Where the subscription stands, in a line. */
 function standing(m: Membership | null): string {
   if (!m) return "Thank you for backing Duro!";
-  if (m.billingIssue) return "Apple is retrying your last payment.";
+  if (m.billingIssue) return `${BILLER} is retrying your last payment.`;
   if (!m.until) return "Thank you for backing Duro!";
   if (!m.renews) return `Cancelled. You keep everything until ${day(m.until)}.`;
   return m.intro ? `Your first period ends ${day(m.until)}, then it renews.` : `Renews ${day(m.until)}.`;

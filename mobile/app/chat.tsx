@@ -19,6 +19,7 @@ import { Text } from "../src/components/Text";
 import { Symbol } from "../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
+import { STORE } from "../src/lib/store";
 import { useSeason } from "../src/lib/season";
 import { SWEETS, useBurst } from "../src/components/Burst";
 import { startListening, voiceAvailable } from "../src/lib/voice";
@@ -192,7 +193,7 @@ export default function ChatScreen() {
       ...b,
       {
         role: "assistant",
-        text: "Your subscription is being confirmed by the App Store. That usually takes a few seconds — send that again in a moment.",
+        text: `Your subscription is being confirmed by ${STORE}. That usually takes a few seconds — send that again in a moment.`,
       },
     ]);
     toBottom();

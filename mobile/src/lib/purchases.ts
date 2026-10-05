@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { nativeOptional } from "./nativeOptional";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ensureSession } from "./useAuth";
@@ -42,8 +43,15 @@ const ELIGIBLE = 2;
  * RevenueCat's SDK keys are scoped to reading offerings and making purchases
  * as the signed-in app user; the secret key that can grant entitlements lives
  * on the server and is not here.
+ *
+ * One key per store: RevenueCat gives the Play Store app its own (goog_...),
+ * and the App Store key does nothing on Android. Without the Android key the
+ * store is simply unavailable there, as on a build without the module.
  */
-const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_KEY ?? "";
+const API_KEY =
+  (Platform.OS === "android"
+    ? process.env.EXPO_PUBLIC_REVENUECAT_KEY_ANDROID
+    : process.env.EXPO_PUBLIC_REVENUECAT_KEY) ?? "";
 
 export function purchasesAvailable(): boolean {
   return Purchases !== null && API_KEY !== "";

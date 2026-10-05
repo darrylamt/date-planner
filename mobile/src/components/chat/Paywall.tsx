@@ -9,6 +9,7 @@ import { Mascot } from "../Mascot";
 import { PressScale, Rise, useReducedMotion } from "../motion";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useIsDark, useTheme } from "../../lib/useTheme";
+import { CANCEL_SHORT, STORE_ACCOUNT } from "../../lib/store";
 import {
   configurePurchases,
   fetchOffer,
@@ -221,7 +222,7 @@ export function Paywall({
       say("Found it. Unlocking now.");
       onPurchased();
     } else if (result === "nothing") {
-      say("No subscription found on this Apple ID.");
+      say(`No subscription found on this ${STORE_ACCOUNT}.`);
     } else {
       say("Could not reach the store just now.");
     }
@@ -311,7 +312,7 @@ export function Paywall({
                 : offer.intro
                   ? `${offer.intro.priceString} for the first ${offer.intro.span}, then ${offer.priceString} per ${offer.period}. `
                   : `${offer.priceString} per ${offer.period}. `}
-              Renews automatically until cancelled. Cancel any time in your Apple ID settings.
+              Renews automatically until cancelled. Cancel any time {CANCEL_SHORT}.
             </Text>
           </>
         ) : (

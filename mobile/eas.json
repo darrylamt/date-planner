@@ -19,7 +19,10 @@
         "simulator": false
       },
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "autoIncrement": true,
@@ -35,6 +38,11 @@
       "ios": {
         "appleTeamId": "26H979HZC3",
         "ascAppId": "6809005685"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
       }
     }
   }

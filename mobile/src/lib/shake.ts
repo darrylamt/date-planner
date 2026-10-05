@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
 import { requireOptionalNativeModule } from "expo-modules-core";
 import { nativeOptional } from "./nativeOptional";
 
@@ -14,7 +13,7 @@ type Sensor = {
   addListener(fn: (r: Reading) => void): { remove(): void };
 };
 const Accelerometer: Sensor | null =
-  Platform.OS === "ios" && requireOptionalNativeModule("ExponentAccelerometer")
+  requireOptionalNativeModule("ExponentAccelerometer")
     ? nativeOptional(() => (require("expo-sensors") as { Accelerometer: Sensor }).Accelerometer)
     : null;
 

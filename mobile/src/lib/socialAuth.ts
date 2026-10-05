@@ -54,7 +54,8 @@ const APPLE_SAYS: Record<string, string> = {
   ERR_INVALID_RESPONSE: "Apple sent back something we could not use. Try again, or use Google or email.",
 };
 const FINISH_FAILED = "We could not finish signing you in. Check your connection and try again.";
-const GOOGLE_FAILED = "Google sign-in did not work just now. Try again, or use Apple or email.";
+// No Apple button on Android, so no pointing at one.
+const GOOGLE_FAILED = `Google sign-in did not work just now. Try again, or use ${Platform.OS === "ios" ? "Apple or email" : "email"}.`;
 
 export interface SocialResult {
   ok: boolean;

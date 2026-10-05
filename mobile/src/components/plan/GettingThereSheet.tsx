@@ -6,6 +6,7 @@ import { Symbol } from "../Symbol";
 import { Button } from "../Button";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
+import { STORE } from "../../lib/store";
 import { uberRideLink, yangoRideLink } from "../../lib/format";
 import { planTrip, type TripOption } from "../../lib/api";
 import { currentPlace, locationAvailable, type Here } from "../../lib/location";
@@ -158,7 +159,7 @@ export function GettingThereSheet({
           </View>
           {!previous && !locationAvailable() ? (
             <Text variant="footnote" tone="secondary">
-              Trotro directions from where you are need the latest version of Duro from the App Store.
+              Trotro directions from where you are need the latest version of Duro from {STORE}.
             </Text>
           ) : null}
 

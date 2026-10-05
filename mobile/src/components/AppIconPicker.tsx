@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Text } from "./Text";
@@ -84,7 +84,7 @@ export async function setHalloweenIcon(): Promise<string> {
 
 /** False on a build without the module, so Profile can hide the row entirely. */
 export function appIconsAvailable(): boolean {
-  return Boolean(Icons?.supportsAlternateIcons);
+  return Platform.OS === "ios" && Boolean(Icons?.supportsAlternateIcons);
 }
 
 export function AppIconPicker({
