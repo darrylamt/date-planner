@@ -99,7 +99,12 @@ export const VIBE_CHIP_TAGS: Record<string, VenueVibeTag[]> = {
   chill: ["chill", "calm", "casual"],
   beach: ["beach", "scenic", "outdoorsy"],
   dancing: ["dancing", "lively"],
-  "club hopping": ["dancing", "lively"],
+  /*
+   * Dancing only. With lively as well, ASANA, a lively dinner lounge, ranked
+   * level with Alley Bar for a night out moving between rooms; the places
+   * people actually hop between are the ones they dance in.
+   */
+  "club hopping": ["dancing"],
   sporty: ["sporty", "adventurous"],
   outdoorsy: ["outdoorsy", "scenic", "adventurous"],
   // No `picnic` tag: it would apply to about three rows. The things that make

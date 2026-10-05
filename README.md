@@ -32,7 +32,7 @@ cp .env.example .env.local   # then fill in the values below
 ### 2. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migration: paste `supabase/migrations/0001_init.sql` into the SQL editor (or `supabase db push` with the CLI).
+2. Run the migration: paste `supabase/migrations/archive/0001_init.sql` (then the rest of `archive/` in order) into the SQL editor (or `supabase db push` with the CLI).
 3. Seed it: paste `supabase/seed.sql` into the SQL editor. Seeds 8 areas, 25 venues with menus, and 5 events. **All seed prices are placeholders**, replace with researched data before launch.
 4. Copy the Project URL, anon key and service role key into `.env.local`.
 5. Auth: in **Authentication → URL Configuration**, set the Site URL to `http://localhost:3000` (and later your Vercel URL). Magic-link email is on by default.
