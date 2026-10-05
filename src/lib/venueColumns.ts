@@ -59,6 +59,8 @@ export const PUBLIC_VENUE_COLUMNS = [
   "service_charge_pct",
   "tax_added_pct",
   "charges_note",
+  // 0075. Entry per person; null unknown, 0 free entry.
+  "entry_fee_ghs",
   "cuisine",
   // 0033. The specific kitchen, where cuisine is only local/continental/both.
   "cuisines",

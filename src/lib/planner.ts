@@ -559,6 +559,19 @@ function drinkable(menu: MenuItem[], choice: PlanInputs["alcohol"]): MenuItem[] 
 const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.price_ghs);
 
 /**
+ * What one drink usually costs here: the middle of the single-serve drinks,
+ * rounded to the nearest five. Null when the menu has none to go on.
+ */
+function typicalDrink(menu: MenuItem[]): number | null {
+  const prices = menu
+    .filter((m) => m.category === "drink" && Number(m.covers_people ?? 1) <= 1 && Number(m.price_ghs) > 0)
+    .map((m) => Number(m.price_ghs))
+    .sort((a, b) => a - b);
+  if (!prices.length) return null;
+  return Math.round(prices[Math.floor(prices.length / 2)] / 5) * 5;
+}
+
+/**
  * Where on a sorted price list a tier starts looking.
  *
  * The cheap tier used to start at the very bottom, and the bottom of a long
@@ -1236,6 +1249,7 @@ function planWith(
   const roleMinutes = (r: Role) => (r === "wellness" ? spaMinutes : ROLE_MINUTES[r]);
 
   const wantedTags = expandVibes(inputs.vibes);
+  const clubHopping = inputs.vibes.some((v) => v.toLowerCase() === "club hopping");
   const menuByVenue = new Map<string, MenuItem[]>();
   candidates.menuItems.forEach((m) => {
     const list = menuByVenue.get(m.venue_id) ?? [];
@@ -1390,6 +1404,8 @@ function planWith(
       ticket?: number | null;
       /** This slot is a dated event's: priced by its door alone (see below). */
       event?: boolean;
+      /** A later bar on a club-hopping night: priced by its door alone (see below). */
+      doorOnly?: boolean;
     } = {}
   ): Option[] => {
     const roleTypes = ROLE_TYPES[role];
@@ -1448,8 +1464,16 @@ function planWith(
     const covers = fixtures.filter((f) => f.cover_ghs != null);
     const fixtureCover = covers.reduce((sum, f) => sum + Number(f.cover_ghs), 0);
     const ticket = opts.ticket ?? null;
+    /*
+     * The venue's usual entry (0075), where nothing more particular says
+     * otherwise. A night with its own cover is that night's price, and an
+     * event's ticket is the event's, so either replaces the usual one rather
+     * than adding to it: nobody pays the Friday cover and the ordinary one.
+     */
+    const usual =
+      !covers.length && ticket == null && venue.entry_fee_ghs != null ? Number(venue.entry_fee_ghs) : null;
 
-    const door = fixtureCover + (ticket ?? 0);
+    const door = fixtureCover + (ticket ?? 0) + (usual ?? 0);
     const doorTotal = Math.round(door * inputs.partySize);
     /*
      * Whether anybody has actually written the door price down.
@@ -1459,7 +1483,7 @@ function planWith(
      * cover is a fixture somebody recorded without saying what it costs, and
      * reading that as free is how a rooftop bar ends up in a plan at nothing.
      */
-    const doorKnown = covers.length > 0 || ticket != null;
+    const doorKnown = covers.length > 0 || ticket != null || usual != null;
 
     const doorLabel = fixtures.length
       ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
@@ -1506,6 +1530,46 @@ function planWith(
           charges: [],
           fixtures,
           score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+        },
+      ];
+    }
+
+    /*
+     * A club after the first on a club-hopping night is its door, and the
+     * drinks are left to them.
+     *
+     * People pregame, at the first stop or before it, and then move between
+     * clubs buying nothing but the way in. Pricing a round at every club
+     * charged a three-club night three rounds nobody drinks, and made a free
+     * night out look like a GHS 1,000 one. So the door is the price and what
+     * a drink costs inside is said in a line, not added: a plan should not
+     * spend money on somebody's behalf that they were never going to spend.
+     *
+     * Only where the entry is recorded. An unknown door priced at nothing is
+     * the same lie as an unpriced venue shown as free, so such a club is
+     * priced the ordinary way, with drinks, until somebody writes its entry
+     * down.
+     */
+    if (opts.doorOnly && venue.type === "lounge" && doorKnown) {
+      const drink = typicalDrink(menu);
+      const note = drink
+        ? `Drinks here are around GHS ${drink} each, if you want one.`
+        : null;
+      return [
+        {
+          venue,
+          /*
+           * The top tier, because the door is the whole of this stop's order,
+           * not a stripped-back one. At tier 0 a club with a recorded free
+           * door sorted behind one with unknown entry and a round of drinks,
+           * which is the plan this exists to stop making.
+           */
+          tier: 2,
+          orders: doorLine.map((o) => ({ ...o, note })),
+          cost: doorTotal,
+          charges: [],
+          fixtures,
+          score: score + 2,
         },
       ];
     }
@@ -1614,7 +1678,7 @@ function planWith(
     return a.area_id === b.area_id ? 0 : 6;
   };
 
-  const optionsFor = (role: Role, slotStart: number): Option[] => {
+  const optionsFor = (role: Role, slotStart: number, doorOnly = false): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
     /*
@@ -1648,7 +1712,7 @@ function planWith(
      */
     const build = (from: Venue[]): Option[] =>
       from
-        .flatMap((venue) => optionsForVenue(venue, role, slotStart))
+        .flatMap((venue) => optionsForVenue(venue, role, slotStart, { doorOnly }))
         .sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
 
     const preferred = build(pool);
@@ -1731,7 +1795,13 @@ function planWith(
       roleSequence(startHour, stopCount, focusesOf(inputs), inputs.vibes, meetingRole(inputs)),
       inputs
     );
-    const slots = roles.map((role, i) => optionsFor(role, nominalStart(roles, i)));
+    /*
+     * Club hopping: the first bar is the pregame, priced with drinks, and
+     * every bar after it is priced at the door (see optionsForVenue).
+     */
+    const slots = roles.map((role, i) =>
+      optionsFor(role, nominalStart(roles, i), clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"))
+    );
 
     /*
      * The event's slot, and its venue nailed into it.

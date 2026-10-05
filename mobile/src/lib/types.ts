@@ -100,6 +100,12 @@ export interface Venue {
   /** What the menu says about charges, in its own words. */
   charges_note?: string | null;
   /**
+   * Usual entry per person, in GHS. Null is "nobody recorded it", which is
+   * not free; 0 is free entry. Not is_free, which says the whole visit costs
+   * nothing. A weekly night's cover overrides it. Absent before 0075.
+   */
+  entry_fee_ghs?: number | null;
+  /**
    * local, continental, or both. Null means nobody has recorded it, which is
    * deliberately not the same as both and is never read as either.
    */

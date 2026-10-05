@@ -247,6 +247,8 @@ export async function fetchCandidates(
     const affordable = [
       `price_band.in.(${bands.join(",")})`,
       "is_free.is.true",
+      // A recorded entry is a price at the door, whatever the band (0075).
+      "entry_fee_ghs.not.is.null",
       ...(doorIds.length ? [`id.in.(${doorIds.join(",")})`] : []),
       /*
        * A spa is judged on its real prices, never on the band guess. Filed as
@@ -405,6 +407,8 @@ export async function fetchCandidates(
        * planner prices the stop from it.
        */
       if (pricedByDoor.has(v.id)) return true;
+      // Its usual entry is on record (0075), free or not.
+      if (v.entry_fee_ghs != null) return true;
       /*
        * Nobody has put a number to this one at all. Still withheld, because
        * an estimate is a claim and "unknown" is the absence of one.

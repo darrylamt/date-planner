@@ -504,13 +504,15 @@ export interface VenueDetail extends VenueListing {
   /** What the venue adds to the bill, as recorded from its menu. Null is not recorded. */
   service_charge_pct: number | null;
   tax_added_pct: number | null;
+  /** Usual entry per person (0075). Null is not recorded, 0 is free entry. */
+  entry_fee_ghs: number | null;
 }
 
 export async function fetchVenue(id: string): Promise<VenueDetail | null> {
   const { data, error } = await supabase
     .from("venues")
     .select(
-      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, description, best_for, dress_code, gallery_urls, instagram_handle, phone, whatsapp_phone, booking_url, google_maps_url, lat, lng, opening_hours_text, place_rating, place_rating_count, reservation_required, min_party_size, max_party_size, has_vegetarian_options, service_charge_pct, tax_added_pct, areas(name, city)"
+      "id, name, type, image_url, price_band, avg_cost_per_person_ghs, cuisines, vibe_tags, description, best_for, dress_code, gallery_urls, instagram_handle, phone, whatsapp_phone, booking_url, google_maps_url, lat, lng, opening_hours_text, place_rating, place_rating_count, reservation_required, min_party_size, max_party_size, has_vegetarian_options, service_charge_pct, tax_added_pct, entry_fee_ghs, areas(name, city)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -549,6 +551,7 @@ export async function fetchVenue(id: string): Promise<VenueDetail | null> {
     has_vegetarian_options: (v.has_vegetarian_options as boolean | null) ?? null,
     service_charge_pct: v.service_charge_pct == null ? null : Number(v.service_charge_pct),
     tax_added_pct: v.tax_added_pct == null ? null : Number(v.tax_added_pct),
+    entry_fee_ghs: v.entry_fee_ghs == null ? null : Number(v.entry_fee_ghs),
   };
 }
 

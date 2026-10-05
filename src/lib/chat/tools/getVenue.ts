@@ -101,6 +101,8 @@ export const getVenue: ChatTool<GetVenueArgs> = {
       cuisine: venue.cuisine ?? null,
       dress_code: venue.dress_code ?? null,
       price: describePrice(venue, menu),
+      // Usual entry per person (0075): "free", a figure, or null for not recorded.
+      entry_ghs: venue.entry_fee_ghs == null ? null : Number(venue.entry_fee_ghs) === 0 ? "free" : Number(venue.entry_fee_ghs),
       party_size: {
         min: Number(venue.min_party_size ?? 1),
         max: venue.max_party_size ?? null,
@@ -239,6 +241,9 @@ function guidance(v: Venue, menu: MenuItem[]): string | undefined {
   }
   if (!menu.length) {
     notes.push("No menu rows on file for this venue.");
+  }
+  if (v.entry_fee_ghs == null && v.type === "lounge") {
+    notes.push("Entry is not recorded. Do not say it is free to get in; say we do not know.");
   }
 
   return notes.length ? notes.join(" ") : undefined;

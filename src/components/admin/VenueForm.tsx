@@ -176,6 +176,8 @@ export function VenueForm({
     service_charge_pct: venue?.service_charge_pct != null ? String(venue.service_charge_pct) : "",
     tax_added_pct: venue?.tax_added_pct != null ? String(venue.tax_added_pct) : "",
     charges_note: venue?.charges_note ?? "",
+    // 0075. "" is not recorded, which is not free entry.
+    entry_fee_ghs: venue?.entry_fee_ghs != null ? String(venue.entry_fee_ghs) : "",
     // "" is "not recorded", which is deliberately not the same as "both".
     cuisine: venue?.cuisine ?? "",
   });
@@ -356,6 +358,7 @@ export function VenueForm({
         service_charge_pct: v.service_charge_pct === "" ? null : Number(v.service_charge_pct),
         tax_added_pct: v.tax_added_pct === "" ? null : Number(v.tax_added_pct),
         charges_note: v.charges_note.trim() || null,
+        entry_fee_ghs: v.entry_fee_ghs === "" ? null : Number(v.entry_fee_ghs),
         cuisine: v.cuisine === "" ? null : v.cuisine,
         opening_periods: hours.periods ?? null,
         opening_hours_text: hours.text ?? null,
@@ -871,12 +874,28 @@ export function VenueForm({
               checked={v.is_free}
               onChange={(e) => setV({ ...v, is_free: e.target.checked })}
             />
-            Free to enter
+            Costs nothing at all
           </label>
           <span className="mt-1 text-[12px] text-mutedbrown">
             {v.is_free
-              ? "Only for places that genuinely charge nothing."
+              ? "Only for places where the whole visit is free: a beach, a park, a free museum. A club that is free to get into is not this; use Entry below."
               : "Leave at 0 if unknown, unpriced venues are withheld, not shown as free."}
+          </span>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[13px] text-mutedbrown">Entry per person, GHS</span>
+            <input
+              className="inp h-[38px] max-w-[110px] font-mono"
+              type="number"
+              min={0}
+              value={v.entry_fee_ghs}
+              onChange={(e) => setV({ ...v, entry_fee_ghs: e.target.value })}
+              placeholder="?"
+            />
+          </div>
+          <span className="mt-1 text-[12px] text-mutedbrown">
+            What the door usually charges. 0 is free entry; blank is not known, which is not free.
+            A weekly night with its own cover overrides it. On club-hopping plans, the bars after
+            the first are priced by this alone, since people pregame and only pay to get in.
           </span>
         </div>
         <div className={field}>

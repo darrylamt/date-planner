@@ -253,6 +253,9 @@ export default function VenuePage() {
   const usable = actions.filter((a) => !a.pro || pro);
 
   const chips: { icon: SymbolViewProps["name"]; text: string }[] = [];
+  // First, because at a club it is the question. Unknown says nothing rather than "free".
+  if (venue.entry_fee_ghs != null)
+    chips.push({ icon: "ticket", text: venue.entry_fee_ghs > 0 ? `Entry GHS ${venue.entry_fee_ghs}` : "Free entry" });
   for (const b of venue.best_for) chips.push({ icon: "heart", text: BEST_FOR_LABEL[b] ?? b.replace(/_/g, " ") });
   for (const t of venue.vibe_tags.slice(0, 4)) chips.push({ icon: "sparkles", text: t[0].toUpperCase() + t.slice(1) });
   for (const k of venue.cuisines) chips.push({ icon: "fork.knife", text: k[0].toUpperCase() + k.slice(1) });
