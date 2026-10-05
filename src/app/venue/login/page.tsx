@@ -32,7 +32,7 @@ function VenueLoginInner() {
   async function signIn() {
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithPassword({
+    const { data, error: err } = await supabase.auth.signInWithPassword({
       email: emailForUsername(username),
       password,
     });
@@ -44,7 +44,8 @@ function VenueLoginInner() {
       setError("That username and password do not match.");
       return;
     }
-    router.push("/venue");
+    // A planner's login has its own space.
+    router.push(data.user?.user_metadata?.event_planner ? "/planner" : "/venue");
     router.refresh();
   }
 

@@ -581,3 +581,201 @@ input[type="range"].budget-slider::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .marquee { overflow-x: auto; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   The event planner's space (/planner).
+
+   Light, for data entry on a phone in daylight, and the brand's rose rather
+   than the admin's teal: a planner is somebody we want to come back, not an
+   operator. The rose is the deeper of the brand's two, because white text on
+   the lighter one is 4.0:1 and fails at button size; this one is 4.9:1.
+
+   Plain CSS rather than Tailwind tokens so the consumer palette, which is
+   dark, is untouched. Everything here is scoped under .planner.
+   ───────────────────────────────────────────────────────────────────────── */
+.planner {
+  --p-bg: #fbf7f4;
+  --p-surface: #ffffff;
+  --p-sunken: #f4eeea;
+  --p-ink: #1c1216;
+  --p-ink-2: #4e3f45;
+  --p-muted: #6a5a61;
+  --p-line: #e9dfda;
+  --p-accent: #c92c58;
+  --p-accent-dark: #a8214a;
+  --p-accent-soft: #fde8ef;
+  --p-gold: #e5b04e;
+  --p-ok: #0f766e;
+  --p-ok-soft: #d8f0ed;
+  --p-warn: #9e4a07;
+  --p-warn-soft: #fdf1dc;
+
+  color-scheme: light;
+  background: var(--p-bg);
+  color: var(--p-ink);
+}
+
+.planner .pl-card {
+  background: var(--p-surface);
+  border: 1px solid var(--p-line);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgb(28 18 22 / 0.04), 0 10px 28px -16px rgb(28 18 22 / 0.18);
+}
+
+.planner .pl-btn,
+.planner .pl-btn-ghost,
+.planner .pl-btn-soft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 22px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.12s, opacity 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.planner .pl-btn {
+  background: var(--p-accent);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgb(201 44 88 / 0.7);
+}
+.planner .pl-btn:hover { background: var(--p-accent-dark); }
+.planner .pl-btn-ghost {
+  background: var(--p-surface);
+  color: var(--p-ink);
+  border: 1.5px solid var(--p-line);
+}
+.planner .pl-btn-ghost:hover { border-color: var(--p-accent); color: var(--p-accent); }
+.planner .pl-btn-soft {
+  background: var(--p-accent-soft);
+  color: var(--p-accent-dark);
+}
+.planner .pl-btn-soft:hover { background: #fbd7e3; }
+.planner .pl-btn:active,
+.planner .pl-btn-ghost:active,
+.planner .pl-btn-soft:active { transform: scale(0.97); }
+.planner .pl-btn:disabled,
+.planner .pl-btn-ghost:disabled,
+.planner .pl-btn-soft:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.planner .pl-btn:focus-visible,
+.planner .pl-btn-ghost:focus-visible,
+.planner .pl-btn-soft:focus-visible,
+.planner .pl-chip:focus-visible,
+.planner .pl-tap:focus-visible {
+  outline: 3px solid rgb(201 44 88 / 0.35);
+  outline-offset: 2px;
+}
+
+/* 16px, so iOS does not zoom the page every time a box is tapped. */
+.planner .pl-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--p-line);
+  background: var(--p-surface);
+  color: var(--p-ink);
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.planner textarea.pl-input { padding: 14px 16px; min-height: 110px; resize: vertical; line-height: 1.5; }
+.planner .pl-input::placeholder { color: #9a8a91; }
+.planner .pl-input:focus {
+  outline: none;
+  border-color: var(--p-accent);
+  box-shadow: 0 0 0 4px rgb(201 44 88 / 0.12);
+}
+.planner .pl-input-big { font-size: 22px; font-weight: 700; min-height: 60px; }
+
+.planner .pl-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--p-ink-2);
+}
+.planner .pl-hint { font-size: 13px; line-height: 1.5; color: var(--p-muted); }
+
+.planner .pl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--p-line);
+  background: var(--p-surface);
+  color: var(--p-ink-2);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.planner .pl-chip:hover { border-color: var(--p-accent); }
+.planner .pl-chip:active { transform: scale(0.96); }
+.planner .pl-chip[aria-pressed="true"],
+.planner .pl-chip[aria-checked="true"] {
+  background: var(--p-accent);
+  border-color: var(--p-accent);
+  color: #fff;
+}
+.planner .pl-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Motion. Every one of these is off for somebody who asked for less. */
+@keyframes pl-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pl-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pl-in-right { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+@keyframes pl-in-left { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+@keyframes pl-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes pl-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes pl-sheet { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pl-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
+}
+@keyframes pl-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes pl-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(201 44 88 / 0.45); }
+  100% { box-shadow: 0 0 0 14px rgb(201 44 88 / 0); }
+}
+
+.planner .pl-up { animation: pl-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-fade { animation: pl-fade 0.35s ease-out both; }
+.planner .pl-in-right { animation: pl-in-right 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-in-left { animation: pl-in-left 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-pop { animation: pl-pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-float { animation: pl-float 3.2s ease-in-out infinite; }
+.planner .pl-sheet { animation: pl-sheet 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-pulse { animation: pl-pulse-ring 1.6s ease-out infinite; }
+.planner .pl-confetti-bit {
+  position: absolute;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation: pl-confetti 1.1s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+.planner .pl-skeleton {
+  background: linear-gradient(90deg, var(--p-sunken) 25%, #fbf4f0 50%, var(--p-sunken) 75%);
+  background-size: 200% 100%;
+  animation: pl-shimmer 1.4s linear infinite;
+}
+
+/* The bottom bar sits above the home indicator on a notched phone. */
+.planner .pl-safe-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .planner *,
+  .planner *::before,
+  .planner *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

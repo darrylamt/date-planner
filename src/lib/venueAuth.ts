@@ -86,22 +86,15 @@ export async function requireVenueUser(): Promise<VenueSession> {
     .filter((v): v is { id: string; name: string; areas: { name: string } | null } => Boolean(v))
     .map((v) => ({ id: v.id, name: v.name, area: v.areas?.name ?? null }));
 
+  // Planners have their own space now (/planner), built for a night at a time on a phone.
+  if (planner) redirect("/planner");
+
   /*
-   * Signed in, but running nothing.
-   *
-   * For a venue account that is an app user who reached the portal rather
-   * than an error, so it says so plainly instead of offering a login form
-   * they would fill in with the same account.
-   *
-   * For a planner it is the ordinary first visit, and sending them to a page
-   * that says they are not a venue would be both wrong and the last thing
-   * they ever read here. They go to Locations, which is the one screen that
-   * works with nothing on the account yet.
+   * Signed in, but running nothing: an app user who reached the portal
+   * rather than an error, so it says so plainly instead of offering a login
+   * form they would fill in with the same account.
    */
-  if (!venues.length) {
-    // What's on handles a planner with nothing yet: it is where they land anyway.
-    redirect(planner ? "/venue/whats-on" : "/venue/login?as=not-a-venue");
-  }
+  if (!venues.length) redirect("/venue/login?as=not-a-venue");
 
   return { userId: user.id, venues, planner };
 }
@@ -142,7 +135,8 @@ export async function requirePortalUser(): Promise<VenueSession> {
     .filter((v): v is { id: string; name: string; areas: { name: string } | null } => Boolean(v))
     .map((v) => ({ id: v.id, name: v.name, area: v.areas?.name ?? null }));
 
-  if (!venues.length && !planner) redirect("/venue/login?as=not-a-venue");
+  if (planner) redirect("/planner");
+  if (!venues.length) redirect("/venue/login?as=not-a-venue");
 
   return { userId: user.id, venues, planner };
 }
