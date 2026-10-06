@@ -16,6 +16,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "arrow.triangle.turn.up.right.diamond": "directions",
   "arrow.up": "arrow_upward",
   "arrow.up.right": "arrow_outward",
+  "arrow.up.left.and.arrow.down.right": "open_in_full",
   bag: "shopping_bag",
   banknote: "payments",
   "birthday.cake": "cake",

@@ -1,6 +1,7 @@
 "use client";
 
 import { IconPin, IconTicket } from "./icons";
+import { WholeImage } from "./WholeImage";
 import { friendlyDate, friendlyTime, kindEmoji, kindLabel } from "./nights";
 import type { Audience } from "@/lib/types";
 
@@ -35,10 +36,10 @@ export function NightPreview({ data, party = 2 }: { data: PreviewData; party?: n
 
   return (
     <div className="overflow-hidden rounded-[22px] bg-white text-left text-[#1c1216] shadow-[0_18px_40px_-22px_rgb(28_18_22/0.45)] ring-1 ring-black/5">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--p-sunken)]">
+      {/* The app's poster strip is about 343 by 240, so the preview is that shape. */}
+      <div className="relative aspect-[10/7] w-full overflow-hidden bg-[var(--p-sunken)]">
         {data.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.image} alt="" className="pl-fade h-full w-full object-cover" />
+          <WholeImage src={data.image} alt="Your poster" className="h-full w-full" />
         ) : (
           <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#fde8ef,#f4eeea_55%,#fdf1dc)]">
             <div className="text-center">

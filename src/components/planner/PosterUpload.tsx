@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { IconImage } from "./icons";
+import { WholeImage } from "./WholeImage";
 
 /**
  * A picture, from the phone's camera roll in one tap.
@@ -64,8 +65,7 @@ export function PosterUpload({
       >
         {value ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={value} alt="Your poster" className="pl-fade h-full w-full object-cover" />
+            <WholeImage src={value} alt="Your poster" className="h-full w-full" />
             <span className="absolute bottom-3 right-3 rounded-full bg-black/65 px-3.5 py-2 text-[13px] font-bold text-white backdrop-blur">
               {busy ? "Uploading…" : "Change"}
             </span>

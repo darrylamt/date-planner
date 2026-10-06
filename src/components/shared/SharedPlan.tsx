@@ -317,7 +317,7 @@ export function SharedPlan(p: SharedPlanProps) {
                     {st.emoji}
                   </span>
                   <div className={`${s.card} rounded-[24px] p-4 sm:p-5`} onMouseMove={tilt} onMouseLeave={untilt}>
-                    {st.image ? <SmartImage src={st.image} alt={st.name} className="mb-4 h-[150px] rounded-[16px] sm:h-[180px]" /> : null}
+                    {st.image ? <SmartImage src={st.image} alt={st.name} className="mb-4 h-[170px] rounded-[16px] sm:h-[210px]" fit="auto" zoomable /> : null}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full px-2.5 py-1 font-mono text-[13px] font-bold" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})`, color: ink }}>
                         {st.time}

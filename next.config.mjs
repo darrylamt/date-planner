@@ -4,6 +4,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "*.supabase.co" },
+      // Gaderin's posters (scripts/scrape-gaderin.ts). Without this the image
+      // service answered 400 and every imported event showed a broken picture.
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
 

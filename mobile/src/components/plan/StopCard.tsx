@@ -145,7 +145,12 @@ export function StopCard({
         existed, which is every plan made until now: those carry image_url and
         nothing else, and must still show their picture.
       */}
-      <StopGallery images={stop.images ?? (stop.image_url ? [stop.image_url] : [])} alt={stop.name} />
+      <StopGallery
+        images={stop.images ?? (stop.image_url ? [stop.image_url] : [])}
+        alt={stop.event?.title ?? stop.name}
+        // An event's poster leads its pictures (picturesOf in itinerary.ts).
+        poster={Boolean(stop.event?.image_url)}
+      />
 
       <View style={{ padding: space.lg, gap: space.sm }}>
         {/* Label + time */}

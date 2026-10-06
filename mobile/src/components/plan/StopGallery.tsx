@@ -2,11 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { Symbol } from "../Symbol";
+import { PhotoViewer } from "./PhotoViewer";
 import { Text } from "../Text";
 import { radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 
 const HEIGHT = 168;
+/*
+ * An event's card, whose first picture is its poster. Posters are mostly
+ * portrait and carry the date and line-up in print, so the strip is taller
+ * there; a venue's photographs are landscape and keep the shorter strip.
+ */
+const POSTER_HEIGHT = 240;
 
 /**
  * The pictures at the top of a stop, swipeable.
@@ -25,8 +32,10 @@ const HEIGHT = 168;
  * A ScrollView rather than a FlatList: these lists are two or three items
  * long, and virtualising three images costs more than it saves.
  */
-export function StopGallery({ images, alt }: { images: string[]; alt: string }) {
+export function StopGallery({ images, alt, poster = false }: { images: string[]; alt: string; poster?: boolean }) {
   const c = useTheme();
+  const HEIGHT_HERE = poster ? POSTER_HEIGHT : HEIGHT;
+  const [viewing, setViewing] = useState<number | null>(null);
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
   /*
@@ -57,7 +66,7 @@ export function StopGallery({ images, alt }: { images: string[]; alt: string }) 
 
   return (
     <View
-      style={{ height: HEIGHT, backgroundColor: c.skeleton }}
+      style={{ height: HEIGHT_HERE, backgroundColor: c.skeleton }}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
       <ScrollView
@@ -72,22 +81,25 @@ export function StopGallery({ images, alt }: { images: string[]; alt: string }) 
         }}
       >
         {images.map((uri, i) => (
-          <Image
+          <Slide
             key={`${uri}-${i}`}
-            source={{ uri }}
-            style={{ width, height: HEIGHT, backgroundColor: c.skeleton }}
-            contentFit="cover"
-            transition={200}
-            accessibilityLabel={`${alt}, picture ${i + 1} of ${images.length}`}
+            uri={uri}
+            width={width}
+            height={HEIGHT_HERE}
+            label={`${alt}, picture ${i + 1} of ${images.length}`}
+            onOpen={() => setViewing(i)}
           />
         ))}
       </ScrollView>
 
+      <PhotoViewer images={images} start={viewing ?? 0} open={viewing !== null} onClose={() => setViewing(null)} alt={alt} />
+
       {single ? null : (
         <>
-          <Arrow side="left" disabled={index === 0} onPress={() => goTo(index - 1)} />
+          <Arrow side="left" top={HEIGHT_HERE / 2 - 16} disabled={index === 0} onPress={() => goTo(index - 1)} />
           <Arrow
             side="right"
+            top={HEIGHT_HERE / 2 - 16}
             disabled={index === images.length - 1}
             onPress={() => goTo(index + 1)}
           />
@@ -150,12 +162,91 @@ export function StopGallery({ images, alt }: { images: string[]; alt: string }) 
   );
 }
 
+/**
+ * One picture in the strip.
+ *
+ * A picture much taller than the strip, which is most posters, used to be
+ * cropped to its middle, and the middle of a poster is rarely where the date
+ * is. Such a picture is now shown whole, over a blurred and darkened copy of
+ * itself so the strip is still filled edge to edge, the way Instagram and
+ * Spotify show a portrait picture in a landscape frame. Ordinary landscape
+ * photographs are unchanged. Either way, a tap opens it full screen.
+ */
+function Slide({
+  uri,
+  width,
+  height,
+  label,
+  onOpen,
+}: {
+  uri: string;
+  width: number;
+  height: number;
+  label: string;
+  onOpen: () => void;
+}) {
+  const c = useTheme();
+  const [whole, setWhole] = useState(false);
+
+  return (
+    <Pressable onPress={onOpen} accessibilityRole="imagebutton" accessibilityLabel={`${label}. Opens it full screen.`}>
+      <View style={{ width, height, backgroundColor: c.skeleton, overflow: "hidden" }}>
+        {whole ? (
+          <>
+            <Image source={{ uri }} style={{ position: "absolute", top: 0, left: 0, width, height }} contentFit="cover" blurRadius={28} />
+            <View style={{ position: "absolute", top: 0, left: 0, width, height, backgroundColor: "rgba(0,0,0,0.28)" }} />
+          </>
+        ) : null}
+        <Image
+          source={{ uri }}
+          style={{ width, height }}
+          contentFit={whole ? "contain" : "cover"}
+          transition={200}
+          onLoad={(e) => {
+            const { width: w, height: h } = e.source;
+            /*
+             * Square or portrait (most posters), or far narrower than the
+             * strip: cropping would lose the top and bottom. A 3:2 landscape
+             * photograph loses a sliver to the crop and is better filling it.
+             */
+            if (w > 0 && h > 0 && (w / h < 1.1 || w / h < (width / height) * 0.6)) setWhole(true);
+          }}
+        />
+        {whole ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: space.sm,
+              bottom: space.sm,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: radius.pill,
+              backgroundColor: "rgba(0,0,0,0.5)",
+            }}
+          >
+            <Symbol name="arrow.up.left.and.arrow.down.right" size={11} color="#fff" weight="semibold" />
+            <Text variant="caption2" weight="600" style={{ color: "#fff" }}>
+              See it all
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
 function Arrow({
   side,
+  top,
   disabled,
   onPress,
 }: {
   side: "left" | "right";
+  top: number;
   disabled: boolean;
   onPress: () => void;
 }) {
@@ -168,7 +259,7 @@ function Arrow({
       accessibilityLabel={side === "left" ? "Previous picture" : "Next picture"}
       style={{
         position: "absolute",
-        top: HEIGHT / 2 - 16,
+        top,
         [side]: space.sm,
         width: 32,
         height: 32,

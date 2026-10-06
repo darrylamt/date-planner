@@ -550,7 +550,7 @@ function EventCard({ event: e }: { event: SoonEvent }) {
   return (
     <article className="card flex flex-col">
       <div className="relative">
-        <SmartImage src={e.image} alt={e.title} className="h-[180px]" sizes="(max-width: 768px) 100vw, 360px" />
+        <SmartImage src={e.image} alt={e.title} className="h-[180px]" sizes="(max-width: 768px) 100vw, 360px" fit="auto" zoomable />
         <div className="absolute left-3 top-3 z-[2] rounded-chip bg-cream/90 px-3 py-1 text-[12px] font-bold text-ink">
           {shortDate(e.date)}
           {e.time ? ` · ${time12(e.time)}` : ""}
