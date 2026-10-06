@@ -242,6 +242,8 @@ export async function fetchNextSpots(input: {
   partySize: number;
   city?: string;
   exclude: string[];
+  /** Up to eight, for the wheel; six otherwise. An older server sends six regardless. */
+  count?: number;
 }): Promise<{ spots: NextSpot[]; from: { lat: number; lng: number } | null } | null> {
   try {
     const res = await postJson<{ spots?: NextSpot[]; from?: { lat: number; lng: number } | null }>("/api/next-spot", {
@@ -256,6 +258,7 @@ export async function fetchNextSpots(input: {
       party_size: input.partySize,
       city: input.city,
       exclude: input.exclude,
+      ...(input.count ? { count: input.count } : {}),
     });
     return res.spots ? { spots: res.spots, from: res.from ?? null } : null;
   } catch {

@@ -23,6 +23,7 @@ import { AskBar } from "../../src/components/home/AskBar";
 import { Avatar } from "../../src/components/home/Avatar";
 import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
+import { setBillSource } from "../../src/lib/bill";
 import { useSeason } from "../../src/lib/season";
 import { HalloweenBanner, SpookyDrift } from "../../src/components/home/Halloween";
 import { fetchProfile } from "../../src/lib/account";
@@ -181,6 +182,41 @@ export default function Home() {
           </View>
           <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
         </Pressable>
+
+        {/* The two money tools, for a night that was never planned here. */}
+        <View style={{ flexDirection: "row", gap: Spacing.three, marginBottom: Spacing.three }}>
+          {(
+            [
+              { title: "Who pays?", sub: "Spin for it", icon: "dice.fill", go: () => router.push("/who-pays") },
+              { title: "Split a bill", sub: "Fair shares, fast", icon: "banknote", go: () => router.push("/split") },
+            ] as const
+          ).map((t) => (
+            <Pressable
+              key={t.title}
+              onPress={() => {
+                setBillSource(null);
+                t.go();
+              }}
+              accessibilityRole="button"
+              style={({ pressed }) => ({
+                flex: 1,
+                gap: 6,
+                padding: Spacing.three,
+                borderRadius: Radius.xl,
+                backgroundColor: c.backgroundElement,
+                borderWidth: HAIRLINE,
+                borderColor: c.border,
+                opacity: pressed ? 0.75 : 1,
+              })}
+            >
+              <Symbol name={t.icon} size={22} color={c.accent} />
+              <Text variant="headline">{t.title}</Text>
+              <Text variant="footnote" tone="secondary">
+                {t.sub}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       {/* In progress */}

@@ -132,6 +132,9 @@ function RootShell() {
           <Stack.Screen name="plan/new" options={{ title: "" }} />
           {/* Pick a mood, shake, go: the night with no plan, or past the end of one. */}
           <Stack.Screen name="where-next" options={{ title: "" }} />
+          {/* The night's money: a wheel for who pays, and the split afterwards. */}
+          <Stack.Screen name="who-pays" options={{ title: "" }} />
+          <Stack.Screen name="split" options={{ title: "" }} />
           {/* A focused task rather than a destination, so it is pushed like
               the planner instead of sitting in the tab bar. */}
           {/*

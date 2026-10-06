@@ -38,6 +38,8 @@ const bodySchema = z.object({
   party_size: z.number().int().min(1).max(50).default(2),
   city: z.string().max(60).optional(),
   exclude: z.array(z.string().uuid()).max(40).default([]),
+  // How many to send back: six for a shake, up to eight to fill a wheel.
+  count: z.number().int().min(1).max(8).default(6),
 });
 
 export type NextSpot = {
@@ -167,7 +169,7 @@ export async function POST(req: Request) {
         Math.random() * 1.5,
     }))
     .sort((a, c) => c.score - a.score)
-    .slice(0, 6);
+    .slice(0, b.count);
 
   const spots: NextSpot[] = ranked.map(({ v, km, open }) => {
     const hop = estimateHop(anchor!, v);

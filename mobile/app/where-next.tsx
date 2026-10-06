@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, ScrollView, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -8,6 +9,8 @@ import { Symbol } from "../src/components/Symbol";
 import { Chip } from "../src/components/Chip";
 import { ChipRow, Segmented } from "../src/components/Segmented";
 import { NextSpotSheet } from "../src/components/plan/NextSpotSheet";
+import { Wheel, type WheelHandle } from "../src/components/fun/Wheel";
+import { Button } from "../src/components/Button";
 import { useReducedMotion } from "../src/components/motion";
 import { MeshBackground } from "../src/components/native/MeshBackground";
 import { GUTTER, radius, space, Spacing } from "../src/theme";
@@ -17,6 +20,7 @@ import { currentPlace, locationAvailable } from "../src/lib/location";
 import { shakeAvailable, useShake } from "../src/lib/shake";
 import { fetchAreas } from "../src/lib/data";
 import { fetchNextSpots, type NextSpot } from "../src/lib/api";
+import { ghs } from "../src/lib/format";
 import type { Area } from "../src/lib/types";
 
 /**
@@ -54,6 +58,18 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export default function WhereNext() {
   const c = useTheme();
   const reduced = useReducedMotion();
+  const { width } = useWindowDimensions();
+  /*
+   * Shake for one answer, or spin: every option laid out first, the ones
+   * nobody fancies taken off, then the wheel decides between the rest.
+   */
+  const [mode, setMode] = useState<"shake" | "spin">("shake");
+  const [options, setOptions] = useState<NextSpot[]>([]);
+  const [vetoed, setVetoed] = useState<string[]>([]);
+  const [optionsFrom, setOptionsFrom] = useState<{ lat: number; lng: number } | null>(null);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [spinning, setSpinning] = useState(false);
+  const wheel = useRef<WheelHandle>(null);
   const [mood, setMood] = useState<Mood>(MOODS[0]);
   const [who, setWho] = useState<Who>("2");
   const [from, setFrom] = useState<From>(locationAvailable() ? { kind: "me" } : { kind: "area", id: "", name: "" });
@@ -78,6 +94,8 @@ export default function WhereNext() {
   useEffect(() => {
     setSpots([]);
     setIndex(0);
+    setOptions([]);
+    setVetoed([]);
   }, [mood, who, from]);
 
   async function areasOfCity(): Promise<Area[]> {
@@ -101,16 +119,8 @@ export default function WhereNext() {
     );
   }
 
-  async function ask() {
-    if (loading) return;
-    setNote(null);
-    // Shaken again with the answer still up: the next one, without asking the server.
-    if (open && index + 1 < spots.length) {
-      void Haptics.selectionAsync();
-      setIndex((i) => i + 1);
-      return;
-    }
-
+  /** Where to look from: the phone, or an area, asking for one when needed. */
+  async function locate(): Promise<{ where: From; near?: { lat: number; lng: number } } | null> {
     let where = from;
     let near: { lat: number; lng: number } | undefined;
     if (where.kind === "me") {
@@ -118,7 +128,7 @@ export default function WhereNext() {
       if (here === "denied" || here === "unavailable") {
         setNote(here === "denied" ? "Location is off for Duro, so pick an area instead." : "We could not find you just now. Pick an area instead.");
         const picked = await pickArea();
-        if (!picked || picked.kind === "me") return;
+        if (!picked || picked.kind === "me") return null;
         where = picked;
         setFrom(picked);
       } else {
@@ -126,17 +136,18 @@ export default function WhereNext() {
       }
     } else if (!where.id) {
       const picked = await pickArea();
-      if (!picked) return;
+      if (!picked) return null;
       setFrom(picked);
-      if (picked.kind === "me") return;
+      if (picked.kind === "me") return null;
       where = picked;
     }
+    return { where, near };
+  }
 
-    setOpen(true);
-    setLoading(true);
+  async function lookUp(where: From, near: { lat: number; lng: number } | undefined, count: number, exclude: string[]) {
     const now = new Date();
     const city = (await AsyncStorage.getItem(LAST_CITY).catch(() => null)) ?? undefined;
-    const res = await fetchNextSpots({
+    return fetchNextSpots({
       near,
       areaId: where.kind === "area" ? where.id : undefined,
       kinds: mood.kinds,
@@ -146,8 +157,26 @@ export default function WhereNext() {
       date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
       time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
       city,
-      exclude: spots.map((s) => s.id),
+      exclude,
+      count,
     });
+  }
+
+  async function ask() {
+    if (loading) return;
+    setNote(null);
+    // Shaken again with the answer still up: the next one, without asking the server.
+    if (open && index + 1 < spots.length) {
+      void Haptics.selectionAsync();
+      setIndex((i) => i + 1);
+      return;
+    }
+    const at = await locate();
+    if (!at) return;
+
+    setOpen(true);
+    setLoading(true);
+    const res = await lookUp(at.where, at.near, 6, spots.map((s) => s.id));
     setLoading(false);
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSpots(res?.spots ?? []);
@@ -155,7 +184,38 @@ export default function WhereNext() {
     setRideFrom(res?.from ?? null);
   }
 
-  useShake(() => void ask(), focused);
+  /** The options for the wheel: up to eight, the ones already seen left out. */
+  async function loadOptions(fresh: boolean) {
+    if (optionsLoading) return;
+    setNote(null);
+    const at = await locate();
+    if (!at) return;
+    setOptionsLoading(true);
+    const res = await lookUp(at.where, at.near, 8, fresh ? options.map((o) => o.id) : []);
+    setOptionsLoading(false);
+    const list = res?.spots ?? [];
+    if (!list.length) setNote("Nothing open and priced near there right now. Try another mood or area.");
+    setOptions(list);
+    setVetoed([]);
+    setOptionsFrom(res?.from ?? null);
+  }
+
+  const onWheel = options.filter((o) => !vetoed.includes(o.id));
+
+  async function spin() {
+    if (spinning || onWheel.length < 2) return;
+    setSpinning(true);
+    const at = await wheel.current?.spin();
+    setSpinning(false);
+    if (at == null || at < 0) return;
+    // The place it landed on, in the same sheet a shake opens.
+    setSpots([onWheel[at]]);
+    setIndex(0);
+    setRideFrom(optionsFrom);
+    setTimeout(() => setOpen(true), reduced ? 0 : 450);
+  }
+
+  useShake(() => void (mode === "spin" ? (onWheel.length >= 2 ? spin() : loadOptions(false)) : ask()), focused);
 
   /* The phone on the card, rocking, so the gesture explains itself. */
   const rock = useRef(new Animated.Value(0)).current;
@@ -183,6 +243,17 @@ export default function WhereNext() {
           <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two }}>
             Pick a mood, then {canShake ? "shake your phone" : "tap below"}. We find somewhere open near you, with prices we know.
           </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl }}>
+          <Segmented
+            options={[
+              { value: "shake", label: "Shake for one" },
+              { value: "spin", label: "Spin the wheel" },
+            ]}
+            value={mode}
+            onChange={setMode}
+          />
         </View>
 
         <Text variant="footnote" weight="600" tone="secondary" style={{ paddingHorizontal: GUTTER, marginTop: space.xl, marginBottom: space.sm }}>
@@ -233,6 +304,22 @@ export default function WhereNext() {
           </Pressable>
         </View>
 
+        {mode === "spin" ? (
+          <SpinPanel
+            options={options}
+            vetoed={vetoed}
+            onVeto={(id) => setVetoed((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))}
+            loading={optionsLoading}
+            spinning={spinning}
+            onLoad={(fresh) => void loadOptions(fresh)}
+            onSpin={() => void spin()}
+            wheel={wheel}
+            size={Math.min(width - GUTTER * 2, 330)}
+            canShake={canShake}
+          />
+        ) : null}
+
+        {mode === "shake" ? (
         <Pressable
           onPress={() => void ask()}
           accessibilityRole="button"
@@ -265,6 +352,7 @@ export default function WhereNext() {
             {canShake ? "or tap here" : "Shaking to ask arrives with the next app update."}
           </Text>
         </Pressable>
+        ) : null}
 
         {note ? (
           <Text variant="footnote" tone="secondary" center style={{ marginTop: space.md, paddingHorizontal: GUTTER }}>
@@ -279,9 +367,115 @@ export default function WhereNext() {
         spot={spots[index] ?? null}
         loading={loading}
         from={rideFrom}
-        shakeHint={canShake}
-        onAnother={() => void ask()}
+        shakeHint={canShake && mode === "shake"}
+        onAnother={() => {
+          if (mode === "spin") {
+            setOpen(false);
+            setTimeout(() => void spin(), 350);
+          } else void ask();
+        }}
       />
+    </View>
+  );
+}
+
+/**
+ * The wheel's half of the screen: the options, each one takeable off, then
+ * the wheel with what is left. Every option is shown before the spin, so the
+ * wheel is choosing between places they have already seen and agreed to.
+ */
+function SpinPanel({
+  options,
+  vetoed,
+  onVeto,
+  loading,
+  spinning,
+  onLoad,
+  onSpin,
+  wheel,
+  size,
+  canShake,
+}: {
+  options: NextSpot[];
+  vetoed: string[];
+  onVeto: (id: string) => void;
+  loading: boolean;
+  spinning: boolean;
+  onLoad: (fresh: boolean) => void;
+  onSpin: () => void;
+  wheel: React.RefObject<WheelHandle | null>;
+  size: number;
+  canShake: boolean;
+}) {
+  const c = useTheme();
+  const left = options.filter((o) => !vetoed.includes(o.id));
+
+  if (!options.length) {
+    return (
+      <View style={{ paddingHorizontal: GUTTER, marginTop: space.xxl, gap: space.md, alignItems: "center" }}>
+        <Text variant="body" tone="secondary" center>
+          We line up to eight places nearby that suit the mood. Take off any you do not fancy, then spin.
+        </Text>
+        <Button title={loading ? "Finding places..." : "Show me the options"} icon="dice.fill" loading={loading} onPress={() => onLoad(false)} block />
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ marginTop: space.xl }}>
+      <Text variant="footnote" weight="600" tone="secondary" style={{ paddingHorizontal: GUTTER, marginBottom: space.sm }}>
+        ON THE WHEEL · TAP ONE TO TAKE IT OFF
+      </Text>
+      <View style={{ paddingHorizontal: GUTTER, gap: space.sm }}>
+        {options.map((o) => {
+          const off = vetoed.includes(o.id);
+          return (
+            <Pressable
+              key={o.id}
+              onPress={() => onVeto(o.id)}
+              disabled={spinning || (!off && left.length <= 2)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: !off }}
+              accessibilityLabel={`${o.name}, ${off ? "off the wheel" : "on the wheel"}`}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.md,
+                padding: space.sm,
+                borderRadius: radius.row,
+                backgroundColor: c.backgroundElement,
+                opacity: off ? 0.45 : pressed ? 0.8 : 1,
+              })}
+            >
+              <Image
+                source={o.image_url ? { uri: o.image_url } : undefined}
+                style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: c.backgroundSelected }}
+                contentFit="cover"
+              />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="subheadline" weight="600" numberOfLines={1} style={off ? { textDecorationLine: "line-through" } : undefined}>
+                  {o.name}
+                </Text>
+                <Text variant="caption1" tone="secondary" numberOfLines={1}>
+                  {o.area} · {o.mins} min away{o.visit ? ` · ${o.visit.what} ~${ghs(o.visit.ghs)}` : ""}
+                </Text>
+              </View>
+              <Symbol name={off ? "plus.circle" : "xmark.circle.fill"} size={22} color={off ? c.accent : c.textTertiary} />
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {left.length >= 2 ? (
+        <View style={{ alignItems: "center", marginTop: space.xl }}>
+          <Wheel ref={wheel} labels={left.map((o) => o.name)} size={size} onCentrePress={onSpin} />
+        </View>
+      ) : null}
+
+      <View style={{ paddingHorizontal: GUTTER, marginTop: space.lg, gap: space.sm }}>
+        <Button title={spinning ? "Spinning..." : canShake ? "Spin (or shake)" : "Spin the wheel"} icon="arrow.clockwise" disabled={spinning || left.length < 2} onPress={onSpin} />
+        <Button title="Different options" kind="plain" disabled={spinning || loading} loading={loading} onPress={() => onLoad(true)} />
+      </View>
     </View>
   );
 }

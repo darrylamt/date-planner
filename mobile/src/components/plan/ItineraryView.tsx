@@ -48,6 +48,7 @@ import { shakeAvailable, useShake } from "../../lib/shake";
 import { fetchNextSpots, type NextSpot } from "../../lib/api";
 import { NextSpotSheet } from "./NextSpotSheet";
 import { afterSharing } from "../../lib/review";
+import { billFromPlan, setBillSource } from "../../lib/bill";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -843,6 +844,36 @@ export function ItineraryView({
               icon="lock.iphone"
               onPress={() => void toggleFollow()}
             />
+          ) : null}
+          {/*
+            The money, for a plan with company: the wheel to settle who pays,
+            and the split to settle it fairly, both starting from this plan.
+          */}
+          {inputs.partySize >= 2 ? (
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Split the bill"
+                  kind="gray"
+                  icon="banknote"
+                  onPress={() => {
+                    setBillSource(billFromPlan(inputs, itinerary));
+                    router.push("/split");
+                  }}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Who pays?"
+                  kind="gray"
+                  icon="dice.fill"
+                  onPress={() => {
+                    setBillSource(billFromPlan(inputs, itinerary));
+                    router.push({ pathname: "/who-pays", params: { count: String(inputs.partySize) } });
+                  }}
+                />
+              </View>
+            </View>
           ) : null}
           <Button title="Add to calendar" kind="gray" icon="calendar" onPress={handleAddToCalendar} />
           <Button title="Edit my answers" kind="plain" onPress={onEdit} />
