@@ -1,4 +1,4 @@
-import { isPlaceholderAvg } from "../../budget";
+import { MENU_ONLY_TYPES, avgIsNotAPrice } from "../../budget";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "../../fetchAll";
 import { isOpenAt, parsePeriods, weekdayOf, describeDay } from "../../hours";
@@ -78,7 +78,7 @@ export async function menusFor(
 export function isPriced(v: Venue, menuItemCount: number): boolean {
   if (v.is_free === true) return true;
   if (v.price_source === "unknown") return false;
-  if (isPlaceholderAvg(v, menuItemCount > 0)) return false;
+  if (avgIsNotAPrice(v, menuItemCount > 0)) return false;
   return Number(v.avg_cost_per_person_ghs) > 0 || menuItemCount > 0;
 }
 
@@ -113,6 +113,8 @@ export function describePrice(v: Venue, menu: MenuItem[]): PriceNote {
   }
 
   const mains = mainsRange(menu);
+  // A place to eat is priced from its menu; without one there is no price to say.
+  if (!menu.length && MENU_ONLY_TYPES.has(v.type)) return { basis: "unknown" };
   if (avg > 0) {
     return mains
       ? { basis: "menu", typical_per_person_ghs: avg, mains_ghs: mains }

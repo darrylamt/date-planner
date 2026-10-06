@@ -43,6 +43,27 @@ export function isPlaceholderAvg(
 }
 
 /**
+ * Places to eat, priced from their menu or not at all.
+ *
+ * A restaurant, cafe or dessert place with no priced menu used to be planned
+ * at its per-head figure, as "Typical spend, per person", and that line is
+ * not something anybody orders: THE MIX and Pâte à choux showed it in plans.
+ * A meal is chosen from a menu, so without one the place is left out until
+ * its menu is uploaded, and comes back by itself when it is. Bars, activities
+ * and outdoor places keep their per-head figure: entry or a round of drinks
+ * really is one price a head.
+ */
+export const MENU_ONLY_TYPES: ReadonlySet<string> = new Set(["restaurant", "cafe", "dessert"]);
+
+/** Whether a venue's per-head figure must not be used as its price. */
+export function avgIsNotAPrice(
+  v: { type?: string | null; avg_cost_per_person_ghs?: number | null; price_source?: string | null },
+  hasMenu: boolean
+): boolean {
+  return isPlaceholderAvg(v, hasMenu) || (!hasMenu && MENU_ONLY_TYPES.has(String(v.type ?? "")));
+}
+
+/**
  * Whether this plan pays for taxis between stops.
  *
  * Two ways to arrive at no: saying you are driving, and setting the budget to

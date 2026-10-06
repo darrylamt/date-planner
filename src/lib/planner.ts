@@ -1,7 +1,7 @@
 import type { Candidates } from "./matching";
 import { chargesOn, chargesTotal } from "./budget";
 import { dishMatchesCuisine } from "./cuisineDishes";
-import { isDriving } from "./budget";
+import { MENU_ONLY_TYPES, isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
@@ -1044,6 +1044,11 @@ function planOrders(
         ],
         cost: price,
       };
+    }
+
+    // A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES): never "Typical spend".
+    if (MENU_ONLY_TYPES.has(venue.type)) {
+      return venue.is_free ? { orders: [], cost: 0 } : null;
     }
 
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));

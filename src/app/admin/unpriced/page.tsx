@@ -1,6 +1,6 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { UnpricedVenues } from "@/components/admin/UnpricedVenues";
-import { isPlaceholderAvg } from "@/lib/budget";
+import { avgIsNotAPrice } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,8 @@ export default async function AdminUnpricedPage({ searchParams }: { searchParams
       if (v.price_source === "unknown") return true;
       const hasMenu = ownIds.has((v.menu_shared_from as string | null) || v.id);
       // The GHS 100 import default counts as no price: see PLACEHOLDER_AVG_GHS.
-      if (isPlaceholderAvg(v, hasMenu)) return true;
+      // The import default, or a place to eat with no menu: neither is a price.
+      if (avgIsNotAPrice(v, hasMenu)) return true;
       if (Number(v.avg_cost_per_person_ghs) > 0) return false;
       return !hasMenu;
     })

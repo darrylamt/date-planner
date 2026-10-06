@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { MENU_ONLY_TYPES } from "@/lib/budget";
 
 interface Row {
   id: string;
@@ -189,6 +190,28 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                       ) : null}
                     </td>
                     <td>{row.area}</td>
+                    {MENU_ONLY_TYPES.has(row.type) ? (
+                      /*
+                       * A place to eat is priced from its menu or not at all
+                       * (budget.ts), so a per-head figure typed here would never
+                       * reach a plan. Say what will.
+                       */
+                      <td colSpan={3}>
+                        <div className="text-[13.5px]">
+                          <span className="font-semibold">Needs its menu.</span>{" "}
+                          <span className="text-mutedbrown">Places to eat are priced from their menu, never a per-head guess.</span>
+                        </div>
+                        <div className="mt-1 flex gap-3 text-[13px] font-semibold">
+                          <a href="/admin/import" className="text-flame underline">
+                            Upload a menu
+                          </a>
+                          <a href={`/admin/venues/${row.id}`} className="text-flame underline">
+                            Open the venue
+                          </a>
+                        </div>
+                      </td>
+                    ) : (
+                      <>
                     <td>
                       <div className="flex items-center gap-2">
                         <input
@@ -231,6 +254,8 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                         </button>
                       )}
                     </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}

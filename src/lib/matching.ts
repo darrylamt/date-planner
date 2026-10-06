@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
-import { isPlaceholderAvg } from "./budget";
+import { avgIsNotAPrice } from "./budget";
 import { haversineKm } from "./transport";
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
@@ -416,7 +416,8 @@ export async function fetchCandidates(
       if (v.price_source === "unknown") return false;
       const hasMenu = pricedVenueIds.has(menuOwnerOf(v)) || pricedVenueIds.has(v.id);
       // An import default, not a price: see PLACEHOLDER_AVG_GHS.
-      if (isPlaceholderAvg(v, hasMenu)) return false;
+      // The GHS 100 import default, or a place to eat with no menu.
+      if (avgIsNotAPrice(v, hasMenu)) return false;
       return Number(v.avg_cost_per_person_ghs) > 0 || hasMenu;
     }
   );

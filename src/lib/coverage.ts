@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "./fetchAll";
-import { isPlaceholderAvg } from "./budget";
+import { avgIsNotAPrice } from "./budget";
 import { DEFAULT_RADIUS_KM } from "./planConstants";
 import { haversineKm } from "./transport";
 
@@ -97,7 +97,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
     if (byDoor.has(v.id)) return true;
     if (v.price_source === "unknown") return false;
     const menu = hasMenu.has(v.menu_shared_from || v.id) || hasMenu.has(v.id);
-    if (isPlaceholderAvg(v as never, menu)) return false;
+    if (avgIsNotAPrice(v as never, menu)) return false;
     return Number(v.avg_cost_per_person_ghs) > 0 || menu;
   };
 
