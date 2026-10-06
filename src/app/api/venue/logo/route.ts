@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { logPlannerActivity } from "@/lib/plannerActivity";
 
 /**
  * An event planner's logo: upload or remove it (migration 0071).
@@ -75,5 +76,11 @@ export async function POST(req: Request) {
   await db.from("events").update(stamp).eq("created_by", user.id);
   if (venueIds.length) await db.from("events").update(stamp).in("venue_id", venueIds);
 
+  await logPlannerActivity({
+    userId: user.id,
+    action: url ? "logo.update" : "logo.remove",
+    summary: url ? "Changed their logo" : "Removed their logo",
+    changes: { logo_url: [null, url] },
+  });
   return NextResponse.json({ ok: true, url });
 }

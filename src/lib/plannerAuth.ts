@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { logPlannerVisit } from "@/lib/plannerActivity";
 
 /**
  * The gate for /planner, the event planner's own space.
@@ -60,6 +61,9 @@ export async function requirePlanner(): Promise<PlannerSession> {
     contact_phone?: string | null;
     is_active?: boolean | null;
   };
+
+  // When they were working, for the admin's activity log (0076).
+  await logPlannerVisit(user.id);
 
   const ownPlaces = (grants ?? [])
     .map((g: { venues: unknown }) => g.venues as { id: string; name: string; area_id: string; areas: { name: string } | null } | null)

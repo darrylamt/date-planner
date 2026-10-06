@@ -66,6 +66,7 @@ const GROUPS: {
       { href: "/admin/reservations", label: "Reservations" },
       { href: "/admin/venue-logins", label: "Venue logins" },
       { href: "/admin/planners", label: "Event planners" },
+      { href: "/admin/planners/activity", label: "Planner activity" },
     ],
   },
 ];
@@ -89,10 +90,15 @@ export function AdminNav({ counts }: { counts: AdminCounts }) {
   const urgent =
     (counts.openReports ?? 0) + (counts.phonesPending ?? 0) + (counts.phonesReported ?? 0);
 
-  const current =
-    GROUPS.flatMap((g) => g.links).find(
-      (l) => pathname === l.href || (l.href !== "/admin" && pathname.startsWith(`${l.href}/`))
-    )?.label ?? "Venues";
+  /*
+   * The most specific link that matches, so a page under another page
+   * (/admin/planners/activity under /admin/planners) lights up alone.
+   */
+  const allLinks = GROUPS.flatMap((g) => g.links);
+  const best = allLinks
+    .filter((l) => pathname === l.href || (l.href !== "/admin" && pathname.startsWith(`${l.href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const current = best?.label ?? "Venues";
 
   async function signOut() {
     const supabase = createClient();
@@ -132,7 +138,7 @@ export function AdminNav({ counts }: { counts: AdminCounts }) {
                 l.href === "/admin"
                   ? pathname === "/admin" ||
                     (pathname.startsWith("/admin/venues") && pathname !== "/admin/venues/new")
-                  : pathname === l.href || pathname.startsWith(`${l.href}/`);
+                  : l.href === best?.href;
 
               const n = l.badge ? counts[l.badge] : 0;
 

@@ -16,6 +16,7 @@ import {
 } from "@/lib/places";
 import { areaCentroids } from "@/lib/areaCentroids";
 import { ensureAreaId, isNeighbourhood } from "@/lib/areas";
+import { logPlannerActivity } from "@/lib/plannerActivity";
 
 /**
  * An event planner adding a place that is not on Duro yet, found on Google.
@@ -206,7 +207,16 @@ export async function POST(req: Request) {
     } else if (b.newArea) {
       const confirmed = isNeighbourhood(b.newArea) ? await confirmAreaName(b.newArea, point) : null;
       if (!confirmed) return NextResponse.json({ error: `Google does not know a ${b.newArea} near this place.` }, { status: 422 });
-      areaId = (await ensureAreaId(db, confirmed.name, city))?.id ?? null;
+      const made = await ensureAreaId(db, confirmed.name, city);
+      areaId = made?.id ?? null;
+      if (made?.created) {
+        await logPlannerActivity({
+          userId: user.id,
+          action: "area.create",
+          entityId: made.id,
+          summary: `Added ${confirmed.name} as a part of town (${city}), ${Math.round(confirmed.metres / 100) / 10}km from Google's centre for it`,
+        });
+      }
     }
     if (!areaId) return NextResponse.json({ error: "Choose the part of town it is in." }, { status: 422 });
 
@@ -237,6 +247,13 @@ export async function POST(req: Request) {
     if (grantError) console.error("planner place grant failed", grantError);
 
     const v = venue as unknown as { id: string; name: string; area_id: string; areas: { name: string } | null };
+    await logPlannerActivity({
+      userId: user.id,
+      action: "place.create",
+      entityId: v.id,
+      summary: `Added ${v.name}, ${v.areas?.name ?? "no area"}${details?.id ? "" : " (a pin with no Google listing)"}`,
+      changes: { type: [null, b.type], google_maps_url: [null, details?.googleMapsUri ?? b.link], address: [null, details?.address ?? null] },
+    });
     return NextResponse.json({ place: { id: v.id, name: v.name, area_id: v.area_id, area: v.areas?.name ?? "", mine: true } });
   } catch (e) {
     if (e instanceof PlacesNotConfigured) {
