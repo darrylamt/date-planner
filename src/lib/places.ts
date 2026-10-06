@@ -579,3 +579,133 @@ export function matchArea(
     ? { existingId: null, name: proposal, isNew: true, reason: "proposed" }
     : { existingId: null, name: null, isNew: false, reason: "none" };
 }
+
+/* ── for event planners adding a place ─────────────────────────────────── */
+
+/** Metres between two points, for the checks below. */
+function metresApart(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  return metresBetween(a.lat, a.lng, b.lat, b.lng);
+}
+
+export interface FoundPlace extends PlaceSummary {
+  lat: number | null;
+  lng: number | null;
+  types: string[];
+}
+
+const FIND_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.businessStatus",
+  "places.primaryType",
+  "places.types",
+].join(",");
+
+/** A name search that also says where each result is, near a point when there is one. */
+export async function findPlaces(query: string, near?: { lat: number; lng: number }, radius = 40000): Promise<FoundPlace[]> {
+  const data = await call<{ places?: RawPlace[] }>(`${BASE}/places:searchText`, FIND_MASK, {
+    textQuery: query,
+    locationBias: {
+      circle: { center: near ? { latitude: near.lat, longitude: near.lng } : ACCRA, radius },
+    },
+    regionCode: "GH",
+    languageCode: "en",
+    maxResultCount: 6,
+  });
+  return (data.places ?? []).map((p) => ({
+    ...toSummary(p),
+    lat: p.location?.latitude ?? null,
+    lng: p.location?.longitude ?? null,
+    types: p.types ?? [],
+  }));
+}
+
+/**
+ * The place a Maps link points at, in Google's own record.
+ *
+ * A link with an id is looked up directly. One with a name is searched for,
+ * near its pin when it has one, and a result more than 1.5km from that pin is
+ * not the same place. Null when the link names no place we can find: a
+ * dropped pin on a lawn is a real answer, handled by the caller.
+ */
+export async function placeFromLink(facts: {
+  placeId: string | null;
+  text: string | null;
+  lat: number | null;
+  lng: number | null;
+}): Promise<PlaceDetails | null> {
+  if (facts.placeId) return placeDetails(facts.placeId);
+  if (!facts.text) return null;
+  const pin = facts.lat != null && facts.lng != null ? { lat: facts.lat, lng: facts.lng } : undefined;
+  const results = await findPlaces(facts.text, pin, pin ? 2000 : 40000);
+  const hit = results.find(
+    (r) => r.id && (!pin || (r.lat != null && r.lng != null && metresApart(pin, { lat: r.lat, lng: r.lng }) <= 1500))
+  );
+  return hit ? placeDetails(hit.id) : null;
+}
+
+/** Google's kinds of place that are a part of town rather than a business. */
+const AREA_KINDS = new Set([
+  "neighborhood",
+  "sublocality",
+  "sublocality_level_1",
+  "sublocality_level_2",
+  "sublocality_level_3",
+  "locality",
+  "administrative_area_level_3",
+  "administrative_area_level_4",
+  "colloquial_area",
+  "postal_town",
+  // Accra names whole parts of town after their roads: Spintex, Oxford Street.
+  "route",
+]);
+
+/**
+ * Whether a part of town somebody typed is real and near their place.
+ *
+ * Google is asked for it by name, near the place, and must answer with a
+ * neighbourhood, locality or road (not a business) within seven kilometres.
+ * Returns Google's spelling when it is recognisably the same name, so
+ * "east legon" is filed as "East Legon"; null when Google does not know it
+ * there.
+ */
+export async function confirmAreaName(
+  typed: string,
+  near: { lat: number; lng: number }
+): Promise<{ name: string; metres: number } | null> {
+  const name = typed.trim().replace(/\s+/g, " ");
+  if (name.length < 3 || name.length > 40) return null;
+  const results = await findPlaces(`${name}, Ghana`, near, 8000);
+  const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const want = flat(name);
+  const hit = results
+    .filter((r) => r.lat != null && r.lng != null && r.types.some((t) => AREA_KINDS.has(t)))
+    .map((r) => ({ r, metres: metresApart(near, { lat: r.lat!, lng: r.lng! }) }))
+    .filter((x) => x.metres <= 7000)
+    .sort((a, b) => a.metres - b.metres)[0];
+  if (!hit) return null;
+  const google = flat(hit.r.name);
+  const same = google.includes(want) || want.includes(google);
+  const titled = name.replace(/\b\w/g, (c) => c.toUpperCase());
+  // Google's spelling when it is the same name; theirs, title-cased, when Google calls it something longer.
+  return { name: same && hit.r.name.length <= 40 && !/road|rd\b|street|st\b|avenue|ave\b/i.test(hit.r.name) ? hit.r.name : titled, metres: hit.metres };
+}
+
+const ACCRA_CENTRE = { lat: 5.6037, lng: -0.187 };
+const KUMASI_CENTRE = { lat: 6.6885, lng: -1.6244 };
+
+/**
+ * Which of Duro's two cities a place belongs to: the nearer one, so Aburi
+ * and Cape Coast day trips file under Accra as the catalogue already does.
+ * Null only outside Ghana.
+ */
+export function cityOf(point: { lat: number; lng: number }): "Accra" | "Kumasi" | null {
+  const inGhana = point.lat >= 4.5 && point.lat <= 11.2 && point.lng >= -3.3 && point.lng <= 1.3;
+  if (!inGhana) return null;
+  return metresApart(point, KUMASI_CENTRE) < metresApart(point, ACCRA_CENTRE) ? "Kumasi" : "Accra";
+}
+
+/** Metres between two points, for callers outside this file. */
+export const metresBetweenPoints = metresApart;

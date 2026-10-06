@@ -19,7 +19,8 @@ export default async function PlannerHome({ searchParams }: { searchParams: { to
   const unpriced = upcoming.filter((n) => n.cost_ghs == null).length;
   // A planner's name is usually their brand ("Recovery Saturdays"), so the greeting is the hour's, not theirs.
   const hour = new Date().getUTCHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  // Still the evening until five: a planner checking their nights at 1am is up late, not early.
+  const greeting = hour >= 5 && hour < 12 ? "Good morning" : hour >= 12 && hour < 17 ? "Good afternoon" : "Good evening";
 
   const notice = searchParams.saved ? "Saved. Your changes are live." : searchParams.deleted ? "Deleted. It is out of plans now." : null;
 

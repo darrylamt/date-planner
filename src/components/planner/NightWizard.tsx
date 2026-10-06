@@ -711,6 +711,12 @@ export function NightWizard({
           areas={areas}
           known={places.map((p) => p.id)}
           onCancel={() => setAddingPlace(false)}
+          onUseExisting={(id) => {
+            if (!places.some((x) => x.id === id)) return;
+            set("venueId", id);
+            setSearch("");
+            setAddingPlace(false);
+          }}
           onCreated={(p) => {
             setPlaces((cur) => [p, ...cur]);
             set("venueId", p.id);
