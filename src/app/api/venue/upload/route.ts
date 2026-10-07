@@ -22,7 +22,7 @@ const ALLOWED = new Map<string, string>([
   ["image/gif", "gif"],
 ]);
 /** Where a portal upload may land, and nowhere else. */
-const FOLDERS = new Set(["venues", "events", "menu", "locations"]);
+const FOLDERS = new Set(["venues", "events", "menu", "locations", "gifts"]);
 
 export async function POST(req: Request) {
   const {
@@ -31,12 +31,14 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Sign in again, then try once more." }, { status: 401 });
 
   const db = createServiceClient();
-  const [{ data: runs }, { data: planner }] = await Promise.all([
+  const [{ data: runs }, { data: planner }, { data: vendor }] = await Promise.all([
     db.from("venue_users").select("venue_id").eq("user_id", user.id).limit(1),
     db.from("event_planners").select("is_active").eq("user_id", user.id).maybeSingle(),
+    // Cake and flower vendors (0078); before it the table is missing and this is simply null.
+    db.from("vendor_users").select("vendor_id").eq("user_id", user.id).maybeSingle(),
   ]);
-  if (!runs?.length && !planner?.is_active) {
-    return NextResponse.json({ error: "Uploads are for venue and planner accounts." }, { status: 403 });
+  if (!runs?.length && !planner?.is_active && !vendor) {
+    return NextResponse.json({ error: "Uploads are for venue, planner and vendor accounts." }, { status: 403 });
   }
 
   let file: File | null = null;

@@ -45,7 +45,7 @@ function VenueLoginInner() {
       return;
     }
     // A planner's login has its own space.
-    router.push(data.user?.user_metadata?.event_planner ? "/planner" : "/venue");
+    router.push(data.user?.user_metadata?.gift_vendor ? "/vendor" : data.user?.user_metadata?.event_planner ? "/planner" : "/venue");
     router.refresh();
   }
 

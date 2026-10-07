@@ -355,6 +355,9 @@ export default async function LandingPage() {
               <a href={`mailto:${CONTACT}?subject=Listing%20on%20Duro!`} className="btn2">
                 Ask to be listed
               </a>
+              <Link href="/vendor/apply" className="text-center text-[14px] font-semibold text-cocoa underline hover:text-flame">
+                Bake cakes or sell flowers? Apply here
+              </Link>
             </div>
           </div>
         </section>

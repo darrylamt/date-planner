@@ -33,6 +33,7 @@ const GROUPS: {
       { href: "/admin/events", label: "Events" },
       { href: "/admin/getting-around", label: "Getting around" },
       { href: "/admin/gifts", label: "Flowers and cakes" },
+      { href: "/admin/vendors", label: "Cake and flower shops", badge: "vendorApplications", urgent: true },
       { href: "/admin/featured", label: "Featured this week" },
     ],
   },

@@ -49,6 +49,8 @@ export interface AdminCounts {
   thinMenus: number;
   /** Gaderin activities still needing a venue (0073, 0074). Zero before those run. */
   gaderinWaiting: number;
+  /** Cake and flower shops waiting on an answer (0078). Zero before it runs. */
+  vendorApplications: number;
 }
 
 const STALE_DAYS = 90;
@@ -121,8 +123,14 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     .eq("dismissed", false)
     .is("venue_id", null);
 
+  const { count: vendorApplications } = await supabase
+    .from("vendor_applications")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+
   return {
     gaderinWaiting: gaderinWaiting ?? 0,
+    vendorApplications: vendorApplications ?? 0,
     venues: rows.length,
     /*
      * `?? false` so this reads correctly before migration 0005 adds the column.
