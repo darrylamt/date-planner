@@ -358,6 +358,12 @@ export function CsvImporter({
             min_age: num(r.min_age),
             requires_gear: r.requires_gear || null,
             /*
+             * Whether a drink has alcohol in it. Optional: blank leaves it
+             * unknown, which keeps it out of alcohol-free plans, so a list
+             * of juices and mocktails should say no.
+             */
+            ...(yesNo(r.alcoholic) !== null ? { is_alcoholic: yesNo(r.alcoholic) } : {}),
+            /*
              * When the price applies. All three optional and all three
              * independent: a weekend price, an evening price, or a Friday
              * evening price. Blank is every day, all day.
@@ -528,7 +534,7 @@ export function CsvImporter({
           ) : (
             <>
               <b>Headers:</b>{" "}
-              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes,days,from,to</code>
+              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes,days,from,to,alcoholic</code>
               <br />
               <span className="text-mutedbrown">
                 Activity lists may add{" "}
@@ -537,6 +543,9 @@ export function CsvImporter({
                 </code>
                 . covers_people is how many people one price covers, so a GHS 30
                 foosball table for two is 30 with covers_people 2, not 30 each.
+                <br />
+                <b>alcoholic</b> is optional: yes or no. Say no for juices, mocktails and soft
+                drinks, or they stay out of alcohol-free plans; blank means unknown.
                 <br />
                 <b>days, from, to</b> are optional: when a price applies. days is Mon-Thu,
                 Fri;Sat, weekdays or weekends; from and to are times like 16:00. List the same
@@ -702,3 +711,10 @@ export function CsvImporter({
   );
 }
 
+/** "yes", "y", "true", "1" → true; "no", "n", "false", "0" → false; anything else, unknown. */
+function yesNo(raw: string | undefined): boolean | null {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (["yes", "y", "true", "1", "alcoholic"].includes(v)) return true;
+  if (["no", "n", "false", "0", "non-alcoholic", "none"].includes(v)) return false;
+  return null;
+}

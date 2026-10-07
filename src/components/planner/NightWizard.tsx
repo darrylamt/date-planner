@@ -841,6 +841,38 @@ function WhenStep({
             ))}
           </div>
         ) : null}
+
+        {/*
+          A weekly night, as a run of dated nights. Planners hold most nights at
+          venues that are not theirs, where a weekly fixture cannot be written,
+          and a dated night per week also lets one week be changed or dropped
+          on its own.
+        */}
+        {!single && d.dates.length ? (
+          <div className="mt-4 rounded-2xl bg-[var(--p-sunken)] p-4">
+            <div className="text-[15px] font-bold">Every week?</div>
+            <p className="pl-hint mt-0.5">
+              The same night every {weekdayName(d.dates[0])}, starting {friendlyDate(d.dates[0])}.
+            </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {[4, 8, 12].map((weeks) => {
+                const run = weekly(d.dates[0], weeks);
+                const on = run.length === d.dates.length && run.every((x, i) => x === d.dates[i]);
+                return (
+                  <button key={weeks} type="button" className="pl-chip !min-h-[40px]" aria-pressed={on} onClick={() => set("dates", on ? [d.dates[0]] : run)}>
+                    {weeks} weeks
+                  </button>
+                );
+              })}
+            </div>
+            {d.dates.length > 1 ? (
+              <p className="pl-hint mt-2">
+                {d.dates.length} nights, {friendlyDate(d.dates[0])} to {friendlyDate(d.dates[d.dates.length - 1])}. Each one can be changed or deleted on its
+                own later.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -986,3 +1018,17 @@ function Checklist({
     </div>
   );
 }
+
+/** `weeks` dates, a week apart, from `start`. */
+function weekly(start: string, weeks: number): string[] {
+  const out: string[] = [];
+  const at = new Date(start + "T00:00:00Z");
+  for (let i = 0; i < weeks; i++) {
+    out.push(at.toISOString().slice(0, 10));
+    at.setUTCDate(at.getUTCDate() + 7);
+  }
+  return out;
+}
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const weekdayName = (iso: string) => WEEKDAYS[new Date(iso + "T00:00:00Z").getUTCDay()];
