@@ -1,5 +1,50 @@
 import { ghs } from "./format";
-import type { Itinerary, StopAlternate, VenueType } from "./types";
+import { estimateHop } from "./transport";
+import type { Itinerary, ItineraryStop, StopAlternate, TransportHop, VenueType } from "./types";
+
+/** "5:30 PM" to minutes after midnight, or null for anything else. */
+function minutesOf(clock: string | undefined): number | null {
+  const m = String(clock ?? "").trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  const h = Number(m[1]) % 12 + (m[3].toUpperCase() === "PM" ? 12 : 0);
+  return h * 60 + Number(m[2]);
+}
+
+/** Minutes after midnight to "5:30 PM", as the planner writes them. */
+function clockOf(total: number): string {
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/**
+ * The rides either side of a swapped stop, worked out again.
+ *
+ * They used to be carried over from the old venue, so a swap across town
+ * kept the old 40-minute ride to the next stop while the new place was
+ * three hours away. Re-estimated with the planner's own hop model wherever
+ * both ends have a pin; a fare of zero stays zero, because that is a plan
+ * that drives. Arrival times after the swap move with the new ride times.
+ */
+function retime(stops: ItineraryStop[], hops: TransportHop[], index: number) {
+  const next = hops.map((h, i) => {
+    if (i !== index - 1 && i !== index) return h;
+    const a = stops[i];
+    const b = stops[i + 1];
+    if (!a || !b || a.lat == null || a.lng == null || b.lat == null || b.lng == null) return h;
+    const est = estimateHop({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
+    return { ...h, from: a.area, to: b.area, mins: est.mins, cost_ghs: Number(h.cost_ghs) === 0 ? 0 : est.cost_ghs };
+  });
+
+  const timed = [...stops];
+  for (let i = Math.max(0, index - 1); i < timed.length - 1; i++) {
+    const at = minutesOf(timed[i].arrival_time);
+    const ride = next[i]?.mins;
+    if (at == null || ride == null) break;
+    timed[i + 1] = { ...timed[i + 1], arrival_time: clockOf(at + Number(timed[i].duration_mins) + Number(ride)) };
+  }
+  return { stops: timed, hops: next };
+}
 
 /**
  * A heading by what kind of place it is, in the planner's own words
@@ -121,23 +166,18 @@ export function swapStopLocally(
     alternates: rotated,
   };
 
-  const stops = itinerary.stops.map((s, i) => (i === index ? swapped : s));
+  const { stops, hops } = retime(
+    itinerary.stops.map((s, i) => (i === index ? swapped : s)),
+    itinerary.hops ?? [],
+    index
+  );
   const food = Math.round(stops.reduce((sum, s) => sum + Number(s.est_cost_ghs), 0));
-  const est = Math.round(food + Number(itinerary.transport_total_ghs));
-
-  /*
-   * Transport is carried over rather than recalculated: the hop model lives on
-   * the server and the client has no distances. That is fine while the swap
-   * stays in the same area, and misleading once it does not, so a move across
-   * town says the total may shift instead of quoting a figure it cannot stand
-   * behind.
-   */
-  const areaChanged = Boolean(next.area && stop.area && next.area !== stop.area);
+  const transport = Math.round(hops.reduce((sum, h) => sum + Number(h.cost_ghs), 0));
+  const est = Math.round(food + transport);
   const buffer = budget - est;
 
-  const message = areaChanged
-    ? `Swapped to ${next.area}, transport will change, so the total is approximate.`
-    : buffer >= 0
+  const message =
+    buffer >= 0
       ? `Swapped, still ${ghs(buffer)} under budget`
       : `Swapped, now ${ghs(Math.abs(buffer))} over budget`;
 
@@ -145,6 +185,8 @@ export function swapStopLocally(
     itinerary: {
       ...itinerary,
       stops,
+      hops,
+      transport_total_ghs: transport,
       summary_route: Array.from(
         new Set(stops.map((s) => s.area).filter(Boolean))
       ).join(" → "),

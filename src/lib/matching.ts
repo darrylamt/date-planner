@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
-import { avgIsNotAPrice } from "./budget";
+import { avgIsNotAPrice, freeToVisit } from "./budget";
 import { haversineKm } from "./transport";
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
@@ -227,43 +227,13 @@ export async function fetchCandidates(
    */
   const runVenueQuery = async (columns: string[]) => {
     /*
-     * Free is affordable at every budget.
-     *
-     * The band filter is a price filter, and a venue flagged free has a price
-     * of nothing whatever band somebody happened to file it under. Filtering
-     * on band alone made a free park recorded as "mid" invisible to exactly
-     * the plan that needs it, the one with no money.
+     * Every active venue in scope, whatever its price band. Affordability is
+     * settled below, once the menus are in hand: see "Affordable" there.
      */
-    /*
-     * Three ways to be affordable, not one.
-     *
-     * The band is a guess at what a place costs per head, which is the right
-     * filter for a restaurant and the wrong one for a door charge: a free talk
-     * at a hotel filed as premium is affordable on any budget, and the band
-     * would have hidden it from exactly the plans that could take it. Whether
-     * the evening actually fits is settled later, by the real figures.
-     */
-    const doorIds = [...pricedByDoor];
-    const affordable = [
-      `price_band.in.(${bands.join(",")})`,
-      "is_free.is.true",
-      // A recorded entry is a price at the door, whatever the band (0075).
-      "entry_fee_ghs.not.is.null",
-      ...(doorIds.length ? [`id.in.(${doorIds.join(",")})`] : []),
-      /*
-       * A spa is judged on its real prices, never on the band guess. Filed as
-       * premium, every spa was invisible below a GHS 850 budget, so a couple
-       * asking for a GHS 350-a-head massage got no spa and therefore no plan.
-       * The treatment floor and the budget walk decide whether it fits.
-       */
-      ...(wantsWellness ? ["type.eq.wellness"] : []),
-    ].join(",");
-
     let q = supabase
       .from("venues")
       .select(`${columns.join(",")},areas(name)`)
-      .eq("is_active", true)
-      .or(affordable);
+      .eq("is_active", true);
 
     if (scope) q = q.in("area_id", [...scope]);
     return q;
@@ -382,25 +352,70 @@ export async function fetchCandidates(
   const menuOwnerOf = (v: Venue): string =>
     (v as { menu_shared_from?: string | null }).menu_shared_from || v.id;
 
-  const pricedVenueIds = new Set(
-    (
-      await fetchAllRows<{ venue_id: string }>((from, to) =>
-        supabase
-          .from("menu_items")
-          .select("venue_id")
-          // Both, for the same reason as below: a branch with a dish of its
-          // own is priced even before its owner's list is counted.
-          .in("venue_id", [...new Set(venues.flatMap((v) => [v.id, menuOwnerOf(v)]))])
-          .range(from, to)
-      )
-    ).map((m) => m.venue_id)
+  const menuRows = await fetchAllRows<{ venue_id: string; price_ghs: number; category: string }>((from, to) =>
+    supabase
+      .from("menu_items")
+      .select("venue_id, price_ghs, category")
+      // Both, for the same reason as below: a branch with a dish of its
+      // own is priced even before its owner's list is counted.
+      .in("venue_id", [...new Set(venues.flatMap((v) => [v.id, menuOwnerOf(v)]))])
+      .range(from, to)
+  );
+  const pricedVenueIds = new Set(menuRows.map((m) => m.venue_id));
+
+  /*
+   * The cheapest real meal on each menu: a main where there are mains,
+   * otherwise the cheapest thing that is not a side or an extra.
+   */
+  const cheapestMain = new Map<string, number>();
+  const cheapestAny = new Map<string, number>();
+  for (const m of menuRows) {
+    const price = Number(m.price_ghs);
+    if (!(price > 0) || m.category === "other") continue;
+    if (price < (cheapestAny.get(m.venue_id) ?? Infinity)) cheapestAny.set(m.venue_id, price);
+    if (m.category === "main" && price < (cheapestMain.get(m.venue_id) ?? Infinity)) cheapestMain.set(m.venue_id, price);
+  }
+
+  /*
+   * Affordable, by the band where that is all we have, and by the menu where
+   * there is one.
+   *
+   * The band is a guess at what a place costs per head: the right filter for
+   * a restaurant nobody has priced, and the wrong one for everything else.
+   * Not one of the 97 restaurants with a menu was filed "budget", so a GHS
+   * 200 plan for two dropped all of them without reading what they charge.
+   * So a venue outside the budget's bands is still kept when:
+   *   - it is free to visit (a gallery, a beach), which is free in any band;
+   *   - its entry is on record (0075), or it charges at the door tonight;
+   *   - it is a spa somebody asked for, judged on its treatments, never the
+   *     band (filed premium, every spa vanished below GHS 850);
+   *   - its cheapest meal for the whole party fits inside most of the budget.
+   * Whether the evening actually fits is settled later, by the real figures.
+   */
+  const bandOk = (v: Venue) => bands.includes(String(v.price_band));
+  const menuFits = (v: Venue) => {
+    const owner = menuOwnerOf(v);
+    const main = cheapestMain.get(owner) ?? cheapestMain.get(v.id);
+    const any = cheapestAny.get(owner) ?? cheapestAny.get(v.id);
+    const meal = v.type === "restaurant" ? main ?? any : any;
+    return meal != null && meal * inputs.partySize <= inputs.budget * 0.7;
+  };
+  venues = venues.filter(
+    (v) =>
+      bandOk(v) ||
+      freeToVisit(v) ||
+      v.entry_fee_ghs != null ||
+      pricedByDoor.has(v.id) ||
+      (wantsWellness && v.type === "wellness") ||
+      menuFits(v)
   );
 
   venues = venues.filter(
     (v) => {
-      // A venue flagged free has a known price of nothing, which is the
-      // opposite of a venue whose price we simply do not have.
-      if (v.is_free === true) return true;
+      // A venue free to visit has a known price of nothing, which is the
+      // opposite of a venue whose price we simply do not have. Never a bar or
+      // a place to eat: see FREE_TYPES.
+      if (freeToVisit(v)) return true;
       /*
        * Charged at the door. Some places have no menu we hold and do not need
        * one: the ticket or the cover is the price of being there, and the
@@ -460,7 +475,12 @@ export async function fetchCandidates(
        * so a nearby place still gets in when it is the better fit.
        */
       const named = pickedAreas.includes(v.area_id) ? 3 : 0;
-      return { v, score: overlap * 2 + occasion + prefs + named };
+      /*
+       * Under a point of chance, so equally good places take turns at the
+       * fourteen places on the shortlist instead of the same fourteen winning
+       * every tie. The planner adds its own, larger, among the shortlist.
+       */
+      return { v, score: overlap * 2 + occasion + prefs + named + Math.random() * 0.9 };
     })
     .sort((a, b) => b.score - a.score);
 

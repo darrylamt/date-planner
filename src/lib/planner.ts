@@ -1,7 +1,7 @@
 import type { Candidates } from "./matching";
 import { chargesOn, chargesTotal } from "./budget";
 import { dishMatchesCuisine } from "./cuisineDishes";
-import { MENU_ONLY_TYPES, isDriving } from "./budget";
+import { MENU_ONLY_TYPES, freeToVisit, isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
@@ -392,6 +392,9 @@ function looksScore(v: Venue, occasion: string): number {
  * unpreferred, because on the day this ships every row is null and reading
  * "we do not know" as "no" would empty the shortlist entirely.
  */
+/** How far a swap may move a stop: a neighbourhood, not a different town. */
+const SWAP_RADIUS_KM = 5;
+
 function cuisineFit(v: Venue, want: PlanCuisine): boolean | null {
   if (want === "either") return true;
   // Only a kitchen can be the wrong cuisine. A bowling alley is neither.
@@ -1047,9 +1050,7 @@ function planOrders(
     }
 
     // A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES): never "Typical spend".
-    if (MENU_ONLY_TYPES.has(venue.type)) {
-      return venue.is_free ? { orders: [], cost: 0 } : null;
-    }
+    if (MENU_ONLY_TYPES.has(venue.type)) return null;
 
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));
     /*
@@ -1059,7 +1060,7 @@ function planOrders(
      * lies about what an evening costs.
      */
     if (each <= 0) {
-      return venue.is_free ? { orders: [], cost: 0 } : null;
+      return freeToVisit(venue) ? { orders: [], cost: 0 } : null;
     }
     return {
       orders: [
@@ -1237,14 +1238,33 @@ export function openOnDate(
  * give both: the plan everybody should get when there is one, and the
  * compromise instead of an empty screen when there is not.
  */
+/**
+ * How much a venue's score may move from one plan to the next: under an
+ * occasion match (2) and a vibe tag (3), so a clearly better fit still wins.
+ *
+ * Without it the planner was a pure function of the request, and among
+ * equally good places the tie went to the cheapest every time. Measured over
+ * 150 ordinary requests on 7 Oct 2026, 46 of the 97 restaurants and cafes
+ * with priced menus never reached a single plan, 42 of them despite being
+ * shortlisted, some 30 times, while four places took a third of the stops.
+ */
+const VARIETY = 2;
+
 export function planItinerary(inputs: PlanInputs, candidates: Candidates): PlannedItinerary | null {
-  return planWith(inputs, candidates, false) ?? planWith(inputs, candidates, true);
+  // One draw per venue per plan, shared by both attempts so they agree.
+  const draws = new Map<string, number>();
+  const variety = (id: string) => {
+    if (!draws.has(id)) draws.set(id, Math.random() * VARIETY);
+    return draws.get(id)!;
+  };
+  return planWith(inputs, candidates, false, variety) ?? planWith(inputs, candidates, true, variety);
 }
 
 function planWith(
   inputs: PlanInputs,
   candidates: Candidates,
-  barsMayStandIn: boolean
+  barsMayStandIn: boolean,
+  variety: (venueId: string) => number = () => 0
 ): PlannedItinerary | null {
   /*
    * A spa stop runs longer the more it books: an hour a treatment, and never
@@ -1454,7 +1474,8 @@ function planWith(
     );
     const score =
       scoreVenue(venue, inputs, wantedTags) +
-      (fixtures.length ? (FIXTURE_WEIGHT[inputs.occasion] ?? 1) : 0);
+      (fixtures.length ? (FIXTURE_WEIGHT[inputs.occasion] ?? 1) : 0) +
+      variety(venue.id);
 
     /*
      * A cover charge is money, so it goes in the order rather than beside it.
@@ -1597,7 +1618,7 @@ function planWith(
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and
       // only a venue recorded as free may be one.
-      if (planned.cost <= 0 && doorTotal <= 0 && !venue.is_free) continue;
+      if (planned.cost <= 0 && doorTotal <= 0 && !freeToVisit(venue)) continue;
       /*
        * What the venue adds to the bill, counted before the budget is
        * checked, so "fits your budget" is what the till says and not the
@@ -1986,8 +2007,17 @@ function planWith(
      * Every move costs strictly more than the one it replaces, so the headroom
      * only shrinks and this terminates.
      */
+    /*
+     * A bare order is the disappointment to climb out of first, so reaching a
+     * typical one outweighs everything. A full sit-down over a typical order
+     * is only spending what is left, worth two and a half points of fit: it
+     * was a thousand, so a cheap place where three courses fitted beat every
+     * better place where two did, and the same few cheap cafes and
+     * restaurants took most stops.
+     */
+    const tierValue = (t: OrderTier) => (t === 0 ? 0 : t === 1 ? 1000 : 1025);
     const gainOf = (option: Option, current: Option) =>
-      (option.tier - current.tier) * 1000 + (option.score - current.score) * 10;
+      tierValue(option.tier) - tierValue(current.tier) + (option.score - current.score) * 10;
 
     for (let guard = 0; guard < 40; guard++) {
       const before = totalOf(chosen);
@@ -2210,8 +2240,16 @@ function planWith(
           // Runners-up this slot could have had, for an instant swap. Only
           // ones that fit what is left of the budget, so a swap can never
           // push the plan over.
+          /*
+           * And only ones near the stop they would replace. Price was the only
+           * test, so a free castle in Cape Coast was offered as the swap for
+           * an Osu stop, three hours from the next one. The route around a
+           * swap is re-timed on the phone, but a swap is meant to be the same
+           * evening with a different place in it, not a different evening.
+           */
           alternates: slots[i]
             .filter((o) => !taken.has(o.venue.id) && o.cost <= p.cost + 1)
+            .filter((o) => kmBetween(o.venue, p.venue) <= SWAP_RADIUS_KM)
             .filter(
               (o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx
             )

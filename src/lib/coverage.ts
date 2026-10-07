@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "./fetchAll";
-import { avgIsNotAPrice } from "./budget";
+import { avgIsNotAPrice, freeToVisit } from "./budget";
 import { DEFAULT_RADIUS_KM } from "./planConstants";
 import { haversineKm } from "./transport";
 
@@ -93,7 +93,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
   const hasMenu = new Set(menuRows.map((m) => m.venue_id));
   const byDoor = new Set(covers.map((c) => c.venue_id));
   const plannable = (v: V) => {
-    if (v.is_free) return true;
+    if (freeToVisit(v)) return true;
     if (byDoor.has(v.id)) return true;
     if (v.price_source === "unknown") return false;
     const menu = hasMenu.has(v.menu_shared_from || v.id) || hasMenu.has(v.id);

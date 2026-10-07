@@ -50,6 +50,19 @@ export function isPlaceholderAvg(
  */
 export const MENU_ONLY_TYPES: ReadonlySet<string> = new Set(["restaurant", "cafe", "dessert"]);
 
+/**
+ * The kinds of place that can honestly be free to be at: a gallery, a
+ * library, a beach, a park. Never a bar or a restaurant, whatever the flag
+ * says. Beehive was ticked free and went into plans at GHS 0 with nothing to
+ * order, which is a table you sit at without buying anything.
+ */
+export const FREE_TYPES: ReadonlySet<string> = new Set(["activity", "outdoor"]);
+
+/** Free to visit: flagged so, and a kind of place where that can be true. */
+export function freeToVisit(v: { type?: string | null; is_free?: boolean | null }): boolean {
+  return v.is_free === true && FREE_TYPES.has(String(v.type ?? ""));
+}
+
 /** Whether a venue's per-head figure must not be used as its price. */
 export function avgIsNotAPrice(
   v: { type?: string | null; avg_cost_per_person_ghs?: number | null; price_source?: string | null },

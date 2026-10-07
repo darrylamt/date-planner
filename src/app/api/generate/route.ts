@@ -12,7 +12,7 @@ import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand } from "@/lib/demand";
 import { createClient } from "@/lib/supabase/server";
-import { BUDGET_MAX } from "@/lib/budget";
+import { BUDGET_MAX, freeToVisit } from "@/lib/budget";
 import { DEFAULT_RADIUS_KM, DEFAULT_WELLNESS_KIND, REACH_FALLBACK_KM, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
   GenerateResponse,
@@ -172,7 +172,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
    * conjure a free venue into the catalogue.
    */
   if (inputs.budget <= 0) {
-    const free = candidates.venues.filter((v) => v.is_free === true).length;
+    const free = candidates.venues.filter((v) => freeToVisit(v)).length;
     if (free < 2) {
       const reached = await reachFurther(supabase, inputs);
       if (reached) return reached;

@@ -25,6 +25,7 @@ const FILES = [
   "pickups.ts",
   "pronouns.ts",
   "swapStop.ts",
+  "transport.ts",
   "types.ts",
 ];
 

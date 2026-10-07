@@ -1,4 +1,4 @@
-import { avgIsNotAPrice } from "./budget";
+import { avgIsNotAPrice, freeToVisit } from "./budget";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "./fetchAll";
 
@@ -145,7 +145,7 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
     // Switched-off venues waiting on a price count too; closed ones do not.
     unpriced: rows.filter((v: any) => {
       if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
-      if (v.is_free ?? false) return false;
+      if (freeToVisit(v)) return false;
       const hasMenu = (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) > 0;
       // The GHS 100 import default is not a price either.
       return avgIsNotAPrice(v, hasMenu) || (Number(v.avg_cost_per_person_ghs) <= 0 && !hasMenu);
