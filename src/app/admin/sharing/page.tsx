@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 interface ShareRow {
   created_at: string;
   kind: "view" | "plan_your_own" | "app_store";
-  page: "shared_plan" | "get" | "home" | "name_poll";
+  page: "shared_plan" | "get" | "home" | "name_poll" | "split";
   plan_slug: string | null;
   occasion: string | null;
 }
@@ -46,7 +46,10 @@ export default async function AdminSharingPage({ searchParams }: { searchParams:
   const planYourOwn = rows.filter((r) => r.kind === "plan_your_own");
   // From a shared plan: the badge on the plan itself, or /get reached by "Plan your own".
   const storeFromShares = rows.filter((r) => r.kind === "app_store" && (r.page === "shared_plan" || (r.page === "get" && r.plan_slug)));
-  const storeElsewhere = rows.filter((r) => r.kind === "app_store" && !storeFromShares.includes(r));
+  // Shared bills (/b/<code>, migration 0077), counted apart from plans.
+  const billOpens = rows.filter((r) => r.kind === "view" && r.page === "split").length;
+  const storeFromBills = rows.filter((r) => r.kind === "app_store" && r.page === "split").length;
+  const storeElsewhere = rows.filter((r) => r.kind === "app_store" && !storeFromShares.includes(r) && r.page !== "split");
 
   const byOccasion = new Map<string, { plans: Set<string>; opens: number; pyo: number; store: number }>();
   const row = (o: string | null) => {
@@ -91,6 +94,10 @@ export default async function AdminSharingPage({ searchParams }: { searchParams:
             <Stat label="Plan your own" value={String(planYourOwn.length)} note={`${pct(planYourOwn.length, opens.length)} of opens`} />
             <Stat label="To the App Store" value={String(storeFromShares.length)} note={`${pct(storeFromShares.length, opens.length)} of opens`} />
             <Stat label="App Store, other pages" value={String(storeElsewhere.length)} note="home, /get, the poll" />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Stat label="Shared bills opened" value={String(billOpens)} note="the split link in a group chat" />
+            <Stat label="Bill to the App Store" value={String(storeFromBills)} note={`${pct(storeFromBills, billOpens)} of bill opens`} />
           </div>
 
           <div className="card mt-5 overflow-x-auto p-4">

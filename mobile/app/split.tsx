@@ -6,10 +6,13 @@ import { Segmented } from "../src/components/Segmented";
 import { PeopleEditor } from "../src/components/fun/PeopleEditor";
 import { GUTTER, HAIRLINE, radius, space, Spacing, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
-import { billSource, splitBill } from "../src/lib/bill";
+import { billLinkCode, billSource, splitBill } from "../src/lib/bill";
+import { fetchProfile } from "../src/lib/account";
 import { ghs } from "../src/lib/format";
 import { isMe, rememberMomo, rememberNames, rememberedMomo, rememberedNames, startingNames } from "../src/lib/people";
 import { afterSharing } from "../src/lib/review";
+
+const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 /**
  * Split the bill, evenly or by who had what.
@@ -82,6 +85,20 @@ export default function Split() {
     void rememberNames(names);
     if (momo.trim()) void rememberMomo(momo.trim());
     const rows = names.map((n, i) => (i === payer ? `${n}: ${ghs(result.shares[i])} (paid)` : `${n}: ${ghs(result.shares[i])}`));
+    /*
+     * A link to the bill's own page, for everybody in the chat without the
+     * app: their share, the number to send it to, and what made it. "Me" is
+     * nobody to the people reading it, so it becomes the sender's first name
+     * when the account has one.
+     */
+    const me = (await fetchProfile().catch(() => null))?.displayName?.split(/\s+/)[0];
+    const code = billLinkCode({
+      title: source?.title,
+      total: result.total,
+      payer,
+      momo: momo.trim() || undefined,
+      people: names.map((n, i) => [isMe(n) && me ? me : n, result.shares[i]]),
+    });
     const message = [
       `${source?.title ? `${source.title}: the` : "The"} bill 🧾`,
       `Total ${ghs(result.total)}`,
@@ -92,6 +109,7 @@ export default function Split() {
         ? `Send me your share${momo.trim() ? ` on MoMo: ${momo.trim()}` : ""}.`
         : `Send your share to ${names[payer]}${momo.trim() ? ` on MoMo: ${momo.trim()}` : ""}.`,
       "",
+      ...(WEB_URL ? [`See it here: ${WEB_URL}/b/${code}`, ""] : []),
       "Split on Duro!",
     ].join("\n");
     const sent = await Share.share({ message });

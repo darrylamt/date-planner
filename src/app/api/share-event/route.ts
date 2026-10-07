@@ -9,7 +9,8 @@ import { createServiceClient } from "@/lib/supabase/server";
  */
 const eventSchema = z.object({
   kind: z.enum(["view", "plan_your_own", "app_store"]),
-  page: z.enum(["shared_plan", "get", "home", "name_poll"]),
+  // "split" needs migration 0077; before it the insert fails quietly, as tracking should.
+  page: z.enum(["shared_plan", "get", "home", "name_poll", "split"]),
   // The share slug's own alphabet and length (randomSlug in format.ts).
   slug: z
     .string()

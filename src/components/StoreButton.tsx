@@ -16,7 +16,7 @@ export function StoreButton({
   children,
 }: {
   href: string;
-  page: "get" | "home" | "name_poll";
+  page: "get" | "home" | "name_poll" | "split";
   /** The shared plan that sent them here, when one did. */
   slug?: string;
   className?: string;

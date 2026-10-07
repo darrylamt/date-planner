@@ -7,7 +7,7 @@
  */
 export function trackShare(
   kind: "view" | "plan_your_own" | "app_store",
-  page: "shared_plan" | "get" | "home" | "name_poll",
+  page: "shared_plan" | "get" | "home" | "name_poll" | "split",
   slug?: string | null
 ): void {
   if (typeof window === "undefined") return;

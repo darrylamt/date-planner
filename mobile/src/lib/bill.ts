@@ -64,6 +64,52 @@ export interface SplitInput {
   payer: number;
 }
 
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+/** UTF-8 bytes of a string, by hand: names like "Ɛfua" must survive the trip. */
+function utf8(s: string): number[] {
+  const out: number[] = [];
+  for (const ch of s) {
+    let cp = ch.codePointAt(0)!;
+    if (cp < 0x80) out.push(cp);
+    else if (cp < 0x800) out.push(0xc0 | (cp >> 6), 0x80 | (cp & 63));
+    else if (cp < 0x10000) out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+    else {
+      out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+    }
+  }
+  return out;
+}
+
+function base64url(bytes: number[]): string {
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const [a, b = 0, c = 0] = [bytes[i], bytes[i + 1], bytes[i + 2]];
+    const n = (a << 16) | (b << 8) | c;
+    out += B64[(n >> 18) & 63] + B64[(n >> 12) & 63];
+    if (i + 1 < bytes.length) out += B64[(n >> 6) & 63];
+    if (i + 2 < bytes.length) out += B64[n & 63];
+  }
+  return out;
+}
+
+/**
+ * The bill as a link to its page on the site (/b/<code>), for the message to
+ * the group. The whole breakdown is in the code, so the page needs nothing
+ * stored anywhere; src/lib/billLink.ts on the web reads it back.
+ */
+export function billLinkCode(bill: { title?: string; total: number; payer: number; momo?: string; people: [string, number][] }): string {
+  const body = {
+    v: 1,
+    ...(bill.title ? { t: bill.title.slice(0, 80) } : {}),
+    c: Math.round(bill.total),
+    w: bill.payer,
+    ...(bill.momo ? { m: bill.momo.replace(/[^+\d\s-]/g, "").slice(0, 20) } : {}),
+    p: bill.people.slice(0, 12).map(([n, s]) => [n.slice(0, 24), Math.round(s)]),
+  };
+  return base64url(utf8(JSON.stringify(body)));
+}
+
 /** Each person's share, in whole cedis, adding up exactly to the total. */
 export function splitBill(s: SplitInput): { shares: number[]; total: number } {
   const n = Math.max(1, s.people);
