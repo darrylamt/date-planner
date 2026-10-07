@@ -14,7 +14,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { ghs, instagramUrl, uberRideLink } from "../../src/lib/format";
 import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { OCCASIONS } from "../../src/lib/planConstants";
-import { fetchMenu, fetchMyRecommendations, fetchVenue, setRecommendation, type VenueDetail } from "../../src/lib/data";
+import { fetchMenu, fetchMyRecommendations, fetchVenue, isFeaturedToday, setRecommendation, type VenueDetail } from "../../src/lib/data";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { fetchAllowance } from "../../src/lib/chat";
@@ -77,6 +77,8 @@ export default function VenuePage() {
   const { session } = useAuth();
   const [venue, setVenue] = useState<VenueDetail | null | undefined>(undefined);
   const [pro, setPro] = useState<boolean | null>(null);
+  /** On the Featured shelf today, which opens the page for everybody. */
+  const [featured, setFeatured] = useState<boolean | null>(null);
   const [menu, setMenu] = useState<MenuItem[] | null>(null);
   const [tab, setTab] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -90,6 +92,9 @@ export default function VenuePage() {
     fetchVenue(id)
       .then((v) => active && setVenue(v))
       .catch(() => active && setVenue(null));
+    isFeaturedToday(id)
+      .then((f) => active && setFeatured(f))
+      .catch(() => active && setFeatured(false));
     return () => {
       active = false;
     };
@@ -105,11 +110,13 @@ export default function VenuePage() {
   }, [checkPro, session?.user.id]);
 
   /*
-   * Pro, or the free month (see freeMenus): the full page either way. The
-   * paywall below only ever shows to somebody who is neither.
+   * Pro, the free months (see freeMenus), or a venue on the Featured shelf
+   * today: the full page in each case. The paywall below only ever shows to
+   * somebody who is none of these, and only once both answers are in.
    */
   const freeMonth = menusFree();
-  const open = pro === true || freeMonth;
+  const open = pro === true || freeMonth || featured === true;
+  const deciding = !open && (pro === null || featured === null);
 
   useEffect(() => {
     if (!open || menu) return;
@@ -250,7 +257,8 @@ export default function VenuePage() {
   actions.push({ icon: "map.fill", label: "Directions", onPress: () => void Linking.openURL(maps) });
   actions.push({ icon: "car.fill", label: "Uber", onPress: () => void Linking.openURL(uberRideLink(venue)) });
   if (instagram) actions.push({ icon: "camera.fill", label: "Instagram", onPress: () => void Linking.openURL(instagram), pro: true });
-  const usable = actions.filter((a) => !a.pro || pro);
+  // The same rule as the menu: the free months promise booking, so the buttons come with it.
+  const usable = actions.filter((a) => !a.pro || open);
 
   const chips: { icon: SymbolViewProps["name"]; text: string }[] = [];
   // First, because at a club it is the question. Unknown says nothing rather than "free".
@@ -370,7 +378,7 @@ export default function VenuePage() {
           </Rise>
         ) : null}
 
-        {pro === null && !freeMonth ? (
+        {deciding ? (
           <SkeletonMenu rows={5} />
         ) : !open ? (
           <View style={{ paddingHorizontal: GUTTER, gap: space.md, marginTop: space.xl }}>

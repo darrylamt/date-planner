@@ -431,6 +431,27 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
     .filter((r): r is FeaturedVenue => r !== null);
 }
 
+/**
+ * Whether a venue is on the Featured shelf today.
+ *
+ * A featured venue's page opens in full for everybody: somebody who tapped
+ * its card on the home screen should land on the place, not on a paywall,
+ * least of all when the venue paid to be there. False on any failure, which
+ * only means the page falls back to the ordinary rule.
+ */
+export async function isFeaturedToday(venueId: string): Promise<boolean> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("featured_venues")
+    .select("id")
+    .eq("venue_id", venueId)
+    .lte("starts_on", today)
+    .gte("ends_on", today)
+    .limit(1);
+  if (error) return false;
+  return Boolean(data?.length);
+}
+
 /* ── venues, for the Venues tab ──────────────────────────────────────── */
 
 /** One row of the Venues list: enough to recognise a place and choose it. */
