@@ -770,6 +770,19 @@ input[type="range"].budget-slider::-moz-range-thumb {
 /* The bottom bar sits above the home indicator on a notched phone. */
 .planner .pl-safe-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 
+/* Bars that grow in, a ring that fills, a row that leaves. Used by the venue portal. */
+@keyframes pl-grow { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes pl-ring { from { stroke-dashoffset: var(--ring-from); } }
+@keyframes pl-leave { to { opacity: 0; transform: translateX(28px) scale(0.98); } }
+@keyframes pl-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+.planner .pl-grow { transform-origin: left center; animation: pl-grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-ring { animation: pl-ring 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.planner .pl-leave { animation: pl-leave 0.32s ease-in both; }
+.planner .pl-wiggle { animation: pl-wiggle 0.5s ease-in-out 2; }
+.planner .pl-lift { transition: transform 0.18s, box-shadow 0.18s; }
+.planner .pl-lift:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgb(28 18 22 / 0.04), 0 16px 32px -16px rgb(28 18 22 / 0.28); }
+.planner .pl-lift:active { transform: scale(0.985); }
+
 @media (prefers-reduced-motion: reduce) {
   .planner *,
   .planner *::before,

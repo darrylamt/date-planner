@@ -2,124 +2,142 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Logo } from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { emailForUsername } from "@/lib/venueUsername";
+import { Wordmark } from "@/components/planner/PlannerShell";
+import { IconArrow, IconCheck } from "@/components/planner/icons";
 
 /**
- * The portal's own door.
- *
- * Separate from /login, which now signs admins in with an email address. A
- * restaurant was given a username on a piece of paper and has no address to
- * type, and a form that asks for one is a form they close.
+ * The portal's own door. A restaurant was given a username, not an email
+ * address, so that is all this asks for. One username namespace across
+ * venues, planners and vendors, so anybody at the wrong door is sent on.
  */
 function VenueLoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const supabase = createClient();
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  /*
-   * Reached by somebody signed in as an ordinary app user. Not an error and
-   * not worth a form: they are already signed in, just not as a venue.
-   */
   const notAVenue = params.get("as") === "not-a-venue";
 
   async function signIn() {
     setBusy(true);
     setError(null);
-    const { data, error: err } = await supabase.auth.signInWithPassword({
+    const { data, error: err } = await createClient().auth.signInWithPassword({
       email: emailForUsername(username),
       password,
     });
-    setBusy(false);
-
     if (err) {
-      // Never "no such username": that tells anybody with the form which
-      // venues have accounts, and the venue cannot act on the difference.
-      setError("That username and password do not match.");
-      return;
+      setBusy(false);
+      // Never "no such username": that would tell anybody which venues have accounts.
+      return setError("That username and password do not match.");
     }
-    // A planner's login has its own space.
-    router.push(data.user?.user_metadata?.gift_vendor ? "/vendor" : data.user?.user_metadata?.event_planner ? "/planner" : "/venue");
+    const meta = data.user?.user_metadata ?? {};
+    router.push(meta.gift_vendor ? "/vendor" : meta.event_planner ? "/planner" : "/venue");
     router.refresh();
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col px-6">
-      <div className="pt-[22px]">
-        <Logo size={22} />
-      </div>
-
-      <div className="flex flex-1 flex-col justify-center pb-24">
-        <div className="text-caption font-bold uppercase tracking-[0.1em] text-flame">
-          For venues
+    <main className="mx-auto grid min-h-screen w-full max-w-[1040px] md:grid-cols-2 md:items-center md:gap-12 md:px-6">
+      <section className="px-6 pb-6 pt-6 md:p-10">
+        <div>
+          <Wordmark height={26} />
         </div>
-        <h1 className="mt-2 font-display text-[30px] font-bold leading-[1.2]">
-          Manage your listing
+        <div className="pl-up mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--p-accent-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--p-accent-dark)]">
+          For restaurants, bars and venues
+        </div>
+        <h1 className="pl-up mt-3 text-[34px] font-bold leading-[1.1] md:text-[42px]" style={{ animationDelay: "80ms" }}>
+          Be the place in their plan.
         </h1>
-        <p className="mt-3 text-[15px] text-mutedbrown">
-          Your menu, your hours, your pictures, and the bookings people send you through Duro.
+        <p className="pl-up mt-3 text-[16px] leading-relaxed text-[var(--p-ink-2)]" style={{ animationDelay: "140ms" }}>
+          Keep your menu, hours and nights right, and see the bookings Duro sends you.
         </p>
+        <ul className="mt-6 hidden flex-col gap-2.5 md:flex">
+          {["Change a price in seconds", "Set your hours, close for a day", "Put your live band or karaoke night on", "See who asked for a table"].map((t, i) => (
+            <li key={t} className="pl-up flex items-center gap-3 text-[15.5px] font-semibold" style={{ animationDelay: `${220 + i * 80}ms` }}>
+              <span className="pl-pop grid h-7 w-7 place-items-center rounded-full bg-[var(--p-ok)] text-white" style={{ animationDelay: `${320 + i * 80}ms` }}>
+                <IconCheck size={14} />
+              </span>
+              {t}
+            </li>
+          ))}
+        </ul>
+      </section>
 
-        {notAVenue ? (
-          <div className="mt-5 rounded-bar border border-line bg-cream/60 p-4 text-[14px] text-mutedbrown">
-            You are signed in, but this account does not run a venue. If you were given a venue
-            username, sign in with that instead.
-          </div>
-        ) : null}
+      <section className="pl-up px-6 pb-12 md:px-0" style={{ animationDelay: "120ms" }}>
+        <div className="pl-card p-5 md:p-7">
+          <h2 className="text-[24px] font-bold">Sign in</h2>
+          <p className="mt-1 text-[14.5px] text-[var(--p-muted)]">With the username and password we gave you.</p>
 
-        <div className="mt-6 flex flex-col gap-3">
-          <label className="flex flex-col">
-            <span className="flbl">Username</span>
-            <input
-              className="inp"
-              value={username}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="the name we gave you"
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && void signIn()}
-            />
-          </label>
+          {notAVenue ? (
+            <div className="mt-4 rounded-2xl bg-[var(--p-warn-soft)] px-4 py-3 text-[14px] text-[var(--p-warn)]">
+              You&apos;re signed in, but not with a venue&apos;s login. Sign in with your venue&apos;s username instead.
+            </div>
+          ) : null}
 
-          <label className="flex flex-col">
-            <span className="flbl">Password</span>
-            <input
-              className="inp"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && void signIn()}
-            />
-          </label>
-
-          {error ? <div className="text-[14px] font-semibold text-flame">{error}</div> : null}
-
-          <button
-            className="btn mt-1"
-            disabled={busy || !username.trim() || !password}
-            onClick={() => void signIn()}
+          <form
+            className="mt-5 flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void signIn();
+            }}
           >
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-        </div>
+            <label className="block">
+              <span className="pl-label">Username</span>
+              <input
+                className="pl-input"
+                value={username}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="the name we gave you"
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="pl-label">Password</span>
+              <div className="relative">
+                <input
+                  className="pl-input !pr-20"
+                  type={show ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[13px] font-bold text-[var(--p-muted)]"
+                  onClick={() => setShow((s) => !s)}
+                >
+                  {show ? "Hide" : "Show"}
+                </button>
+              </div>
+            </label>
 
-        {/*
-          No "forgot password" link, and that is deliberate rather than
-          missing: the address behind a venue username receives no mail, so a
-          reset email would be sent into a hole. An admin reissues instead.
-        */}
-        <p className="mt-6 text-[13px] text-mutedbrown">
-          Lost your password? Ask us and we will issue a new one. We cannot email it to you,
-          because your login is a username rather than an address.
-        </p>
-      </div>
+            {error ? (
+              <div role="alert" className="pl-fade pl-wiggle text-[14px] font-semibold text-[var(--p-accent-dark)]">
+                {error}
+              </div>
+            ) : null}
+
+            <button type="submit" className="pl-btn mt-1 w-full" disabled={busy || !username.trim() || !password}>
+              {busy ? "Signing in…" : "Sign in"} {!busy ? <IconArrow size={20} /> : null}
+            </button>
+          </form>
+
+          {/* No reset link: the address behind a username takes no mail. */}
+          <p className="mt-5 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
+            Lost your password? Message us and we&apos;ll give you a new one. Not listed yet?{" "}
+            <a href="mailto:planbyaduro@gmail.com?subject=Listing%20on%20Duro!" className="font-bold text-[var(--p-accent)] underline">
+              Get in touch
+            </a>
+            .
+          </p>
+        </div>
+      </section>
     </main>
   );
 }

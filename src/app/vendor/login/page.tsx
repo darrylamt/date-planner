@@ -41,7 +41,9 @@ function VendorLoginInner() {
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-[1040px] md:grid-cols-2 md:items-center md:gap-12 md:px-6">
       <section className="px-6 pb-8 pt-6 md:p-10">
-        <Wordmark height={26} />
+        <div>
+          <Wordmark height={26} />
+        </div>
         <div className="pl-up mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--p-accent-soft)] px-3 py-1.5 text-[13px] font-bold text-[var(--p-accent-dark)]">
           For cake and flower shops
         </div>

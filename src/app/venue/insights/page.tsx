@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { chosenVenue, requireVenueUser } from "@/lib/venueAuth";
-import { VenueNav } from "@/components/venue/VenueNav";
+import { venuePortal } from "@/lib/venuePortal";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { CHECKLIST_VENUE_COLUMNS, checklistScore, venueChecklist } from "@/lib/venueChecklist";
+import { VenueShell } from "@/components/venue/VenueShell";
+import { Ring } from "@/components/venue/ui";
+import { IconCheck, IconChevron } from "@/components/planner/icons";
 
-export const dynamic = "force-dynamic";
-
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const OCCASION: Record<string, string> = {
   first_date: "First dates",
   anniversary: "Anniversaries",
@@ -22,7 +23,6 @@ const OCCASION: Record<string, string> = {
 };
 
 interface Insights {
-  days: number;
   in_plans: number;
   by_occasion: Record<string, number>;
   by_weekday: Record<string, number>;
@@ -34,236 +34,193 @@ interface Insights {
   area_budgets: Record<string, number>;
 }
 
-const top = (o: Record<string, number>, n = 5) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
+const top = (o: Record<string, number> | null | undefined, n = 5) =>
+  Object.entries(o ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n);
 
 /**
- * What Duro is doing for this venue, and what would make it do more.
- *
- * Three kinds of number, all counts, none about a person: how often plans
- * put the venue in front of somebody, how many of those people kept the plan
- * or asked for a table, and what is being asked for in its area, including
- * how often we could find nothing that fitted, which is the opening a venue
- * can fill. Then the listing itself, scored, because the fastest way for a
- * venue to appear in more plans is a complete one.
+ * What Duro is doing for this venue, and what would make it do more. All
+ * counts, none about a person.
  */
-export default async function VenueInsightsPage({
-  searchParams,
-}: {
-  searchParams: { venue?: string; days?: string };
-}) {
-  const session = await requireVenueUser();
-  const venue = chosenVenue(session, searchParams.venue);
+export default async function VenueInsightsPage({ searchParams }: { searchParams: { venue?: string; days?: string } }) {
+  const { session, venue, imageUrl } = await venuePortal(searchParams.venue);
   const days = [7, 30, 90].includes(Number(searchParams.days)) ? Number(searchParams.days) : 30;
   const supabase = createClient();
+  const q = (extra = "") => {
+    const p = new URLSearchParams();
+    if (session.venues.length > 1) p.set("venue", venue.id);
+    if (extra) p.set("days", extra);
+    const s = p.toString();
+    return s ? `?${s}` : "";
+  };
+  const link = (href: string) => {
+    const [path, hash] = href.split("#");
+    return `${path}${q()}${hash ? `#${hash}` : ""}`;
+  };
 
-  const [{ data: insights, error }, { data: me }] = await Promise.all([
+  const [{ data: insights, error }, { data: me }, { data: area }] = await Promise.all([
     supabase.rpc("venue_insights", { p_venue: venue.id, p_days: days }),
-    supabase
-      .from("venues")
-      .select("id, name, image_url, gallery_urls, description, opening_periods, phone, whatsapp_phone, booking_url, instagram_handle, menu_shared_from, areas(name)")
-      .eq("id", venue.id)
-      .maybeSingle(),
+    supabase.from("venues").select(CHECKLIST_VENUE_COLUMNS).eq("id", venue.id).maybeSingle(),
+    supabase.from("venues").select("areas(name)").eq("id", venue.id).maybeSingle(),
   ]);
   const v = me as Record<string, unknown> | null;
   const owner = (v?.menu_shared_from as string | null) || venue.id;
   const menu = await fetchAllRows<Record<string, unknown>>((a, b) =>
-    supabase.from("menu_items").select("*").in("venue_id", [owner, venue.id]).range(a, b)
+    supabase.from("menu_items").select("*").in("venue_id", [...new Set([owner, venue.id])]).range(a, b)
   ).catch(() => [] as Record<string, unknown>[]);
-  const areaName = (v?.areas as { name?: string } | null)?.name ?? "your area";
+  const areaName = ((area as { areas?: { name?: string } | null } | null)?.areas?.name) ?? "your area";
   const ins = (insights ?? null) as Insights | null;
 
   const liked = menu
     .filter((m) => Number(m.recommend_count ?? 0) > 0)
     .sort((a, b) => Number(b.recommend_count) - Number(a.recommend_count))
     .slice(0, 5);
-
-  /*
-   * The listing, scored. Each line is something the planner or the app
-   * actually uses: a venue with no hours cannot be planned for a given night
-   * with confidence, one with no prices is withheld from plans altogether, and
-   * a menu without descriptions shows guests a list of names.
-   */
-  const withNotes = menu.filter((m) => String(m.notes ?? "").trim()).length;
-  const withPics = menu.filter((m) => String(m.image_url ?? "").trim()).length;
-  const checks: { ok: boolean; label: string; why: string; href: string }[] = [
-    { ok: Boolean(v?.image_url), label: "A main photo", why: "Every card and page leads with it.", href: "/venue/listing" },
-    {
-      ok: ((v?.gallery_urls as string[] | null) ?? []).length >= 3,
-      label: "At least three more photos",
-      why: "Guests swipe through them before they choose.",
-      href: "/venue/listing",
-    },
-    { ok: String(v?.description ?? "").length > 60, label: "A description", why: "Tells guests what you are like in your words.", href: "/venue/listing" },
-    {
-      ok: Array.isArray(v?.opening_periods) && (v?.opening_periods as unknown[]).length > 0,
-      label: "Opening hours",
-      why: "We only plan evenings around places we know are open.",
-      href: "/venue/hours",
-    },
-    { ok: menu.length >= 10, label: "A priced menu", why: "Venues without prices are left out of plans with a budget.", href: "/venue/menu" },
-    {
-      ok: menu.length > 0 && withNotes / menu.length >= 0.6,
-      label: "Descriptions on most menu items",
-      why: `${withNotes} of ${menu.length} items have one. Guests read these on each item's page.`,
-      href: "/venue/menu",
-    },
-    {
-      ok: withPics >= Math.min(5, menu.length),
-      label: "Pictures of your best dishes",
-      why: `${withPics} items have a picture. Five is enough to change what people order.`,
-      href: "/venue/menu",
-    },
-    {
-      ok: Boolean(v?.booking_url || v?.whatsapp_phone || v?.phone),
-      label: "A way to book",
-      why: "A booking link or WhatsApp number turns a plan into a table request.",
-      href: "/venue/listing",
-    },
-    { ok: Boolean(v?.instagram_handle), label: "Your Instagram", why: "Guests check it before they go.", href: "/venue/listing" },
-  ];
-  const score = Math.round((100 * checks.filter((c) => c.ok).length) / checks.length);
-  const withVenue = (href: string) => (session.venues.length > 1 ? `${href}?venue=${venue.id}` : href);
+  const checks = venueChecklist(v, menu).sort((a, b) => Number(a.ok) - Number(b.ok) || b.weight - a.weight);
+  const score = checklistScore(checks);
 
   return (
-    <>
-      <Suspense>
-        <VenueNav venues={session.venues} currentVenueId={venue.id} planner={session.planner} />
-      </Suspense>
+    <VenueShell venues={session.venues} current={venue} imageUrl={imageUrl}>
+      <div className="pl-up mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[30px] font-bold leading-tight md:text-[36px]">Insights</h1>
+          <p className="mt-1 text-[15px] text-[var(--p-muted)]">How Duro is putting you in front of people. All counts; nothing here identifies a guest.</p>
+        </div>
+        <div className="flex rounded-full bg-white p-1 ring-1 ring-[var(--p-line)]">
+          {[7, 30, 90].map((d) => (
+            <Link
+              key={d}
+              href={`/venue/insights${q(String(d))}`}
+              className={`rounded-full px-3.5 py-1.5 text-[14px] font-bold transition-colors ${d === days ? "bg-[var(--p-ink)] text-white" : "text-[var(--p-ink-2)]"}`}
+            >
+              {d} days
+            </Link>
+          ))}
+        </div>
+      </div>
 
-      <main className="admin-main mx-auto w-full max-w-[1080px] px-5 py-7">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="font-display text-[24px] font-bold">Insights</h1>
-          <div className="flex gap-2 text-[13px]">
-            {[7, 30, 90].map((d) => (
-              <Link
-                key={d}
-                href={`/venue/insights?days=${d}${session.venues.length > 1 ? `&venue=${venue.id}` : ""}`}
-                className={`rounded-full px-3 py-1 font-semibold ${d === days ? "bg-ink text-white" : "bg-white ring-1 ring-black/10"}`}
-              >
-                {d} days
-              </Link>
+      {error || !ins ? (
+        <div className="pl-card p-6 text-[15px] text-[var(--p-muted)]">Insights are being set up. Check back shortly.</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { n: ins.in_plans, label: "In plans", note: `times Duro put you in an outing` },
+              { n: ins.saved, label: "Kept", note: "plans with you that people saved" },
+              { n: ins.table_requests, label: "Table requests", note: "sent to you from a plan" },
+              { n: ins.area_plans, label: `Outings in ${areaName}`, note: `${ins.area_unmet} found nothing that fitted` },
+            ].map((s, i) => (
+              <div key={s.label} className="pl-card pl-up p-4" style={{ animationDelay: `${40 + i * 60}ms` }}>
+                <div className="truncate text-[12.5px] font-bold uppercase tracking-[0.06em] text-[var(--p-muted)]">{s.label}</div>
+                <div className="pl-pop mt-1 text-[32px] font-bold tabular-nums leading-tight" style={{ animationDelay: `${200 + i * 60}ms` }}>
+                  {Number(s.n ?? 0).toLocaleString()}
+                </div>
+                <div className="text-[12.5px] leading-snug text-[var(--p-muted)]">{s.note}</div>
+              </div>
             ))}
           </div>
-        </div>
-        <p className="mb-6 mt-1 text-[14px] text-mutedbrown">
-          How Duro is putting you in front of people, and what would put you in front of more. All counts; nothing here
-          identifies a guest.
-        </p>
 
-        {error || !ins ? (
-          <div className="card p-5 text-[14px] text-mutedbrown">
-            Insights are being set up. Check back shortly.
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <Card title="What you're chosen for" delay={120}>
+              <Bars rows={top(ins.by_occasion).map(([k, n]) => [OCCASION[k] ?? k, n])} empty="Not in any plans yet in this window." />
+            </Card>
+            <Card title="The days people plan you for" delay={170}>
+              <Bars
+                rows={DAYS.map((d, i) => [d, Number(ins.by_weekday?.[String(i)] ?? 0)] as [string, number]).filter(([, n]) => n > 0)}
+                empty="Not in any plans yet in this window."
+              />
+            </Card>
+            <Card title={`What people want in ${areaName}`} delay={220}>
+              <Bars rows={top(ins.area_occasions).map(([k, n]) => [OCCASION[k] ?? k, n])} empty="No outings planned here yet." />
+              {ins.area_unmet > 0 ? (
+                <p className="mt-3 rounded-xl bg-[var(--p-warn-soft)] px-3 py-2 text-[13.5px] text-[var(--p-warn)]">
+                  {ins.area_unmet} of {ins.area_plans} found nothing that fitted. That&apos;s demand you could fill: complete hours, prices and nights on the days people ask for.
+                </p>
+              ) : null}
+            </Card>
+            <Card title={`Budgets in ${areaName}`} delay={270}>
+              <Bars rows={top(ins.area_budgets, 6).map(([k, n]) => [k === "free" ? "Free" : `GHS ${k}`, n])} empty="No outings planned here yet." />
+            </Card>
           </div>
-        ) : (
-          <>
-            <div className="grid gap-3 md:grid-cols-4">
-              <Stat label="In plans" value={ins.in_plans} note={`times Duro put you in an outing, last ${days} days`} />
-              <Stat label="Kept" value={ins.saved} note="plans with you in them that people saved" />
-              <Stat label="Table requests" value={ins.table_requests} note="sent to you from a plan" />
-              <Stat label={`Outings planned in ${areaName}`} value={ins.area_plans} note={`${ins.area_unmet} found nothing that fitted`} />
-            </div>
+        </>
+      )}
 
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <Card title="What you are chosen for">
-                <Bars rows={top(ins.by_occasion).map(([k, n]) => [OCCASION[k] ?? k, n])} empty="Not in any plans yet in this window." />
-              </Card>
-              <Card title="The days people plan you for">
-                <Bars
-                  rows={DAYS.map((d, i) => [d, Number(ins.by_weekday[String(i)] ?? 0)] as [string, number]).filter(([, n]) => n > 0)}
-                  empty="Not in any plans yet in this window."
-                />
-              </Card>
-              <Card title={`What people want in ${areaName}`}>
-                <Bars rows={top(ins.area_occasions).map(([k, n]) => [OCCASION[k] ?? k, n])} empty="No outings planned here yet." />
-                {ins.area_unmet > 0 ? (
-                  <p className="mt-3 text-[13px] text-mutedbrown">
-                    {ins.area_unmet} of {ins.area_plans} found nothing that fitted. Complete hours and prices, and events on the
-                    nights people ask for, are how you fill that.
-                  </p>
-                ) : null}
-              </Card>
-              <Card title={`Budgets in ${areaName}`}>
-                <Bars rows={top(ins.area_budgets, 6).map(([k, n]) => [k === "free" ? "Free" : `GHS ${k}`, n])} empty="No outings planned here yet." />
-              </Card>
-            </div>
-          </>
-        )}
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <Card title="Your listing" delay={320}>
+          <div className="mb-4 flex items-center gap-4">
+            <Ring value={score} size={72} stroke={8} />
+            <p className="text-[14px] leading-snug text-[var(--p-muted)]">The fastest way to appear in more plans is a complete listing.</p>
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {checks.map((c) => (
+              <li key={c.label}>
+                {c.ok ? (
+                  <div className="flex items-center gap-3 px-1 py-1.5 text-[14.5px] text-[var(--p-muted)]">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--p-ok)] text-white">
+                      <IconCheck size={13} />
+                    </span>
+                    {c.label}
+                  </div>
+                ) : (
+                  <Link href={link(c.href)} className="pl-lift group flex items-center gap-3 rounded-xl bg-[var(--p-sunken)] px-3 py-2.5">
+                    <span className="h-6 w-6 shrink-0 rounded-full border-2 border-[var(--p-line)] bg-white" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14.5px] font-bold">{c.label}</span>
+                      <span className="block text-[12.5px] text-[var(--p-muted)]">{c.why}</span>
+                    </span>
+                    <IconChevron className="text-[var(--p-muted)] transition-transform group-hover:translate-x-1" />
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
 
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <Card title="Your most recommended">
-            {liked.length ? (
-              <ul className="grid gap-1.5 text-[14px]">
-                {liked.map((m) => (
-                  <li key={String(m.id)} className="flex justify-between gap-3">
-                    <span>{String(m.name)}</span>
-                    <span className="font-mono text-mutedbrown">👍 {String(m.recommend_count)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-[13px] text-mutedbrown">
-                Nobody has recommended a dish yet. Recommendations count only from guests who planned a visit, so they
-                arrive after people come.
-              </p>
-            )}
-          </Card>
-
-          <Card title={`Your listing: ${score}% complete`}>
-            <ul className="grid gap-2 text-[13.5px]">
-              {checks.map((c) => (
-                <li key={c.label} className="flex gap-2">
-                  <span>{c.ok ? "✅" : "⬜"}</span>
-                  <span className="flex-1">
-                    {c.ok ? (
-                      <b>{c.label}</b>
-                    ) : (
-                      <Link href={withVenue(c.href)} className="font-bold text-flame hover:underline">
-                        {c.label}
-                      </Link>
-                    )}
-                    <span className="block text-mutedbrown">{c.why}</span>
-                  </span>
+        <Card title="Most recommended dishes" delay={370}>
+          {liked.length ? (
+            <ul className="grid gap-2 text-[15px]">
+              {liked.map((m, i) => (
+                <li key={String(m.id)} className="pl-up flex items-center justify-between gap-3" style={{ animationDelay: `${420 + i * 60}ms` }}>
+                  <span className="truncate">{String(m.name)}</span>
+                  <span className="shrink-0 rounded-full bg-[var(--p-ok-soft)] px-2.5 py-0.5 text-[13px] font-bold text-[var(--p-ok)]">👍 {String(m.recommend_count)}</span>
                 </li>
               ))}
             </ul>
-          </Card>
-        </div>
-      </main>
-    </>
+          ) : (
+            <p className="text-[14px] leading-relaxed text-[var(--p-muted)]">
+              No recommendations yet. Only guests who planned a visit can recommend a dish, so these arrive after people come.
+            </p>
+          )}
+        </Card>
+      </div>
+    </VenueShell>
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: number; note: string }) {
+function Card({ title, children, delay }: { title: string; children: ReactNode; delay: number }) {
   return (
-    <div className="card p-4">
-      <div className="text-[12px] font-semibold uppercase tracking-wide text-mutedbrown">{label}</div>
-      <div className="mt-1 font-display text-[26px] font-bold">{value.toLocaleString()}</div>
-      <div className="text-[12px] text-mutedbrown">{note}</div>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="card p-5">
-      <h2 className="mb-3 font-display text-[17px] font-bold">{title}</h2>
+    <section className="pl-card pl-up p-5" style={{ animationDelay: `${delay}ms` }}>
+      <h2 className="mb-4 text-[18px] font-bold">{title}</h2>
       {children}
-    </div>
+    </section>
   );
 }
 
 function Bars({ rows, empty }: { rows: [string, number][]; empty: string }) {
-  if (!rows.length) return <p className="text-[13px] text-mutedbrown">{empty}</p>;
+  if (!rows.length) return <p className="text-[14px] text-[var(--p-muted)]">{empty}</p>;
   const max = Math.max(...rows.map((r) => r[1]));
   return (
-    <ul className="grid gap-1.5 text-[13px]">
-      {rows.map(([k, n]) => (
+    <ul className="grid gap-2.5 text-[14px]">
+      {rows.map(([k, n], i) => (
         <li key={k} className="flex items-center gap-3">
-          <span className="w-[40%] truncate">{k}</span>
-          <span className="h-2 flex-1 rounded bg-black/5">
-            <span className="block h-2 rounded bg-flame" style={{ width: `${Math.round((100 * n) / max)}%` }} />
+          <span className="w-[38%] truncate font-semibold">{k}</span>
+          <span className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--p-sunken)]">
+            <span
+              className="pl-grow block h-3 rounded-full bg-[var(--p-accent)]"
+              style={{ width: `${Math.max(4, Math.round((100 * n) / max))}%`, animationDelay: `${200 + i * 90}ms` }}
+            />
           </span>
-          <span className="w-10 text-right font-mono">{n}</span>
+          <span className="w-9 text-right font-bold tabular-nums">{n}</span>
         </li>
       ))}
     </ul>

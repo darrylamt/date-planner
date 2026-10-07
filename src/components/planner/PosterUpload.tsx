@@ -21,7 +21,7 @@ export function PosterUpload({
 }: {
   value: string;
   onChange: (url: string) => void;
-  folder?: "events" | "locations" | "venues" | "gifts";
+  folder?: "events" | "locations" | "venues" | "gifts" | "menu";
   label?: string;
   hint?: string;
   aspect?: string;

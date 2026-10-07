@@ -117,3 +117,51 @@ export const IconWarn = ({ size = 18, className }: P) => (
     <path d="M12 3l9.5 17H2.5L12 3zM12 10v4M12 17.2h.01" />
   </svg>
 );
+export const IconHome = ({ size = 22, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1v-9.5z" />
+  </svg>
+);
+export const IconFork = ({ size = 22, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M7 3v8M4.5 3v5a2.5 2.5 0 0 0 5 0V3M7 11v10M17 21V3c-2.2 1.2-3.5 3.8-3.5 7v3H17" />
+  </svg>
+);
+export const IconChart = ({ size = 22, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
+  </svg>
+);
+export const IconStore = ({ size = 22, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M4 9.5V20h16V9.5M3 4h18l-1.5 5.5a2.6 2.6 0 0 1-5 0 2.6 2.6 0 0 1-5 0 2.6 2.6 0 0 1-5 0L3 4zM9.5 20v-5h5v5" />
+  </svg>
+);
+export const IconMusic = ({ size = 22, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M9 18V5l11-2v13" />
+    <circle cx="6.5" cy="18" r="2.5" />
+    <circle cx="17.5" cy="16" r="2.5" />
+  </svg>
+);
+export const IconPhone = ({ size = 20, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M5 3.5h3.5l1.8 4.5-2.3 1.5a11 11 0 0 0 6.5 6.5l1.5-2.3 4.5 1.8V19a2 2 0 0 1-2 2A16.5 16.5 0 0 1 3 5.5a2 2 0 0 1 2-2z" />
+  </svg>
+);
+export const IconChevron = ({ size = 18, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);
+export const IconEye = ({ size = 20, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+export const IconStar = ({ size = 18, className }: P) => (
+  <svg {...base(size)} className={className}>
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5z" />
+  </svg>
+);
