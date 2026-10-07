@@ -30,6 +30,8 @@ export function CsvImporter({
   const [mode, setMode] = useState<"venues" | "menu_items" | "enrich">("venues");
   const [report, setReport] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  /** What a long import is doing right now, so a wait never looks like a hang. */
+  const [progress, setProgress] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   /*
    * What a file would do, held back until somebody says go.
@@ -54,6 +56,18 @@ export function CsvImporter({
    * earlier, rather than by a second implementation that agrees with it today.
    */
   async function run(text: string, dryRun: boolean) {
+    try {
+      await runInner(text, dryRun);
+    } catch (e) {
+      // Never leave the screen spinning: whatever went wrong, say it.
+      setReport((r) => [`Something went wrong: ${e instanceof Error ? e.message : String(e)}`, ...r]);
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  async function runInner(text: string, dryRun: boolean) {
     setBusy(true);
     setReport([]);
     if (dryRun) setStaged(null);
@@ -91,18 +105,38 @@ export function CsvImporter({
 
       for (let at = 0; at < items.length; at += SIZE) {
         const chunk = items.slice(at, at + SIZE);
+        setProgress(`Writing ${Math.min(at + chunk.length, items.length)} of ${items.length}…`);
         const { error } = await supabase.from(table).insert(chunk.map((c) => c.values));
         if (!error) {
           written += chunk.length;
           continue;
         }
 
-        for (const one of chunk) {
+        /*
+         * Row by row, but not forever. When the database refuses everything
+         * for one reason (a broken trigger did, after 0078), retrying three
+         * hundred rows one at a time is minutes of spinner that ends in the
+         * same message three hundred times. If the first few singles fail
+         * exactly as the batch did, it is the batch, not the rows: say so once
+         * and stop.
+         */
+        let sameFailures = 0;
+        for (const [n, one] of chunk.entries()) {
+          setProgress(`Checking row ${n + 1} of ${chunk.length} in a batch that failed…`);
           const { error: rowError } = await supabase.from(table).insert(one.values);
           if (rowError) {
             out.push(`Row ${one.row} (${String(one.values.name)}): ${rowError.message}`);
+            sameFailures = rowError.message === error.message ? sameFailures + 1 : 0;
+            if (sameFailures >= 5 && written === 0) {
+              out.unshift(
+                `Stopped: every row is failing with "${error.message}". Nothing in this batch was written. ` +
+                  `This is the database refusing the import, not a problem with the file.`
+              );
+              return written;
+            }
           } else {
             written += 1;
+            sameFailures = 0;
           }
         }
       }
@@ -271,9 +305,7 @@ export function CsvImporter({
 
       if (dryRun) {
         setStaged({ rows: pending, log });
-        setStaged(null);
-    setRaw("");
-    setReport(log);
+        setReport(log);
         setBusy(false);
         return;
       }
@@ -468,6 +500,9 @@ export function CsvImporter({
       for (const [from, to] of mapped) log.push(`  ${from} → ${to}`);
     }
     log.unshift(`Imported ${ok} of ${rows.length} rows.`);
+    // Done with this file: the preview and its Import button go, so it cannot be sent twice.
+    setStaged(null);
+    if (ok) setRaw("");
     setReport(log);
     setBusy(false);
     setToast(`Imported ${ok} rows`);
@@ -686,7 +721,7 @@ export function CsvImporter({
                   disabled={busy}
                   onClick={() => void run(raw, false)}
                 >
-                  {busy ? "Importing…" : `Import ${staged.rows.length} rows`}
+                  {busy ? progress ?? "Importing…" : `Import ${staged.rows.length} rows`}
                 </button>
                 <span className="text-[13px] text-mutedbrown">
                   Re-importing a menu updates the prices already on file rather than adding the
