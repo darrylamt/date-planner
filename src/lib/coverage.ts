@@ -62,16 +62,66 @@ export interface AreaCoverage {
  * them unpriced plans like a neighbourhood with two. Counting only active rows
  * would call it covered; this says it has two and eight waiting.
  */
+interface PlannableFacts {
+  id: string;
+  type: string;
+  is_free: boolean | null;
+  price_source: string | null;
+  avg_cost_per_person_ghs: number | null;
+  menu_shared_from: string | null;
+  entry_fee_ghs?: number | null;
+}
+
+/**
+ * Whether the planner could put this venue in a plan: the same test the
+ * planner applies (matching.ts), so an area counted as live really can be
+ * planned. Free to visit, a door price (a weekly cover or a recorded entry,
+ * 0075), or a real price from a menu or an average.
+ */
+function isPlannable(v: PlannableFacts, hasMenu: Set<string>, byDoor: Set<string>): boolean {
+  if (freeToVisit(v)) return true;
+  if (byDoor.has(v.id)) return true;
+  if (v.entry_fee_ghs != null) return true;
+  if (v.price_source === "unknown") return false;
+  const menu = hasMenu.has(v.menu_shared_from || v.id) || hasMenu.has(v.id);
+  if (avgIsNotAPrice(v as never, menu)) return false;
+  return Number(v.avg_cost_per_person_ghs) > 0 || menu;
+}
+
+/**
+ * The areas with at least one venue a plan could use, for the app's
+ * "where" lists. Listing an area with only unpriced venues in it offers a
+ * place that can only answer "we could not plan that".
+ */
+export async function liveAreas(supabase: SupabaseClient): Promise<{ id: string; name: string; city: string }[]> {
+  const [{ data: areas }, venues, menuRows, covers] = await Promise.all([
+    supabase.from("areas").select("id, name, city").order("name"),
+    fetchAllRows<PlannableFacts & { area_id: string | null }>((a, b) =>
+      supabase
+        .from("venues")
+        .select("id, area_id, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, entry_fee_ghs")
+        .eq("is_active", true)
+        .range(a, b)
+    ),
+    fetchAllRows<{ venue_id: string }>((a, b) =>
+      supabase.from("menu_items").select("venue_id").gt("price_ghs", 0).range(a, b)
+    ),
+    fetchAllRows<{ venue_id: string }>((a, b) =>
+      supabase.from("venue_schedules").select("venue_id").not("cover_ghs", "is", null).range(a, b)
+    ),
+  ]);
+  const hasMenu = new Set(menuRows.map((m) => m.venue_id));
+  const byDoor = new Set(covers.map((c) => c.venue_id));
+  const live = new Set(venues.filter((v) => v.area_id && isPlannable(v, hasMenu, byDoor)).map((v) => v.area_id!));
+  return ((areas ?? []) as { id: string; name: string; city: string | null }[])
+    .filter((a) => live.has(a.id))
+    .map((a) => ({ id: a.id, name: a.name, city: a.city || "Accra" }));
+}
+
 export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCoverage[]> {
-  type V = {
-    id: string;
+  type V = PlannableFacts & {
     name: string;
     area_id: string | null;
-    type: string;
-    is_free: boolean | null;
-    price_source: string | null;
-    avg_cost_per_person_ghs: number | null;
-    menu_shared_from: string | null;
     lat: number | null;
     lng: number | null;
   };
@@ -80,7 +130,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
     fetchAllRows<V>((a, b) =>
       supabase
         .from("venues")
-        .select("id, name, area_id, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, lat, lng")
+        .select("id, name, area_id, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, entry_fee_ghs, lat, lng")
         .eq("is_active", true)
         .range(a, b)
     ),
@@ -92,14 +142,7 @@ export async function areaCoverage(supabase: SupabaseClient): Promise<AreaCovera
 
   const hasMenu = new Set(menuRows.map((m) => m.venue_id));
   const byDoor = new Set(covers.map((c) => c.venue_id));
-  const plannable = (v: V) => {
-    if (freeToVisit(v)) return true;
-    if (byDoor.has(v.id)) return true;
-    if (v.price_source === "unknown") return false;
-    const menu = hasMenu.has(v.menu_shared_from || v.id) || hasMenu.has(v.id);
-    if (avgIsNotAPrice(v as never, menu)) return false;
-    return Number(v.avg_cost_per_person_ghs) > 0 || menu;
-  };
+  const plannable = (v: V) => isPlannable(v, hasMenu, byDoor);
 
   const out = new Map<string, AreaCoverage>();
   for (const a of (areas ?? []) as { id: string; name: string }[]) {

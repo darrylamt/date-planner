@@ -1,6 +1,7 @@
 import type { PriceBand, VenueType } from "./types";
 import { parsePeriods, type OpeningPeriod } from "./hours";
 import { isNeighbourhood } from "./areas";
+import { nearestNeighbourhood } from "./neighbourhoods";
 
 /**
  * Google Places (New), the factual half of a venue row.
@@ -274,15 +275,15 @@ function localitiesOf(p: RawPlace): string[] {
 }
 
 /**
- * The neighbourhood Google gives a discovered place, for filing it.
+ * The neighbourhood a place is in, for filing it.
  *
  * In Accra, the catalogue's own areas decide (matchArea), because they are
- * many and the address is read against them well. Elsewhere there are few
- * areas yet, and Google seldom names a neighbourhood in Ghana: what it does
- * give is the municipal district, "Asokwa Municipal", which without the word
- * "Municipal" is the name people use. So, narrowest first: a neighbourhood,
- * a town that is not the city itself, the district, then the town. Never a
- * street, and never the "Metropolitan" district, which is the whole city.
+ * many and the address is read against them well. Elsewhere, the nearest
+ * known neighbourhood (neighbourhoods.ts) within two and a half kilometres;
+ * then a finer name Google gives (a neighbourhood or a town that is not the
+ * city itself); then the town. Never a municipal district: Google files
+ * most of south-west Kumasi, Ahodwo included, under "Kwadaso Municipal", and
+ * using it put every place there in Kwadaso. Never a street either.
  */
 export function neighbourhoodOf(
   place: { addressParts: string[]; localities: string[] },
@@ -298,11 +299,18 @@ export function neighbourhoodOf(
     if (known.existingId && known.name) return { name: known.name, existing: true };
   }
 
+  const near = nearestNeighbourhood(city, point);
+  if (near) {
+    const known = has(near.name);
+    return { name: known?.name ?? near.name, existing: Boolean(known) };
+  }
+
   for (const raw of place.localities) {
-    if (/metropolitan|region|^ghana$/i.test(raw)) continue;
+    // Administrative units, not places: "Kwadaso Municipal", "Kumasi Metropolitan".
+    if (/\b(metropolitan|municipal|district|region|assembly)\b|^ghana$/i.test(raw)) continue;
     // Sub-metro districts like Kpeshie: Google's word, not a place anyone names.
     if (!isNeighbourhood(raw)) continue;
-    const name = raw.replace(/\s+(municipal|district)(\s+assembly)?$/i, "").trim();
+    const name = raw.trim();
     if (name.length < 3 || name.length > 40 || /\d/.test(name)) continue;
     if (name.toLowerCase() === cityKey) continue;
     const known = has(name);

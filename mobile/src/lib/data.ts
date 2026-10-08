@@ -10,7 +10,27 @@ import type { Area, Itinerary, MenuItem, PlanInputs, SavedPlan } from "./types";
  * routes need the web server, and those live in api.ts.
  */
 
+const API = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+
 export async function fetchAreas(): Promise<Area[]> {
+  /*
+   * Only areas with something a plan can use: at least one venue with a
+   * price, free to visit, or with a door price. The server works it out,
+   * because it needs every menu to know, and the phone should not download
+   * those to draw a list of names. Any failure falls back to the rule below.
+   */
+  if (API) {
+    try {
+      const res = await fetch(`${API}/api/areas`);
+      if (res.ok) {
+        const json = (await res.json()) as { areas?: Area[] };
+        if (json.areas?.length) return json.areas;
+      }
+    } catch {
+      /* Offline or the server is down: the older rule below. */
+    }
+  }
+
   const { data, error } = await supabase
     .from("areas")
     .select("id, name, city")
