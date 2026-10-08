@@ -4,8 +4,10 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { consumeMessage } from "@/lib/entitlements";
 import { buildToolContext, todayInAccra } from "@/lib/chat/tools";
 import { getProvider, type ChatTurn, type ModelUsage } from "@/lib/chat/model";
-import { SYSTEM, buildOpeningContext, seasonNote } from "@/lib/chat/system";
+import { unstable_cache } from "next/cache";
+import { SYSTEM, buildOpeningContext, CONTEXT_PREFIX } from "@/lib/chat/system";
 import { runChat } from "@/lib/chat/run";
+import { liveAreas } from "@/lib/coverage";
 
 /**
  * The chat endpoint.
@@ -92,21 +94,30 @@ export async function POST(req: Request) {
   const history = await loadHistory(admin, conversationId);
 
   /*
-   * The date and the area names ride on the first user turn rather than in the
-   * system prompt. In the prompt they would change the cached prefix at
+   * The date, the time and the area names ride on the user turn rather than
+   * in the system prompt. In the prompt they would change the cached prefix at
    * midnight, for everybody at once; here they cost a few tokens and
    * invalidate nothing.
+   *
+   * On every turn, not just the first. It used to ride on a conversation's
+   * first message only, so a thread reopened two days later still believed it
+   * was the day it began, and once history trimming dropped that message the
+   * date went with it. It is also no longer saved: the app shows stored
+   * messages back to people, and this line, every area name and all, sat at
+   * the top of their first bubble.
    */
+  const now = new Date();
   const today = todayInAccra();
   const ctx = buildToolContext(userId);
   /*
    * Grouped by city, so the assistant can tell Kumasi from a neighbourhood of
-   * Accra. Before cities were read, "Kumasi" sat in this list between Kpeshie
-   * and La as though it were a short taxi away.
+   * Accra. Only areas with something a plan can use, as the app lists them:
+   * telling the model Duro "covers" two hundred neighbourhoods with nothing in
+   * them invites searches that come back empty.
    */
-  const { data: areas } = await ctx.catalog.from("areas").select("name,city").order("name");
+  const areas = await areasForChat().catch(() => []);
   const byCity = new Map<string, string[]>();
-  for (const a of (areas ?? []) as { name: string; city: string | null }[]) {
+  for (const a of areas) {
     const c = a.city || "Accra";
     byCity.set(c, [...(byCity.get(c) ?? []), a.name]);
   }
@@ -114,13 +125,10 @@ export async function POST(req: Request) {
     byCity.size > 1 ? `${c}: ${names.join(", ")}` : names.join(", ")
   );
 
-  const halloween = body.season === "halloween" || halloweenNow();
-  const note = history.length ? seasonNote(JSON.stringify(history), halloween) : null;
-  const userContent = history.length
-    ? note
-      ? `${note}\n\n${body.message}`
-      : body.message
-    : `${buildOpeningContext(today, areaNames, { halloween })}\n\n${body.message}`;
+  const halloween = body.season === "halloween" || halloweenNow(now);
+  // Accra keeps GMT all year, so the UTC clock is the local one.
+  const time = now.toISOString().slice(11, 16);
+  const userContent = `${buildOpeningContext(today, areaNames, { halloween, time })}\n\n${body.message}`;
 
   const provider = getProvider();
   const encoder = new TextEncoder();
@@ -136,7 +144,11 @@ export async function POST(req: Request) {
       try {
         for await (const event of runChat({ provider, system: SYSTEM, history, userContent, ctx })) {
           if (event.type === "done") {
-            await persist(admin, conversationId, event.turns, event.usage);
+            // What the person typed, not the context line it was sent with.
+            const [first, ...rest] = event.turns;
+            const turns: ChatTurn[] =
+              first?.role === "user" ? [{ role: "user", content: [{ type: "text", text: body.message }] }, ...rest] : event.turns;
+            await persist(admin, conversationId, turns, event.usage);
             send({ type: "done" });
             continue;
           }
@@ -241,9 +253,13 @@ async function loadHistory(
 
   return ((data ?? []) as { role: "user" | "assistant"; content: ChatTurn["content"] }[]).map((m) => ({
     role: m.role,
-    content: m.content,
+    // Older builds saved the context line into the message; today's arrives fresh.
+    content: m.content.map((b) => (b.type === "text" ? { ...b, text: b.text.replace(CONTEXT_PREFIX, "") } : b)),
   }));
 }
+
+/** The app's own area list (see /api/areas), held for five minutes rather than rebuilt per message. */
+const areasForChat = unstable_cache(() => liveAreas(createServiceClient()), ["chat-live-areas"], { revalidate: 300 });
 
 /**
  * Write the exchange.

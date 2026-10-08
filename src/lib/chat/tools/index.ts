@@ -9,6 +9,7 @@ import { estimateBudget } from "./estimateBudget";
 import { buildPlan, planFrom } from "./buildPlan";
 import { listPastOutings } from "./pastOutings";
 import { requestReservation } from "./requestReservation";
+import { searchEvents } from "./searchEvents";
 
 /**
  * The tools, in a fixed order.
@@ -28,6 +29,7 @@ export const CHAT_TOOLS: ChatTool<never>[] = [
   buildPlan,
   listPastOutings,
   requestReservation,
+  searchEvents,
 ] as unknown as ChatTool<never>[];
 
 const BY_NAME = new Map<string, ChatTool<never>>(CHAT_TOOLS.map((t) => [t.name, t]));

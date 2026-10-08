@@ -47,6 +47,7 @@ const TOOL_LABEL: Record<string, string> = {
   build_plan: "Building the evening",
   check_opening_hours: "Checking opening hours",
   estimate_budget: "Working out the cost",
+  search_events: "Checking what's on",
 };
 
 export async function* runChat(opts: {
@@ -122,14 +123,25 @@ export async function* runChat(opts: {
       return;
     }
 
-    const assistantTurn: ChatTurn = { role: "assistant", content: reply.blocks };
+    const calls = toolCallsOf(reply.blocks);
+
+    /*
+     * Words written on the way to a tool call are dropped, from the stream
+     * and from the record alike.
+     *
+     * The prompt asks for no "let me check", and the model writes one anyway
+     * on most turns that search. Shown, it arrived glued to the answer
+     * ("budget around GHS 800.This Saturday evening...") and said nothing the
+     * progress line was not already saying. The answer after the tools is the
+     * whole reply; a turn that calls a tool needs only the call.
+     */
+    const blocks = calls.length ? reply.blocks.filter((b) => b.type !== "text") : reply.blocks;
+    const assistantTurn: ChatTurn = { role: "assistant", content: blocks };
     added.push(assistantTurn);
     messages = [...messages, assistantTurn];
 
-    const text = textOf(reply.blocks);
+    const text = calls.length ? "" : textOf(reply.blocks);
     if (text) yield { type: "text", text };
-
-    const calls = toolCallsOf(reply.blocks);
     if (!calls.length) {
       if (!text) {
         yield {

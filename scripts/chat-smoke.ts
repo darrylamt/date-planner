@@ -73,8 +73,15 @@ async function main() {
     today,
   };
 
-  const { data: areas } = await anon.from("areas").select("name").order("name");
-  const areaNames = ((areas ?? []) as { name: string }[]).map((a) => a.name);
+  // As /api/chat builds it: the live areas, grouped by city, and the time.
+  const { liveAreas } = await import("../src/lib/coverage");
+  const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+  });
+  const byCity = new Map<string, string[]>();
+  for (const a of await liveAreas(service)) byCity.set(a.city || "Accra", [...(byCity.get(a.city || "Accra") ?? []), a.name]);
+  const areaNames = [...byCity].map(([c, names]) => (byCity.size > 1 ? `${c}: ${names.join(", ")}` : names.join(", ")));
+  const time = new Date().toISOString().slice(11, 16);
 
   const provider = getProvider();
   console.log(`\nprovider: ${provider.id} / ${provider.model}\n`);
@@ -90,7 +97,7 @@ async function main() {
     console.log(`\x1b[1m\x1b[36m? ${q.ask}\x1b[0m`);
     if (q.looking_for) console.log(`\x1b[2m  want: ${q.looking_for}\x1b[0m`);
 
-    const userContent = `${buildOpeningContext(today, areaNames)}\n\n${q.ask}`;
+    const userContent = `${buildOpeningContext(today, areaNames, { time })}\n\n${q.ask}`;
     let answer = "";
 
     for await (const ev of runChat({ provider, system: SYSTEM, history: [], userContent, ctx })) {

@@ -50,7 +50,7 @@ Say so plainly when asked, rather than approximating:
 - Some dishes carry a line copied word for word from the menu, shown as "menu says". Quote it and say it is what the menu prints. Never extend it: "menu says vegetarian" does not tell you whether it contains dairy.
 - Some venues have been rung and asked whether they do vegetarian food, and that answer is attributed. Most have not, and "nobody has asked the venue" means exactly that, not "no".
 - Drinks recorded as alcoholic are marked. A drink not marked is not thereby safe: most are simply unrecorded. Never tell somebody a drink is alcohol-free unless the data says so outright.
-- Some venues have weekly fixtures recorded, karaoke on a Thursday or a band on a Friday, and get_venue returns them. Very few do. An empty list means nobody has told us, not that the place is quiet, and it must never be reported as "nothing on".
+- Events and weekly nights (karaoke on a Thursday, a band on a Friday, a class, a Halloween party) come from search_events, which looks across every venue at once; get_venue shows one venue's weekly nights. Only what somebody has listed with Duro is there. An empty result means nobody has told us, not that nothing is on, and it must never be reported as "nothing on" or "no karaoke anywhere". Never conclude that from checking a few venues one at a time.
 - A fixture or event marked "ladies only" or "men only" is a night nobody else can come to. Always say so when you mention it, and never suggest it to a group that includes anyone it excludes. A ladies' night with free entry for women is not one of these: everybody can go.
 - A venue can have a specific kitchen recorded, shown as "serves": italian, korean, jamaican. Very few do. An empty search for one means nobody has written it down, not that no such place exists in Accra, and those are different sentences. Say which one you mean.
 - No live availability, no table booking, no wait times.
@@ -63,6 +63,8 @@ Answer first, in one or two sentences. Then stop.
 You are on a phone screen. Almost every answer should be under fifty words. A list of places may run longer, but never more than five, one line each, unless the person asks for a number: then give that many, up to ten.
 
 When somebody asks for a ranking (the most expensive, the cheapest, the best rated, a "top 10"), search with sort set and limit set to the number they asked for, give the list in order with each place's price or rating, and say in a few words what it is ranked by. Never decline a ranking the search can make, and never rank by anything the search did not return.
+
+When somebody asks what is on, what is happening, or for a kind of night (karaoke, live music, a party, a class, Halloween), search events first, for the dates they mean. When they describe a place by a feature (rooftop, sports bar, football, brunch, beach, pool, garden), search venues with that word as keywords. Either way, search before asking them anything: a broad question gets the best few answers, not a question back.
 
 Do not:
 - restate the question before answering it
@@ -124,7 +126,11 @@ If what they want cannot be built from the catalogue, say which part failed. "We
  * returns nothing, which reads to the user as an empty catalogue rather than a
  * bad guess. Cheaper than a tool call and it removes a whole class of wrong.
  */
-export function buildOpeningContext(today: string, areaNames: string[], opts: { halloween?: boolean } = {}): string {
+export function buildOpeningContext(
+  today: string,
+  areaNames: string[],
+  opts: { halloween?: boolean; time?: string } = {}
+): string {
   const areas = areaNames.length ? areaNames.join(", ") : "none recorded yet";
   /*
    * The season, here and not in the system prompt, for the same reason as the
@@ -132,20 +138,32 @@ export function buildOpeningContext(today: string, areaNames: string[], opts: { 
    * spooky word is welcome, an invented Halloween party is not.
    */
   const season = opts.halloween ? ` ${HALLOWEEN_NOTE}` : "";
-  return `[Context: today is ${today}. The areas Duro covers are: ${areas}. Use these names when searching; anywhere else in Accra is not in the catalogue.${season}]`;
+  /*
+   * The week spelled out, weekday by weekday. Given only "2026-10-08", the
+   * model counted its own way to Saturday and landed on Sunday: "this
+   * Saturday" was planned for the 11th and "Friday" for the 10th. A plan on
+   * the wrong day is worse than no plan, and a calendar costs thirty tokens.
+   */
+  const week = Array.from({ length: 8 }, (_, i) => labelDay(addDays(today, i))).join(", ");
+  const now = opts.time ? ` and the time in Accra is ${opts.time}` : "";
+  return `[Context: today is ${labelDay(today)}${now}. The next week: ${week}. The areas Duro covers are: ${areas}. Use these names when searching; anywhere else in Accra is not in the catalogue.${season}]`;
 }
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Thursday 2026-10-08". */
+function labelDay(iso: string): string {
+  return `${WEEKDAYS[new Date(`${iso}T00:00:00Z`).getUTCDay()]} ${iso}`;
+}
+
+function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Matches the context line, wherever an older build saved it into a person's message. */
+export const CONTEXT_PREFIX = /^\[Context: [^\n]*\]\s*/;
 
 const HALLOWEEN_NOTE =
-  'It is Halloween season (Halloween is 31 October). When someone wants something for Halloween, look for events on those dates and say plainly if the catalogue has none. A light spooky touch in your words is welcome, never at the expense of the facts. If someone says "trick or treat", answer with one playful line, then offer to plan something.';
-
-/**
- * The season for a conversation that began before it, or before the preview
- * was turned on. The opening context rides only on a conversation's first
- * message, so without this Durobot learned it was Halloween in new chats and
- * nowhere else: "trick or treat" in last week's thread got a straight answer.
- * Added once, and again only if history trimming has dropped the first.
- */
-export function seasonNote(historyText: string, halloween: boolean): string | null {
-  if (!halloween || historyText.includes("Halloween season")) return null;
-  return `[Context: ${HALLOWEEN_NOTE}]`;
-}
+  'It is Halloween season (Halloween is 31 October). When someone wants something for Halloween, search events with the query "halloween" from today to 1 November, and say plainly if none are listed. A light spooky touch in your words is welcome, never at the expense of the facts. If someone says "trick or treat", answer with one playful line, then offer to plan something.';

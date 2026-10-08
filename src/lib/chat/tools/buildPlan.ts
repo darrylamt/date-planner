@@ -191,7 +191,8 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
       };
     }
 
-    const inputs = toPlanInputs(args, areas);
+    const start = args.start_time ?? defaultStart(args.date, ctx.today);
+    const inputs = toPlanInputs(args, areas, start);
     const candidates = await fetchCandidates(ctx.catalog, inputs);
 
     if (candidates.totalActiveVenues < 2) {
@@ -248,7 +249,7 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
       assumed: [
         args.party_size == null ? `${DEFAULTS.party_size} people` : null,
         args.budget_ghs == null ? `a GHS ${DEFAULTS.budget_ghs} budget` : null,
-        args.start_time == null ? `a ${DEFAULTS.start_time} start` : null,
+        args.start_time == null ? `a ${start} start` : null,
         args.hours == null ? `${DEFAULTS.hours} hours` : null,
       ].filter(Boolean),
       spends_ghs: itinerary.est_total_ghs,
@@ -317,8 +318,26 @@ async function resolveAreas(ctx: ToolContext, wanted: string[]): Promise<Resolve
   return { ids, names, city };
 }
 
+/**
+ * Seven, unless it is tonight and seven has gone.
+ *
+ * "Where can I go tonight", asked at twenty to eight, was planned from seven:
+ * the first stop had been going for forty minutes before anybody read the
+ * plan. Tonight now starts half an hour from now, on the next half hour, so
+ * there is time to get dressed and get a car. Accra is on GMT all year, so the
+ * server's UTC clock is its clock.
+ */
+function defaultStart(date: string, today: string, now = new Date()): string {
+  if (date !== today) return DEFAULTS.start_time;
+  const soonest = Math.ceil((now.getUTCHours() * 60 + now.getUTCMinutes() + 30) / 30) * 30;
+  const seven = 19 * 60;
+  const latest = 23 * 60 + 30;
+  const at = Math.min(Math.max(soonest, seven), latest);
+  return `${String(Math.floor(at / 60)).padStart(2, "0")}:${String(at % 60).padStart(2, "0")}`;
+}
+
 /** What the planner expects, from what somebody actually said. */
-function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas): PlanInputs {
+function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas, start: string): PlanInputs {
   return {
     areaIds: areas.ids,
     areaNames: areas.names,
@@ -332,7 +351,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas): PlanInputs {
     companions: [],
     budget: args.budget_ghs ?? DEFAULTS.budget_ghs,
     date: args.date,
-    startTime: args.start_time ?? DEFAULTS.start_time,
+    startTime: start,
     hours: args.hours ?? DEFAULTS.hours,
     stops: args.stops,
     vibes: args.vibes ?? [],

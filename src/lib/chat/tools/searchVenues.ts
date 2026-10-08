@@ -3,7 +3,7 @@ import { CUISINE_KINDS, VIBE_CHIP_TAGS, expandVibes } from "../../catalog";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { Venue } from "../../types";
 import type { ChatTool, ToolContext } from "./types";
-import { compactVenue, describePrice, isPriced, menusFor, openStateAt, type CompactVenue } from "./shared";
+import { compactVenue, describePrice, isPriced, keywordHits, keywordPatterns, menusFor, openStateAt, type CompactVenue } from "./shared";
 
 /**
  * Find places, the way somebody asks for them out loud.
@@ -44,6 +44,7 @@ const argsSchema = z.object({
   open_at: z.string().regex(/^\d{1,2}:\d{2}$/).optional(),
   sort: z.enum(["best_match", "most_expensive", "cheapest", "top_rated"]).optional(),
   limit: z.number().int().min(1).max(MAX_LIMIT).optional(),
+  keywords: z.string().max(60).optional(),
 });
 
 export type SearchVenuesArgs = z.infer<typeof argsSchema>;
@@ -124,12 +125,17 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
         type: "integer",
         description: "How many to return, up to 15. Set it when somebody asks for a number, e.g. 10 for a top 10.",
       },
+      keywords: {
+        type: "string",
+        description:
+          "A feature somebody asked for in their own words, e.g. rooftop, football, brunch, beach, pool, shisha. Matched against each venue's name, description, tags and menu. Only venues that match are returned.",
+      },
     },
     additionalProperties: false,
   },
   parse: (raw) => argsSchema.parse(raw),
 
-  async run(args, ctx): Promise<{ venues: (CompactVenue & { rating?: number | null; reviews?: number })[]; note?: string }> {
+  async run(args, ctx): Promise<{ venues: (CompactVenue & { rating?: number | null; reviews?: number; matched_on?: string })[]; note?: string }> {
     const venues = await load(ctx, args);
     if (!venues.length) {
       return {
@@ -142,6 +148,41 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
 
     // Unpriced is withheld, not shown as free. See isPriced.
     let priced = venues.filter((v) => isPriced(v, (menus.get(v.id) ?? []).length));
+
+    /*
+     * Asked for by a feature, in the person's own words.
+     *
+     * Vibe chips could not say "rooftop" or "somewhere to watch the
+     * football", so those searches came back as lively lounges in general,
+     * and the bot either missed Mad Skyz, a rooftop it had described itself
+     * two questions earlier, or asked what kind of outing was meant. The words
+     * are matched against what the catalogue says about each place, its menu
+     * included, so "brunch" finds the cafes that serve one.
+     *
+     * A menu match is weaker than a description and is reported as one, with
+     * the dish that matched: "beach" finds a Sex on the Beach on a cocktail
+     * list, and the model can only discard that if it can see it.
+     */
+    const words = keywordPatterns(args.keywords, KEYWORD_STOP, KEYWORD_ALSO);
+    const keywordScore = new Map<string, number>();
+    const matchedOn = new Map<string, string>();
+    if (words.length) {
+      for (const v of priced) {
+        const said = [v.name, v.description, ...(v.vibe_tags ?? []), ...(v.best_for ?? []), ...(v.cuisines ?? [])]
+          .filter(Boolean)
+          .join(" ");
+        const described = keywordHits(words, said);
+        const dish = described ? undefined : (menus.get(v.id) ?? []).find((i) => keywordHits(words, i.name) > 0);
+        if (described) {
+          keywordScore.set(v.id, described * 2);
+          matchedOn.set(v.id, "how the venue is described");
+        } else if (dish) {
+          keywordScore.set(v.id, 1);
+          matchedOn.set(v.id, `only a menu item: ${dish.name}`);
+        }
+      }
+      priced = priced.filter((v) => keywordScore.has(v.id));
+    }
 
     if (args.max_per_person_ghs) {
       priced = priced.filter((v) => withinBudget(v, args.max_per_person_ghs!));
@@ -181,7 +222,9 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
 
     const wanted = expandVibes(args.vibes ?? []);
     const match = (v: Venue) =>
-      (v.vibe_tags ?? []).filter((t) => wanted.includes(t)).length * 2 + cuisineBonus(v, args.cuisine);
+      (keywordScore.get(v.id) ?? 0) * 3 +
+      (v.vibe_tags ?? []).filter((t) => wanted.includes(t)).length * 2 +
+      cuisineBonus(v, args.cuisine);
 
     let pool = priced;
     let rankedBy: string | undefined;
@@ -216,6 +259,7 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
           ownerName: v.menu_shared_from ? names.get(v.menu_shared_from) : undefined,
         }),
         ...(sort === "top_rated" ? { rating: rating(v), reviews: Number((v as Rated).place_rating_count ?? 0) } : {}),
+        ...(matchedOn.has(v.id) ? { matched_on: matchedOn.get(v.id) } : {}),
       })),
       ...(rankedBy
         ? {
@@ -264,7 +308,7 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
    * inverted.
    */
   if (args.name) {
-    const needle = args.name.trim().replace(/[\%_]/g, (ch) => `\${ch}`);
+    const needle = args.name.trim().replace(/[\\%_]/g, (ch) => `\\${ch}`);
     q = q.ilike("name", `%${needle}%`);
   }
 
@@ -320,6 +364,24 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
 
   return venues;
 }
+
+/** Words that say nothing a type or vibe does not already say. */
+const KEYWORD_STOP = new Set([
+  "bar", "bars", "place", "places", "spot", "spots", "restaurant", "restaurants", "lounge", "lounges",
+  "somewhere", "good", "best", "nice", "with", "the", "and", "for", "accra", "can", "where", "watch",
+]);
+
+/** The obvious other ways a place describes the same thing. */
+const KEYWORD_ALSO: Record<string, string[]> = {
+  football: ["sport", "screen"],
+  soccer: ["football", "sport", "screen"],
+  sports: ["sport"],
+  rooftop: ["roof"],
+  kids: ["family", "children", "kid"],
+  children: ["family", "kid"],
+  family: ["kid", "children"],
+  pool: ["swim"],
+};
 
 function cuisineBonus(v: Venue, wanted?: "local" | "continental"): number {
   if (!wanted) return 0;

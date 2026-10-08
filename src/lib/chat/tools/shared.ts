@@ -311,3 +311,27 @@ function firstSentence(text: string | null | undefined): string | null {
   const one = end === -1 ? t : t.slice(0, end + 1);
   return one.length > 150 ? one.slice(0, 147).trimEnd() + "\u2026" : one;
 }
+
+/**
+ * The words somebody searched with, as patterns that match the start of a word.
+ *
+ * Start of a word, not anywhere: a plain substring test found "live" inside
+ * "delivers" and listed a bowling alley under live music. Each word carries
+ * its alternatives, and a word counts once however many of them match.
+ */
+export function keywordPatterns(text: string | undefined, stop: Set<string>, also: Record<string, string[]>): RegExp[][] {
+  return (text ?? "")
+    .toLowerCase()
+    .split(/[^a-z0-9']+/)
+    .filter((w) => w.length >= 3 && !stop.has(w))
+    .map((w) =>
+      [w.length > 4 ? w.replace(/s$/, "") : w, ...(also[w] ?? [])].map(
+        (alt) => new RegExp(`(^|[^a-z0-9])${alt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i")
+      )
+    );
+}
+
+/** How many of the searched words the text matches. */
+export function keywordHits(patterns: RegExp[][], text: string): number {
+  return patterns.filter((alts) => alts.some((re) => re.test(text))).length;
+}
