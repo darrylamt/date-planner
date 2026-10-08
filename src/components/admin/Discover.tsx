@@ -17,6 +17,27 @@ import type { Area } from "@/lib/types";
  * Everything added lands in the unpriced queue, which is the list of venues to
  * go and find menus for.
  */
+/** Towns worth searching beyond the two cities, offered as suggestions; any name works. */
+const TOWNS = [
+  "Accra",
+  "Kumasi",
+  "Takoradi",
+  "Cape Coast",
+  "Elmina",
+  "Tamale",
+  "Ho",
+  "Koforidua",
+  "Sunyani",
+  "Kasoa",
+  "Winneba",
+  "Ada",
+  "Akosombo",
+  "Obuasi",
+  "Techiman",
+  "Bolgatanga",
+  "Wa",
+];
+
 const KINDS = [
   "restaurants",
   "bars",
@@ -42,6 +63,10 @@ interface Result {
   priceLevel: string | null;
   rating: number | null;
   ratingCount: number | null;
+  /** The neighbourhood it will be filed under, from its address. */
+  area: string | null;
+  /** Whether that area already exists, or will be created. */
+  areaKnown: boolean;
   already: boolean;
 }
 
@@ -55,12 +80,16 @@ export function Discover({
 }) {
   const router = useRouter();
   const [what, setWhat] = useState(KINDS.find((k) => k === initial?.what) ?? KINDS[0]);
-  const [area, setArea] = useState(
-    areas.find((a) => a.name === initial?.area)?.name ?? areas[0]?.name ?? "Osu"
-  );
+  const startArea = areas.find((a) => a.name === initial?.area);
+  const [city, setCity] = useState(startArea?.city || "Accra");
+  // Optional: blank searches the whole town.
+  const [area, setArea] = useState(startArea?.name ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<Result[] | null>(null);
+  const [neighbourhoods, setNeighbourhoods] = useState<{ name: string; count: number }[]>([]);
+  const cities = [...new Set([...areas.map((a) => a.city || "Accra"), ...TOWNS])];
+  const areasHere = areas.filter((a) => (a.city || "Accra").toLowerCase() === city.trim().toLowerCase());
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
 
@@ -75,14 +104,17 @@ export function Discover({
     return json;
   }
 
-  async function search() {
+  async function search(inArea = area) {
+    if (city.trim().length < 2) return setError("Pick a city or town first.");
     setBusy(true);
     setError(null);
     setResults(null);
     setPicked(new Set());
     try {
-      const json = await post({ action: "search", what, area });
+      const json = await post({ action: "search", what, city: city.trim(), area: inArea.trim() });
       setResults(json.results as Result[]);
+      // Kept from the whole-town search, so the chips stay while you look closer.
+      if (!inArea.trim()) setNeighbourhoods(json.neighbourhoods ?? []);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -112,8 +144,10 @@ export function Discover({
     try {
       const json = await post({
         action: "add",
-        area,
+        city: city.trim(),
+        area: area.trim(),
         places: chosen.map((r) => ({
+          area: r.area,
           id: r.id,
           name: r.name,
           address: r.address,
@@ -126,7 +160,7 @@ export function Discover({
       });
 
       setToast(
-        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}. They have no prices yet, find their menus next.`
+        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}${json.areasCreated ? `, ${json.areasCreated} new area(s)` : ""}. They stay hidden until their menu goes in.`
       );
       // Reflect what is now held, without a second round trip.
       setResults((cur) =>
@@ -147,7 +181,9 @@ export function Discover({
     <div>
       <h1 className="font-display text-[24px] font-bold">Discover venues</h1>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
-        Tick what belongs. Added venues have no prices yet, find those next.
+        Pick a city or town anywhere in Ghana. Leave the area blank to search the whole place: each result
+        shows the neighbourhood it will be filed under, and the neighbourhoods found appear as chips to look
+        closer. Added venues stay hidden from the app until their menu goes in.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3">
@@ -163,25 +199,78 @@ export function Discover({
         </label>
 
         <label className="flex flex-col">
-          <span className="flbl">Where</span>
+          <span className="flbl">City or town</span>
+          <input
+            className="inp"
+            list="admin-city-list"
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              setArea("");
+              setNeighbourhoods([]);
+            }}
+            placeholder="Kumasi"
+          />
+          <datalist id="admin-city-list">
+            {cities.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </label>
+
+        <label className="flex flex-col">
+          <span className="flbl">Area, optional</span>
           <input
             className="inp"
             list="admin-area-list"
             value={area}
             onChange={(e) => setArea(e.target.value)}
-            placeholder="Osu"
+            placeholder="Whole town"
           />
           <datalist id="admin-area-list">
-            {areas.map((a) => (
+            {areasHere.map((a) => (
               <option key={a.id} value={a.name} />
             ))}
           </datalist>
         </label>
 
-        <button type="button" className="btn btnsm" disabled={busy} onClick={search}>
+        <button type="button" className="btn btnsm" disabled={busy} onClick={() => void search()}>
           {busy ? "Searching…" : "Search"}
         </button>
       </div>
+
+      {neighbourhoods.length ? (
+        <div className="mt-4">
+          <div className="text-[13px] text-mutedbrown">Neighbourhoods found in {city}, tap one to look closer:</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {area ? (
+              <button
+                type="button"
+                className="chip"
+                onClick={() => {
+                  setArea("");
+                  void search("");
+                }}
+              >
+                ← All of {city}
+              </button>
+            ) : null}
+            {neighbourhoods.map((n) => (
+              <button
+                key={n.name}
+                type="button"
+                className={`chip ${area === n.name ? "chip-on" : ""}`}
+                onClick={() => {
+                  setArea(n.name);
+                  void search(n.name);
+                }}
+              >
+                {n.name} · {n.count}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error ? <p className="mt-4 text-[13px] text-staletext">{error}</p> : null}
 
@@ -272,6 +361,12 @@ export function Discover({
                         ) : null}
                       </div>
                       <div className="mt-0.5 text-[13px] text-mutedbrown">{r.address}</div>
+                      {r.area && !r.already ? (
+                        <div className="mt-1 text-[12.5px] text-cocoa">
+                          Files under <b>{r.area}</b>
+                          {r.areaKnown ? "" : " (new area)"}
+                        </div>
+                      ) : null}
                     </div>
                   </label>
                 </li>

@@ -66,6 +66,9 @@ const DISCOVER_MASK = [
   "places.priceLevel",
   "places.rating",
   "places.userRatingCount",
+  // Where each one is, so it can be filed under its own neighbourhood.
+  "places.addressComponents",
+  "nextPageToken",
 ].join(",");
 
 /** Search results only need enough to pick the right one from a list. */
@@ -195,6 +198,10 @@ export interface DiscoveredPlace extends PlaceSummary {
   rating: number | null;
   ratingCount: number | null;
   types: string[];
+  /** The neighbourhood, town and street from Google, narrowest first. */
+  addressParts: string[];
+  /** Only the place-name parts (neighbourhood, town, district), narrowest first, no streets. */
+  localities: string[];
 }
 
 /**
@@ -214,21 +221,30 @@ export async function discoverPlaces(
   area: string,
   opts: { openNow?: boolean; city?: string | null } = {}
 ): Promise<DiscoveredPlace[]> {
-  // The area's own city: "in Adum, Accra" finds nothing worth having.
-  const city = opts.city || "Accra";
-  const data = await call<{ places?: RawPlace[] }>(
-    `${BASE}/places:searchText`,
-    DISCOVER_MASK,
-    {
-      textQuery: `${what} in ${area}${area.toLowerCase() === city.toLowerCase() ? "" : `, ${city}`}, Ghana`,
-      locationBias: { circle: { center: city === "Kumasi" ? KUMASI : ACCRA, radius: 40000 } },
+  /*
+   * In the area's own city, anywhere in Ghana. "in Adum, Accra" finds
+   * nothing worth having, and a town with no area named yet is searched
+   * whole: "restaurants in Takoradi, Ghana".
+   */
+  const city = (opts.city || "Accra").trim();
+  const where = area.trim() && area.trim().toLowerCase() !== city.toLowerCase() ? `${area.trim()}, ${city}` : city;
+  const ask = (pageToken?: string) =>
+    call<{ places?: RawPlace[]; nextPageToken?: string }>(`${BASE}/places:searchText`, DISCOVER_MASK, {
+      textQuery: `${what} in ${where}, Ghana`,
+      ...(city === "Kumasi" || city === "Accra"
+        ? { locationBias: { circle: { center: city === "Kumasi" ? KUMASI : ACCRA, radius: 40000 } } }
+        : { locationRestriction: GHANA }),
       regionCode: "GH",
       languageCode: "en",
       ...(opts.openNow ? { openNow: true } : {}),
-    }
-  );
+      ...(pageToken ? { pageToken } : {}),
+    });
 
-  return (data.places ?? []).map((p) => ({
+  // Two pages: a whole town has more than twenty of anything worth seeing.
+  const first = await ask();
+  const second = first.nextPageToken ? await ask(first.nextPageToken).catch(() => ({ places: [] })) : { places: [] };
+
+  return [...(first.places ?? []), ...(second.places ?? [])].map((p) => ({
     ...toSummary(p),
     lat: p.location?.latitude ?? null,
     lng: p.location?.longitude ?? null,
@@ -236,7 +252,58 @@ export async function discoverPlaces(
     rating: p.rating ?? null,
     ratingCount: p.userRatingCount ?? null,
     types: p.types ?? [],
+    addressParts: addressPartsOf(p),
+    localities: localitiesOf(p),
   }));
+}
+
+/** The place-name components alone, narrowest first: never a street or a plus code. */
+function localitiesOf(p: RawPlace): string[] {
+  const out: string[] = [];
+  for (const wanted of AREA_COMPONENT_ORDER) {
+    for (const c of p.addressComponents ?? []) {
+      if (c.types?.includes(wanted) && c.longText) out.push(c.longText);
+    }
+  }
+  return [...new Set(out)];
+}
+
+/**
+ * The neighbourhood Google gives a discovered place, for filing it.
+ *
+ * In Accra, the catalogue's own areas decide (matchArea), because they are
+ * many and the address is read against them well. Elsewhere there are few
+ * areas yet, and Google seldom names a neighbourhood in Ghana: what it does
+ * give is the municipal district, "Asokwa Municipal", which without the word
+ * "Municipal" is the name people use. So, narrowest first: a neighbourhood,
+ * a town that is not the city itself, the district, then the town. Never a
+ * street, and never the "Metropolitan" district, which is the whole city.
+ */
+export function neighbourhoodOf(
+  place: { addressParts: string[]; localities: string[] },
+  city: string,
+  areasInCity: AreaForMatch[],
+  point?: { lat: number | null; lng: number | null }
+): { name: string; existing: boolean } | null {
+  const cityKey = city.trim().toLowerCase();
+  const has = (name: string) => areasInCity.find((a) => a.name.toLowerCase() === name.toLowerCase());
+
+  if (cityKey === "accra") {
+    const known = matchArea(place.addressParts, areasInCity, point);
+    if (known.existingId && known.name) return { name: known.name, existing: true };
+  }
+
+  for (const raw of place.localities) {
+    if (/metropolitan|region|^ghana$/i.test(raw)) continue;
+    const name = raw.replace(/\s+(municipal|district)(\s+assembly)?$/i, "").trim();
+    if (name.length < 3 || name.length > 40 || /\d/.test(name)) continue;
+    if (name.toLowerCase() === cityKey) continue;
+    const known = has(name);
+    return { name: known?.name ?? name, existing: Boolean(known) };
+  }
+
+  const town = has(city.trim());
+  return { name: town?.name ?? city.trim(), existing: Boolean(town) };
 }
 
 /** Full detail for one place. */
