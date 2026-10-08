@@ -1,5 +1,6 @@
 import type { PriceBand, VenueType } from "./types";
 import { parsePeriods, type OpeningPeriod } from "./hours";
+import { isNeighbourhood } from "./areas";
 
 /**
  * Google Places (New), the factual half of a venue row.
@@ -295,6 +296,8 @@ export function neighbourhoodOf(
 
   for (const raw of place.localities) {
     if (/metropolitan|region|^ghana$/i.test(raw)) continue;
+    // Sub-metro districts like Kpeshie: Google's word, not a place anyone names.
+    if (!isNeighbourhood(raw)) continue;
     const name = raw.replace(/\s+(municipal|district)(\s+assembly)?$/i, "").trim();
     if (name.length < 3 || name.length > 40 || /\d/.test(name)) continue;
     if (name.toLowerCase() === cityKey) continue;
@@ -602,10 +605,18 @@ const SAME_AREA_METRES = 2000;
  */
 export function matchArea(
   addressParts: string[],
-  areas: AreaForMatch[],
+  allAreas: AreaForMatch[],
   point?: { lat: number | null; lng: number | null }
 ): AreaMatch {
   const haystack = addressParts.join(" | ").toLowerCase();
+  /*
+   * Never a district, even one that has crept into the areas table. Kpeshie
+   * was an area again, and Google writes "Kpeshie" into the address of
+   * everything in Labone, Cantonments and La, so the address step filed them
+   * all under a name nobody gives as their location. Districts are skipped
+   * here and the coordinates below find the real neighbourhood instead.
+   */
+  const areas = allAreas.filter((a) => isNeighbourhood(a.name));
 
   /*
    * Longest name first, so "Airport Residential" wins over a bare "Airport"
@@ -660,6 +671,11 @@ export function matchArea(
       part.length >= 3 &&
       part.length <= 40 &&
       !/^(accra|ghana|greater accra region)$/i.test(part.trim()) &&
+      // Nor a district or an administrative unit: those are not places people go.
+      isNeighbourhood(part) &&
+      !/\b(municipal|metropolitan|district|region|assembly)\b/i.test(part) &&
+      // Nor a street: "Liberation Road" is where a place is, not an area of town.
+      !/\b(road|rd|street|st|avenue|ave|highway|bypass|link|close|crescent|lane|drive|boulevard|blvd)\b\.?$/i.test(part.trim()) &&
       !/\d/.test(part) &&
       !part.includes(",")
   );
