@@ -9,6 +9,7 @@ import {
   findPlaces,
   matchArea,
   metresBetweenPoints,
+  neighbourhoodOf,
   placeDetails,
   placeFromLink,
   venueTypeFromPlace,
@@ -62,7 +63,17 @@ type Db = ReturnType<typeof createServiceClient>;
 async function describe(db: Db, details: PlaceDetails | null, pin: { lat: number; lng: number }, link: string | null) {
   const city = cityOf(pin);
   const areas = await areaCentroids(db);
-  const match = matchArea(details?.addressParts ?? [], areas, pin);
+  let match = matchArea(details?.addressParts ?? [], areas, pin);
+  /*
+   * Outside Accra, the town's known neighbourhoods decide (neighbourhoods.ts),
+   * as in the admin forms: Google's address alone files most of a town under
+   * one municipal district.
+   */
+  if (city && city !== "Accra") {
+    const finer = neighbourhoodOf({ addressParts: details?.addressParts ?? [], localities: details?.localities ?? [] }, city, areas, pin);
+    const id = finer ? areas.find((a) => a.name.toLowerCase() === finer.name.toLowerCase())?.id ?? null : null;
+    if (finer) match = id ? { existingId: id, name: finer.name, isNew: false, reason: "address" } : { existingId: null, name: finer.name, isNew: true, reason: "proposed" };
+  }
 
   // Already on Duro: the same Google place, or the same name a stone's throw away.
   let existing: { id: string; name: string; area: string } | null = null;

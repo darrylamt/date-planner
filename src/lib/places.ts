@@ -1,7 +1,7 @@
 import type { PriceBand, VenueType } from "./types";
 import { parsePeriods, type OpeningPeriod } from "./hours";
 import { isNeighbourhood } from "./areas";
-import { nearestNeighbourhood } from "./neighbourhoods";
+import { cityAt, nearestNeighbourhood } from "./neighbourhoods";
 
 /**
  * Google Places (New), the factual half of a venue row.
@@ -811,18 +811,14 @@ export async function confirmAreaName(
   return { name: same && hit.r.name.length <= 40 && !/road|rd\b|street|st\b|avenue|ave\b/i.test(hit.r.name) ? hit.r.name : titled, metres: hit.metres };
 }
 
-const ACCRA_CENTRE = { lat: 5.6037, lng: -0.187 };
-const KUMASI_CENTRE = { lat: 6.6885, lng: -1.6244 };
 
 /**
- * Which of Duro's two cities a place belongs to: the nearer one, so Aburi
- * and Cape Coast day trips file under Accra as the catalogue already does.
- * Null only outside Ghana.
+ * Which town a place belongs to: Accra, Kumasi, or one of the towns in
+ * neighbourhoods.ts (Cape Coast, Takoradi, Ho...), by their centres. Null
+ * only outside Ghana.
  */
-export function cityOf(point: { lat: number; lng: number }): "Accra" | "Kumasi" | null {
-  const inGhana = point.lat >= 4.5 && point.lat <= 11.2 && point.lng >= -3.3 && point.lng <= 1.3;
-  if (!inGhana) return null;
-  return metresApart(point, KUMASI_CENTRE) < metresApart(point, ACCRA_CENTRE) ? "Kumasi" : "Accra";
+export function cityOf(point: { lat: number; lng: number }): string | null {
+  return cityAt(point);
 }
 
 /** Metres between two points, for callers outside this file. */

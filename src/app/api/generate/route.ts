@@ -144,17 +144,20 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   // Nothing in the catalog at all, blaming the user's budget here is simply
   // wrong, and used to send people round a loop raising it against an empty
   // table.
+  // The plan's own city, in every message below: a Kumasi plan is not told about Accra.
+  const city = inputs.city || "Accra";
+
   if (candidates.totalActiveVenues < 2) {
     return NextResponse.json({
       status: "no_match",
-      headline: "We are still building the Accra catalogue.",
+      headline: `We are still building the ${city} catalogue.`,
       message:
         "There are not enough venues loaded yet to plan a real evening, and we will not invent one. Check back shortly.",
       suggestions: [],
     });
   }
 
-  const areaLabel = inputs.surpriseMe ? "Accra" : inputs.areaNames.join(" & ");
+  const areaLabel = inputs.surpriseMe ? city : inputs.areaNames.join(" & ");
 
   /*
    * A budget of nothing, checked before anything blames the budget.
@@ -187,7 +190,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
         suggestions: [
           ...(inputs.surpriseMe
             ? []
-            : ([{ label: "Look across all of Accra", action: "widen_area" }] as const)),
+            : ([{ label: `Look across all of ${city}`, action: "widen_area" }] as const)),
           { label: "Nudge budget to GHS 200", action: "raise_budget", value: 200 },
         ],
       });
@@ -197,13 +200,22 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   if (candidates.venues.length < 2) {
     const reached = await reachFurther(supabase, inputs);
     if (reached) return reached;
-    const widerAreas = candidates.allAreaNames
-      .filter((n) => !inputs.areaNames.includes(n))
-      .slice(0, 2);
-    const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [];
-    if (widerAreas.length) {
-      suggestions.push({ label: `Widen to ${widerAreas.join(" & ")}`, action: "widen_area" });
+    /*
+     * The whole city already searched and still nothing: a city we are only
+     * starting on. Said as that, with no "widen" to tap, because widening a
+     * search that already covers the city would only come back here.
+     */
+    if (inputs.surpriseMe) {
+      return NextResponse.json({
+        status: "no_match",
+        headline: `We're still adding places in ${city}.`,
+        message: `There aren't enough priced places in ${city} yet to build an evening, and we won't invent one. We're adding more every week.`,
+        suggestions: [],
+      });
     }
+    const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [];
+    // Tapping it searches all of this city (the app sets surpriseMe), so it says so.
+    suggestions.push({ label: `Look across all of ${city}`, action: "widen_area" });
     const nudge = Math.min(BUDGET_MAX, Math.ceil((inputs.budget * 1.5) / 50) * 50);
     if (nudge > inputs.budget) {
       suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
@@ -233,9 +245,10 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
       BUDGET_MAX,
       Math.max(200, Math.ceil((inputs.budget * 1.5) / 50) * 50)
     );
-    const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [
-      { label: "Widen the search area", action: "widen_area" },
-    ];
+    // Only when there is wider to go: the whole city searched already has no further to widen.
+    const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = inputs.surpriseMe
+      ? []
+      : [{ label: `Look across all of ${city}`, action: "widen_area" }];
     if (nudge > inputs.budget) {
       suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
     }

@@ -614,7 +614,7 @@ export async function fetchCandidates(
     : ([] as MenuItem[]);
 
   const [{ data: allAreas }, { count: totalActiveVenues }] = await Promise.all([
-    supabase.from("areas").select("name"),
+    supabase.from("areas").select("name, city"),
     supabase
       .from("venues")
       .select("id", { count: "exact", head: true })
@@ -655,7 +655,14 @@ export async function fetchCandidates(
     menuItems,
     events,
     schedules,
-    allAreaNames: (allAreas ?? []).map((a: { name: string }) => a.name),
+    /*
+     * This city's areas only. "Widen to" offered the first two names in the
+     * whole table, so a Kumasi plan that came up short was told to try Osu
+     * and Labone.
+     */
+    allAreaNames: ((allAreas ?? []) as { name: string; city: string | null }[])
+      .filter((a) => (a.city || DEFAULT_CITY).toLowerCase() === (inputs.city || DEFAULT_CITY).toLowerCase())
+      .map((a) => a.name),
     totalActiveVenues: totalActiveVenues ?? 0,
   };
 }

@@ -788,11 +788,20 @@ export function VenueForm({
             {newAreaName && !v.area_id ? (
               <option value="">Create &ldquo;{newAreaName}&rdquo;</option>
             ) : null}
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
+            {/* By town: with every town's neighbourhoods on file, one alphabetical list ran to hundreds. */}
+            {[...new Set(areas.map((a) => a.city || "Accra"))]
+              .sort((x, y) => (x === "Accra" ? -1 : y === "Accra" ? 1 : x === "Kumasi" ? -1 : y === "Kumasi" ? 1 : x.localeCompare(y)))
+              .map((town) => (
+                <optgroup key={town} label={town}>
+                  {areas
+                    .filter((a) => (a.city || "Accra") === town)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
           </select>
 
           {newAreaName && !v.area_id ? (
