@@ -3,7 +3,7 @@ import { CUISINE_KINDS, VIBE_CHIP_TAGS, expandVibes } from "../../catalog";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { Venue } from "../../types";
 import type { ChatTool, ToolContext } from "./types";
-import { compactVenue, isPriced, menusFor, openStateAt, type CompactVenue } from "./shared";
+import { compactVenue, describePrice, isPriced, menusFor, openStateAt, type CompactVenue } from "./shared";
 
 /**
  * Find places, the way somebody asks for them out loud.
@@ -18,6 +18,14 @@ import { compactVenue, isPriced, menusFor, openStateAt, type CompactVenue } from
  * every subsequent turn expensive, since history is resent on every request.
  */
 const LIMIT = 8;
+/** The most a ranking may return: "top 10" is the usual ask, with a little room. */
+const MAX_LIMIT = 15;
+/** Fewer Google reviews than this and a rating says little, so it is not ranked on. */
+const MIN_REVIEWS = 20;
+
+type Sort = "best_match" | "most_expensive" | "cheapest" | "top_rated";
+/** Google's rating, selected with the venue (VENUE_SELECT) though not on the Venue type. */
+type Rated = Venue & { place_rating?: number | null; place_rating_count?: number | null };
 
 const argsSchema = z.object({
   name: z.string().min(2).max(80).optional(),
@@ -34,6 +42,8 @@ const argsSchema = z.object({
   party_size: z.number().int().positive().max(50).optional(),
   open_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   open_at: z.string().regex(/^\d{1,2}:\d{2}$/).optional(),
+  sort: z.enum(["best_match", "most_expensive", "cheapest", "top_rated"]).optional(),
+  limit: z.number().int().min(1).max(MAX_LIMIT).optional(),
 });
 
 export type SearchVenuesArgs = z.infer<typeof argsSchema>;
@@ -41,8 +51,9 @@ export type SearchVenuesArgs = z.infer<typeof argsSchema>;
 export const searchVenues: ChatTool<SearchVenuesArgs> = {
   name: "search_venues",
   description:
-    "Search the Accra catalogue for places that match what someone is after. " +
-    "Returns at most 8, with an honest price note for each. Use this before " +
+    "Search the Accra catalogue for places that match what someone is after, " +
+    "or rank them: the most expensive, the cheapest, the top rated. " +
+    "Returns 8 by default and up to 15 when asked, with an honest price note for each. Use this before " +
     "naming any venue: a place not in these results is not in the catalogue " +
     "and must not be mentioned.",
   parameters: {
@@ -104,12 +115,21 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
         type: "string",
         description: "24h time HH:MM, used with open_on to check a specific moment.",
       },
+      sort: {
+        enum: ["best_match", "most_expensive", "cheapest", "top_rated"],
+        description:
+          "How to order the results. most_expensive and cheapest rank by the typical price per person (the middle main on the menu, or the middle of an estimate); places with no price are left out. top_rated ranks by Google rating, only for places with at least 20 reviews. Use these for 'top 10 most expensive', 'cheapest places', 'best rated' questions. Default best_match.",
+      },
+      limit: {
+        type: "integer",
+        description: "How many to return, up to 15. Set it when somebody asks for a number, e.g. 10 for a top 10.",
+      },
     },
     additionalProperties: false,
   },
   parse: (raw) => argsSchema.parse(raw),
 
-  async run(args, ctx): Promise<{ venues: CompactVenue[]; note?: string }> {
+  async run(args, ctx): Promise<{ venues: (CompactVenue & { rating?: number | null; reviews?: number })[]; note?: string }> {
     const venues = await load(ctx, args);
     if (!venues.length) {
       return {
@@ -135,30 +155,73 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
 
     // A name lookup is a lookup, not a shortlist: if six branches match, all
     // six are the answer.
-    const limit = args.name ? Math.max(LIMIT, priced.length) : LIMIT;
+    const asked = Math.min(MAX_LIMIT, args.limit ?? LIMIT);
+    const limit = args.name ? Math.max(asked, priced.length) : asked;
+    const sort: Sort = args.sort ?? "best_match";
+
+    /*
+     * Ranked, when the question is a ranking.
+     *
+     * The search could only order by how well a place matched a mood, so
+     * "the ten most expensive restaurants in Accra" came back as eight places
+     * in no particular order, and the bot rightly would not invent a ranking.
+     * A first question like that, answered "I can't", reads as a useless bot.
+     * Price ranks on the same typical figure the bot quotes for each place,
+     * so the order and the prices it gives can never disagree.
+     */
+    const perHead = (v: Venue) => {
+      const p = describePrice(v, menus.get(v.id) ?? []);
+      if (p.basis === "menu") return p.typical_per_person_ghs;
+      if (p.basis === "estimated") return (p.per_person_range_ghs[0] + p.per_person_range_ghs[1]) / 2;
+      if (p.basis === "free") return 0;
+      return null;
+    };
+    const rating = (v: Venue) =>
+      Number((v as Rated).place_rating_count ?? 0) >= MIN_REVIEWS && (v as Rated).place_rating != null ? Number((v as Rated).place_rating) : null;
 
     const wanted = expandVibes(args.vibes ?? []);
-    const ranked = priced
-      .map((v) => ({
-        v,
-        score:
-          (v.vibe_tags ?? []).filter((t) => wanted.includes(t)).length * 2 +
-          cuisineBonus(v, args.cuisine),
-      }))
-      .sort((a, b) => b.score - a.score)
+    const match = (v: Venue) =>
+      (v.vibe_tags ?? []).filter((t) => wanted.includes(t)).length * 2 + cuisineBonus(v, args.cuisine);
+
+    let pool = priced;
+    let rankedBy: string | undefined;
+    if (sort === "most_expensive" || sort === "cheapest") {
+      pool = priced.filter((v) => perHead(v) != null && (sort === "cheapest" || perHead(v)! > 0));
+      rankedBy = "typical price per person: the middle main course on the menu, or the middle of an estimate";
+    } else if (sort === "top_rated") {
+      pool = priced.filter((v) => rating(v) != null);
+      rankedBy = `Google rating, among places with at least ${MIN_REVIEWS} reviews`;
+    }
+    const ranked = pool
+      .map((v) => ({ v, score: match(v), per: perHead(v) ?? 0, stars: rating(v) ?? 0 }))
+      .sort((a, b) =>
+        sort === "most_expensive"
+          ? b.per - a.per
+          : sort === "cheapest"
+            ? a.per - b.per
+            : sort === "top_rated"
+              ? b.stars - a.stars || Number((b.v as Rated).place_rating_count ?? 0) - Number((a.v as Rated).place_rating_count ?? 0)
+              : b.score - a.score
+      )
       .slice(0, limit)
       .map((s) => s.v);
 
     const names = new Map(venues.map((v) => [v.id, v.name]));
 
     return {
-      venues: ranked.map((v) =>
-        compactVenue(v, menus.get(v.id) ?? [], {
+      venues: ranked.map((v) => ({
+        ...compactVenue(v, menus.get(v.id) ?? [], {
           date: args.open_on,
           time: args.open_at,
           ownerName: v.menu_shared_from ? names.get(v.menu_shared_from) : undefined,
-        })
-      ),
+        }),
+        ...(sort === "top_rated" ? { rating: rating(v), reviews: Number((v as Rated).place_rating_count ?? 0) } : {}),
+      })),
+      ...(rankedBy
+        ? {
+            note: `Ranked by ${rankedBy}, ${sort === "cheapest" ? "lowest" : "highest"} first. Only places we hold a price${sort === "top_rated" ? " and a rating" : ""} for are ranked; say so in a few words.`,
+          }
+        : {}),
     };
   },
 };
