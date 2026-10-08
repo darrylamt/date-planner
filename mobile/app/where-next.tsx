@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Platform, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,7 +14,8 @@ import { Button } from "../src/components/Button";
 import { useReducedMotion } from "../src/components/motion";
 import { MeshBackground } from "../src/components/native/MeshBackground";
 import { GUTTER, radius, space, Spacing } from "../src/theme";
-import { useTheme } from "../src/lib/useTheme";
+import { useIsDark, useTheme } from "../src/lib/useTheme";
+import { swiftMods, swiftUI } from "../src/lib/swiftUI";
 import { chooseAction } from "../src/lib/actionSheet";
 import { currentPlace, locationAvailable } from "../src/lib/location";
 import { shakeAvailable, useShake } from "../src/lib/shake";
@@ -52,11 +53,15 @@ const MOODS: Mood[] = [
 type Who = "1" | "2" | "4";
 type From = { kind: "me" } | { kind: "area"; id: string; name: string };
 const LAST_CITY = "duro.city.last";
+const GLASS = Platform.OS === "ios" && parseInt(String(Platform.Version), 10) >= 26;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function WhereNext() {
   const c = useTheme();
+  const isDark = useIsDark();
+  const ui = swiftUI;
+  const sm = swiftMods;
   const reduced = useReducedMotion();
   const { width } = useWindowDimensions();
   /*
@@ -74,6 +79,12 @@ export default function WhereNext() {
   const [who, setWho] = useState<Who>("2");
   const [from, setFrom] = useState<From>(locationAvailable() ? { kind: "me" } : { kind: "area", id: "", name: "" });
   const [areas, setAreas] = useState<Area[] | null>(null);
+
+  // The city's areas, ready for the menu below.
+  useEffect(() => {
+    void areasOfCity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Start from what home says: near me, or an area of the chosen city.
   useEffect(() => {
@@ -288,30 +299,72 @@ export default function WhereNext() {
           />
         </View>
 
+        {/*
+          Where from, dressed like the questionnaire's city menu (CityMenu):
+          the phone's own menu in a capsule, glass on iOS 26, and the same pill
+          opening an action sheet where that is not available.
+        */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl, flexDirection: "row" }}>
-          <Pressable
-            onPress={async () => {
-              const picked = await pickArea();
-              if (picked) setFrom(picked);
-            }}
-            accessibilityRole="button"
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: space.md,
-              paddingVertical: space.sm,
-              borderRadius: radius.pill,
-              backgroundColor: c.backgroundElement,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Symbol name={from.kind === "me" ? "location.fill" : "mappin.and.ellipse"} size={14} color={c.accent} />
-            <Text variant="callout" weight="600" style={{ color: c.accent }}>
-              {from.kind === "me" ? "Near me" : from.name || "Choose an area"}
-            </Text>
-            <Symbol name="chevron.down" size={11} weight="semibold" color={c.accent} />
-          </Pressable>
+          {ui && sm && areas ? (
+            <ui.Host matchContents colorScheme={isDark ? "dark" : "light"} seedColor={c.accent}>
+              <ui.Menu
+                label={
+                  <ui.HStack spacing={6}>
+                    <ui.Image systemName={from.kind === "me" ? "location.fill" : "mappin.and.ellipse"} size={14} />
+                    <ui.Text modifiers={[sm.font({ size: 16, weight: "semibold" })]}>
+                      {from.kind === "me" ? "Near me" : from.name || "Choose an area"}
+                    </ui.Text>
+                    <ui.Image systemName="chevron.down" size={11} />
+                  </ui.HStack>
+                }
+                modifiers={[
+                  sm.buttonStyle(GLASS ? "glass" : "bordered"),
+                  sm.buttonBorderShape("capsule"),
+                  sm.tint(c.accent),
+                ]}
+              >
+                {locationAvailable() ? (
+                  <ui.Button
+                    label="Near me"
+                    systemImage={from.kind === "me" ? "checkmark" : "location"}
+                    onPress={() => setFrom({ kind: "me" })}
+                  />
+                ) : null}
+                {areas.map((a) => (
+                  <ui.Button
+                    key={a.id}
+                    label={a.name}
+                    systemImage={from.kind === "area" && from.id === a.id ? "checkmark" : undefined}
+                    onPress={() => setFrom({ kind: "area", id: a.id, name: a.name })}
+                  />
+                ))}
+              </ui.Menu>
+            </ui.Host>
+          ) : (
+            <Pressable
+              onPress={async () => {
+                const picked = await pickArea();
+                if (picked) setFrom(picked);
+              }}
+              accessibilityRole="button"
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingHorizontal: space.md,
+                paddingVertical: space.sm,
+                borderRadius: radius.pill,
+                backgroundColor: c.backgroundElement,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Symbol name={from.kind === "me" ? "location.fill" : "mappin.and.ellipse"} size={14} color={c.accent} />
+              <Text variant="callout" weight="600" style={{ color: c.accent }}>
+                {from.kind === "me" ? "Near me" : from.name || "Choose an area"}
+              </Text>
+              <Symbol name="chevron.down" size={11} weight="semibold" color={c.accent} />
+            </Pressable>
+          )}
         </View>
 
         {mode === "spin" ? (
