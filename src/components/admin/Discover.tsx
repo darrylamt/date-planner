@@ -154,6 +154,8 @@ export function Discover({
           lat: r.lat,
           lng: r.lng,
           priceLevel: r.priceLevel,
+          rating: r.rating,
+          ratingCount: r.ratingCount,
           primaryType: r.primaryType,
           types: r.types,
         })),

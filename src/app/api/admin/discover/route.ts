@@ -54,6 +54,8 @@ const bodySchema = z.discriminatedUnion("action", [
           lat: z.number().nullable().default(null),
           lng: z.number().nullable().default(null),
           priceLevel: z.string().nullable().default(null),
+          rating: z.number().nullable().default(null),
+          ratingCount: z.number().int().nullable().default(null),
           primaryType: z.string().nullable().default(null),
           types: z.array(z.string()).default([]),
           /** The neighbourhood this one is filed under, from its address. */
@@ -205,6 +207,10 @@ export async function POST(req: Request) {
         google_place_id: p.id,
         business_status: "OPERATIONAL",
         price_level: p.priceLevel,
+        // Already in the search result; dropping it left "top rated" with
+        // ten rated venues out of three hundred.
+        place_rating: p.rating,
+        place_rating_count: p.ratingCount,
         places_synced_at: new Date().toISOString(),
       });
 

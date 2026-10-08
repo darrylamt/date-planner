@@ -249,10 +249,25 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
       .slice(0, limit)
       .map((s) => s.v);
 
+    /*
+     * The unrated still exist. Left out of a ranking they cannot join, they
+     * read as absent: asked for the best restaurants in Kumasi, where the
+     * three priced ones had no rating yet, the bot said Kumasi had nothing on
+     * file. They follow the ranked ones, marked, when there is room.
+     */
+    const unrated =
+      sort === "top_rated"
+        ? priced
+            .filter((v) => rating(v) == null)
+            .sort((a, b) => match(b) - match(a))
+            .slice(0, Math.max(0, limit - ranked.length))
+        : [];
+    const shown = [...ranked, ...unrated];
+
     const names = new Map(venues.map((v) => [v.id, v.name]));
 
     return {
-      venues: ranked.map((v) => ({
+      venues: shown.map((v) => ({
         ...compactVenue(v, menus.get(v.id) ?? [], {
           date: args.open_on,
           time: args.open_at,
@@ -263,7 +278,11 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
       })),
       ...(rankedBy
         ? {
-            note: `Ranked by ${rankedBy}, ${sort === "cheapest" ? "lowest" : "highest"} first. Only places we hold a price${sort === "top_rated" ? " and a rating" : ""} for are ranked; say so in a few words.`,
+            note:
+              `Ranked by ${rankedBy}, ${sort === "cheapest" ? "lowest" : "highest"} first. Only places we hold a price${sort === "top_rated" ? " and a rating" : ""} for are ranked; say so in a few words.` +
+              (unrated.length
+                ? ` The last ${unrated.length} (rating null) have no Google rating with ${MIN_REVIEWS}+ reviews: they are in the catalogue, just not ranked. Never say a place has nothing because none of it is rated.`
+                : ""),
           }
         : {}),
     };

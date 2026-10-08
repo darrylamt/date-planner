@@ -9,6 +9,7 @@
     "lint": "next lint",
     "places:sync": "tsx scripts/places-sync.ts",
     "places:hours": "tsx scripts/places-hours.ts",
+    "places:ratings": "tsx scripts/places-ratings.ts",
     "phones:approve": "tsx scripts/approve-phones.ts",
     "research:venues": "tsx scripts/research-venues.ts",
     "places:link": "tsx scripts/places-link.ts",

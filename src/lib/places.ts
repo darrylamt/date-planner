@@ -373,6 +373,22 @@ export async function placeStatus(placeId: string): Promise<BusinessStatus | nul
   }
 }
 
+/** Rating and its review count, and nothing else. */
+const RATING_MASK = "id,rating,userRatingCount";
+
+/**
+ * Google's star rating, for the ratings backfill.
+ *
+ * Its own mask rather than DETAIL_MASK: rating is an Enterprise-tier field, so
+ * this costs what a detail call costs, but asking for hours and an address
+ * besides would buy nothing the backfill writes. Null when Google has no
+ * rating yet, which is a new place, not a bad one.
+ */
+export async function placeRating(placeId: string): Promise<{ rating: number | null; count: number | null }> {
+  const p = await call<RawPlace>(`${BASE}/places/${encodeURIComponent(placeId)}`, RATING_MASK);
+  return { rating: p.rating ?? null, count: p.userRatingCount ?? null };
+}
+
 /* ── mapping into our own vocabulary ──────────────────────────────────── */
 
 /**
