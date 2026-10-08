@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
 import { Toast } from "@/components/Toast";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
-import { bandFromPriceLevel, cityOf, matchArea, venueTypeFromPlace } from "@/lib/places";
-import type { AreaForMatch, PlaceDetails } from "@/lib/places";
+import { bandFromPriceLevel, cityOf, matchArea, neighbourhoodOf, venueTypeFromPlace } from "@/lib/places";
+import type { AreaForMatch, AreaMatch, PlaceDetails } from "@/lib/places";
 import { HoursEditor } from "./HoursEditor";
 import { ImageField, ImageListField } from "./ImageField";
 import { clockText, daysText, parseClock, parseDays } from "@/lib/menuTiming";
@@ -589,7 +589,24 @@ export function VenueForm({
      * area alphabetically. The area is what the planner groups stops by and
      * routes taxis between, so a wrong one quietly ruins the itinerary.
      */
-    const area = matchArea(d.addressParts, areaCentres, { lat: d.lat, lng: d.lng });
+    /*
+     * Outside Accra the catalogue has few areas yet, so reading the address
+     * against them only ever found the town: Olives on Ofori Kuragu Avenue
+     * came out as "Kumasi". There the finer name Google gives decides, as in
+     * Discover (neighbourhoodOf): a neighbourhood, else the municipal district
+     * without the word "Municipal", else the town.
+     */
+    const city = d.lat != null && d.lng != null ? cityOf({ lat: d.lat, lng: d.lng }) : null;
+    const finer =
+      city && city !== "Accra"
+        ? neighbourhoodOf({ addressParts: d.addressParts, localities: d.localities ?? [] }, city, areaCentres, { lat: d.lat, lng: d.lng })
+        : null;
+    const finerId = finer?.existing ? areaCentres.find((a) => a.name.toLowerCase() === finer.name.toLowerCase())?.id ?? null : null;
+    const area: AreaMatch = finer
+      ? finerId
+        ? { existingId: finerId, name: finer.name, isNew: false, reason: "address" }
+        : { existingId: null, name: finer.name, isNew: true, reason: "proposed" }
+      : matchArea(d.addressParts, areaCentres, { lat: d.lat, lng: d.lng });
     setAreaOptions(area.alternatives ?? []);
     setNewAreaName(area.isNew ? area.name : null);
     setAreaNote(

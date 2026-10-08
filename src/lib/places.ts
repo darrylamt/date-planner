@@ -114,6 +114,8 @@ export interface PlaceDetails extends PlaceSummary {
   openingPeriods: OpeningPeriod[] | null;
   /** Every place name Google attaches to the address, broadest last. */
   addressParts: string[];
+  /** Only the place-name parts (neighbourhood, town, district), narrowest first, no streets. */
+  localities: string[];
   types: string[];
 }
 
@@ -189,7 +191,9 @@ export async function searchPlaces(query: string): Promise<PlaceSummary[]> {
   const seen = new Set<string>();
   return [...(plain.places ?? []), ...(inGhana.places ?? [])]
     .map(toSummary)
-    .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+    .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)))
+    // The best ten: the ", Ghana" retry pads a common name with everything nearby.
+    .slice(0, 10);
 }
 
 export interface DiscoveredPlace extends PlaceSummary {
@@ -337,6 +341,7 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
     openingHours: p.regularOpeningHours?.weekdayDescriptions ?? [],
     openingPeriods: parsePeriods(p.regularOpeningHours?.periods),
     addressParts: addressPartsOf(p),
+    localities: localitiesOf(p),
     types: p.types ?? [],
   };
 }

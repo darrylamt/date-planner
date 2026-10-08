@@ -139,6 +139,38 @@ export function stopsAreGrounded(
   );
 }
 
+const KIND_WORD: Record<string, string> = {
+  restaurant: "A restaurant",
+  lounge: "A bar",
+  cafe: "A cafe",
+  dessert: "Somewhere sweet",
+  activity: "Something to do",
+  outdoor: "Somewhere outdoors",
+  wellness: "A spa",
+};
+
+/**
+ * A line about a runner-up, for the card it becomes when swapped in.
+ *
+ * Only the chosen stops have words written for them, so a swap used to land
+ * on a card with no description at all. Writing them for every runner-up
+ * would double what each plan costs to word, so a runner-up says what the
+ * catalogue says about it: its own description, first two sentences, or
+ * failing that what kind of place it is, where, and what it is like.
+ */
+function aboutVenue(v: Venue): string {
+  const own = String(v.description ?? "").trim();
+  if (own) {
+    const sentences = own.match(/[^.!?]+[.!?]+/g) ?? [own];
+    const short = sentences.slice(0, 2).join(" ").trim();
+    return short.length > 260 ? `${short.slice(0, 257).trimEnd()}…` : short;
+  }
+  const kind = KIND_WORD[v.type] ?? "A place";
+  const where = v.areas?.name ? ` in ${v.areas.name}` : "";
+  const feel = (v.vibe_tags ?? []).slice(0, 2).map((t) => t.replace(/_/g, " ")).join(" and ");
+  return `${kind}${where}${feel ? `, ${feel}` : ""}.`;
+}
+
 /**
  * Turn a planned itinerary plus its words into the client's shape.
  *
@@ -198,7 +230,7 @@ export function assembleItinerary(
       charges: a.charges,
       charge_rates: ratesOf(a.venue),
       est_cost_ghs: a.cost,
-      why_this_fits: "",
+      why_this_fits: aboutVenue(a.venue),
     }));
 
     return {
