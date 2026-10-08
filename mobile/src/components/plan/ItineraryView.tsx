@@ -29,6 +29,7 @@ import * as Calendar from "expo-calendar/legacy";
 import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
 import { Button, ActionBar } from "../Button";
+import { PaySafely } from "../PaySafely";
 import { Symbol } from "../Symbol";
 import { Toast } from "../Toast";
 import { BudgetBar, Hop } from "./BudgetBar";
@@ -346,7 +347,7 @@ export function ItineraryView({
     // How to reach them is a choice of what to do next, so it is asked the way the phone asks those.
     chooseAction({
       title: "Request a table?",
-      message: `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.`,
+      message: `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.\n\nNever pay a deposit or send money over a phone call. If a deposit is needed, pay it on the venue's own booking page.`,
       actions: channels.map((ch) => ({ text: ch.text, onPress: () => void reserveVia(index, ch) })),
       cancel: "Not yet",
     });
@@ -831,6 +832,9 @@ export function ItineraryView({
             </Fragment>
           ))}
         </View>
+
+        {/* Under the stops, where the Reserve buttons are. */}
+        <PaySafely style={{ marginHorizontal: GUTTER, marginTop: space.lg }} />
 
         <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl, gap: space.sm }}>
           {nightOn ? (

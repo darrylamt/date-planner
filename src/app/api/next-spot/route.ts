@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VENUE_SELECT } from "@/lib/venueColumns";
 import { expandVibes } from "@/lib/catalog";
 import { estimateHop, haversineKm } from "@/lib/transport";
+import { cityAt } from "@/lib/neighbourhoods";
 import { describePrice, hoursOn, isPriced, medianPrice, menusFor, openStateAt, type PriceNote } from "@/lib/chat/tools/shared";
 import type { MenuItem, Venue, VenueType } from "@/lib/types";
 
@@ -133,7 +134,14 @@ export async function POST(req: Request) {
 
   const kinds = b.kinds?.length ? b.kinds : kindsFor(b.occasion, b.vibes, b.time);
   let q = supabase.from("venues").select(VENUE_SELECT).eq("is_active", true).in("type", kinds);
-  const { data: cityAreas } = await supabase.from("areas").select("id").eq("city", b.city?.trim() || "Accra");
+  /*
+   * The phone's own position says which town it is in. The city the app
+   * sent is the last one somebody planned in, so after planning a day in
+   * Kumasi, "near me" in Accra searched Kumasi's venues for ones within
+   * eight kilometres of Accra, and found nothing.
+   */
+  const city = b.lat != null && b.lng != null ? cityAt({ lat: b.lat, lng: b.lng }) ?? b.city?.trim() : b.city?.trim();
+  const { data: cityAreas } = await supabase.from("areas").select("id").eq("city", city || "Accra");
   const areaIds = ((cityAreas ?? []) as { id: string }[]).map((a) => a.id);
   if (areaIds.length) q = q.in("area_id", areaIds);
   const { data, error } = await q;

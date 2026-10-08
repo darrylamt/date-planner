@@ -8,6 +8,7 @@ import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
 import { StopGallery } from "../../src/components/plan/StopGallery";
 import { Paywall } from "../../src/components/chat/Paywall";
+import { PaySafely } from "../../src/components/PaySafely";
 import { ItemSheet, availability } from "../../src/components/venue/ItemSheet";
 import { GUTTER, HAIRLINE, radius, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
@@ -369,6 +370,11 @@ export default function VenuePage() {
             </PressScale>
           ))}
         </Rise>
+
+        {/* Beside the ways to reach them: never pay over a call. */}
+        {usable.some((a) => a.label === "Call" || a.label === "WhatsApp" || a.label === "Book") ? (
+          <PaySafely where="venue" style={{ marginHorizontal: GUTTER, marginTop: space.lg }} />
+        ) : null}
 
         {venue.description ? (
           <Rise delay={180}>

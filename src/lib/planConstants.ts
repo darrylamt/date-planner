@@ -633,35 +633,50 @@ export function tidyForPathway(inputs: PlanInputs): PlanInputs {
   };
 }
 
+/**
+ * Whether a step can be skipped without the plan losing anything it needs.
+ *
+ * Who it is for, how it should feel, what it is made of and how many
+ * places: each has a default the planner uses well. A business meeting's own
+ * question is the exception, because it chooses the kind of place outright.
+ */
+export function isOptionalStep(id: StepId, occasion: Occasion): boolean {
+  if (id === "extra") return occasion !== "business_meeting";
+  return id === "details" || id === "vibe" || id === "shape" || id === "stops";
+}
+
 export function stepsFor(occasion: Occasion, occasionPreset: boolean): StepId[] {
-  const steps: StepId[] = [];
-  if (!occasionPreset) steps.push("occasion");
-  if (!(PARTY_RULES[occasion]?.fixed === 1)) steps.push("party");
-  if (OCCASION_EXTRA[occasion]) steps.push("extra");
   /*
    * Only the questions this pathway needs. A meeting has no feel to pick, no
    * person to describe and one place already, so it goes from its own
    * question straight to the practical ones.
    */
   const ask = (id: StepId) =>
-    (id === "details" && !aboutQuestionsFor(occasion).length) ||
-    (id === "vibe" && !vibesFor(occasion, 2).length) ||
-    (id === "stops" && occasion === "business_meeting")
-      ? null
-      : id;
+    !(
+      (id === "occasion" && occasionPreset) ||
+      (id === "party" && PARTY_RULES[occasion]?.fixed === 1) ||
+      (id === "extra" && !OCCASION_EXTRA[occasion]) ||
+      (id === "details" && !aboutQuestionsFor(occasion).length) ||
+      (id === "vibe" && !vibesFor(occasion, 2).length) ||
+      (id === "stops" && occasion === "business_meeting")
+    );
   /*
-   * "How many places" is its own screen, at the end.
+   * What the plan needs first, then everything that only makes it better.
    *
-   * It was the third question on the timing step, under the start time and the
-   * duration, which put the one answer that decides the shape of the evening
-   * below two that decide only its edges, on a screen already carrying two
-   * wheels. Somebody who scrolled past it got the inference instead of their
-   * own answer and never knew they had been asked.
+   * The personal questions used to come before where, the budget and the
+   * day, so people answered five questions they could have skipped before
+   * reaching the three that mattered, and complained there were too many,
+   * reading every one as compulsory. Now the essentials come first, and from
+   * the first optional question on, the plan can be built at once (see
+   * isOptionalStep and the plan screen's "Build my plan now").
+   *
+   * "How many places" stays last of all: it decides the shape of the
+   * evening, so it is its own screen rather than the third question on the
+   * timing step, where people scrolled past it.
    */
-  for (const id of ["details", "vibe", "shape", "area", "budget", "when", "timing", "stops"] as StepId[]) {
-    if (ask(id)) steps.push(id);
-  }
-  return steps;
+  const order: StepId[] = ["occasion", "party", "extra", "area", "budget", "when", "timing", "details", "vibe", "shape", "stops"];
+  const wanted = order.filter(ask);
+  return [...wanted.filter((id) => !isOptionalStep(id, occasion)), ...wanted.filter((id) => isOptionalStep(id, occasion))];
 }
 
 /* ── party rules ──────────────────────────────────────────────────────── */

@@ -664,7 +664,7 @@ export function PlanSteps({
   if (step === "vibe") {
     return (
       <>
-        <StepHeading title="What should it feel like?" subtitle="Pick up to three." />
+        <StepHeading title="What should it feel like?" subtitle="Pick up to three, or skip it and we will choose." />
         <ChipRow>
           {vibesFor(inputs.occasion, inputs.partySize).map((v) => {
             const val = v.toLowerCase();

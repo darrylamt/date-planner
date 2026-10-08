@@ -18,6 +18,7 @@ import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
+import { CityChip } from "../../src/components/home/CityChip";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
 import { AskBar } from "../../src/components/home/AskBar";
 import { Avatar } from "../../src/components/home/Avatar";
@@ -151,6 +152,9 @@ export default function Home() {
         <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two, marginBottom: Spacing.three }}>
           Dates, days out, meetings and trips, planned to your budget with real prices.
         </Text>
+
+        {/* Which city everything starts from, so "Where next" never searches the wrong one. */}
+        <CityChip />
 
         {/*
           For somebody already out: no plan, no questions, one place. Under

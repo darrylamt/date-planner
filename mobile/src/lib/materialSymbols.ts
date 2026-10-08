@@ -35,6 +35,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "checkmark.circle": "check_circle",
   "checkmark.circle.fill": "check_circle",
   "chevron.down": "keyboard_arrow_down",
+  "checkmark.shield.fill": "verified_user",
   "chevron.left": "chevron_left",
   "chevron.left.circle.fill": "arrow_circle_left",
   "chevron.right": "chevron_right",

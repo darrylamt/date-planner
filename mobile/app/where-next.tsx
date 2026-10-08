@@ -75,6 +75,16 @@ export default function WhereNext() {
   const [from, setFrom] = useState<From>(locationAvailable() ? { kind: "me" } : { kind: "area", id: "", name: "" });
   const [areas, setAreas] = useState<Area[] | null>(null);
 
+  // Start from what home says: near me, or an area of the chosen city.
+  useEffect(() => {
+    AsyncStorage.getItem("duro.where.from")
+      .then((pref) => {
+        if (pref === "city") setFrom({ kind: "area", id: "", name: "" });
+        else if (pref === "near" && locationAvailable()) setFrom({ kind: "me" });
+      })
+      .catch(() => undefined);
+  }, []);
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [spots, setSpots] = useState<NextSpot[]>([]);

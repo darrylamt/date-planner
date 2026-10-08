@@ -33,6 +33,7 @@ import {
   clampParty,
   defaultStopsFor,
   defaultInputs,
+  isOptionalStep,
   stepsFor,
   tidyForPathway,
   wellnessAllowed,
@@ -56,7 +57,7 @@ import { SkeletonRows, SkeletonSteps } from "../../src/components/Skeleton";
  * colour taken from there is resolved before the occasion theme exists, which
  * is why this bar stayed teal on every pathway.
  */
-function ProgressRail({ total, current }: { total: number; current: number }) {
+function ProgressRail({ total, current, optionalFrom }: { total: number; current: number; optionalFrom: number }) {
   const c = useTheme();
 
   /*
@@ -90,12 +91,83 @@ function ProgressRail({ total, current }: { total: number; current: number }) {
           key={i}
           style={{
             flex: 1,
-            height: 4,
+            // The optional steps are thinner and paler: the part you may skip looks like it.
+            height: i >= optionalFrom ? 3 : 5,
+            alignSelf: "center",
             borderRadius: radius.pill,
             backgroundColor: i <= current ? c.accent : c.backgroundSelected,
+            opacity: i >= optionalFrom && i > current ? 0.55 : 1,
           }}
         />
       ))}
+    </View>
+  );
+}
+
+/**
+ * At the start of every pathway: how few questions are actually needed.
+ *
+ * People were complaining there were too many questions, reading every one
+ * as compulsory; the "optional" in a field label was too small to notice.
+ * So it is said first, plainly, and with the reason to answer more anyway.
+ */
+function EssentialsIntro({ needed }: { needed: number }) {
+  const c = useTheme();
+  return (
+    <View
+      style={{
+        marginHorizontal: GUTTER,
+        marginBottom: space.lg,
+        padding: space.md,
+        borderRadius: radius.card,
+        backgroundColor: c.accentSoft,
+        flexDirection: "row",
+        gap: space.sm,
+        alignItems: "flex-start",
+      }}
+    >
+      <Symbol name="clock" size={18} color={c.accent} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text variant="headline" style={{ color: c.accent }}>
+          Only {needed} quick questions are needed
+        </Text>
+        <Text variant="subheadline" style={{ color: c.text }}>
+          After those, everything is optional and you can build your plan straight away. Every extra answer makes it more personal, so add what you like.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** On every optional step: say so, big enough to be seen. */
+function OptionalBanner({ first }: { first: boolean }) {
+  const c = useTheme();
+  return (
+    <View
+      style={{
+        marginHorizontal: GUTTER,
+        marginBottom: space.lg,
+        padding: space.md,
+        borderRadius: radius.card,
+        backgroundColor: c.accentSoft,
+        gap: 4,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+        <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: c.accent }}>
+          <Text variant="caption1" weight="700" uppercase style={{ color: c.textOnBrand, letterSpacing: 0.6 }}>
+            Optional
+          </Text>
+        </View>
+        <Text variant="headline" style={{ color: c.accent, flex: 1 }}>
+          {first ? "That's all we need" : "Skip it if you like"}
+        </Text>
+      </View>
+      <Text variant="subheadline" style={{ color: c.text }}>
+        {first
+          ? "Build your plan now, or answer a few more: the more you tell us, the more personal the plan."
+          : "Each answer makes the plan more personal. Build it whenever you're ready."}
+      </Text>
     </View>
   );
 }
@@ -507,7 +579,7 @@ export default function PlanNew() {
 
   const canContinue =
     (stepId !== "area" || inputs.surpriseMe || inputs.areaIds.length > 0 || Boolean(inputs.near)) &&
-    (stepId !== "vibe" || inputs.vibes.length > 0) &&
+
     // The spa floor: the cheapest real treatment, for everybody coming.
     (stepId !== "budget" ||
       !inputs.wellness ||
@@ -516,13 +588,21 @@ export default function PlanNew() {
 
   const poss = possessiveName(inputs.partner.name, pronounForGender(inputs.partner.gender));
 
+  // Where the optional questions start in this pathway, and whether we are in them.
+  const optionalFrom = (() => {
+    const i = steps.findIndex((id) => isOptionalStep(id, inputs.occasion));
+    return i === -1 ? totalSteps : i;
+  })();
+  const optional = stepIndex >= optionalFrom;
+  const lastStep = stepIndex === totalSteps - 1;
+
   return themed(
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={insets.top + 44}
     >
-      <ProgressRail total={totalSteps} current={stepIndex} />
+      <ProgressRail total={totalSteps} current={stepIndex} optionalFrom={optionalFrom} />
       <AiConsentSheet
         purpose={askingConsent ? "plan" : null}
         onAnswer={(allowed) => {
@@ -550,6 +630,8 @@ export default function PlanNew() {
           </View>
         ) : (
           <>
+            {stepIndex === 0 && optionalFrom < totalSteps ? <EssentialsIntro needed={optionalFrom} /> : null}
+            {optional ? <OptionalBanner first={stepIndex === optionalFrom} /> : null}
             <PlanSteps
               step={stepId}
               inputs={inputs}
@@ -573,18 +655,33 @@ export default function PlanNew() {
         * places as well as different weights: Back is a bordered button at the
         * left, Continue takes the rest of the row and stays the obvious one.
       */}
-      <ActionBar style={{ flexDirection: "row", alignItems: "center" }}>
-        {stepIndex > 0 ? (
-          <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
-        ) : null}
-        <Button
-          title={stepIndex === totalSteps - 1 ? `Build ${poss} evening` : "Continue"}
-          icon={stepIndex === totalSteps - 1 ? "sparkles" : undefined}
-          onPress={goNext}
-          disabled={!canContinue}
-          style={{ flex: 1 }}
-        />
-      </ActionBar>
+      {/*
+        On an optional step, building the plan is the big button and the next
+        question is the smaller one beside Back: skipping the rest should be
+        the obvious move, answering more an easy one.
+      */}
+      {optional && !lastStep ? (
+        <ActionBar style={{ gap: space.sm }}>
+          <Button title={`Build ${poss} plan now`} icon="sparkles" onPress={() => void generate()} disabled={!canContinue} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
+            <Button title="Next question" kind="tinted" size="large" onPress={goNext} disabled={!canContinue} style={{ flex: 1 }} />
+          </View>
+        </ActionBar>
+      ) : (
+        <ActionBar style={{ flexDirection: "row", alignItems: "center" }}>
+          {stepIndex > 0 ? (
+            <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
+          ) : null}
+          <Button
+            title={lastStep ? `Build ${poss} plan` : "Continue"}
+            icon={lastStep ? "sparkles" : undefined}
+            onPress={goNext}
+            disabled={!canContinue}
+            style={{ flex: 1 }}
+          />
+        </ActionBar>
+      )}
     </KeyboardAvoidingView>
   );
 }
