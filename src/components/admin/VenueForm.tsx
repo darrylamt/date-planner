@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DAY_NAMES as SCHEDULE_DAYS } from "@/lib/schedules";
 import { Toast } from "@/components/Toast";
 import { PlacesLookup } from "@/components/admin/PlacesLookup";
-import { bandFromPriceLevel, matchArea, venueTypeFromPlace } from "@/lib/places";
+import { bandFromPriceLevel, cityOf, matchArea, venueTypeFromPlace } from "@/lib/places";
 import type { AreaForMatch, PlaceDetails } from "@/lib/places";
 import { HoursEditor } from "./HoursEditor";
 import { ImageField, ImageListField } from "./ImageField";
@@ -380,7 +380,11 @@ export function VenueForm({
        * arcade in the wrong part of town.
        */
       if (newAreaName && !payload.area_id) {
-        const created = await ensureAreaId(supabase, newAreaName);
+        // In the venue's own city: a new Kumasi neighbourhood must not be filed under Accra.
+        const lat = Number(payload.lat);
+        const lng = Number(payload.lng);
+        const city = Number.isFinite(lat) && Number.isFinite(lng) && payload.lat != null && payload.lng != null ? cityOf({ lat, lng }) : null;
+        const created = await ensureAreaId(supabase, newAreaName, city ?? "Accra");
         if (created) payload.area_id = created.id;
       }
 

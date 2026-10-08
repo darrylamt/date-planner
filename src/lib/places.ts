@@ -148,25 +148,44 @@ async function call<T>(url: string, mask: string, body?: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-/* Accra, so a search for "Republic" does not return one in another country. */
+/* Accra, the centre of a search that has nowhere better to start. */
 const ACCRA = { latitude: 5.6037, longitude: -0.187 };
+const KUMASI = { latitude: 6.6885, longitude: -1.6244 };
 
-/** Find candidate places by name. */
+/**
+ * All of Ghana, as a box Google must stay inside.
+ *
+ * Name searches leaned on a 40 km circle round Accra, so a Kumasi place
+ * could not be found by name at all ("Google has no match for that name in
+ * Accra"), and without any limit a bare "Kyala" matched a sushi bar in
+ * California. A restriction to the country does both jobs.
+ */
+const GHANA = {
+  rectangle: { low: { latitude: 4.5, longitude: -3.3 }, high: { latitude: 11.2, longitude: 1.3 } },
+};
+
+/**
+ * Find candidate places by name, anywhere in Ghana.
+ *
+ * Asked twice, as typed and with ", Ghana" on the end, because Google's
+ * spelling is not always ours: "Kyala City" is listed as "KAYLA CITY", and
+ * only the second form finds the business rather than a district of that
+ * name. The two answers are merged, the plain one first.
+ */
 export async function searchPlaces(query: string): Promise<PlaceSummary[]> {
-  const data = await call<{ places?: RawPlace[] }>(
-    `${BASE}/places:searchText`,
-    SEARCH_MASK,
-    {
-      textQuery: query,
-      // A bias rather than a hard restriction: a venue just outside the radius
-      // should still be findable, only ranked lower.
-      locationBias: { circle: { center: ACCRA, radius: 40000 } },
+  const ask = (textQuery: string) =>
+    call<{ places?: RawPlace[] }>(`${BASE}/places:searchText`, SEARCH_MASK, {
+      textQuery,
+      locationRestriction: GHANA,
       regionCode: "GH",
       languageCode: "en",
-    }
-  );
+    });
+  const [plain, inGhana] = await Promise.all([ask(query), /ghana/i.test(query) ? Promise.resolve({ places: [] }) : ask(`${query}, Ghana`)]);
 
-  return (data.places ?? []).map(toSummary);
+  const seen = new Set<string>();
+  return [...(plain.places ?? []), ...(inGhana.places ?? [])]
+    .map(toSummary)
+    .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
 }
 
 export interface DiscoveredPlace extends PlaceSummary {
@@ -193,14 +212,16 @@ export interface DiscoveredPlace extends PlaceSummary {
 export async function discoverPlaces(
   what: string,
   area: string,
-  opts: { openNow?: boolean } = {}
+  opts: { openNow?: boolean; city?: string | null } = {}
 ): Promise<DiscoveredPlace[]> {
+  // The area's own city: "in Adum, Accra" finds nothing worth having.
+  const city = opts.city || "Accra";
   const data = await call<{ places?: RawPlace[] }>(
     `${BASE}/places:searchText`,
     DISCOVER_MASK,
     {
-      textQuery: `${what} in ${area}, Accra, Ghana`,
-      locationBias: { circle: { center: ACCRA, radius: 40000 } },
+      textQuery: `${what} in ${area}${area.toLowerCase() === city.toLowerCase() ? "" : `, ${city}`}, Ghana`,
+      locationBias: { circle: { center: city === "Kumasi" ? KUMASI : ACCRA, radius: 40000 } },
       regionCode: "GH",
       languageCode: "en",
       ...(opts.openNow ? { openNow: true } : {}),
@@ -607,9 +628,10 @@ const FIND_MASK = [
 export async function findPlaces(query: string, near?: { lat: number; lng: number }, radius = 40000): Promise<FoundPlace[]> {
   const data = await call<{ places?: RawPlace[] }>(`${BASE}/places:searchText`, FIND_MASK, {
     textQuery: query,
-    locationBias: {
-      circle: { center: near ? { latitude: near.lat, longitude: near.lng } : ACCRA, radius },
-    },
+    // Near the pin when there is one; otherwise anywhere in Ghana, not just Accra.
+    ...(near
+      ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius } } }
+      : { locationRestriction: GHANA }),
     regionCode: "GH",
     languageCode: "en",
     maxResultCount: 6,

@@ -51,7 +51,7 @@ export function PlacesLookup({
       const json = await post({ action: "search", query: query.trim() });
       const found = json.results as PlaceSummary[];
       setResults(found);
-      if (!found.length) setError("Google has no match for that name in Accra.");
+      if (!found.length) setError("Google has no match for that name in Ghana. Try adding the town, like “Kayla City Kumasi”, or Google’s own spelling.");
     } catch (e) {
       setError((e as Error).message);
     } finally {

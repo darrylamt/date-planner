@@ -72,7 +72,9 @@ export async function POST(req: Request) {
 
   try {
     if (body.action === "search") {
-      const found = await discoverPlaces(body.what, body.area);
+      // Searched in the area's own city, so a Kumasi area is not looked for in Accra.
+      const { data: areaRow } = await supabase.from("areas").select("city").ilike("name", body.area).limit(1).maybeSingle();
+      const found = await discoverPlaces(body.what, body.area, { city: (areaRow as { city?: string | null } | null)?.city ?? null });
 
       // Mark what we already hold, by place id and by name, so the list shows
       // twenty results rather than twenty results minus the ones you cannot
