@@ -1847,18 +1847,41 @@ function planWith(
      * come from the same list, so there is nothing to swap it for there
      * either, which is right: the event is the point of the evening.
      */
+    /*
+     * Into a stop that takes its kind of place, when the request named one.
+     *
+     * By time alone was right when an event was a block party somebody had
+     * planned around. Since Gaderin, most days carry thirty standing
+     * activities, so nearly every plan has an event to pin, and pinned by
+     * time alone it took whatever stop was nearest: a business meeting asked
+     * to be held in a cafe was sent bowling, and a couple who asked for a spa
+     * first were sent to a pottery class. So: a stop of its own kind,
+     * nearest in time, first. A meeting or a narrowed focus is held to that,
+     * and so is a spa stop, which only ever holds a spa. An ordinary evening
+     * with no stop of the event's kind falls back to the nearest in time, as
+     * before.
+     */
     let pinnedIndex = -1;
     if (pin) {
       const at = pin.at ?? startMinutes;
-      let closest = Infinity;
-      roles.forEach((_, i) => {
-        const gap = Math.abs(nominalStart(roles, i) - at);
-        if (gap < closest) {
-          closest = gap;
-          pinnedIndex = i;
-        }
-      });
-
+      const nearest = (fits: (role: Role) => boolean) => {
+        let best = -1;
+        let closest = Infinity;
+        roles.forEach((role, i) => {
+          if (!fits(role)) return;
+          const gap = Math.abs(nominalStart(roles, i) - at);
+          if (gap < closest) {
+            closest = gap;
+            best = i;
+          }
+        });
+        return best;
+      };
+      const strict = Boolean(meetingRole(inputs)) || focusTypes.length > 0;
+      pinnedIndex = nearest((role) => ROLE_TYPES[role].includes(pin.venue.type));
+      if (pinnedIndex < 0 && !strict) pinnedIndex = nearest((role) => role !== "wellness");
+    }
+    if (pin && pinnedIndex >= 0) {
       const built = optionsForVenue(
         pin.venue,
         roles[pinnedIndex],
