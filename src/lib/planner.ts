@@ -6,6 +6,7 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
+import { byTheGlass } from "./bottles";
 import { schedulesDuring } from "./schedules";
 import {
   focusesOf,
@@ -566,8 +567,8 @@ const byPrice = (a: MenuItem, b: MenuItem) => Number(a.price_ghs) - Number(b.pri
  * rounded to the nearest five. Null when the menu has none to go on.
  */
 function typicalDrink(menu: MenuItem[]): number | null {
-  const prices = menu
-    .filter((m) => m.category === "drink" && Number(m.covers_people ?? 1) <= 1 && Number(m.price_ghs) > 0)
+  const prices = byTheGlass(menu.filter((m) => m.category === "drink"))
+    .filter((m) => Number(m.price_ghs) > 0)
     .map((m) => Number(m.price_ghs))
     .sort((a, b) => a - b);
   if (!prices.length) return null;
@@ -815,6 +816,8 @@ function planOrders(
 
   const orderFrom = (category: string, people: number): OrderLine[] => {
     let all = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    // A drink each means a glass each, never a bottle per head. See bottles.ts.
+    if (category === "drink") all = byTheGlass(all);
     /*
      * At a table, a side is never somebody's meal and a stew is only ordered
      * where it can be eaten. See accompaniments.ts: plain rice filed as a

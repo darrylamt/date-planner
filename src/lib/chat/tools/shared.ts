@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllRows } from "../../fetchAll";
 import { isOpenAt, parsePeriods, weekdayOf, describeDay } from "../../hours";
 import type { MenuItem, Venue } from "../../types";
+import { byTheGlass } from "../../bottles";
 
 /**
  * The pieces every catalogue tool needs, in one place so they cannot drift
@@ -148,8 +149,8 @@ export function typicalPlate(menu: MenuItem[]): number | null {
 
 /** The median of one category's prices, one per person, or null with none. */
 export function medianPrice(menu: MenuItem[], category: MenuItem["category"]): number | null {
-  const prices = menu
-    .filter((m) => m.category === category && Math.max(1, Number(m.covers_people ?? 1)) === 1)
+  const inCategory = menu.filter((m) => m.category === category && Math.max(1, Number(m.covers_people ?? 1)) === 1);
+  const prices = (category === "drink" ? byTheGlass(inCategory) : inCategory)
     .map((m) => Number(m.price_ghs))
     .filter((p) => p > 0)
     .sort((a, b) => a - b);

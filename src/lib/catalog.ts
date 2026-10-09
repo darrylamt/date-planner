@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { byTheGlass } from "./bottles";
 
 /**
  * Catalog vocabulary shared by server and client.
@@ -284,7 +285,7 @@ export function suggestAvgCost(items: IngestedItem[], venue?: IngestedVenue): nu
   };
 
   const mains = items.filter((i) => i.category === "main").map((i) => i.price_ghs);
-  const drinks = items.filter((i) => i.category === "drink").map((i) => i.price_ghs);
+  const drinks = byTheGlass(items.filter((i) => i.category === "drink")).map((i) => i.price_ghs);
 
   // No mains (an activity, a dessert bar), fall back to the median of
   // everything so the figure still reflects real prices.
