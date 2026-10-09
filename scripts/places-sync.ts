@@ -66,7 +66,7 @@ async function main() {
 
   let query = supabase
     .from("venues")
-    .select("id, name, is_active, google_place_id, business_status")
+    .select("id, name, is_active, google_place_id, business_status, verification_summary")
     .not("google_place_id", "is", null)
     // Least recently checked first, so an interrupted run resumes usefully.
     .order("places_synced_at", { ascending: true, nullsFirst: true });
@@ -129,13 +129,28 @@ async function main() {
     }
 
     /*
-     * Reopened. Left inactive on purpose, it may have been switched off for a
-     * reason of our own, and Google saying it trades again is not permission
-     * to start recommending it.
+     * Reopened. Switched back on when this sweep is what switched it off:
+     * switched off means closed, and Google saying it trades again means it
+     * is not. One taken off for any other reason, reported closed by people
+     * on a plan or hidden by the venue itself, stays off for a person to
+     * decide, because Google's word is not theirs.
      */
     if (!shut && !v.is_active && v.business_status && isClosed(v.business_status)) {
-      console.log(`  ${v.name}: ${status} again, still inactive, reactivate by hand if you want it`);
       reopened++;
+      if ((v.verification_summary ?? "").startsWith("Google reports")) {
+        console.log(`  ${v.name}: ${status} again, switching back on`);
+        if (!dry) {
+          await touch(v.id, {
+            business_status: status,
+            is_active: true,
+            verification_status: "unverified",
+            verification_summary: `Google reports ${status} again.`,
+            verified_at: new Date().toISOString(),
+          });
+        }
+        continue;
+      }
+      console.log(`  ${v.name}: ${status} again, but switched off by a person, so left off`);
     }
 
     if (!dry) await touch(v.id, { business_status: status });
@@ -157,6 +172,7 @@ interface VenueRow {
   is_active: boolean;
   google_place_id: string | null;
   business_status: string | null;
+  verification_summary: string | null;
 }
 
 main().catch((e) => {

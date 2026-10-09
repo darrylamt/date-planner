@@ -162,7 +162,7 @@ export function Discover({
       });
 
       setToast(
-        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}${json.areasCreated ? `, ${json.areasCreated} new area(s)` : ""}. They stay hidden until their menu goes in.`
+        `Added ${json.added} venue(s)${json.skipped ? `, skipped ${json.skipped} already held` : ""}${json.areasCreated ? `, ${json.areasCreated} new area(s)` : ""}. They join plans once their menu goes in.`
       );
       // Reflect what is now held, without a second round trip.
       setResults((cur) =>
@@ -185,7 +185,7 @@ export function Discover({
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
         Pick a city or town anywhere in Ghana. Leave the area blank to search the whole place: each result
         shows the neighbourhood it will be filed under, and the neighbourhoods found appear as chips to look
-        closer. Added venues stay hidden from the app until their menu goes in.
+        closer. Added venues join plans once their menu goes in.
       </p>
 
       <div className="mt-5 flex flex-wrap items-end gap-3">

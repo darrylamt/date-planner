@@ -200,8 +200,13 @@ export async function POST(req: Request) {
         vibe_tags: [],
         best_for: [],
         reservation_required: false,
-        // Off until its menu goes in, which switches it on (0078).
-        is_active: false,
+        /*
+         * On from the start. Switched off is kept for closed places, so the
+         * Inactive list reads as exactly that; a venue with no menu yet is
+         * still withheld from plans and from Durobot for want of a price, and
+         * the Unpriced page is where it waits for one.
+         */
+        is_active: true,
         lat: p.lat,
         lng: p.lng,
         google_place_id: p.id,
