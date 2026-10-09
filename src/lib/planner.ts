@@ -625,6 +625,27 @@ function priceCentre(tier: OrderTier, count: number): number {
  * walking stops back down the tiers rather than inventing cheaper items.
  */
 /**
+ * Which place a venue is, branches counted as one.
+ *
+ * A plan checked only that it never used the same venue twice, so an
+ * evening at Atomic Junction went to Chocolate Sarayi in East Legon and then
+ * Chocolate Sarayi at Accra Mall: two stops, one dessert. Branches are named
+ * "Brand - Place" or "Brand (Place)", so the brand is the name up to that
+ * suffix, with accents and the Turkish dotless i folded ("Chocolate Sarayı"
+ * is the Osu branch of the same shop).
+ */
+export function brandOf(v: { name: string }): string {
+  return v.name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ı/g, "i")
+    .toLowerCase()
+    .split(/\s+[-–|]\s+|\s*\(/)[0]
+    .replace(/\s+restaurant$/, "")
+    .trim();
+}
+
+/**
  * A line sold only to children: "(Kids)", "under 12s", "Trampoline, under 12
  * years". Something for adults and children together is not one of these.
  */
@@ -1054,25 +1075,8 @@ function planOrders(
 
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));
 
-    /*
-     * A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES),
-     * unless the figure is an estimate and says so: then the line is named
-     * as one and carries why, and the plan's total turns into a range.
-     */
-    if (MENU_ONLY_TYPES.has(venue.type)) {
-      if (venue.price_source !== "estimated" || each <= 0) return null;
-      return {
-        orders: [
-          {
-            item: "Estimated spend, per person",
-            qty: partySize,
-            price_ghs: each * partySize,
-            note: "We're working on getting their menu, so this is an estimate.",
-          },
-        ],
-        cost: each * partySize,
-      };
-    }
+    // A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES): never "Typical spend".
+    if (MENU_ONLY_TYPES.has(venue.type)) return null;
 
     /*
      * Nothing priced at all. A venue flagged free is genuinely free and can
@@ -1937,9 +1941,9 @@ function planWith(
     const pickOrder = slots.map((_, i) => i);
     if (pinnedIndex >= 0) pickOrder.unshift(...pickOrder.splice(pinnedIndex, 1));
     for (const i of pickOrder) {
-      const pick = slots[i].find((o) => !used.has(o.venue.id));
+      const pick = slots[i].find((o) => !used.has(brandOf(o.venue)));
       if (!pick) return null;
-      used.add(pick.venue.id);
+      used.add(brandOf(pick.venue));
       chosen[i] = pick;
     }
     /*
@@ -2019,9 +2023,9 @@ function planWith(
       };
 
       chosen.forEach((current, i) => {
-        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => c.venue.id));
+        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => brandOf(c.venue)));
         for (const option of slots[i]) {
-          if (taken.has(option.venue.id)) continue;
+          if (taken.has(brandOf(option.venue))) continue;
           const saving = current.cost - option.cost;
           if (saving <= 0) continue;
           consider({ index: i, option, saving });
@@ -2070,9 +2074,9 @@ function planWith(
       let move: { index: number; option: Option; gain: number; extra: number } | null = null;
 
       chosen.forEach((current, i) => {
-        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => c.venue.id));
+        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => brandOf(c.venue)));
         for (const option of slots[i]) {
-          if (option === current || taken.has(option.venue.id)) continue;
+          if (option === current || taken.has(brandOf(option.venue))) continue;
 
           const gain = gainOf(option, current);
           if (gain <= 0) continue;
@@ -2156,12 +2160,12 @@ function planWith(
       for (let i = 0; i < chosen.length; i++) {
         if (i === pinnedIndex) continue;
         const current = chosen[i];
-        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => c.venue.id));
+        const taken = new Set(chosen.filter((_, j) => j !== i).map((c) => brandOf(c.venue)));
         const kmNow = routeKm(chosen);
         const backNow = revisitsOf(chosen);
         let best: { option: Option; km: number; back: number } | null = null;
         for (const option of slots[i]) {
-          if (option === current || taken.has(option.venue.id)) continue;
+          if (option === current || taken.has(brandOf(option.venue))) continue;
           if (option.tier < current.tier) continue;
           const trial = chosen.slice();
           trial[i] = option;
@@ -2245,7 +2249,7 @@ function planWith(
     function toStops(picks: Option[]): PlannedStop[] {
       return picks.map((p, i) => {
         const role = roles[i];
-        const taken = new Set(picks.map((x) => x.venue.id));
+        const taken = new Set(picks.map((x) => brandOf(x.venue)));
         const onTonight = i === pinnedIndex && pin ? pin.event : null;
         return {
           venue: p.venue,
@@ -2292,7 +2296,7 @@ function planWith(
            * evening with a different place in it, not a different evening.
            */
           alternates: slots[i]
-            .filter((o) => !taken.has(o.venue.id) && o.cost <= p.cost + 1)
+            .filter((o) => !taken.has(brandOf(o.venue)) && o.cost <= p.cost + 1)
             .filter((o) => kmBetween(o.venue, p.venue) <= SWAP_RADIUS_KM)
             .filter(
               (o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx

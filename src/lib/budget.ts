@@ -48,12 +48,11 @@ export function isPlaceholderAvg(
  * and outdoor places keep their per-head figure: entry or a round of drinks
  * really is one price a head.
  *
- * Except an estimate, said as one. A place whose only published menu is on a
- * delivery app can be marked price_source 'estimated' with a per-head figure
- * and a spread: it is planned as "Estimated spend, per person" with a note
- * that we are getting its menu, the plan's total becomes a range, and Duro bot
- * gives a range rather than a figure. A bare per-head number on a place to
- * eat is still not a price.
+ * That holds for an estimate too. A place whose only published menu is on a
+ * delivery app may carry price_source 'estimated' and a per-head range, which
+ * Duro bot quotes as a range (see isPriced in chat/tools/shared.ts). Plans
+ * leave it out: "Estimated spend, per person" at a restaurant was tried on 9
+ * Oct and read as filler, three times in two plans.
  */
 export const MENU_ONLY_TYPES: ReadonlySet<string> = new Set(["restaurant", "cafe", "dessert"]);
 
@@ -75,10 +74,7 @@ export function avgIsNotAPrice(
   v: { type?: string | null; avg_cost_per_person_ghs?: number | null; price_source?: string | null },
   hasMenu: boolean
 ): boolean {
-  return (
-    isPlaceholderAvg(v, hasMenu) ||
-    (!hasMenu && MENU_ONLY_TYPES.has(String(v.type ?? "")) && v.price_source !== "estimated")
-  );
+  return isPlaceholderAvg(v, hasMenu) || (!hasMenu && MENU_ONLY_TYPES.has(String(v.type ?? "")));
 }
 
 /**

@@ -79,6 +79,9 @@ export async function menusFor(
 export function isPriced(v: Venue, menuItemCount: number): boolean {
   if (v.is_free === true) return true;
   if (v.price_source === "unknown") return false;
+  // An estimate is quoted as a range here, though plans leave a place to eat
+  // out until its menu arrives (see avgIsNotAPrice).
+  if (v.price_source === "estimated" && Number(v.avg_cost_per_person_ghs) > 0) return true;
   if (avgIsNotAPrice(v, menuItemCount > 0)) return false;
   return Number(v.avg_cost_per_person_ghs) > 0 || menuItemCount > 0;
 }
