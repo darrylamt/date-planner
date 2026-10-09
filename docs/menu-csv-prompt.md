@@ -16,7 +16,7 @@ I have attached the menu as photos or a PDF. Read every page.
 1. One CSV inside a single code block. The first line must be exactly this header:
 
 ```
-venue,name,category,price_ghs,notes,days,from,to,covers_people,min_players,max_players,duration_minutes,min_age,requires_gear
+venue,name,category,price_ghs,notes,days,from,to,alcoholic,dietary,covers_people,min_players,max_players,duration_minutes,min_age,requires_gear
 ```
 
 2. After the code block, a short plain-text report (see "Report" at the end).
@@ -33,6 +33,9 @@ venue,name,category,price_ghs,notes,days,from,to,covers_people,min_players,max_p
   - `activity`: something you do and pay for. A game of bowling, a round of mini golf, laser tag, arcade tokens, a paint session, a pool pass, a spa treatment.
   - `other`: plain sides and extras (plain rice, fries, yam, banku, fufu, kenkey, plantain, extra chicken), shisha, packages that are not one dish, and anything that fits nowhere else.
 - **price_ghs**: the price for ONE of the item, as a number only: `85`, not `GHS 85.00` or `₵85`. A drink sold by the glass and by the bottle is two rows: "Red Wine (Glass)" and "Red Wine (Bottle)".
+  - **Any wine, champagne or spirit priced for the whole bottle gets "(Bottle)" in its name, even when the menu prints only the brand.** A wine list or a spirits section with prices in the hundreds or thousands is almost always bottle prices: "Hennessy VS 1,700" is "Hennessy VS (Bottle)". A shot or glass of the same drink gets "(Shot)" or "(Glass)". Without this, plans order a bottle as one person's drink.
+- **alcoholic**: `yes` or `no` for drinks, blank for food. `no` for water, soft drinks, juice, smoothies, coffee, tea, malt drinks, mocktails and anything marked virgin or non-alcoholic. `yes` for beer, wine, spirits, cider and cocktails. If you cannot tell (a house cocktail with no ingredients listed), leave it blank: blank keeps it out of alcohol-free plans, which is the safe side.
+- **dietary**: only what the menu itself prints about the dish, such as `Vegan`, `Vegetarian`, `Gluten free` or a (V) symbol the menu explains as vegetarian. Never decide this from the ingredients. Leave it blank when the menu says nothing.
 - **notes**: at most 150 characters, and only what the menu itself says that helps somebody choose. What the dish is ("Grilled tilapia with banku and pepper"), what comes with it ("Served with fries"), how much ("6 pieces", "Serves two"), or "Add-on, not sold on its own". Never write a description the menu does not give. Leave it blank if the menu says nothing.
 - **days, from, to**: only when the menu says a price applies at certain times, such as happy hour, weekend brunch, a lunch special or off-peak rates. Write days as `Mon-Thu`, `Fri;Sat`, `weekdays` or `weekends`, and from/to in 24-hour time like `16:00`. Leave all three blank for normal prices. The same item at two prices at two times is two rows.
 - **covers_people, min_players, max_players, duration_minutes, min_age, requires_gear**: for `activity` rows only. Leave them blank for food and drink.
@@ -66,13 +69,17 @@ Example rows:
 
 ```
 venue,name,category,price_ghs,notes,days,from,to,covers_people,min_players,max_players,duration_minutes,min_age,requires_gear
-Example Grill,Palava Sauce,main,95,"Served with boiled yam or plantain",,,,,,,,,
-Example Grill,Plain Rice,other,30,,,,,,,,,,
-Example Grill,Club Beer,drink,25,,Mon-Fri,17:00,19:00,,,,,,
-Example Grill,Club Beer,drink,35,,,,,,,,,,
-Example Grill,Chicken Nuggets (Kids),main,60,"6 pieces with fries",,,,,,,,,
-Example Arcade,Bowling,activity,125,"Per head, per game",,,,1,,,,,
-Example Arcade,Foosball,activity,30,"Per table",,,,2,2,2,,,
+Example Grill,Palava Sauce,main,95,"Served with boiled yam or plantain",,,,,,,,,,,
+Example Grill,Vegetable Curry,main,110,"With rice",,,,,Vegan,,,,,,
+Example Grill,Plain Rice,other,30,,,,,,,,,,,,
+Example Grill,Club Beer,drink,25,,Mon-Fri,17:00,19:00,yes,,,,,,,
+Example Grill,Club Beer,drink,35,,,,,yes,,,,,,,
+Example Grill,Hennessy VS (Shot),drink,90,,,,,yes,,,,,,,
+Example Grill,Hennessy VS (Bottle),drink,1700,,,,,yes,,,,,,,
+Example Grill,Pineapple Juice,drink,40,,,,,no,,,,,,,
+Example Grill,Chicken Nuggets (Kids),main,60,"6 pieces with fries",,,,,,,,,,,
+Example Arcade,Bowling,activity,125,"Per head, per game",,,,,,1,,,,,
+Example Arcade,Foosball,activity,30,"Per table",,,,,,2,2,2,,,
 ```
 
 ## Report (after the CSV)

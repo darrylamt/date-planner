@@ -4,6 +4,7 @@
  *   npm run research:list                 # missing description / tags / best_for / cuisines
  *   npm run research:list -- --instagram  # missing an Instagram handle
  *   npm run research:list -- --place      # missing a map link, a pin or a phone
+ *   npm run research:list -- --menu       # switched on, but no menu prices to plan with
  *
  * Each list is also cut into batches of 25 under research/, the size a model
  * answers without padding the tail with filler.
@@ -37,6 +38,8 @@ async function main() {
     env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE,
     { auth: { persistSession: false } }
   );
+
+  if (process.argv.includes("--menu")) return listUnpriced(db);
 
   const { data, error } = await db
     .from("venues")
@@ -143,6 +146,51 @@ async function main() {
     console.log(`Wrote ${out}`);
     console.log("Paste 20-30 names at a time into docs/venue-research-prompt.md.");
   }
+}
+
+/**
+ * Venues that are switched on but cannot be planned with, for want of a
+ * price: about half the catalogue in October 2026. The same test Durobot and
+ * the planner use (isPriced), so a venue on this list is exactly one they
+ * skip. With its Instagram and map link, because that is where a menu is
+ * usually found. Paste a batch into docs/menu-research-prompt.md.
+ */
+async function listUnpriced(db: ReturnType<typeof createClient>) {
+  const { isPriced } = await import("../src/lib/chat/tools/shared");
+  const { data, error } = await db
+    .from("venues")
+    .select("id, name, type, is_free, price_source, avg_cost_per_person_ghs, menu_shared_from, entry_fee_ghs, instagram_handle, google_maps_url, areas(name, city)")
+    .eq("is_active", true)
+    .order("name");
+  if (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  const counts = new Map<string, number>();
+  for (let from = 0; ; from += 1000) {
+    const { data: rows } = await db.from("menu_items").select("venue_id").gt("price_ghs", 0).range(from, from + 999);
+    for (const r of (rows ?? []) as { venue_id: string }[]) counts.set(r.venue_id, (counts.get(r.venue_id) ?? 0) + 1);
+    if (!rows || rows.length < 1000) break;
+  }
+  type V = { id: string; name: string; type: string; menu_shared_from: string | null; instagram_handle: string | null; google_maps_url: string | null; areas: { name?: string; city?: string } | null };
+  const rows = ((data ?? []) as unknown as V[]).filter(
+    (v) => !isPriced(v as never, counts.get(v.menu_shared_from ?? v.id) ?? 0)
+  );
+  const q = (x: string | null | undefined) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+  const lines = ["name,area,city,type,instagram,google_maps_url"].concat(
+    rows.map((v) => [v.name, v.areas?.name, v.areas?.city, v.type, v.instagram_handle ? `@${v.instagram_handle.replace(/^@/, "")}` : "", v.google_maps_url].map(q).join(","))
+  );
+  const out = path.join(process.cwd(), "venues-to-research-menu.csv");
+  fs.writeFileSync(out, lines.join("\n") + "\n", "utf8");
+  const dir = path.join(process.cwd(), "research");
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of fs.readdirSync(dir)) if (f.startsWith("menu-")) fs.unlinkSync(path.join(dir, f));
+  for (let i = 1, b = 1; i < lines.length; i += 25, b++) {
+    fs.writeFileSync(path.join(dir, `menu-${String(b).padStart(2, "0")}.csv`), [lines[0], ...lines.slice(i, i + 25)].join("\n") + "\n", "utf8");
+  }
+  console.log(`${rows.length} switched-on venues have no menu prices, so plans and Durobot skip them.`);
+  console.log(`Wrote ${out}, and batches of 25 in research/menu-*.csv`);
+  console.log("Paste one batch at a time into docs/menu-research-prompt.md.");
 }
 
 void main();

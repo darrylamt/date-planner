@@ -396,6 +396,13 @@ export function CsvImporter({
              */
             ...(yesNo(r.alcoholic) !== null ? { is_alcoholic: yesNo(r.alcoholic) } : {}),
             /*
+             * What the menu itself prints about the dish: "Vegan",
+             * "Vegetarian", "Contains nuts". Durobot quotes it as the menu's
+             * words and never extends it. Not a judgement anybody here made
+             * about the food, so it is kept as printed.
+             */
+            ...(r.dietary?.trim() ? { dietary_note: r.dietary.trim().slice(0, 80) } : {}),
+            /*
              * When the price applies. All three optional and all three
              * independent: a weekend price, an evening price, or a Friday
              * evening price. Blank is every day, all day.
@@ -569,7 +576,7 @@ export function CsvImporter({
           ) : (
             <>
               <b>Headers:</b>{" "}
-              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes,days,from,to,alcoholic</code>
+              <code className="font-mono text-[12.5px]">venue,name,category,price_ghs,notes,days,from,to,alcoholic,dietary</code>
               <br />
               <span className="text-mutedbrown">
                 Activity lists may add{" "}
@@ -581,6 +588,12 @@ export function CsvImporter({
                 <br />
                 <b>alcoholic</b> is optional: yes or no. Say no for juices, mocktails and soft
                 drinks, or they stay out of alcohol-free plans; blank means unknown.
+                <br />
+                <b>dietary</b> is optional: only what the menu prints, such as Vegan or
+                Vegetarian. Leave it blank otherwise.
+                <br />
+                A wine or spirit priced for the whole bottle needs (Bottle) in its name,
+                or plans treat it as one person&apos;s drink.
                 <br />
                 <b>days, from, to</b> are optional: when a price applies. days is Mon-Thu,
                 Fri;Sat, weekdays or weekends; from and to are times like 16:00. List the same

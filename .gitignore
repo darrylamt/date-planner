@@ -38,3 +38,4 @@ venues-to-research-place.csv
 # Batches of 25 cut from the lists above by research:list.
 research/
 venues-to-verify.txt
+venues-to-research-menu.csv
