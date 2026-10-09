@@ -3,7 +3,7 @@
 About half the switched-on venues have no menu prices, so plans and Duro bot skip them. This finds where each one's menu is published. Turning a menu into rows is a second step, one venue at a time, with docs/menu-csv-prompt.md.
 
 1. Run `npm run research:list -- --menu`. It writes batches of 25 to `research/menu-01.csv`, `menu-02.csv` and so on.
-2. Paste everything below the line into an AI that can browse the web, then paste one batch under it.
+2. Paste everything below the line into an AI that can browse the web, then paste 8 to 10 rows of a batch under it. With all 25 at once, the first pass opened six venues and marked the rest unchecked.
 3. For each venue it finds a usable menu for, open the source, save the menu pages as photos or a PDF, and run docs/menu-csv-prompt.md on them. Upload the CSV at Admin > Import > Menu items.
 
 ---
