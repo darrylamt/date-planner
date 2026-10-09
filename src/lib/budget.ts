@@ -47,6 +47,13 @@ export function isPlaceholderAvg(
  * its menu is uploaded, and comes back by itself when it is. Bars, activities
  * and outdoor places keep their per-head figure: entry or a round of drinks
  * really is one price a head.
+ *
+ * Except an estimate, said as one. A place whose only published menu is on a
+ * delivery app can be marked price_source 'estimated' with a per-head figure
+ * and a spread: it is planned as "Estimated spend, per person" with a note
+ * that we are getting its menu, the plan's total becomes a range, and Duro bot
+ * gives a range rather than a figure. A bare per-head number on a place to
+ * eat is still not a price.
  */
 export const MENU_ONLY_TYPES: ReadonlySet<string> = new Set(["restaurant", "cafe", "dessert"]);
 
@@ -68,7 +75,10 @@ export function avgIsNotAPrice(
   v: { type?: string | null; avg_cost_per_person_ghs?: number | null; price_source?: string | null },
   hasMenu: boolean
 ): boolean {
-  return isPlaceholderAvg(v, hasMenu) || (!hasMenu && MENU_ONLY_TYPES.has(String(v.type ?? "")));
+  return (
+    isPlaceholderAvg(v, hasMenu) ||
+    (!hasMenu && MENU_ONLY_TYPES.has(String(v.type ?? "")) && v.price_source !== "estimated")
+  );
 }
 
 /**

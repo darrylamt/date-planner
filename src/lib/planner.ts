@@ -1052,10 +1052,28 @@ function planOrders(
       };
     }
 
-    // A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES): never "Typical spend".
-    if (MENU_ONLY_TYPES.has(venue.type)) return null;
-
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));
+
+    /*
+     * A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES),
+     * unless the figure is an estimate and says so: then the line is named
+     * as one and carries why, and the plan's total turns into a range.
+     */
+    if (MENU_ONLY_TYPES.has(venue.type)) {
+      if (venue.price_source !== "estimated" || each <= 0) return null;
+      return {
+        orders: [
+          {
+            item: "Estimated spend, per person",
+            qty: partySize,
+            price_ghs: each * partySize,
+            note: "We're working on getting their menu, so this is an estimate.",
+          },
+        ],
+        cost: each * partySize,
+      };
+    }
+
     /*
      * Nothing priced at all. A venue flagged free is genuinely free and can
      * carry a stop at zero; one that simply has no prices on file is withheld,

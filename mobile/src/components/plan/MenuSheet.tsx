@@ -200,8 +200,8 @@ export function MenuSheet({
               {needle
                 ? `Nothing here matches “${query.trim()}”.`
                 : only === "activity"
-                  ? "No price list on file for this spot yet."
-                  : "No menu on file for this spot yet."}
+                  ? "We're working on getting their price list."
+                  : "We're working on getting their menu."}
             </Text>
           ) : (
             grouped.map((g) => (

@@ -70,9 +70,17 @@ export function periodsFrom(week: DayHours[], original: unknown): OpeningPeriod[
 
     const [oh, om] = d.open.split(":").map(Number);
     const [ch, cm] = d.close.split(":").map(Number);
+    /*
+     * A close at or before the opening time is after midnight, so it falls on
+     * the next day. Saved on the same day, "Thursday 17:00 to 01:00" read as
+     * closing at 01:00 the Thursday after: Beehive was open for 152 hours
+     * straight, and every late lounge saved through this form was open all
+     * week. Google's own periods already put the close on the next day.
+     */
+    const overnight = (ch || 0) * 60 + (cm || 0) <= (oh || 0) * 60 + (om || 0);
     out.push({
       open: { day, hour: oh || 0, minute: om || 0 },
-      close: { day, hour: ch || 0, minute: cm || 0 },
+      close: { day: overnight ? (day + 1) % 7 : day, hour: ch || 0, minute: cm || 0 },
     });
   });
 

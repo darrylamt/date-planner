@@ -97,7 +97,7 @@ export function BudgetBar({
       {approximate && confidence?.estimatedStops.length ? (
         <Text variant="caption1" tone="tertiary">
           Estimated at {confidence.estimatedStops.join(", ")}, so the total is a
-          range rather than a figure.
+          range rather than a figure. We&apos;re working on getting their menus.
         </Text>
       ) : null}
 

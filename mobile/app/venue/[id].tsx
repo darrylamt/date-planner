@@ -448,7 +448,7 @@ export default function VenuePage() {
                 <SkeletonMenu />
               ) : menu.length === 0 ? (
                 <Text variant="body" tone="secondary" style={{ paddingHorizontal: GUTTER, marginTop: space.sm }}>
-                  We do not hold their menu yet.
+                  We're working on getting their menu.
                 </Text>
               ) : (
                 <>
