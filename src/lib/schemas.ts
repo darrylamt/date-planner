@@ -32,7 +32,14 @@ export const planInputsSchema = z.object({
    */
   stops: z.number().int().min(0).max(5).optional(),
   alcohol: z.enum(["either", "none"]).optional(),
-  vibes: z.array(z.string()).min(1).max(3),
+  /*
+   * None is an answer. The vibe became an optional step on 8 Oct, so "Build
+   * plan now" before reaching it sends an empty list, and min(1) here turned
+   * every plan built that way into "Invalid plan inputs": a graduation at
+   * Atomic Junction, then the same with Surprise me. The planner, the copy
+   * and Duro bot's plans all already read an empty list as "no preference".
+   */
+  vibes: z.array(z.string()).max(3).default([]),
   // Defaulted rather than required: a plan posted by an older build of the
   // app still has to be plannable.
   focus: z.enum(["everything", "food", "drinks", "activities"]).default("everything"),
