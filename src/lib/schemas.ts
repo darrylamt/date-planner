@@ -2,8 +2,11 @@ import { z } from "zod";
 import { BUDGET_MAX, BUDGET_MIN } from "./budget";
 
 export const planInputsSchema = z.object({
-  areaIds: z.array(z.string().uuid()).default([]),
-  areaNames: z.array(z.string()).default([]),
+  // Caps here and on vibes and occasionDetail are generous for any real plan.
+  // /api/generate is unauthenticated and these go into a paid prompt and into
+  // plan_demand, so without a ceiling a request could be as big as it liked.
+  areaIds: z.array(z.string().uuid()).max(300).default([]),
+  areaNames: z.array(z.string().max(80)).max(300).default([]),
   surpriseMe: z.boolean().default(false),
   partySize: z.number().int().min(1).max(20).default(2),
   companions: z.array(z.string().max(60)).max(20).default([]),
@@ -39,7 +42,7 @@ export const planInputsSchema = z.object({
    * Atomic Junction, then the same with Surprise me. The planner, the copy
    * and Duro bot's plans all already read an empty list as "no preference".
    */
-  vibes: z.array(z.string()).max(3).default([]),
+  vibes: z.array(z.string().max(60)).max(3).default([]),
   // Defaulted rather than required: a plan posted by an older build of the
   // app still has to be plannable.
   focus: z.enum(["everything", "food", "drinks", "activities"]).default("everything"),
@@ -66,7 +69,10 @@ export const planInputsSchema = z.object({
     "business_meeting",
     "family_day",
   ]),
-  occasionDetail: z.record(z.string().max(300)).default({}),
+  occasionDetail: z
+    .record(z.string().max(60), z.string().max(300))
+    .refine((d) => Object.keys(d).length <= 40, "Too many details")
+    .default({}),
   // Optional: absent is mixed, and a build from before the question sends none.
   crew: z.enum(["mixed", "ladies", "guys"]).optional(),
   // Both optional, so a plan posted by an older build still validates.

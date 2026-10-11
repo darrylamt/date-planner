@@ -28,7 +28,10 @@ export default async function VenueHome({ searchParams }: { searchParams: { venu
   };
 
   const [{ data: bookings }, { data: row }, { data: insights }] = await Promise.all([
-    supabase.from("reservation_requests").select("*").eq("venue_id", venue.id).order("reservation_date", { ascending: false }).limit(60),
+    // Every column but user_id, which venues are not granted (migration 0080).
+    supabase
+      .from("reservation_requests")
+      .select("id, venue_id, venue_name, plan_slug, party_size, reservation_date, arrival_time, guest_name, status, channel, created_at").eq("venue_id", venue.id).order("reservation_date", { ascending: false }).limit(60),
     supabase.from("venues").select(CHECKLIST_VENUE_COLUMNS).eq("id", venue.id).maybeSingle(),
     supabase.rpc("venue_insights", { p_venue: venue.id, p_days: 30 }),
   ]);

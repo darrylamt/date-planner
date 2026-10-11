@@ -76,6 +76,11 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "reset") {
+    // Only ever a venue's login: this sets a password and hands it back, so it
+    // must not reach an app user's or another admin's account.
+    const { data: link } = await supabase.from("venue_users").select("user_id").eq("user_id", body.userId).limit(1);
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", body.userId).maybeSingle();
+    if (!link?.length || profile?.is_admin) return NextResponse.json({ error: "That is not a venue's login." }, { status: 404 });
     const password = generatePassword();
     const { error } = await supabase.auth.admin.updateUserById(body.userId, { password });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVendor } from "@/lib/vendorAuth";
+import { safeHref } from "@/lib/safeHref";
 import { VendorShell } from "@/components/vendor/VendorShell";
 
 /**
@@ -86,8 +87,8 @@ export default async function VendorOrders() {
                       <div className="text-[14px] text-[var(--p-muted)]">GHS {Math.round(Number(r.price_ghs))}</div>
                       {r.message ? <div className="mt-1 text-[14px]">On it: &ldquo;{r.message}&rdquo;</div> : null}
                       {r.colour ? <div className="text-[14px]">Colour: {r.colour}</div> : null}
-                      {r.reference_image_url ? (
-                        <a href={r.reference_image_url} target="_blank" rel="noreferrer" className="text-[14px] font-bold text-[var(--p-accent)] underline">
+                      {safeHref(r.reference_image_url) ? (
+                        <a href={safeHref(r.reference_image_url)} target="_blank" rel="noreferrer" className="text-[14px] font-bold text-[var(--p-accent)] underline">
                           See the picture they sent
                         </a>
                       ) : null}

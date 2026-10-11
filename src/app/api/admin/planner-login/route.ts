@@ -128,6 +128,10 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "reset") {
+    // Only ever a planner's login, as with delete below.
+    const { data: planner } = await supabase.from("event_planners").select("user_id").eq("user_id", body.userId).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", body.userId).maybeSingle();
+    if (!planner || profile?.is_admin) return NextResponse.json({ error: "That is not a planner's login." }, { status: 404 });
     const password = generatePassword();
     const { error } = await supabase.auth.admin.updateUserById(body.userId, { password });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

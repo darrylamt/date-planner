@@ -78,6 +78,14 @@ export const MAX_TOKENS = 1500;
 export const MAX_TOOL_ROUNDS = 6;
 
 /**
+ * Tool calls run per round. Rounds alone did not bound a message: one reply
+ * could ask for any number of catalogue-wide lookups at once, every result
+ * then resent on each later round, all for one metered message. Four covers
+ * the widest real question (a search, two venues, their hours).
+ */
+export const MAX_TOOL_CALLS_PER_ROUND = 4;
+
+/**
  * Turns kept before the oldest are dropped.
  *
  * History is resent in full on every request, so an unbounded conversation is

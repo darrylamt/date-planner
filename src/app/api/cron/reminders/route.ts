@@ -59,14 +59,12 @@ export async function GET(req: Request) {
   /*
    * Vercel signs its own cron calls with this header. Checked because the
    * route is otherwise a public URL that sends notifications to strangers, and
-   * "nobody will guess the path" is not an access control.
+   * "nobody will guess the path" is not an access control. With no secret
+   * configured nothing can call it, rather than anybody.
    */
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Not authorised." }, { status: 401 });
-    }
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
 
   const now = new Date();

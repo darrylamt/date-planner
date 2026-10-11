@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
+import { safeNextPath } from "@/lib/safeHref";
 import { AuthErrorNotice } from "@/components/AuthErrorNotice";
 
 /** Supabase's default minimum. Enforced here so the error arrives before the round trip. */
@@ -19,7 +20,7 @@ function LoginInner() {
    * kept a consumer account area; people plan in the app now, and the only
    * reason to have a session in this browser is to run the catalogue.
    */
-  const next = params.get("next") ?? "/admin";
+  const next = safeNextPath(params.get("next"), "/admin");
   const linkError = params.get("error") === "link";
 
   const [mode, setMode] = useState<Mode>("signin");

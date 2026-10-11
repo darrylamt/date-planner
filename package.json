@@ -36,7 +36,8 @@
     "transit:import": "tsx scripts/import-route-map.ts",
     "journey:check": "tsx scripts/journey-check.ts",
     "mascots": "tsx scripts/build-mascots.ts",
-    "pathway:smoke": "tsx scripts/pathway-smoke.ts"
+    "pathway:smoke": "tsx scripts/pathway-smoke.ts",
+    "audit:smoke": "tsx scripts/audit-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { safeHref } from "@/lib/safeHref";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 export interface GaderinRow {
@@ -133,7 +134,7 @@ export function GaderinActivities({ rows, venues }: { rows: GaderinRow[]; venues
                         <img src={r.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                       ) : null}
                       <div>
-                        <a href={r.url} target="_blank" rel="noreferrer" className="font-bold hover:underline">
+                        <a href={safeHref(r.url)} target="_blank" rel="noreferrer" className="font-bold hover:underline">
                           {r.title}
                         </a>
                         <div className="text-[13px] text-mutedbrown">

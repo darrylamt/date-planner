@@ -129,6 +129,10 @@ export async function POST(req: Request) {
   const db = createServiceClient();
   const { data: planner } = await db.from("event_planners").select("is_active").eq("user_id", user.id).maybeSingle();
   if (!planner) return NextResponse.json({ error: "Places are added from planner accounts." }, { status: 403 });
+  // Every action below spends the Google Places key, so a switched-off planner gets none of them.
+  if (!planner.is_active) {
+    return NextResponse.json({ error: "Your account is switched off. Get in touch with us under Help." }, { status: 403 });
+  }
 
   let b: z.infer<typeof body>;
   try {

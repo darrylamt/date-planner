@@ -30,7 +30,8 @@ const TO_HOUR = 9;
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) {
+  // No secret configured means nobody may call it, not everybody.
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
 

@@ -91,15 +91,34 @@ async function main() {
     ok("planner reads own row", Boolean(mine), mine?.username ?? "no row");
 
     // ── 3. Create a location ───────────────────────────────────────────────
+    // Straight into the table is refused (0080): it skipped the Google and
+    // is_active checks and let a planner set withheld columns such as
+    // menu_shared_from. Places come in through /api/planner/place, which
+    // inserts with the service role and links the planner, as done here.
     const { data: area } = await admin.from("areas").select("id, name").limit(1).single();
-    const { error: vErr } = await as.from("venues").insert({
-      name: "ZZ Test Lawn " + stamp,
+    const { error: directErr } = await as.from("venues").insert({
+      name: "ZZ Direct Lawn " + stamp,
       type: "outdoor",
       area_id: area.id,
-      description: "A lawn that exists for one test.",
+      description: "Must never exist.",
     });
-    ok("planner creates a location", !vErr, vErr?.message ?? "");
-    if (vErr) throw new Error("venue insert: " + vErr.message);
+    ok("planner cannot insert a venue directly", Boolean(directErr), directErr?.message ?? "insert went through");
+    await admin.from("venues").delete().eq("name", "ZZ Direct Lawn " + stamp);
+
+    const { data: made, error: vErr } = await admin
+      .from("venues")
+      .insert({
+        name: "ZZ Test Lawn " + stamp,
+        type: "outdoor",
+        area_id: area.id,
+        description: "A lawn that exists for one test.",
+        is_active: true,
+      })
+      .select("id")
+      .single();
+    ok("location created the way the API does it", !vErr, vErr?.message ?? "");
+    if (vErr || !made) throw new Error("venue insert: " + vErr?.message);
+    await admin.from("venue_users").insert({ user_id: userId, venue_id: made.id, created_by: userId });
 
     const { data: found } = await admin
       .from("venues")
@@ -111,7 +130,7 @@ async function main() {
 
     // ── 4. The trigger claimed it for them ─────────────────────────────────
     const { data: link } = await as.from("venue_users").select("venue_id").eq("venue_id", venueId);
-    ok("trigger linked the location to its planner", (link ?? []).length === 1, `${(link ?? []).length} link rows`);
+    ok("location linked to its planner", (link ?? []).length === 1, `${(link ?? []).length} link rows`);
 
     // ── 5. They can put an event at it, with a contact number ──────────────
     const date = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);

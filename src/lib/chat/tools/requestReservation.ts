@@ -21,7 +21,12 @@ const argsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{1,2}:\d{2}$/),
   party_size: z.number().int().min(1).max(20),
-  guest_name: z.string().max(60).optional(),
+  // A name, not a sentence: this field is shown to the venue, so it must not
+  // be able to carry anything else out of the conversation.
+  guest_name: z
+    .string()
+    .regex(/^\p{L}[\p{L} .'-]{0,39}$/u)
+    .optional(),
 });
 
 export type RequestReservationArgs = z.infer<typeof argsSchema>;
@@ -61,6 +66,16 @@ export const requestReservation: ChatTool<RequestReservationArgs> = {
       .maybeSingle();
 
     if (error) throw new Error(`venue lookup failed: ${error.message}`);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const yearOut = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10);
+    const [h, m] = args.time.split(":").map(Number);
+    if (args.date < today || args.date > yearOut || h > 23 || m > 59) {
+      return {
+        logged: false as const,
+        reason: "That date or time is not one a table can be asked for. Check it with them.",
+      };
+    }
 
     const venue = data as unknown as Venue | null;
     if (!venue) {

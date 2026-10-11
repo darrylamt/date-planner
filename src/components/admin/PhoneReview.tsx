@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { safeHref } from "@/lib/safeHref";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 
 interface PendingVenue {
@@ -186,10 +187,10 @@ export function PhoneReview({
                             Instagram
                           </a>
                         ) : null}
-                        {v.google_maps_url ? (
+                        {safeHref(v.google_maps_url) ? (
                           <a
                             className="text-flame underline"
-                            href={v.google_maps_url}
+                            href={safeHref(v.google_maps_url)}
                             target="_blank"
                             rel="noreferrer"
                           >

@@ -103,6 +103,29 @@ export async function POST(req: Request) {
 
   const supabase = createServiceClient();
 
+  /*
+   * ── one event is not the whole account ────────────────────────────────
+   * app_user_id is whatever the app told RevenueCat, and a modified app can
+   * tell it anybody's id. So an event about one subscription must not undo
+   * Pro the account holds for another reason: an admin grant, or a store
+   * subscription that runs longer than the one this event is about.
+   */
+  const { data: existing } = await supabase
+    .from("entitlements")
+    .select("tier, status, source, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const eventExpiry = event.expiration_at_ms ?? null;
+  const heldExpiry = existing?.expires_at ? new Date(existing.expires_at).getTime() : null;
+  const holdsPro = existing?.tier === "pro" && (existing.status === "active" || existing.status === "in_grace");
+  const granted = holdsPro && existing?.source === "grant";
+  // Longer by more than a day than the subscription this event describes.
+  const holdsLonger = holdsPro && heldExpiry != null && eventExpiry != null && heldExpiry > eventExpiry + 86_400_000;
+
+  if (granted) {
+    return NextResponse.json({ ignored: "account holds an admin grant", type });
+  }
+
   let patch: Record<string, unknown> | null = null;
 
   if (GRANTS.has(type)) {
@@ -110,21 +133,22 @@ export async function POST(req: Request) {
       tier: "pro",
       status: "active",
       source: sourceFor(event.store),
-      expires_at: event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : null,
+      // Never shortens a longer subscription the account already holds.
+      expires_at: holdsLonger ? existing!.expires_at : eventExpiry ? new Date(eventExpiry).toISOString() : null,
       rc_app_user_id: userId,
     };
-  } else if (REVOKES.has(type)) {
-    patch = { tier: "free", status: "expired", expires_at: null };
-  } else if (GRACE.has(type)) {
-    patch = { status: "in_grace" };
+  } else if (REVOKES.has(type) || GRACE.has(type)) {
+    if (holdsLonger) return NextResponse.json({ ignored: "account holds a longer subscription", type });
+    patch = REVOKES.has(type) ? { tier: "free", status: "expired", expires_at: null } : { status: "in_grace" };
   } else if (type === "CANCELLATION") {
     /*
      * Cancelled is not expired. They have turned off auto-renew and keep what
      * they paid for until the period ends; EXPIRATION arrives then and does
      * the actual revoking. Taking access away here would be charging somebody
-     * for a month and giving them part of it.
+     * for a month and giving them part of it -- and writing 'cancelled' did
+     * exactly that, because the chat gate counts only active and in_grace.
      */
-    patch = { status: "cancelled" };
+    return NextResponse.json({ ok: true, type, userId, unchanged: true });
   }
 
   if (!patch) {
@@ -221,9 +245,28 @@ async function transfer(event: RcEvent) {
   )[0];
   if (!held) return NextResponse.json({ ok: true, type: "TRANSFER", moved: 0 });
 
+  // A destination that already holds a grant, or a subscription running
+  // longer than the one being moved, keeps what it has.
+  const { data: dest } = await supabase
+    .from("entitlements")
+    .select("user_id, tier, status, source, expires_at")
+    .in("user_id", to);
+  const heldUntil = new Date(held.expires_at ?? 0).getTime();
+  const keeps = new Set(
+    ((dest ?? []) as { user_id: string; tier: string; status: string; source: string | null; expires_at: string | null }[])
+      .filter(
+        (d) =>
+          d.tier === "pro" &&
+          (d.status === "active" || d.status === "in_grace") &&
+          (d.source === "grant" || d.expires_at == null || new Date(d.expires_at).getTime() > heldUntil)
+      )
+      .map((d) => d.user_id)
+  );
+  const targets = to.filter((id) => !keeps.has(id));
+
   const now = new Date().toISOString();
-  const { error: grantError } = await supabase.from("entitlements").upsert(
-    to.map((userId) => ({
+  const { error: grantError } = targets.length ? await supabase.from("entitlements").upsert(
+    targets.map((userId) => ({
       user_id: userId,
       tier: "pro",
       status: held.status,
@@ -233,7 +276,7 @@ async function transfer(event: RcEvent) {
       updated_at: now,
     })),
     { onConflict: "user_id" }
-  );
+  ) : { error: null };
   if (grantError) {
     console.error("revenuecat webhook: could not grant the transfer", grantError);
     return NextResponse.json({ error: "Could not record that." }, { status: 500 });
@@ -247,5 +290,5 @@ async function transfer(event: RcEvent) {
     .in("user_id", from)
     .in("source", ["apple", "play", "stripe"]);
 
-  return NextResponse.json({ ok: true, type: "TRANSFER", moved: to.length });
+  return NextResponse.json({ ok: true, type: "TRANSFER", moved: targets.length });
 }

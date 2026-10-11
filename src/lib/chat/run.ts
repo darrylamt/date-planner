@@ -1,6 +1,7 @@
 import { CHAT_TOOLS, planFrom, runTool, type ToolContext } from "./tools";
 import {
   MAX_TOKENS,
+  MAX_TOOL_CALLS_PER_ROUND,
   MAX_TOOL_ROUNDS,
   textOf,
   toolCallsOf,
@@ -48,6 +49,8 @@ const TOOL_LABEL: Record<string, string> = {
   check_opening_hours: "Checking opening hours",
   estimate_budget: "Working out the cost",
   search_events: "Checking what's on",
+  list_past_outings: "Looking at your past plans",
+  request_reservation: "Logging a table request",
 };
 
 export async function* runChat(opts: {
@@ -72,6 +75,10 @@ export async function* runChat(opts: {
 
   let messages: ChatTurn[] = [...trimHistory(opts.history), userTurn];
 
+  // The one tool that writes something a venue reads. Once per message, so
+  // text planted in a venue's description cannot have it lodge request after
+  // request in the user's name.
+  let reservationLogged = false;
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     let reply;
     try {
@@ -169,8 +176,19 @@ export async function* runChat(opts: {
     }
 
     await Promise.all(
-      calls.map(async (call) => {
-        const outcome = await runTool(call.name, call.input, ctx);
+      calls.map(async (call, i) => {
+        // Every tool_use still needs a tool_result, so the extras are answered
+        // rather than dropped.
+        const refused =
+          i >= MAX_TOOL_CALLS_PER_ROUND
+            ? "Too many lookups at once. Ask for at most four at a time."
+            : call.name === "request_reservation" && reservationLogged
+              ? "One table request per message. Ask them before lodging another."
+              : null;
+        if (call.name === "request_reservation" && !refused) reservationLogged = true;
+        const outcome = refused
+          ? { content: { error: refused }, isError: true }
+          : await runTool(call.name, call.input, ctx);
 
         // A successful build carries the itinerary itself off to one side. It
         // never enters the conversation: the model reads the digest, the app
