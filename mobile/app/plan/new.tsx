@@ -165,8 +165,8 @@ function OptionalBanner({ first }: { first: boolean }) {
       </View>
       <Text variant="subheadline" style={{ color: c.text }}>
         {first
-          ? "Build your plan now, or answer a few more: the more you tell us, the more personal the plan."
-          : "Each answer makes the plan more personal. Build it whenever you're ready."}
+          ? "Answer a few more for a more personal plan, or skip the rest and build it now."
+          : "Each answer makes the plan more personal. Skip the rest whenever you're ready."}
       </Text>
     </View>
   );
@@ -541,6 +541,8 @@ export default function PlanNew() {
         onSave={handleSave}
         shareSlug={shareSlug}
         saving={saving}
+        // Switched on once migration 0081 (vibe_feedback) has been run.
+        askVibe={false}
       />
     );
   }
@@ -656,17 +658,28 @@ export default function PlanNew() {
         * left, Continue takes the rest of the row and stays the obvious one.
       */}
       {/*
-        On an optional step, building the plan is the big button and the next
-        question is the smaller one beside Back: skipping the rest should be
-        the obvious move, answering more an easy one.
+        On an optional step the row people have been tapping all along stays
+        exactly where and what it was: Back, and the big filled button that
+        moves on. Building early is the lighter button underneath.
+
+        It used to be the other way round, with Build as the big filled button
+        on top. Every required step trains the thumb to the big filled button,
+        so on the first optional step people built the plan when they meant to
+        keep answering.
       */}
       {optional && !lastStep ? (
         <ActionBar style={{ gap: space.sm }}>
-          <Button title={`Build ${poss} plan now`} icon="sparkles" onPress={() => void generate()} disabled={!canContinue} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
             <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
-            <Button title="Next question" kind="tinted" size="large" onPress={goNext} disabled={!canContinue} style={{ flex: 1 }} />
+            <Button title="Next question" size="large" onPress={goNext} disabled={!canContinue} style={{ flex: 1 }} />
           </View>
+          <Button
+            title={`Skip the rest, build ${poss} plan`}
+            kind="tinted"
+            icon="sparkles"
+            onPress={() => void generate()}
+            disabled={!canContinue}
+          />
         </ActionBar>
       ) : (
         <ActionBar style={{ flexDirection: "row", alignItems: "center" }}>

@@ -53,6 +53,7 @@ import { billFromPlan, setBillSource } from "../../lib/bill";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
+import { VibeCheck } from "./VibeCheck";
 import { giftsForOccasion, pickupLine, pickupTotal } from "../../lib/pickups";
 import type { PickupChoice } from "../../lib/pickups";
 import type {
@@ -82,6 +83,7 @@ export function ItineraryView({
   shareSlug,
   saving,
   initialNote = null,
+  askVibe = false,
 }: {
   inputs: PlanInputs;
   itinerary: Itinerary;
@@ -93,6 +95,8 @@ export function ItineraryView({
   saving: boolean;
   /** The note already on the saved plan, if this is one. */
   initialNote?: string | null;
+  /** Ask whether the plan fits the vibe they chose. Fresh plans only. */
+  askVibe?: boolean;
 }) {
   const c = useTheme();
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
@@ -835,6 +839,17 @@ export function ItineraryView({
 
         {/* Under the stops, where the Reserve buttons are. */}
         <PaySafely style={{ marginHorizontal: GUTTER, marginTop: space.lg }} />
+
+        {askVibe ? (
+          <View style={{ paddingHorizontal: GUTTER }}>
+            {/* Keyed on the stops: a swap is a different evening, so it asks again. */}
+            <VibeCheck
+              key={itinerary.stops.map((s) => s.venue_id ?? s.name).join("|")}
+              inputs={inputs}
+              itinerary={itinerary}
+            />
+          </View>
+        ) : null}
 
         <View style={{ paddingHorizontal: GUTTER, marginTop: space.xl, gap: space.sm }}>
           {nightOn ? (

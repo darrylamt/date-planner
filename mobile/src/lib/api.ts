@@ -120,6 +120,33 @@ export async function reportIssue(input: {
 }
 
 /**
+ * "Does this feel <vibe>?", answered under a plan.
+ *
+ * Sent again when they add a reason; the server keeps one answer per device
+ * per plan, so the second call replaces the first. Never throws: a lost
+ * answer is not worth an error on screen.
+ */
+export async function sendVibeFeedback(input: {
+  planKey: string;
+  vibes: string[];
+  occasion?: string;
+  venueIds: string[];
+  fits: boolean;
+  reason?: string;
+}): Promise<{ ok: boolean }> {
+  try {
+    const { getDeviceId } = await import("./deviceId");
+    const res = await postJson<{ ok: boolean }>("/api/vibe-feedback", {
+      ...input,
+      deviceId: await getDeviceId(),
+    });
+    return { ok: Boolean(res.ok) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
  * What can be picked up on the way to this plan.
  *
  * The server filters by occasion and by whether the vendor could have it ready
