@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { sendExpoPush, tokensForUsers, type PushMessage } from "@/lib/pushServer";
 
 /**
  * "Today be the day dem born you."
@@ -21,8 +22,6 @@ import { createServiceClient } from "@/lib/supabase/server";
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const EXPO_PUSH = "https://exp.host/--/api/v2/push/send";
 
 /** Morning, so it lands before the day starts rather than during it. */
 const FROM_HOUR = 6;
@@ -70,20 +69,9 @@ export async function GET(req: Request) {
   const people = (birthdayRows ?? []) as { id: string; display_name: string | null }[];
   if (!people.length) return NextResponse.json({ date: `${day}/${month}`, greeted: 0 });
 
-  const { data: tokenRows } = await supabase
-    .from("push_tokens")
-    .select("token, user_id")
-    .in(
-      "user_id",
-      people.map((p) => p.id)
-    );
+  const tokensFor = await tokensForUsers(supabase, people.map((p) => p.id));
 
-  const tokensFor = new Map<string, string[]>();
-  for (const t of (tokenRows ?? []) as { token: string; user_id: string }[]) {
-    tokensFor.set(t.user_id, [...(tokensFor.get(t.user_id) ?? []), t.token]);
-  }
-
-  const messages: { to: string; title: string; body: string; data: Record<string, string> }[] = [];
+  const messages: PushMessage[] = [];
   let greeted = 0;
 
   for (const person of people) {
@@ -120,24 +108,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ date: `${day}/${month}`, birthdays: people.length, sent: 0 });
   }
 
-  let sent = 0;
-  const failures: string[] = [];
-  for (let i = 0; i < messages.length; i += 100) {
-    try {
-      const res = await fetch(EXPO_PUSH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(messages.slice(i, i + 100)),
-      });
-      const json = (await res.json()) as { data?: { status: string; message?: string }[] };
-      for (const ticket of json.data ?? []) {
-        if (ticket.status === "ok") sent += 1;
-        else failures.push(ticket.message ?? "unknown");
-      }
-    } catch (e) {
-      failures.push(e instanceof Error ? e.message : String(e));
-    }
-  }
+  const { sent, failures } = await sendExpoPush(messages);
 
   if (failures.length) console.warn(`birthday push: ${failures.length} failed`, failures.slice(0, 5));
 

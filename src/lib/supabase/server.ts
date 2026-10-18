@@ -45,3 +45,22 @@ export function createServiceClient(): SupabaseClient {
     { auth: { persistSession: false } }
   );
 }
+
+/**
+ * Whoever is calling, however they authenticated.
+ *
+ * The website sends a cookie; the native app has no cookie jar and sends a
+ * bearer token instead. Lifted from account deletion, which found that out the
+ * hard way: reading only cookies meant the app could never be recognised.
+ *
+ * `anonymous` is Supabase's own flag, for routes that must not let a minted
+ * anonymous session stand in for an account (0057, group outings).
+ */
+export async function getCaller(req: Request): Promise<{ id: string; anonymous: boolean } | null> {
+  const token = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const { data, error } = token
+    ? await createServiceClient().auth.getUser(token)
+    : await createClient().auth.getUser();
+  const user = error ? null : data.user;
+  return user ? { id: user.id, anonymous: Boolean(user.is_anonymous) } : null;
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, getCaller } from "@/lib/supabase/server";
 
 /**
  * Delete the signed-in account and everything tied to it.
@@ -18,33 +18,9 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
  */
 export const maxDuration = 30;
 
-/**
- * Whoever is calling, however they authenticated.
- *
- * The website sends a cookie; the native app has no cookie jar and sends a
- * bearer token instead. Reading only cookies here meant deletion from the app
- * could never work at all, which is exactly the surface the App Store requires
- * it on.
- */
-async function callerId(req: Request): Promise<string | null> {
-  const header = req.headers.get("authorization");
-  const token = header?.match(/^Bearer\s+(.+)$/i)?.[1];
-
-  if (token) {
-    const admin = createServiceClient();
-    const { data, error } = await admin.auth.getUser(token);
-    return error ? null : (data.user?.id ?? null);
-  }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
-
 export async function POST(req: Request) {
-  const userId = await callerId(req);
+  // Cookie from the website, bearer from the app; see getCaller.
+  const userId = (await getCaller(req))?.id ?? null;
 
   if (!userId) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });

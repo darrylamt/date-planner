@@ -21,6 +21,7 @@ import path from "path";
 const FILES = [
   "budget.ts",
   "format.ts",
+  "groups.ts",
   "planConstants.ts",
   "pickups.ts",
   "pronouns.ts",

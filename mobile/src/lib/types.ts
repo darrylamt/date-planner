@@ -635,6 +635,12 @@ export interface ItineraryStop {
    * A swap is then a local substitution rather than another model call.
    */
   alternates?: StopAlternate[];
+  /**
+   * Group plans (0083): each person orders for themselves here, so orders
+   * holds only what everyone pays and each person sees their own order
+   * separately. Absent on every other plan.
+   */
+  own_orders?: boolean;
 }
 
 export interface StopAlternate {
@@ -708,6 +714,8 @@ export interface Itinerary {
   price_confidence?: PriceConfidence;
   budget_note: string | null; // honest note when budget is tight
   personal_summary: string; // "Built around them" card text
+  /** Set on a group outing's plan: the totals are what everyone pays, not anyone's whole evening. */
+  group?: { code: string };
 }
 
 export type GenerateResponse =

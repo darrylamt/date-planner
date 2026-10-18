@@ -239,3 +239,19 @@ function isPro(row: {
   if (row.status !== "active" && row.status !== "in_grace") return false;
   return !row.expires_at || new Date(row.expires_at) > new Date();
 }
+
+/**
+ * Whether this account is Pro right now, for gates other than chat.
+ *
+ * Group outings let free accounts run two at once and Pro any number; the
+ * limit itself is checked inside group_create under a lock (0083), so this
+ * only chooses which limit to pass. Absent row means free.
+ */
+export async function isProUser(userId: string): Promise<boolean> {
+  const { data: row } = await createServiceClient()
+    .from("entitlements")
+    .select("tier,status,expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return row ? isPro(row) : false;
+}

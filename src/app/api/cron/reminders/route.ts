@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { reminderFor } from "@/lib/reminderCopy";
+import { sendExpoPush, tokensForUsers, type PushMessage } from "@/lib/pushServer";
 import type { SavedPlan } from "@/lib/types";
 
 /**
@@ -41,19 +42,9 @@ import type { SavedPlan } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Expo's own endpoint. No SDK: it is one POST and a JSON body. */
-const EXPO_PUSH = "https://exp.host/--/api/v2/push/send";
-
 /** Sent between these hours the evening before. */
 const FROM_HOUR = 18;
 const TO_HOUR = 21;
-
-interface PushMessage {
-  to: string;
-  title: string;
-  body: string;
-  data: Record<string, string>;
-}
 
 export async function GET(req: Request) {
   /*
@@ -95,16 +86,7 @@ export async function GET(req: Request) {
   const plans = (rows ?? []) as unknown as (SavedPlan & { id: string })[];
   if (!plans.length) return NextResponse.json({ date, plans: 0, sent: 0 });
 
-  const userIds = [...new Set(plans.map((p) => p.user_id).filter(Boolean))] as string[];
-  const { data: tokenRows } = await supabase
-    .from("push_tokens")
-    .select("token, user_id")
-    .in("user_id", userIds);
-
-  const tokensFor = new Map<string, string[]>();
-  for (const t of (tokenRows ?? []) as { token: string; user_id: string }[]) {
-    tokensFor.set(t.user_id, [...(tokensFor.get(t.user_id) ?? []), t.token]);
-  }
+  const tokensFor = await tokensForUsers(supabase, plans.map((p) => p.user_id).filter(Boolean) as string[]);
 
   const messages: PushMessage[] = [];
   const claimed: string[] = [];
@@ -145,38 +127,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ date, plans: plans.length, sent: 0 });
   }
 
-  /*
-   * A hundred at a time, which is Expo's documented limit for one request.
-   * Sending them singly would work and would also be one HTTP round trip per
-   * device on a job with a sixty second ceiling.
-   */
-  let sent = 0;
-  const failures: string[] = [];
-
-  for (let i = 0; i < messages.length; i += 100) {
-    const batch = messages.slice(i, i + 100);
-    try {
-      const res = await fetch(EXPO_PUSH, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(batch),
-      });
-      const json = (await res.json()) as { data?: { status: string; message?: string }[] };
-      for (const ticket of json.data ?? []) {
-        if (ticket.status === "ok") sent += 1;
-        else failures.push(ticket.message ?? "unknown");
-      }
-    } catch (e) {
-      failures.push(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  /*
-   * Recorded, not acted on. A token that fails once may be a phone that is off
-   * rather than an install that is gone, and deleting on the first failure is
-   * how somebody stops getting reminders because they flew somewhere. Expo's
-   * receipts are the right place to prune from, which is a later job.
-   */
+  // Batched and failure-tolerant; see pushServer.ts.
+  const { sent, failures } = await sendExpoPush(messages);
   if (failures.length) {
     console.warn(`reminder push: ${failures.length} failed`, failures.slice(0, 5));
   }

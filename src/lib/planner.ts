@@ -520,6 +520,11 @@ const AVOID_MATCH: Record<string, (v: Venue) => boolean> = {
   smoke: (v) => /shisha|hookah|cigar|smoking/.test(venueWords(v)),
 };
 
+/** One avoid, as a yes or no: group hard no's filter venues with these rather than score them. */
+export function avoidHit(v: Venue, key: "loud music" | "crowds" | "long walks" | "smoke"): boolean {
+  return AVOID_MATCH[key](v);
+}
+
 /** Five points each: heavier than a preference, since avoiding is the stronger ask. */
 export function avoidPenalty(v: Venue, avoid: string): number {
   const said = avoid.toLowerCase().split(",").map((p) => p.trim()).filter((p) => AVOID_MATCH[p]);
@@ -528,9 +533,17 @@ export function avoidPenalty(v: Venue, avoid: string): number {
 
 /* ── orders ───────────────────────────────────────────────────────────── */
 
-interface OrderPlan {
+export interface OrderPlan {
   orders: ItineraryOrder[];
   cost: number;
+  /**
+   * How the stop was priced, which decides whether a group can split it into
+   * personal orders (groupPlan.ts): "menu" is dishes a person chooses; "unit"
+   * is a court or a booking charged per group or per hour; "fallback" is the
+   * cheapest single line; "typical" is the venue's average; "free" is nothing
+   * to pay. Absent means "menu", the common case.
+   */
+  basis?: "menu" | "unit" | "fallback" | "typical" | "free";
 }
 
 /** One line of a bill: a dish, how many of it, and what that comes to. */
@@ -554,7 +567,7 @@ type OrderLine = ItineraryOrder;
  * enough to build an evening from. If that number ever gets thin, the fix is
  * to record more of them, not to relax this.
  */
-function drinkable(menu: MenuItem[], choice: PlanInputs["alcohol"]): MenuItem[] {
+export function drinkable(menu: MenuItem[], choice: PlanInputs["alcohol"]): MenuItem[] {
   if (choice !== "none") return menu;
   return menu.filter((m) =>
     m.category === "drink" ? m.is_alcoholic === false : m.is_alcoholic !== true
@@ -662,7 +675,7 @@ function addOnOnly(m: MenuItem): boolean {
   return /\badd[\s-]?ons?\b|not sold on its own|\bon top of\b|\bextra (token|game|round|life)\b|\btop[\s-]?up\b/.test(text);
 }
 
-function planOrders(
+export function planOrders(
   venue: Venue,
   menu: MenuItem[],
   partySize: number,
@@ -683,8 +696,15 @@ function planOrders(
   /** The plan's weekday, 0 = Sunday, for prices sold only on some days. */
   planWeekday: number | null = null,
   /** Whether children may be in the party: a family day. Kids' lines are for nobody else. */
-  withChildren = false
+  withChildren = false,
+  /**
+   * seat: where in the menu window to start dealing. A group deals each
+   * person's order alone (partySize 1), and starting everyone at the same
+   * dish gave twelve people the same jollof. 0 is today's behaviour exactly.
+   */
+  opts: { seat?: number } = {}
 ): OrderPlan | null {
+  const seat = Math.max(0, Math.floor(opts.seat ?? 0));
   // Which treatment an order is being dealt for, while the spa branch runs.
   let onlyKind: WellnessKind | null = null;
   /*
@@ -706,6 +726,7 @@ function planOrders(
       return {
         orders: [{ item: `Booking for ${partySize}`, qty: 1, price_ghs: Math.round(unit) }],
         cost: Math.round(unit),
+        basis: "unit",
       };
     }
     if (mode === "per_hour") {
@@ -719,6 +740,7 @@ function planOrders(
           },
         ],
         cost: total,
+        basis: "unit",
       };
     }
     if (mode === "per_hour_per_person") {
@@ -732,6 +754,7 @@ function planOrders(
           },
         ],
         cost: total,
+        basis: "unit",
       };
     }
   }
@@ -939,7 +962,7 @@ function planOrders(
     const counts = new Map<string, { item: MenuItem; qty: number }>();
     let covered = 0;
     for (let i = 0; covered < people && i < people * 2 + WIDTH; i++) {
-      const m = candidates[i % candidates.length];
+      const m = candidates[(i + seat) % candidates.length];
       const seen = counts.get(m.id) ?? { item: m, qty: 0 };
       seen.qty += 1;
       counts.set(m.id, seen);
@@ -1071,6 +1094,7 @@ function planOrders(
           { item: anything.name, qty: partySize, price_ghs: price, note: anything.notes ?? null },
         ],
         cost: price,
+        basis: "fallback",
       };
     }
 
@@ -1086,13 +1110,14 @@ function planOrders(
      * lies about what an evening costs.
      */
     if (each <= 0) {
-      return freeToVisit(venue) ? { orders: [], cost: 0 } : null;
+      return freeToVisit(venue) ? { orders: [], cost: 0, basis: "free" } : null;
     }
     return {
       orders: [
         { item: "Typical spend, per person", qty: partySize, price_ghs: each * partySize },
       ],
       cost: each * partySize,
+      basis: "typical",
     };
   }
 
@@ -1119,11 +1144,12 @@ function planOrders(
       return {
         orders: [{ item: `Minimum spend, GHS ${floor} each`, qty: partySize, price_ghs: least }],
         cost: least,
+        basis: "menu",
       };
     }
   }
 
-  return { orders, cost };
+  return { orders, cost, basis: "menu" };
 }
 
 /* ── planning ─────────────────────────────────────────────────────────── */
@@ -1153,7 +1179,14 @@ export interface PlannedStop {
   alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[]; label: string }[];
   /** What the venue adds to the bill, already counted in cost. */
   charges: StopCharge[];
+  /** The order tier this stop was planned at (0 modest, 2 full). */
+  tier?: OrderTier;
+  /** How the stop was priced; decides what a group may split into personal orders. */
+  basis?: StopBasis;
 }
+
+/** OrderPlan.basis, plus "door": a stop priced only by its entry or ticket. */
+export type StopBasis = NonNullable<OrderPlan["basis"]> | "door";
 
 export interface PlannedItinerary {
   stops: PlannedStop[];
@@ -1179,7 +1212,7 @@ function minutesOf(hhmm: string): number {
  * long, it just is not bought. The time matters as much as the money here,
  * because arrival times and the opening-hours checks are laid out from it.
  */
-function hopsFor(stops: PlannedStop[], driving = false) {
+function hopsFor(stops: PlannedStop[], driving = false, cars = 1) {
   const hops = [];
   for (let i = 0; i < stops.length - 1; i++) {
     const a = stops[i].venue;
@@ -1189,7 +1222,8 @@ function hopsFor(stops: PlannedStop[], driving = false) {
       from: a.areas?.name ?? "",
       to: b.areas?.name ?? "",
       mins: est.mins,
-      cost_ghs: driving ? 0 : est.cost_ghs,
+      // A taxi is priced per car, and a group of eight needs two of them.
+      cost_ghs: driving ? 0 : est.cost_ghs * Math.max(1, cars),
     });
   }
   return hops;
@@ -1276,21 +1310,36 @@ export function openOnDate(
  */
 const VARIETY = 2;
 
-export function planItinerary(inputs: PlanInputs, candidates: Candidates): PlannedItinerary | null {
+export interface PlanOptions {
+  /** Cars the party needs for each ride, for groups; one taxi takes four. Default 1. */
+  cars?: number;
+  /** Fixed per-venue variety, so checks can be repeated exactly. Default: a random draw. */
+  variety?: (venueId: string) => number;
+}
+
+export function planItinerary(
+  inputs: PlanInputs,
+  candidates: Candidates,
+  opts: PlanOptions = {}
+): PlannedItinerary | null {
   // One draw per venue per plan, shared by both attempts so they agree.
   const draws = new Map<string, number>();
-  const variety = (id: string) => {
-    if (!draws.has(id)) draws.set(id, Math.random() * VARIETY);
-    return draws.get(id)!;
-  };
-  return planWith(inputs, candidates, false, variety) ?? planWith(inputs, candidates, true, variety);
+  const variety =
+    opts.variety ??
+    ((id: string) => {
+      if (!draws.has(id)) draws.set(id, Math.random() * VARIETY);
+      return draws.get(id)!;
+    });
+  const cars = Math.max(1, Math.floor(opts.cars ?? 1));
+  return planWith(inputs, candidates, false, variety, cars) ?? planWith(inputs, candidates, true, variety, cars);
 }
 
 function planWith(
   inputs: PlanInputs,
   candidates: Candidates,
   barsMayStandIn: boolean,
-  variety: (venueId: string) => number = () => 0
+  variety: (venueId: string) => number = () => 0,
+  cars = 1
 ): PlannedItinerary | null {
   /*
    * A spa stop runs longer the more it books: an hour a treatment, and never
@@ -1405,6 +1454,8 @@ function planWith(
     score: number;
     /** Weekly fixtures on while the party is here. Usually none. */
     fixtures: VenueSchedule[];
+    /** How it was priced; see OrderPlan.basis. "door" is entry or a ticket only. */
+    basis?: StopBasis;
   }
 
   /*
@@ -1586,6 +1637,7 @@ function planWith(
           cost: doorTotal,
           // Nothing is added to a ticket.
           charges: [],
+          basis: "door",
           fixtures,
           score: score + (roleTypes.includes(venue.type) ? 2 : 0),
         },
@@ -1626,6 +1678,7 @@ function planWith(
           orders: doorLine.map((o) => ({ ...o, note })),
           cost: doorTotal,
           charges: [],
+          basis: "door",
           fixtures,
           score: score + 2,
         },
@@ -1667,6 +1720,7 @@ function planWith(
         cost: planned.cost + chargesTotal(charges) + doorTotal,
         charges,
         fixtures,
+        basis: planned.basis ?? "menu",
         // Within a focus every venue is allowed, so nudge the slot towards
         // its own role to keep the evening varied rather than three of the
         // same thing.
@@ -1695,6 +1749,7 @@ function planWith(
         cost: doorTotal,
         // A cover at the door has nothing added to it.
         charges: [],
+        basis: "door",
         fixtures,
         score: score + (roleTypes.includes(venue.type) ? 2 : 0),
       });
@@ -1966,7 +2021,7 @@ function planWith(
 
     const totalOf = (picks: Option[]) => {
       const stops = toStops(picks);
-      const hops = hopsFor(stops, driving);
+      const hops = hopsFor(stops, driving, cars);
       return (
         picks.reduce((s, p) => s + p.cost, 0) + hops.reduce((s, h) => s + h.cost_ghs, 0)
       );
@@ -2201,7 +2256,7 @@ function planWith(
     }
 
     const stops = toStops(chosen);
-    const hops = hopsFor(stops, driving);
+    const hops = hopsFor(stops, driving, cars);
     schedule(stops, startMinutes, hops);
 
     /*
@@ -2292,6 +2347,8 @@ function planWith(
           orders: p.orders,
           cost: p.cost,
           charges: p.charges,
+          tier: p.tier,
+          basis: p.basis ?? "menu",
           // Runners-up this slot could have had, for an instant swap. Only
           // ones that fit what is left of the budget, so a swap can never
           // push the plan over.
