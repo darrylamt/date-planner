@@ -10,8 +10,9 @@ import { MenuSheet } from "./MenuSheet";
 import { ReportSheet } from "./ReportSheet";
 import { GettingThereSheet } from "./GettingThereSheet";
 import { HAIRLINE, radius, space } from "../../theme";
-import { useTheme } from "../../lib/useTheme";
-import { ghs, instagramUrl, time12, uberRideLink } from "../../lib/format";
+import { useIsDark, useTheme } from "../../lib/useTheme";
+import { chooseAction } from "../../lib/actionSheet";
+import { ghs, instagramUrl, time12 } from "../../lib/format";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -47,6 +48,14 @@ export function StopCard({
   locked?: boolean;
 }) {
   const c = useTheme();
+  const dark = useIsDark();
+  /*
+   * Closed by default: the card says where, when, why in a line or two, and
+   * what it costs; the orders, the menus and the long words open on a tap.
+   * Every stop showing everything at once made a plan a wall of text that
+   * people scrolled past rather than read.
+   */
+  const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -130,6 +139,29 @@ export function StopCard({
    */
   const [openNote, setOpenNote] = useState<number | null>(null);
 
+  /** One line for the closed card: what is being ordered, in brief. */
+  const summary = stop.orders.length
+    ? `${stop.orders.slice(0, 2).map((o) => sentenceCase(o.item)).join(", ")}${stop.orders.length > 2 ? ` +${stop.orders.length - 2} more` : ""}`
+    : isActivityVenue
+      ? "What you can do here"
+      : "See what to order";
+  const reason = stop.what_to_do?.trim() || stop.why_this_fits?.trim() || stop.event?.description?.trim() || "";
+
+  /** Everything used once in a hundred stops, in the phone's own action sheet. */
+  function more() {
+    void Haptics.selectionAsync();
+    chooseAction({
+      title: stop.name,
+      dark,
+      actions: [
+        { text: "Open in Maps", onPress: openMaps },
+        ...(instagram ? [{ text: "Instagram", onPress: () => void Linking.openURL(instagram) }] : []),
+        ...(organiser ? [{ text: "Call the organiser", onPress: () => void Linking.openURL(`tel:${organiser}`) }] : []),
+        { text: "Report a problem", onPress: () => setReportOpen(true) },
+      ],
+    });
+  }
+
   function openMaps() {
     const url =
       stop.google_maps_url ??
@@ -172,73 +204,29 @@ export function StopCard({
 
         {/*
           On an event stop the event is the heading and the venue is where it
-          is. The night is what somebody came for; the name of the building
-          it happens in was set larger than the name of the thing happening.
-        */}
-        {/*
-          Swap beside the name, filled, rather than one grey pill among eight
-          at the foot of the card. Testers read the card top to bottom, found
-          what they wanted to change at the top, and never got as far as the
-          row that could change it.
+          is. Swap sits beside the name, filled, where people looking to
+          change a stop already are.
         */}
         <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.sm }}>
-          <View style={{ flex: 1 }}>
-            {stop.event ? (
-              <Text variant="title2">{stop.event.title}</Text>
-            ) : (
-              <Text variant="title3">{stop.name}</Text>
-            )}
+          <View style={{ flex: 1, gap: 2 }}>
+            {stop.event ? <Text variant="title3">{stop.event.title}</Text> : <Text variant="title3">{stop.name}</Text>}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
+              <Symbol name="mappin" size={12} color={c.textSecondary} />
+              <Text variant="footnote" tone="secondary" style={{ flex: 1 }} numberOfLines={1}>
+                {stop.event && stop.event.title !== stop.name ? `${stop.name} · ${stop.area}` : stop.area}
+              </Text>
+            </View>
           </View>
           {locked ? null : <SwapButton onPress={onSwap} busy={swapping} hint={index === 0} />}
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
-          <Symbol name="mappin" size={12} color={c.textSecondary} />
-          <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
-            {stop.event && stop.event.title !== stop.name ? `${stop.name} · ${stop.area}` : stop.area}
-          </Text>
-        </View>
-
-        {stop.event?.description ? (
-          <Text variant="subheadline" tone="secondary">
-            {stop.event.description}
-          </Text>
-        ) : null}
-
-        {/*
-          Why this stop is here at all. The label above is already the event's
-          name, but a name on its own reads like any other heading; this says
-          plainly that it is happening on this date and not every night, and
-          gives the hour it starts, which is the one thing the arrival time
-          cannot tell you.
-        */}
+        {/* Dated, and when it starts: the one thing the arrival time cannot say. */}
         {stop.event ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
             <Symbol name="ticket" size={12} color={c.accent} />
             <Text variant="footnote" tone="tint" weight="600">
               On this date only
               {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
-            </Text>
-          </View>
-        ) : null}
-
-        {/*
-          Who is running the night, with their logo when they have added one
-          (migration 0071). A planner's mark is half of why people go back to a
-          night they have been to before.
-        */}
-        {stop.event?.organiser_name ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-            {stop.event.organiser_logo_url ? (
-              <Image
-                source={{ uri: stop.event.organiser_logo_url }}
-                style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: "#FFFFFF", borderWidth: HAIRLINE, borderColor: c.border }}
-                contentFit="contain"
-                accessibilityIgnoresInvertColors
-              />
-            ) : null}
-            <Text variant="footnote" tone="secondary">
-              Hosted by <Text variant="footnote" weight="700">{stop.event.organiser_name}</Text>
             </Text>
           </View>
         ) : null}
@@ -265,209 +253,19 @@ export function StopCard({
         ) : null}
 
         {/*
-          What the place does every week that is on while you are here.
-          
-          Under the event badge rather than merged with it: an event is a dated
-          one-off the evening was built around, a fixture is a property of the
-          place like its opening hours, and a stop can carry both. The wording
-          is the server's, so this card and the shared link say the same thing.
+          One reason, two lines until opened. A stop used to carry the event's
+          description, a written line and a "why this fits" box, which often
+          said the same thing three ways. The written line describes the place
+          and wins; "why it fits" stands in when there is none.
         */}
-        {(stop.whats_on ?? []).map((line) => (
-          <View
-            key={line}
-            style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
-          >
-            <Symbol name="music.note" size={12} color={c.textSecondary} />
-            <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
-              {line}
-            </Text>
-          </View>
-        ))}
-
-        {stop.what_to_do ? (
-          <Text variant="subheadline" tone="secondary" style={{ marginTop: space.xs }}>
-            {stop.what_to_do}
+        {reason ? (
+          <Text variant="subheadline" tone="secondary" numberOfLines={open ? undefined : 2}>
+            {reason}
           </Text>
-        ) : null}
-
-        {/* Order lines with steppers */}
-        {stop.orders.length > 0 ? (
-          <View
-            style={{
-              marginTop: space.sm,
-              borderTopWidth: HAIRLINE,
-              borderTopColor: c.border,
-              paddingTop: space.sm,
-            }}
-          >
-            {stop.orders.map((o, i) => (
-              <View key={`${o.item}-${i}`}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: space.sm,
-                  paddingVertical: 6,
-                }}
-              >
-                {/*
-                  Tappable only where there is a note, and it says so with the
-                  glyph rather than by being tried. Kitchens name dishes for
-                  regulars -- "Chairman", "Jollof Special" -- and the note is
-                  the only place the plan can say what one actually is.
-                */}
-                {o.note ? (
-                  <Pressable
-                    onPress={() => {
-                      void Haptics.selectionAsync();
-                      setOpenNote(openNote === i ? null : i);
-                    }}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={`What is ${o.item}`}
-                    accessibilityState={{ expanded: openNote === i }}
-                    style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 5 }}
-                  >
-                    <Text variant="subheadline" numberOfLines={2} style={{ flexShrink: 1 }}>
-                      {o.item}
-                    </Text>
-                    <Symbol
-                      name={openNote === i ? "chevron.up.circle" : "info.circle"}
-                      size={14}
-                      color={c.textTertiary}
-                    />
-                  </Pressable>
-                ) : (
-                  <Text variant="subheadline" style={{ flex: 1 }} numberOfLines={2}>
-                    {o.item}
-                  </Text>
-                )}
-
-                {editable ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-                    <Pressable
-                      onPress={() => changeQty(i, -1)}
-                      hitSlop={8}
-                      accessibilityLabel={`Remove one ${o.item}`}
-                    >
-                      <Symbol name="minus.circle" size={22} color={c.textSecondary} />
-                    </Pressable>
-                    <Text variant="subheadline" tabular weight="600" style={{ minWidth: 16, textAlign: "center" }}>
-                      {o.qty}
-                    </Text>
-                    <Pressable
-                      onPress={() => changeQty(i, 1)}
-                      hitSlop={8}
-                      accessibilityLabel={`Add one ${o.item}`}
-                    >
-                      <Symbol name="plus.circle" size={22} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Text variant="subheadline" tone="secondary" tabular>
-                    x{o.qty}
-                  </Text>
-                )}
-
-                <Text variant="subheadline" tabular style={{ minWidth: 74, textAlign: "right" }}>
-                  {ghs(o.price_ghs)}
-                </Text>
-              </View>
-
-              {/*
-                The menu's own words, indented under the name they explain and
-                never presented as ours. A kitchen that writes "served with
-                two sides" is making a promise; we are only repeating it.
-              */}
-              {openNote === i && o.note ? (
-                <Text
-                  variant="footnote"
-                  tone="secondary"
-                  style={{ paddingBottom: 8, paddingRight: 90 }}
-                >
-                  {o.note}
-                </Text>
-              ) : null}
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {/*
-          The way into the menu, right under the dishes, which is where
-          somebody looking at what they are ordering already is. It used to
-          be a pill at the bottom labelled "Menu", which read as a heading.
-        */}
-        {editable ? (
-          <BigAction
-            icon={isActivityVenue ? "figure.bowling" : "fork.knife"}
-            title={isActivityVenue ? "See what you can do here" : "See the full menu"}
-            sub={
-              isActivityVenue
-                ? "Games, sessions and prices"
-                : stop.orders.length
-                  ? "Change what you order, or add to it"
-                  : "Pick something to order here"
-            }
-            onPress={() => (isActivityVenue ? setActivityOpen(true) : setMenuOpen(true))}
-          />
-        ) : null}
-        {editable && isActivityVenue ? (
-          <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one" onPress={() => setMenuOpen(true)} />
-        ) : null}
-
-        {/*
-          What the venue adds to the bill, under what is ordered and above the
-          total it is part of. Not editable: it follows the order.
-        */}
-        {(stop.charges ?? []).filter((ch) => ch.ghs > 0).map((ch) => (
-          <View key={ch.label} style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-            <Symbol name="percent" size={12} color={c.textSecondary} />
-            <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
-              {ch.label}
-            </Text>
-            <Text variant="footnote" tone="secondary" tabular>
-              {ghs(ch.ghs)}
-            </Text>
-          </View>
-        ))}
-
-        {/* Stop subtotal */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            borderTopWidth: HAIRLINE,
-            borderTopColor: c.border,
-            paddingTop: space.sm,
-          }}
-        >
-          <Text variant="subheadline" tone="secondary">
-            Stop total
-          </Text>
-          <Text variant="subheadline" weight="600" tabular>
-            {ghs(stop.est_cost_ghs)}
-          </Text>
-        </View>
-
-        {/* Why this fits */}
-        {stop.why_this_fits ? (
-          <View
-            style={{
-              backgroundColor: c.accentSoft,
-              borderRadius: 10,
-              padding: space.md,
-              marginTop: space.xs,
-            }}
-          >
-            <Text variant="footnote" style={{ color: c.accent }}>
-              {stop.why_this_fits}
-            </Text>
-          </View>
         ) : null}
 
         {stop.reservation_requested ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: space.xs }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
             <Symbol name="checkmark.circle.fill" size={14} color={c.success} />
             <Text variant="footnote" tone="green">
               Reservation requested
@@ -475,85 +273,190 @@ export function StopCard({
           </View>
         ) : null}
 
-        {/* Actions */}
-        <View
-          style={{
+        {/* The total, and the way into everything behind it. */}
+        <Pressable
+          onPress={() => {
+            void Haptics.selectionAsync();
+            setOpen(!open);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+          accessibilityLabel={`${open ? "Hide" : "Show"} details, stop total ${ghs(stop.est_cost_ghs)}`}
+          style={({ pressed }) => ({
             flexDirection: "row",
-            flexWrap: "wrap",
+            alignItems: "center",
             gap: space.sm,
-            marginTop: space.sm,
+            marginTop: space.xs,
             borderTopWidth: HAIRLINE,
             borderTopColor: c.border,
-            paddingTop: space.md,
-          }}
+            paddingTop: space.sm,
+            opacity: pressed ? 0.6 : 1,
+          })}
         >
-          <StopAction icon="map" label="Map" onPress={openMaps} />
-          {/*
-            A ride here, from wherever they are when they tap it.
+          <View style={{ flex: 1 }}>
+            <Text variant="subheadline" tone="secondary">
+              Stop total
+            </Text>
+            <Text variant="caption1" tone="tint" weight="600" numberOfLines={1}>
+              {open ? "Hide details" : summary}
+            </Text>
+          </View>
+          <Text variant="headline" tabular>
+            {ghs(stop.est_cost_ghs)}
+          </Text>
+          <Symbol name={open ? "chevron.up" : "chevron.down"} size={13} color={c.textSecondary} weight="semibold" />
+        </Pressable>
 
-            The pickup is left to Uber ("my_location"), so Uber reads the
-            phone's position in its own app under its own permission, and
-            Duro never asks for or sees it. On the first stop that is the trip
-            from home; on the rest it is the hop from the stop before.
-          */}
-          {/*
-            One button for every way there: Uber and Yango with the drop-off
-            filled in, and walk, trotro and taxi directions from the stop
-            before, or from where they are if they choose to share it.
-          */}
-          <StopAction icon="figure.walk" label="Get there" onPress={() => setTripOpen(true)} />
-          {/*
-            Always here, greyed when there is nothing to open.
-            
-            Only twenty-nine of a hundred and eighty-five venues have a handle
-            on file, so hiding it would make the action bar a different length
-            on most cards, and would say nothing at all about the gap. Greyed
-            says "nobody has found one for this place", which is true, and is
-            the same thing every other unknown in this catalogue admits to.
-          */}
-          <StopAction
-            glyph={(color) => <InstagramGlyph color={color} />}
-            label="Instagram"
-            disabled={!instagram}
-            onPress={() => instagram && void Linking.openURL(instagram)}
-          />
+        {open ? (
+          <View style={{ gap: space.sm }}>
+            {/* What the place does every week that is on while you are here. */}
+            {(stop.whats_on ?? []).map((line) => (
+              <View key={line} style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
+                <Symbol name="music.note" size={12} color={c.textSecondary} />
+                <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+                  {line}
+                </Text>
+              </View>
+            ))}
+
+            {stop.event?.description && stop.event.description.trim() !== reason ? (
+              <Text variant="footnote" tone="secondary">
+                {stop.event.description}
+              </Text>
+            ) : null}
+
+            {/* Who is running the night, with their logo when they have added one. */}
+            {stop.event?.organiser_name ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+                {stop.event.organiser_logo_url ? (
+                  <Image
+                    source={{ uri: stop.event.organiser_logo_url }}
+                    style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: "#FFFFFF", borderWidth: HAIRLINE, borderColor: c.border }}
+                    contentFit="contain"
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : null}
+                <Text variant="footnote" tone="secondary">
+                  Hosted by <Text variant="footnote" weight="700">{stop.event.organiser_name}</Text>
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Order lines with steppers */}
+            {stop.orders.map((o, i) => (
+              <View key={`${o.item}-${i}`}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: 4 }}>
+                  {/*
+                    Tappable only where there is a note, and it says so with the
+                    glyph. Kitchens name dishes for regulars, and the note is the
+                    only place the plan can say what one actually is.
+                  */}
+                  {o.note ? (
+                    <Pressable
+                      onPress={() => {
+                        void Haptics.selectionAsync();
+                        setOpenNote(openNote === i ? null : i);
+                      }}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`What is ${o.item}`}
+                      accessibilityState={{ expanded: openNote === i }}
+                      style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 5 }}
+                    >
+                      <Text variant="subheadline" numberOfLines={2} style={{ flexShrink: 1 }}>
+                        {o.item}
+                      </Text>
+                      <Symbol name={openNote === i ? "chevron.up.circle" : "info.circle"} size={14} color={c.textTertiary} />
+                    </Pressable>
+                  ) : (
+                    <Text variant="subheadline" style={{ flex: 1 }} numberOfLines={2}>
+                      {o.item}
+                    </Text>
+                  )}
+
+                  {editable ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+                      <Pressable onPress={() => changeQty(i, -1)} hitSlop={8} accessibilityLabel={`Remove one ${o.item}`}>
+                        <Symbol name="minus.circle" size={22} color={c.textSecondary} />
+                      </Pressable>
+                      <Text variant="subheadline" tabular weight="600" style={{ minWidth: 16, textAlign: "center" }}>
+                        {o.qty}
+                      </Text>
+                      <Pressable onPress={() => changeQty(i, 1)} hitSlop={8} accessibilityLabel={`Add one ${o.item}`}>
+                        <Symbol name="plus.circle" size={22} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Text variant="subheadline" tone="secondary" tabular>
+                      x{o.qty}
+                    </Text>
+                  )}
+
+                  <Text variant="subheadline" tabular style={{ minWidth: 74, textAlign: "right" }}>
+                    {ghs(o.price_ghs)}
+                  </Text>
+                </View>
+                {openNote === i && o.note ? (
+                  <Text variant="footnote" tone="secondary" style={{ paddingBottom: 8, paddingRight: 90 }}>
+                    {o.note}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+
+            {/* What the venue adds to the bill. Not editable: it follows the order. */}
+            {(stop.charges ?? []).filter((ch) => ch.ghs > 0).map((ch) => (
+              <View key={ch.label} style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+                <Symbol name="percent" size={12} color={c.textSecondary} />
+                <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+                  {ch.label}
+                </Text>
+                <Text variant="footnote" tone="secondary" tabular>
+                  {ghs(ch.ghs)}
+                </Text>
+              </View>
+            ))}
+
+            {/* The way into the menu, right under the dishes. */}
+            {editable ? (
+              <BigAction
+                icon={isActivityVenue ? "figure.bowling" : "fork.knife"}
+                title={isActivityVenue ? "See what you can do here" : "See the full menu"}
+                sub={
+                  isActivityVenue
+                    ? "Games, sessions and prices"
+                    : stop.orders.length
+                      ? "Change what you order, or add to it"
+                      : "Pick something to order here"
+                }
+                onPress={() => (isActivityVenue ? setActivityOpen(true) : setMenuOpen(true))}
+              />
+            ) : null}
+            {editable && isActivityVenue ? (
+              <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one" onPress={() => setMenuOpen(true)} />
+            ) : null}
+          </View>
+        ) : null}
+
+        {/*
+          Three actions, not six. Getting there is the one used at every stop
+          (the map is inside it); booking is the one that matters where there
+          is something to book; the rest, used once in a hundred stops, are
+          behind "More".
+        */}
+        <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.xs }}>
+          <StopAction icon="car.fill" label="Get there" onPress={() => setTripOpen(true)} grow />
           {tickets ? (
             <StopAction
               icon="ticket"
-              label={stop.event?.reservation_required ? "Book your spot" : "Get tickets"}
+              label={stop.event?.reservation_required ? "Book a spot" : "Tickets"}
               onPress={() => void Linking.openURL(tickets)}
+              grow
             />
+          ) : canReserve ? (
+            <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} grow />
           ) : null}
-          {canReserve ? (
-            <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} />
-          ) : null}
-          {/*
-            The organiser, on an event that came with a number.
-
-            Labelled "Organiser" and not "Call", because it sits next to
-            Reserve and the two reach different people: Reserve is the venue,
-            which will still answer next month, and this is whoever is running
-            one night. Shown only where there is one, unlike Instagram above,
-            because an absent organiser's number is not a gap in our
-            catalogue to admit to -- most stops have no event at all.
-          */}
-          {organiser ? (
-            <StopAction
-              icon="person.crop.circle.badge.questionmark"
-              label="Organiser"
-              onPress={() => void Linking.openURL(`tel:${organiser}`)}
-            />
-          ) : null}
-          {/*
-            Last, and never the most prominent thing on the card. Someone
-            reaches for this once in a hundred stops, but when they do they are
-            usually standing in front of the problem.
-          */}
-          <StopAction
-            icon="exclamationmark.bubble"
-            label="Report"
-            onPress={() => setReportOpen(true)}
-          />
+          <StopAction icon="ellipsis" label="More" iconOnly onPress={more} />
         </View>
       </View>
 
@@ -596,8 +499,9 @@ let hintSeen: boolean | null = null;
 /**
  * Swap, where it is seen: filled in the occasion's colour, beside the name.
  *
- * On the first stop of somebody's first plan it pulses and says what it is
- * for, once, and never again after they tap it or wave the hint away.
+ * On the first stop of somebody's first plan it pulses, once, until they tap
+ * it. It used to add a bubble of words under itself too, which squeezed the
+ * stop's name into a column three words wide.
  */
 function SwapButton({ onPress, busy, hint }: { onPress: () => void; busy: boolean; hint: boolean }) {
   const c = useTheme();
@@ -690,27 +594,15 @@ function SwapButton({ onPress, busy, hint }: { onPress: () => void; busy: boolea
           </Text>
         </Pressable>
       </View>
-      {showHint ? (
-        <Pressable
-          onPress={seen}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss hint"
-          style={{
-            marginTop: space.xs,
-            maxWidth: 190,
-            backgroundColor: c.accentSoft,
-            borderRadius: 12,
-            paddingHorizontal: space.sm,
-            paddingVertical: 6,
-          }}
-        >
-          <Text variant="caption1" tone="tint" weight="600">
-            Not feeling a place? Swap it for another that fits. Tap to hide.
-          </Text>
-        </Pressable>
-      ) : null}
     </View>
   );
+}
+
+/** A menu line in ALL CAPS read as a sentence; anything else is left as the venue wrote it. */
+function sentenceCase(item: string): string {
+  if (item !== item.toUpperCase()) return item;
+  const lower = item.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 /** A full-width row for an action worth finding: tinted, with a line saying what it does. */
@@ -767,7 +659,13 @@ function StopAction({
   onPress,
   busy,
   disabled,
+  grow,
+  iconOnly,
 }: {
+  /** Share the row's width with the other actions. */
+  grow?: boolean;
+  /** A round button with only its icon; the label is for VoiceOver. */
+  iconOnly?: boolean;
   icon?: Parameters<typeof Symbol>[0]["name"];
   /** For the one mark SF Symbols does not carry. Given the resolved colour. */
   glyph?: (color: string) => React.ReactNode;
@@ -801,9 +699,12 @@ function StopAction({
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         gap: 6,
-        paddingHorizontal: space.md,
-        height: 32,
+        paddingHorizontal: iconOnly ? 0 : space.md,
+        width: iconOnly ? 40 : undefined,
+        flex: grow ? 1 : undefined,
+        height: 40,
         borderRadius: radius.pill,
         backgroundColor: c.backgroundSelected,
         opacity: pressed ? 0.6 : busy ? 0.5 : disabled ? 0.45 : 1,
@@ -814,59 +715,14 @@ function StopAction({
       ) : glyph ? (
         glyph(tint)
       ) : icon ? (
-        <Symbol name={icon} size={13} weight="semibold" color={tint} />
+        <Symbol name={icon} size={iconOnly ? 16 : 13} weight="semibold" color={tint} />
       ) : null}
-      <Text variant="footnote" weight="600" style={{ color: tint }}>
-        {label}
-      </Text>
+      {iconOnly ? null : (
+        <Text variant="subheadline" weight="600" style={{ color: tint }}>
+          {label}
+        </Text>
+      )}
     </Pressable>
-  );
-}
-
-/**
- * The Instagram mark, drawn.
- *
- * SF Symbols carries no third-party logos and the app ships no icon font, so
- * the alternatives were a bundled PNG that cannot take the theme's colour or
- * three nested Views that can. A rounded square, a circle and a dot is the
- * whole mark, and at thirteen points it is read by shape rather than by
- * detail.
- */
-function InstagramGlyph({ color }: { color: string }) {
-  const SIZE = 14;
-  return (
-    <View
-      style={{
-        width: SIZE,
-        height: SIZE,
-        borderRadius: 4.5,
-        borderWidth: 1.5,
-        borderColor: color,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <View
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          borderWidth: 1.5,
-          borderColor: color,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          top: 1.5,
-          right: 1.5,
-          width: 1.8,
-          height: 1.8,
-          borderRadius: 1,
-          backgroundColor: color,
-        }}
-      />
-    </View>
   );
 }
 

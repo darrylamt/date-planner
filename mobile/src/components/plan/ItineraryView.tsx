@@ -203,7 +203,6 @@ export function ItineraryView({
     setToast(said);
   }
 
-  const over = itinerary.est_total_ghs > inputs.budget;
   // Read from the inputs rather than inferred from a zero hop cost: an old
   // plan saved before this existed has real fares and must keep showing them.
   const driving = isDriving(inputs);
@@ -688,67 +687,23 @@ export function ItineraryView({
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: space.sm }}>
             <Symbol name="arrow.triangle.turn.up.right.diamond" size={13} color={c.textSecondary} />
-            <Text variant="footnote" tone="secondary">
+            <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
               {itinerary.summary_route}
             </Text>
           </View>
+          {/* Who it was built around, in a line rather than a card of its own. */}
+          {itinerary.personal_summary ? (
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.xs, marginTop: space.xs }}>
+              <Symbol name="heart.fill" size={12} color={c.accent} />
+              <Text variant="footnote" tone="secondary" style={{ flex: 1 }} numberOfLines={2}>
+                {itinerary.personal_summary}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Budget */}
         <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
-          {/*
-            Above the itinerary, because it happens before it. A pickup is an
-            errand rather than a stop: it costs money and four minutes, so it
-            joins the total without taking a slot in the evening.
-          */}
-          {giftsForOccasion(inputs.occasion).length ? (
-            <Pressable
-              onPress={() => setPickupOpen(true)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: space.md,
-                backgroundColor: c.backgroundElement,
-                borderRadius: radius.card,
-                padding: space.md,
-                marginBottom: space.md,
-                borderWidth: pickup ? 1.5 : HAIRLINE,
-                borderColor: pickup ? c.accent : c.border,
-              }}
-            >
-              <Symbol
-                name={pickup?.kind === "cake" ? "birthday.cake.fill" : "leaf.fill"}
-                size={22}
-                color={c.accent}
-              />
-              <View style={{ flex: 1 }}>
-                <Text variant="body" numberOfLines={1}>
-                  {pickup ? pickupLine(pickup) : "Pick something up on the way"}
-                </Text>
-                <Text variant="footnote" tone="secondary" numberOfLines={1}>
-                  {pickup
-                    ? [
-                        ghs(pickupTotal(pickup)),
-                        pickup.message ? `"${pickup.message}"` : null,
-                        pickup.colour,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : giftsForOccasion(inputs.occasion).includes("cake")
-                      ? "Flowers or a cake, collected before you set off"
-                      : "Flowers, collected before you set off"}
-                </Text>
-              </View>
-              {pickup ? (
-                <Pressable onPress={() => setPickup(null)} hitSlop={10}>
-                  <Symbol name="xmark.circle.fill" size={20} color={c.textTertiary} />
-                </Pressable>
-              ) : (
-                <Symbol name="plus.circle.fill" size={22} color={c.accent} />
-              )}
-            </Pressable>
-          ) : null}
-
           <BudgetBar
             estimated={itinerary.est_total_ghs + (pickup ? pickupTotal(pickup) : 0)}
             budget={inputs.budget}
@@ -756,47 +711,9 @@ export function ItineraryView({
             transport={itinerary.transport_total_ghs}
             confidence={itinerary.price_confidence}
             driving={driving}
+            note={itinerary.budget_note ?? null}
           />
         </View>
-
-        {itinerary.budget_note ? (
-          <View
-            style={{
-              marginHorizontal: GUTTER,
-              marginBottom: space.lg,
-              padding: space.md,
-              borderRadius: radius.card,
-              backgroundColor: over ? c.accentSoft : c.backgroundSunken,
-            }}
-          >
-            <Text variant="footnote" tone={over ? "red" : "secondary"}>
-              {itinerary.budget_note}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Built around them */}
-        {itinerary.personal_summary ? (
-          <View
-            style={{
-              marginHorizontal: GUTTER,
-              marginBottom: space.xl,
-              padding: space.lg,
-              borderRadius: radius.card,
-              backgroundColor: c.backgroundElement,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginBottom: space.xs }}>
-              <Symbol name="heart.fill" size={13} />
-              <Text variant="caption1" tone="tint" weight="700" style={{ letterSpacing: 0.6 }}>
-                BUILT AROUND THEM
-              </Text>
-            </View>
-            <Text variant="subheadline" tone="secondary">
-              {itinerary.personal_summary}
-            </Text>
-          </View>
-        ) : null}
 
         {/*
           The note, where the sender can see it again. It used to go straight
@@ -858,6 +775,62 @@ export function ItineraryView({
               ) : null}
             </Fragment>
           ))}
+        </View>
+
+        <View style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}>
+            {/*
+              Under the stops, offered once the evening has been read; it sat
+              above the budget and was the first thing on the plan, ahead of
+              the plan. It still happens before the evening, and says so. A pickup is an
+              errand rather than a stop: it costs money and four minutes, so it
+              joins the total without taking a slot in the evening.
+            */}
+            {giftsForOccasion(inputs.occasion).length ? (
+              <Pressable
+                onPress={() => setPickupOpen(true)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: space.md,
+                  backgroundColor: c.backgroundElement,
+                  borderRadius: radius.card,
+                  padding: space.md,
+                                    borderWidth: pickup ? 1.5 : HAIRLINE,
+                  borderColor: pickup ? c.accent : c.border,
+                }}
+              >
+                <Symbol
+                  name={pickup?.kind === "cake" ? "birthday.cake.fill" : "leaf.fill"}
+                  size={22}
+                  color={c.accent}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text variant="body" numberOfLines={1}>
+                    {pickup ? pickupLine(pickup) : "Pick something up on the way"}
+                  </Text>
+                  <Text variant="footnote" tone="secondary" numberOfLines={1}>
+                    {pickup
+                      ? [
+                          ghs(pickupTotal(pickup)),
+                          pickup.message ? `"${pickup.message}"` : null,
+                          pickup.colour,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : giftsForOccasion(inputs.occasion).includes("cake")
+                        ? "Flowers or a cake, collected before you set off"
+                        : "Flowers, collected before you set off"}
+                  </Text>
+                </View>
+                {pickup ? (
+                  <Pressable onPress={() => setPickup(null)} hitSlop={10}>
+                    <Symbol name="xmark.circle.fill" size={20} color={c.textTertiary} />
+                  </Pressable>
+                ) : (
+                  <Symbol name="plus.circle.fill" size={22} color={c.accent} />
+                )}
+              </Pressable>
+            ) : null}
         </View>
 
         {myOrder ? (

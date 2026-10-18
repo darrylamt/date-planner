@@ -46,6 +46,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "dice.fill": "casino",
   "doc.text": "description",
   "ellipsis.circle": "more_horiz",
+  ellipsis: "more_horiz",
   envelope: "mail",
   "envelope.fill": "mail",
   "envelope.badge.fill": "mark_email_unread",

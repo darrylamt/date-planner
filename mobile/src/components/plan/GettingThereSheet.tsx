@@ -142,6 +142,28 @@ export function GettingThereSheet({
             ) : null}
           </View>
 
+          {/* The map, here with the other ways there, since the card no longer has its own button. */}
+          <Pressable
+            onPress={() =>
+              void Linking.openURL(
+                stop.google_maps_url ?? `https://maps.apple.com/?q=${encodeURIComponent(`${stop.name} ${stop.area} Accra`)}`
+              )
+            }
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              height: 48,
+              borderRadius: radius.pill,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.backgroundElement,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text variant="headline">Open in Maps</Text>
+          </Pressable>
+
           <Text variant="title3" style={{ marginTop: space.md }}>
             By trotro
           </Text>
