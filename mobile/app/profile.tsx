@@ -5,7 +5,6 @@ import {
   Linking,
   Pressable,
   ScrollView,
-  Switch,
   TextInput,
   View,
 } from "react-native";
@@ -19,6 +18,7 @@ import { Group, Row } from "../src/components/List";
 import { BirthdayRow } from "../src/components/profile/BirthdayRow";
 import { Symbol } from "../src/components/Symbol";
 import { Toast } from "../src/components/Toast";
+import { Toggle } from "../src/components/Toggle";
 import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
@@ -448,13 +448,13 @@ export default function Profile() {
           title="Use AI (Anthropic's Claude)"
           subtitle="For plan descriptions and the assistant. What you type is sent to Anthropic."
           trailing={
-            <Switch
+            <Toggle
               value={aiAllowed}
               onValueChange={(on) => {
                 setAiAllowed(on);
                 void setAiConsent(on ? "granted" : "declined");
               }}
-              trackColor={{ true: c.accent, false: c.backgroundSelected }}
+              accessibilityLabel="Use AI"
             />
           }
         />
@@ -466,10 +466,10 @@ export default function Profile() {
           title="Dark mode"
           subtitle={preference === "system" ? "Following your phone" : undefined}
           trailing={
-            <Switch
+            <Toggle
               value={scheme === "dark"}
               onValueChange={(on) => setPreference(on ? "dark" : "light")}
-              trackColor={{ true: c.accent, false: c.backgroundSelected }}
+              accessibilityLabel="Dark mode"
             />
           }
         />

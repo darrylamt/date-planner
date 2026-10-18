@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Share, Switch, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Share, TextInput, View } from "react-native";
+import { Toggle } from "../src/components/Toggle";
 import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Segmented } from "../src/components/Segmented";
@@ -164,7 +165,7 @@ export default function Split() {
         {rides > 0 ? (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.sm }}>
             <Text variant="callout">Share the rides too ({ghs(rides)})</Text>
-            <Switch value={includeRides} onValueChange={setIncludeRides} trackColor={{ true: c.accent }} />
+            <Toggle value={includeRides} onValueChange={setIncludeRides} accessibilityLabel="Share the rides too" />
           </View>
         ) : null}
       </Section>
