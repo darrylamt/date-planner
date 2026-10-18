@@ -38,7 +38,8 @@
     "mascots": "tsx scripts/build-mascots.ts",
     "pathway:smoke": "tsx scripts/pathway-smoke.ts",
     "audit:smoke": "tsx scripts/audit-smoke.ts",
-    "group:check": "tsx scripts/group-orders-check.ts"
+    "group:check": "tsx scripts/group-orders-check.ts",
+    "group:smoke": "tsx scripts/group-smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

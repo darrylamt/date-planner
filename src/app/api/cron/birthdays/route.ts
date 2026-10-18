@@ -44,6 +44,26 @@ export async function GET(req: Request) {
 
   const supabase = createServiceClient();
 
+  /*
+   * Budgets from group outings are kept only as long as they are needed: two
+   * weeks after the outing (or after a group is called off), they go. The
+   * orders already made stay; the figure somebody typed in does not.
+   */
+  const fortnightAgo = new Date(now.getTime() - 14 * 86_400_000);
+  const { data: oldGroups } = await supabase
+    .from("groups")
+    .select("id")
+    .or(`plan_date.lt.${fortnightAgo.toISOString().slice(0, 10)},and(status.eq.cancelled,updated_at.lt.${fortnightAgo.toISOString()})`)
+    .limit(200);
+  const oldIds = (oldGroups ?? []).map((g) => g.id as string);
+  if (oldIds.length) {
+    const { data: oldMembers } = await supabase.from("group_members").select("id").in("group_id", oldIds);
+    const memberIds = (oldMembers ?? []).map((m) => m.id as string);
+    if (memberIds.length) {
+      await supabase.from("group_member_secrets").update({ budget_ghs: null }).in("member_id", memberIds).not("budget_ghs", "is", null);
+    }
+  }
+
   const day = now.getUTCDate();
   const month = now.getUTCMonth() + 1;
   const year = now.getUTCFullYear();

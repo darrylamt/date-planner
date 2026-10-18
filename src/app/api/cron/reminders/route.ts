@@ -76,20 +76,45 @@ export async function GET(req: Request) {
    */
   const { data: rows, error } = await supabase
     .from("plans")
-    .select("id, user_id, share_slug, inputs, itinerary")
+    .select("id, user_id, share_slug, inputs, itinerary, group_id")
     .eq("inputs->>date", date);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const plans = (rows ?? []) as unknown as (SavedPlan & { id: string })[];
-  if (!plans.length) return NextResponse.json({ date, plans: 0, sent: 0 });
-
-  const tokensFor = await tokensForUsers(supabase, plans.map((p) => p.user_id).filter(Boolean) as string[]);
-
+  const plans = (rows ?? []) as unknown as (SavedPlan & { id: string; group_id: string | null })[];
   const messages: PushMessage[] = [];
   const claimed: string[] = [];
+
+  /*
+   * A group's organiser gets one nudge once answers have closed and the group
+   * is still waiting on them to plan it. Once, ever: claimed per group.
+   */
+  const { data: waiting } = await supabase
+    .from("groups")
+    .select("id, code, owner_id, title")
+    .eq("status", "collecting")
+    .lte("answer_deadline", now.toISOString())
+    .limit(200);
+  for (const g of (waiting ?? []) as { id: string; code: string; owner_id: string; title: string | null }[]) {
+    const tokens = (await tokensForUsers(supabase, [g.owner_id])).get(g.owner_id) ?? [];
+    if (!tokens.length) continue;
+    const { error: claimError } = await supabase.from("group_notifications").insert({ group_id: g.id, kind: "deadline", key: "" });
+    if (claimError) continue;
+    for (const token of tokens) {
+      messages.push({
+        to: token,
+        title: "Answers are in",
+        body: g.title ? `Get a plan for ${g.title}.` : "Get a plan that works for your group.",
+        data: { url: `/group/${g.code}` },
+      });
+    }
+  }
+
+  if (!plans.length && !messages.length) return NextResponse.json({ date, plans: 0, sent: 0 });
+
+  const tokensFor = await tokensForUsers(supabase, plans.map((p) => p.user_id).filter(Boolean) as string[]);
 
   for (const plan of plans) {
     const tokens = plan.user_id ? (tokensFor.get(plan.user_id) ?? []) : [];
@@ -120,6 +145,40 @@ export async function GET(req: Request) {
         // Opens the plan itself rather than the app's front door.
         data: { url: `/plan/${plan.share_slug}`, slug: plan.share_slug },
       });
+    }
+  }
+
+  /*
+   * Everyone going on a group outing, not only its organiser: each member with
+   * an account, claimed per member, and opened on the group so they land on
+   * their own order rather than the organiser's saved plan.
+   */
+  for (const plan of plans.filter((p) => p.group_id)) {
+    const { data: g } = await supabase.from("groups").select("id, code, owner_id").eq("id", plan.group_id!).maybeSingle();
+    const { data: locked } = await supabase
+      .from("group_plans")
+      .select("attending_member_ids")
+      .eq("group_id", plan.group_id!)
+      .eq("status", "locked")
+      .maybeSingle();
+    if (!g || !locked) continue;
+    const { data: people } = await supabase
+      .from("group_members")
+      .select("id, user_id")
+      .in("id", locked.attending_member_ids as string[])
+      .not("user_id", "is", null)
+      .neq("user_id", g.owner_id);
+    const rows = (people ?? []) as { id: string; user_id: string }[];
+    const tokens = await tokensForUsers(supabase, rows.map((r) => r.user_id));
+    for (const person of rows) {
+      const theirs = tokens.get(person.user_id) ?? [];
+      if (!theirs.length) continue;
+      const { error: claimError } = await supabase
+        .from("plan_notifications")
+        .insert({ plan_id: plan.id, kind: `eve:${person.id}`, delivered: theirs.length });
+      if (claimError) continue;
+      const { title, body } = reminderFor(plan.inputs, plan.itinerary, `${plan.id}${person.id}`);
+      for (const token of theirs) messages.push({ to: token, title, body, data: { url: `/group/${g.code}` } });
     }
   }
 
