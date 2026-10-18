@@ -476,7 +476,7 @@ function OccasionCard({
 
   return (
     <Pressable
-      onPress={() => void startNewPlan(occasion.id as PlanInputs["occasion"])}
+      onPress={() => void startNewPlan(occasion.id as PlanInputs["occasion"], "home_row")}
       style={({ pressed }) => ({
         // Two per row, accounting for the gap between them.
         width: "47.5%",

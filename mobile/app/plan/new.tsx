@@ -207,7 +207,9 @@ export default function PlanNew() {
    * only available action was "Edit my answers", so a new plan could not be
    * started at all.
    */
-  const params = useLocalSearchParams<{ occasion?: string; fresh?: string }>();
+  const params = useLocalSearchParams<{ occasion?: string; fresh?: string; from?: string }>();
+  // Which entry point opened the planner, for counting (0085). Shape-checked, never trusted further.
+  const entry = /^[a-z_]{1,32}$/.test(params.from ?? "") ? (params.from as PlanInputs["entry"]) : undefined;
 
   /**
    * Arriving from an occasion card means that question is answered, so the
@@ -245,7 +247,7 @@ export default function PlanNew() {
       if (startFresh) {
         // Home has already confirmed replacing any existing draft.
         await clearDraft();
-        const base = defaultInputs();
+        const base = { ...defaultInputs(), ...(entry ? { entry } : {}) };
         const withOccasion =
           seeded && isOccasion(seeded)
             ? {
@@ -265,6 +267,8 @@ export default function PlanNew() {
         void saveDraft({ inputs: withOccasion, step: 0, itinerary: null, shareSlug: null });
       } else {
         const draft = await loadDraft();
+        // No draft to resume: a new plan, opened by a link or a shortcut. A draft keeps its own entry.
+        if (active && !draft?.inputs) setInputs({ ...defaultInputs(), entry: entry ?? "deeplink" });
         if (active && draft) {
           if (draft.inputs) setInputs(draft.inputs);
           if (draft.itinerary) setPhase({ name: "result", itinerary: draft.itinerary });

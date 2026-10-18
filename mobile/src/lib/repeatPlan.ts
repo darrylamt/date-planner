@@ -31,7 +31,8 @@ export async function draftFromPlan(plan: SavedPlan): Promise<void> {
   const whenAt = Math.max(0, steps.indexOf("when"));
 
   await saveDraft({
-    inputs: { ...inputs, date: tomorrow.toISOString().slice(0, 10) },
+    // Counted as a repeat (0085), whatever started the original.
+    inputs: { ...inputs, date: tomorrow.toISOString().slice(0, 10), entry: "repeat" },
     itinerary: null,
     shareSlug: null,
     step: whenAt,

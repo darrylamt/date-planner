@@ -1,7 +1,7 @@
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { loadDraft } from "./draft";
-import type { PlanInputs } from "./types";
+import type { PlanEntry, PlanInputs } from "./types";
 
 /**
  * Starts a NEW plan from anywhere.
@@ -11,10 +11,12 @@ import type { PlanInputs } from "./types";
  * else's, when every entry point resumed, a finished plan made it impossible
  * to start another.
  */
-export async function startNewPlan(occasion?: PlanInputs["occasion"]): Promise<void> {
+export async function startNewPlan(occasion?: PlanInputs["occasion"], entry?: PlanEntry): Promise<void> {
+  // entry says which door this was (0085), so the Home redesign can be judged by use.
+  const from = entry ? `&from=${entry}` : "";
   const href = occasion
-    ? `/plan/new?fresh=1&occasion=${occasion}`
-    : "/plan/new?fresh=1";
+    ? `/plan/new?fresh=1&occasion=${occasion}${from}`
+    : `/plan/new?fresh=1${from}`;
 
   const draft = await loadDraft();
   // A saved plan is kept in Saved, so starting another loses nothing and

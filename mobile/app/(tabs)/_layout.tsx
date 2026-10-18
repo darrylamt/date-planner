@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useQuickActionRouting } from "expo-quick-actions/router";
 import { startNewPlan } from "../../src/lib/startPlan";
@@ -33,7 +33,13 @@ export default function TabsLayout() {
    * and not in the root layout, which navigates before the tabs exist. On a
    * build without the module it does nothing.
    */
-  useQuickActionRouting();
+  // New plan is opened here so it is counted (0085); it still resumes a draft, as before.
+  const onQuickAction = useCallback((action: { id: string }) => {
+    if (action.id !== "new-plan") return false;
+    router.navigate("/plan/new?from=quick_action");
+    return true;
+  }, []);
+  useQuickActionRouting(onQuickAction);
   const c = useTheme();
   // undefined while the flag is being read, rendering the tabs first and
   // redirecting after would flash the home screen behind the intro.
@@ -76,7 +82,7 @@ export default function TabsLayout() {
         role={OWN_CIRCLE ? "search" : undefined}
         disabled
         accessibilityLabel="New plan"
-        listeners={{ tabPress: () => void startNewPlan() }}
+        listeners={{ tabPress: () => void startNewPlan(undefined, "tab_plus") }}
       >
         <NativeTabs.Trigger.Icon sf="plus" md="add" />
         <NativeTabs.Trigger.Label>New plan</NativeTabs.Trigger.Label>

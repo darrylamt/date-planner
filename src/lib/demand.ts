@@ -59,10 +59,16 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse)
       outcome: answer.status === "no_match" ? "no_match" : reached ? "reached" : "ok",
       no_match_reason: answer.status === "no_match" ? answer.headline.slice(0, 200) : null,
       venue_ids: venueIds,
+      // Which entry point started it (0085).
+      ...(inputs.entry ? { entry: inputs.entry } : {}),
     };
     const { error } = await db.from("plan_demand").insert(row);
-    // Before migration 0069 the table knows only ok and no_match.
-    if (error && row.outcome === "reached") await db.from("plan_demand").insert({ ...row, outcome: "ok" });
+    if (error) {
+      // Before 0069 the table knows only ok and no_match; before 0085 it has no entry.
+      const { entry: _entry, ...withoutEntry } = row as typeof row & { entry?: string };
+      void _entry;
+      await db.from("plan_demand").insert({ ...withoutEntry, outcome: row.outcome === "reached" ? "ok" : row.outcome });
+    }
   } catch {
     /* statistics are never worth a failed plan */
   }

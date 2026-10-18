@@ -350,6 +350,23 @@ export type Formality = "either" | "casual" | "fancy";
  */
 export type AlcoholChoice = "either" | "none";
 
+/**
+ * Where a plan was started from. Recorded with each generate request so the
+ * Home and onboarding redesign can be judged by what people actually tap.
+ */
+export type PlanEntry =
+  | "home_row"
+  | "home_all"
+  | "tab_plus"
+  | "onboarding"
+  | "quick_action"
+  | "widget"
+  | "push_birthday"
+  | "plans_empty"
+  | "repeat"
+  | "chat"
+  | "deeplink";
+
 export interface PlanInputs {
   areaIds: string[];
   areaNames: string[];
@@ -453,6 +470,8 @@ export interface PlanInputs {
    * older build, which predates the question.
    */
   ai?: boolean;
+  /** Which entry point started the plan, for counting only (0085). */
+  entry?: PlanEntry;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that

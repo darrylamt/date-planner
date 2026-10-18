@@ -6,6 +6,7 @@ import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
 import { Group, Row } from "../../src/components/List";
 import { draftFromPlan } from "../../src/lib/repeatPlan";
+import { startNewPlan } from "../../src/lib/startPlan";
 import { chooseAction } from "../../src/lib/actionSheet";
 import { Symbol } from "../../src/components/Symbol";
 import { Mascot, SpeechBubble } from "../../src/components/Mascot";
@@ -95,7 +96,7 @@ export default function Plans() {
         bubble="This shelf is looking empty."
         title="No saved plans yet"
         body="Build a plan and save it, it will show up here with its share link."
-        action={<Button title="Plan an outing" icon="sparkles" onPress={() => router.push("/plan/new")} />}
+        action={<Button title="Plan an outing" icon="sparkles" onPress={() => void startNewPlan(undefined, "plans_empty")} />}
       />
     );
   }

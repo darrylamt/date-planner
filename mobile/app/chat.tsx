@@ -271,7 +271,8 @@ export default function ChatScreen() {
            * swapping, menus and saving intact, so the plan built here lands in
            * exactly the same place as one built from the questionnaire.
            */
-          await saveDraft({ inputs: ev.inputs, itinerary: ev.itinerary, shareSlug: null });
+          // Counted as a plan from chat (0085).
+          await saveDraft({ inputs: { ...ev.inputs, entry: "chat" }, itinerary: ev.itinerary, shareSlug: null });
           setPlan({ title: ev.itinerary.title, total: ev.itinerary.est_total_ghs });
         } else if (ev.type === "tool") {
           setStatus(ev.label);

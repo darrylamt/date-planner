@@ -119,7 +119,7 @@ export async function GET(req: Request) {
           ? `Happy Birthday ${name}. Make we plan something?`
           : "Happy Birthday. Make we plan something?",
         // Straight into planning, since that is the only thing being offered.
-        data: { url: "/plan/new?occasion=birthday&fresh=1" },
+        data: { url: "/plan/new?occasion=birthday&fresh=1&from=push_birthday" },
       });
     }
   }

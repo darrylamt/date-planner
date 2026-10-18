@@ -52,7 +52,7 @@ function countdownAt(at: Date, start: Date, end: Date): string {
 
 const EMPTY: NextPlanProps = {
   empty: true,
-  url: "aduro://plan/new",
+  url: "aduro://plan/new?from=widget",
   title: "",
   countdown: "",
   when: "",

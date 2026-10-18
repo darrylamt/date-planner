@@ -83,6 +83,9 @@ export const planInputsSchema = z.object({
   near: z.object({ lat: z.number().min(4).max(12), lng: z.number().min(-4).max(2) }).optional(),
   wellnessKinds: z.array(z.enum(["massage", "facial", "nails"])).max(3).optional(),
   ai: z.boolean().optional(),
+  // Which entry point started the plan (0085). Lenient: a value this server
+  // does not know is dropped, never a reason to refuse the plan.
+  entry: z.string().regex(/^[a-z_]{1,32}$/).optional().catch(undefined),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),
