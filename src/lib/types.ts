@@ -352,6 +352,7 @@ export type AlcoholChoice = "either" | "none";
 export type PlanEntry =
   | "home_row"
   | "home_all"
+  | "home_season"
   | "tab_plus"
   | "onboarding"
   | "quick_action"

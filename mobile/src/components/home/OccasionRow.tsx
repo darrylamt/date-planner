@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { Text } from "../Text";
 import { Mascot } from "../Mascot";
@@ -21,9 +22,12 @@ const GAP = 12;
 export function OccasionRow({
   order,
   onPick,
+  lead,
 }: {
   order: readonly PlanInputs["occasion"][];
   onPick: (id: PlanInputs["occasion"]) => void;
+  /** A card ahead of the occasions, at the same width: the season's, when there is one. */
+  lead?: (width: number) => ReactNode;
 }) {
   const { width } = useWindowDimensions();
   const cardWidth = Math.round((width - GUTTER) / 2.5);
@@ -42,6 +46,7 @@ export function OccasionRow({
       snapToAlignment="start"
       contentContainerStyle={{ paddingHorizontal: GUTTER, gap: GAP }}
     >
+      {lead?.(cardWidth)}
       {items.map((o) => (
         <OccasionCard key={o.id} occasion={o} width={cardWidth} onPress={() => onPick(o.id as PlanInputs["occasion"])} />
       ))}

@@ -11,12 +11,18 @@ import type { PlanEntry, PlanInputs } from "./types";
  * else's, when every entry point resumed, a finished plan made it impossible
  * to start another.
  */
-export async function startNewPlan(occasion?: PlanInputs["occasion"], entry?: PlanEntry): Promise<void> {
+export async function startNewPlan(
+  occasion?: PlanInputs["occasion"],
+  entry?: PlanEntry,
+  /** A night already decided, like Halloween: the day (YYYY-MM-DD) and start (HH:MM). */
+  preset?: { date?: string; start?: string }
+): Promise<void> {
   // entry says which door this was (0085), so the Home redesign can be judged by use.
   const from = entry ? `&from=${entry}` : "";
+  const when = `${preset?.date ? `&date=${preset.date}` : ""}${preset?.start ? `&start=${encodeURIComponent(preset.start)}` : ""}`;
   const href = occasion
-    ? `/plan/new?fresh=1&occasion=${occasion}${from}`
-    : `/plan/new?fresh=1${from}`;
+    ? `/plan/new?fresh=1&occasion=${occasion}${from}${when}`
+    : `/plan/new?fresh=1${from}${when}`;
 
   const draft = await loadDraft();
   // A saved plan is kept in Saved, so starting another loses nothing and

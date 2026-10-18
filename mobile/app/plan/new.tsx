@@ -208,9 +208,16 @@ export default function PlanNew() {
    * only available action was "Edit my answers", so a new plan could not be
    * started at all.
    */
-  const params = useLocalSearchParams<{ occasion?: string; fresh?: string; from?: string }>();
+  const params = useLocalSearchParams<{ occasion?: string; fresh?: string; from?: string; date?: string; start?: string }>();
   // Which entry point opened the planner, for counting (0085). Shape-checked, never trusted further.
   const entry = /^[a-z_]{1,32}$/.test(params.from ?? "") ? (params.from as PlanInputs["entry"]) : undefined;
+  /*
+   * A night chosen for them, like Halloween from Home. Only a real day from
+   * today on, and a plain HH:MM; anything else leaves the usual defaults.
+   */
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const presetDate = /^\d{4}-\d{2}-\d{2}$/.test(params.date ?? "") && (params.date as string) >= todayISO ? params.date : undefined;
+  const presetStart = /^([01]\d|2[0-3]):[0-5]\d$/.test(params.start ?? "") ? params.start : undefined;
 
   /**
    * Arriving from an occasion card means that question is answered, so the
@@ -248,7 +255,12 @@ export default function PlanNew() {
       if (startFresh) {
         // Home has already confirmed replacing any existing draft.
         await clearDraft();
-        const base = { ...defaultInputs(), ...(entry ? { entry } : {}) };
+        const base = {
+          ...defaultInputs(),
+          ...(entry ? { entry } : {}),
+          ...(presetDate ? { date: presetDate } : {}),
+          ...(presetStart ? { startTime: presetStart } : {}),
+        };
         const withOccasion =
           seeded && isOccasion(seeded)
             ? {

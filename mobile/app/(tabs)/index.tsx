@@ -22,7 +22,7 @@ import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { setBillSource } from "../../src/lib/bill";
 import { useSeason } from "../../src/lib/season";
-import { HalloweenStrip, SpookyDrift } from "../../src/components/home/Halloween";
+import { HalloweenCard, SpookyDrift } from "../../src/components/home/Halloween";
 import { countSavedPlans, fetchProfile } from "../../src/lib/account";
 import { supabase } from "../../src/lib/supabase";
 import { myGroups } from "../../src/lib/groupApi";
@@ -170,11 +170,12 @@ export default function Home() {
         />
       </View>
 
-      {/* What are you planning? */}
+      {/* What are you planning? See all sits on the line right above the cards it opens. */}
       <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.one }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: Spacing.two }}>
-          <Text variant="title1" style={{ flex: 1 }}>
-            What are you planning?
+        <Text variant="title1">What are you planning?</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: Spacing.three }}>
+          <Text variant="footnote" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
+            {season === "halloween" ? "Pick one, or make it Halloween." : "Pick one. We plan the whole outing."}
           </Text>
           <Pressable hitSlop={10} onPress={() => setAllOpen(true)} accessibilityRole="button">
             <Text variant="subheadline" weight="600" style={{ color: c.accent }}>
@@ -182,16 +183,22 @@ export default function Home() {
             </Text>
           </Pressable>
         </View>
-        {season === "halloween" ? (
-          <HalloweenStrip />
-        ) : (
-          <Text variant="footnote" tone="secondary">
-            Pick one. We plan the whole outing to your budget, with real prices.
-          </Text>
-        )}
       </View>
       <View style={{ marginTop: Spacing.three }}>
-        <OccasionRow order={ROW_ORDER} onPick={(id) => void startNewPlan(id, "home_row")} />
+        <OccasionRow
+          order={ROW_ORDER}
+          onPick={(id) => void startNewPlan(id, "home_row")}
+          lead={
+            season === "halloween"
+              ? (width) => (
+                  <HalloweenCard
+                    width={width}
+                    onPlan={(date) => void startNewPlan(undefined, "home_season", date ? { date, start: "19:00" } : undefined)}
+                  />
+                )
+              : undefined
+          }
+        />
       </View>
 
       <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.two }}>

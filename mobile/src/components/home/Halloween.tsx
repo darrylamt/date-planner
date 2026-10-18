@@ -5,8 +5,9 @@ import * as Haptics from "expo-haptics";
 import { Text } from "../Text";
 import { useBurst } from "../Burst";
 import { appIconsAvailable, setHalloweenIcon } from "../AppIconPicker";
-import { useReducedMotion } from "../motion";
-import { radius, space } from "../../theme";
+import { PressScale, useReducedMotion } from "../motion";
+import { Mascot } from "../Mascot";
+import { Radius, Spacing, radius, space } from "../../theme";
 
 const NIGHT = "#0D0015";
 const LOGO = require("../../../assets/halloween/logo.png");
@@ -98,17 +99,32 @@ export function HalloweenBanner({ onPlan }: { onPlan: () => void }) {
   );
 }
 
+/** This year's Halloween as YYYY-MM-DD while it is still ahead, else null. */
+export function halloweenDate(now: Date = new Date()): string | null {
+  const iso = `${now.getFullYear()}-10-31`;
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return today <= iso ? iso : null;
+}
+
 /**
- * The season on Home, in one slim line instead of a banner.
+ * The season's card, first in the occasion row: friends out in front of an
+ * orange moon, and one tap to plan Halloween night itself (the 31st, from 7pm; the
+ * planner still asks who it is with).
  *
- * The banner pushed the occasion row below the first screen, and the row is
- * the call to action, so the season now says so in a 32pt pill and gets out
- * of the way. The pumpkin keeps the banner's secret: three quick taps say
- * boo, seven bring the bats.
+ * It replaced a pill that only said the season was on. A card in the row is
+ * where people are already looking and choosing, so the season becomes
+ * something to do rather than a label. After the 31st it stays for the rest
+ * of the season without a date.
+ *
+ * The pumpkin keeps the old banner's secret: three quick taps say boo, seven
+ * bring the bats. It is its own button, so playing with it never opens the
+ * planner.
  */
-export function HalloweenStrip() {
+export function HalloweenCard({ width, onPlan }: { width: number; onPlan: (date: string | null) => void }) {
   const burst = useBurst();
   const taps = useRef<number[]>([]);
+  const date = halloweenDate();
+  const day = date ? new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" }) : null;
 
   function poke(x: number, y: number) {
     const now = Date.now();
@@ -128,48 +144,79 @@ export function HalloweenStrip() {
   }
 
   return (
-    <View
+    <PressScale
+      onPress={() => onPlan(date)}
+      accessibilityRole="button"
+      accessibilityLabel={date ? "Plan Halloween night, the 31st" : "Plan a night out for spooky season"}
       style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: space.sm,
-        height: 32,
-        paddingHorizontal: space.sm,
-        borderRadius: 999,
+        width,
+        minHeight: 176,
+        padding: Spacing.three,
+        borderRadius: Radius.xl,
         backgroundColor: NIGHT,
-        alignSelf: "flex-start",
+        overflow: "hidden",
+        justifyContent: "space-between",
       }}
     >
-      <Pressable hitSlop={8} onPress={(e) => poke(e.nativeEvent.pageX, e.nativeEvent.pageY)} accessibilityLabel="Pumpkin">
-        <Text style={{ fontSize: 16 }}>🎃</Text>
-      </Pressable>
-      <Text variant="footnote" weight="700" style={{ color: "#FFE3C2" }}>
-        Spooky season in Accra
-      </Text>
-      {appIconsAvailable() ? (
+      {/* A harvest moon with friends in front of it, and a few stars: drawn, so no new image ships. */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 4, left: 4, width: 104, height: 104, borderRadius: 52, backgroundColor: "rgba(255,146,43,0.12)" }} />
+      <View pointerEvents="none" style={{ position: "absolute", top: 16, left: 16, width: 80, height: 80, borderRadius: 40, backgroundColor: "#FF922B" }} />
+      {STARS.map(([top, right, size], i) => (
+        <View
+          key={i}
+          pointerEvents="none"
+          style={{ position: "absolute", top, right, width: size, height: size, borderRadius: size, backgroundColor: "rgba(255,227,194,0.75)" }}
+        />
+      ))}
+
+      <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+        <Mascot occasion="friend_outing" size={72} animate={false} style={{ marginLeft: 8, marginTop: 14 }} />
         <Pressable
-          hitSlop={8}
-          onPress={() =>
-            void setHalloweenIcon().then((msg) => {
-              if (!msg.startsWith("Spooky")) Alert.alert("Halloween icon", msg);
-            })
-          }
-          style={({ pressed }) => ({
-            paddingHorizontal: space.sm,
-            paddingVertical: 2,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,146,43,0.2)",
-            opacity: pressed ? 0.7 : 1,
-          })}
+          hitSlop={10}
+          onPress={(e) => poke(e.nativeEvent.pageX, e.nativeEvent.pageY)}
+          accessibilityLabel="Pumpkin"
+          style={{ marginLeft: 2 }}
         >
-          <Text variant="caption1" weight="700" style={{ color: "#FF922B" }}>
-            Get the icon
-          </Text>
+          <Text style={{ fontSize: 24 }}>🎃</Text>
         </Pressable>
-      ) : null}
-    </View>
+      </View>
+
+      <View style={{ gap: 2 }}>
+        <Text variant="headline" numberOfLines={2} style={{ color: "#FF922B" }}>
+          {date ? "Halloween night" : "Spooky season"}
+        </Text>
+        <Text variant="footnote" numberOfLines={2} style={{ color: "rgba(255,227,194,0.78)" }}>
+          {date ? `${day} 31 Oct, from 7pm` : "A few spooky nights left in Accra."}
+        </Text>
+        {appIconsAvailable() ? (
+          // The season's icon, one tap; iOS confirms a change itself, so only a failure is said.
+          <Pressable
+            hitSlop={8}
+            onPress={() =>
+              void setHalloweenIcon().then((msg) => {
+                if (!msg.startsWith("Spooky")) Alert.alert("Halloween icon", msg);
+              })
+            }
+            style={({ pressed }) => ({ alignSelf: "flex-start", marginTop: Spacing.one, opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text variant="caption1" weight="700" style={{ color: "#FF922B" }}>
+              Get the icon ›
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </PressScale>
   );
 }
+
+/** [top, right, size] for the card's stars, on the dark side away from the moon. */
+const STARS: [number, number, number][] = [
+  [16, 18, 3],
+  [34, 40, 2],
+  [52, 14, 2],
+  [72, 30, 2],
+  [12, 52, 2],
+];
 
 /**
  * Bats and a ghost drifting across the top of Home, behind everything and
