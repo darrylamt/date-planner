@@ -3,7 +3,8 @@ import { Pressable, View } from "react-native";
 import { Text } from "../Text";
 import { Button } from "../Button";
 import { NativeSheet } from "../native/NativeSheet";
-import { NativeWheel } from "../native/NativeWheel";
+import { Chip } from "../Chip";
+import { useTheme } from "../../lib/useTheme";
 import { GUTTER, radius, space } from "../../theme";
 import { updateBirthday } from "../../lib/account";
 
@@ -37,6 +38,7 @@ export function BirthdayRow({
   month: number | null;
   onSaved: (day: number | null, month: number | null) => void;
 }) {
+  const c = useTheme();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [draftDay, setDraftDay] = useState(day ?? 1);
@@ -91,7 +93,7 @@ export function BirthdayRow({
       </Pressable>
 
       {/*
-        Sized to what is in it: a title, two wheels and the buttons, where a
+        Sized to what is in it: a title, the month and day, and the buttons, where a
         page sheet put them at the top of a screen of empty background.
       */}
       <NativeSheet visible={open} onClose={() => setOpen(false)}>
@@ -108,24 +110,41 @@ export function BirthdayRow({
             to know how old you are.
           </Text>
 
-          <View style={{ flexDirection: "row", gap: space.md, marginTop: space.xl }}>
-            <View style={{ flex: 1 }}>
-              <NativeWheel
-                options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
-                value={draftMonth}
-                onChange={setDraftMonth}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <NativeWheel
-                options={Array.from({ length: daysInMonth }, (_, i) => ({
-                  value: i + 1,
-                  label: String(i + 1),
-                }))}
-                value={safeDay}
-                onChange={setDraftDay}
-              />
-            </View>
+          {/* The month as chips, then its days as a grid: two taps, no spinning. */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, paddingHorizontal: GUTTER, marginTop: space.xl }}>
+            {MONTHS.map((m, i) => (
+              <Chip key={m} label={m.slice(0, 3)} selected={draftMonth === i + 1} onPress={() => setDraftMonth(i + 1)} />
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: GUTTER, marginTop: space.lg }}>
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+              const on = d === safeDay;
+              return (
+                <Pressable
+                  key={d}
+                  onPress={() => setDraftDay(d)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={`${d} ${MONTHS[draftMonth - 1]}`}
+                  style={{ width: `${100 / 7}%`, height: 44, alignItems: "center", justifyContent: "center" }}
+                >
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: on ? c.text : "transparent",
+                    }}
+                  >
+                    <Text variant="subheadline" weight={on ? "700" : "500"} style={{ color: on ? c.background : c.text }}>
+                      {d}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
 
           <View

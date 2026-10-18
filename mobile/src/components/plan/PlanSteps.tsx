@@ -8,7 +8,7 @@ import { ChipRow, Segmented } from "../Segmented";
 import { Field, StepHeading } from "../Field";
 import { BudgetSlider } from "../BudgetSlider";
 // The phone's own wheel where the build has SwiftUI, the drawn one where it does not.
-import { NativeWheel } from "../native/NativeWheel";
+import { TimeStrip } from "./TimeStrip";
 import { CityMenu } from "./CityMenu";
 import { DayStrip } from "./DayStrip";
 import type { WellnessFloors } from "../../lib/data";
@@ -412,18 +412,18 @@ export function PlanSteps({
         />
 
         <GroupLabel>Start time</GroupLabel>
-        <NativeWheel
+        <TimeStrip
           options={startTimeOptions().map((t) => ({ value: t, label: time12(t) }))}
           value={inputs.startTime}
           onChange={(startTime) => update({ startTime })}
         />
 
         <GroupLabel>How long are you out for?</GroupLabel>
-        <NativeWheel
-          options={DURATIONS.map((d) => ({ value: d.hours, label: d.label }))}
-          value={inputs.hours}
-          onChange={(hours) => update({ hours })}
-        />
+        <ChipRow>
+          {DURATIONS.map((d) => (
+            <Chip key={d.hours} label={d.label} selected={inputs.hours === d.hours} onPress={() => update({ hours: d.hours })} />
+          ))}
+        </ChipRow>
 
       </>
     );
@@ -448,11 +448,16 @@ export function PlanSteps({
           title="How many places?"
           subtitle="Dinner and one more, or a proper crawl. We will fit them to the time you have."
         />
-        <NativeWheel
-          options={STOP_OPTIONS.map((o) => ({ value: o.stops, label: o.label }))}
-          value={inputs.stops ?? 0}
-          onChange={(stops) => update({ stops: stops || undefined })}
-        />
+        <ChipRow>
+          {STOP_OPTIONS.map((o) => (
+            <Chip
+              key={o.stops}
+              label={o.label}
+              selected={(inputs.stops ?? 0) === o.stops}
+              onPress={() => update({ stops: o.stops || undefined })}
+            />
+          ))}
+        </ChipRow>
       </>
     );
   }
@@ -765,21 +770,22 @@ export function PlanSteps({
             </Text>
           </View>
         ) : (
-          <NativeWheel
-            options={partySizeOptions(inputs.occasion).map((n) => ({
-              value: n,
-              label: n === 1 ? "Just me" : String(n),
-            }))}
-            value={inputs.partySize}
-            onChange={(partySize) =>
-              update({
-                partySize,
-                // Drop names that no longer have a seat.
-                companions: inputs.companions.slice(0, Math.max(0, partySize - 1)),
-              })
-            }
-            suffix={inputs.partySize > 1 ? "people" : undefined}
-          />
+          <ChipRow>
+            {partySizeOptions(inputs.occasion).map((n) => (
+              <Chip
+                key={n}
+                label={n === 1 ? "Just me" : `${n} people`}
+                selected={inputs.partySize === n}
+                onPress={() =>
+                  update({
+                    partySize: n,
+                    // Drop names that no longer have a seat.
+                    companions: inputs.companions.slice(0, Math.max(0, n - 1)),
+                  })
+                }
+              />
+            ))}
+          </ChipRow>
         )}
 
         {pair ? (
