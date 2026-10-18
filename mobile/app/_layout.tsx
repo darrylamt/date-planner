@@ -135,6 +135,9 @@ function RootShell() {
           {/* The night's money: a wheel for who pays, and the split afterwards. */}
           <Stack.Screen name="who-pays" options={{ title: "" }} />
           <Stack.Screen name="split" options={{ title: "" }} />
+          {/* Group outings: start one, and one screen for everything after. */}
+          <Stack.Screen name="group/new" options={{ title: "" }} />
+          <Stack.Screen name="group/[code]" options={{ title: "" }} />
           {/* A focused task rather than a destination, so it is pushed like
               the planner instead of sitting in the tab bar. */}
           {/*

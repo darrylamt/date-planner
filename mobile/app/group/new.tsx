@@ -1,0 +1,190 @@
+import { useMemo, useState } from "react";
+import { Share, View } from "react-native";
+import { router } from "expo-router";
+import { Screen } from "../../src/components/Screen";
+import { Text } from "../../src/components/Text";
+import { Chip } from "../../src/components/Chip";
+import { Field } from "../../src/components/Field";
+import { Button } from "../../src/components/Button";
+import { DayStrip } from "../../src/components/plan/DayStrip";
+import { Paywall } from "../../src/components/chat/Paywall";
+import { GUTTER, space } from "../../src/theme";
+import { useTheme } from "../../src/lib/useTheme";
+import { useAuth } from "../../src/lib/useAuth";
+import { createGroup, groupLink } from "../../src/lib/groupApi";
+import type { GroupOccasion } from "../../src/lib/groups";
+
+/**
+ * Start a group outing: what it is, which days, and when answers close.
+ *
+ * Needs a real account, because the group has to outlive a reinstall and
+ * reach the organiser by push. Friends never need one.
+ */
+const OCCASIONS: { id: GroupOccasion; label: string }[] = [
+  { id: "friend_outing", label: "Night out" },
+  { id: "birthday", label: "Birthday" },
+  { id: "celebration", label: "Celebration" },
+  { id: "graduation", label: "Graduation" },
+];
+const SPANS = [1, 2, 3, 5, 7];
+const SIZES = [3, 4, 5, 6, 8, 10, 12];
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const addDays = (dateIso: string, n: number) => {
+  const d = new Date(`${dateIso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return iso(d);
+};
+
+export default function NewGroup() {
+  const c = useTheme();
+  const { session, anonymous, loading } = useAuth();
+  const [occasion, setOccasion] = useState<GroupOccasion>("friend_outing");
+  const [title, setTitle] = useState("");
+  const [start, setStart] = useState(() => addDays(iso(new Date()), 3));
+  const [span, setSpan] = useState(3);
+  const [expected, setExpected] = useState<number | null>(null);
+  const [name, setName] = useState(() => String(session?.user?.user_metadata?.display_name ?? "").split(/\s+/)[0] ?? "");
+  const [deadlineKey, setDeadlineKey] = useState<"tomorrow" | "two_days" | "day_before">("tomorrow");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [paywalled, setPaywalled] = useState(false);
+
+  const end = addDays(start, span - 1);
+  // When answers close: never later than the evening before the first day.
+  const deadlines = useMemo(() => {
+    const now = Date.now();
+    const dayBefore = new Date(`${addDays(start, -1)}T18:00:00Z`).getTime();
+    const opts = [
+      { key: "tomorrow" as const, label: "Tomorrow evening", at: new Date(`${addDays(iso(new Date()), 1)}T18:00:00Z`).getTime() },
+      { key: "two_days" as const, label: "In two days", at: new Date(`${addDays(iso(new Date()), 2)}T18:00:00Z`).getTime() },
+      { key: "day_before" as const, label: "The day before", at: dayBefore },
+    ];
+    return opts.filter((o) => o.at > now + 3_600_000 && o.at <= dayBefore);
+  }, [start]);
+  const deadline = deadlines.find((d) => d.key === deadlineKey) ?? deadlines[deadlines.length - 1] ?? null;
+
+  if (!loading && (!session || anonymous)) {
+    return (
+      <Screen contentStyle={{ paddingHorizontal: GUTTER, gap: space.lg, paddingTop: space.lg }}>
+        <Text variant="display">Plan with friends</Text>
+        <Text variant="body" tone="secondary">
+          Sign in to start a group outing. Your friends don&apos;t need an account to answer, just the link.
+        </Text>
+        <Button title="Sign in" onPress={() => router.push("/login")} />
+      </Screen>
+    );
+  }
+
+  if (paywalled) {
+    return (
+      <Screen contentStyle={{ paddingHorizontal: GUTTER, paddingTop: space.lg }}>
+        <Paywall tier="free" reason="groups" onPurchased={() => setPaywalled(false)} />
+      </Screen>
+    );
+  }
+
+  async function start_() {
+    if (name.trim().length < 2) return setError("Add the name your friends know you by.");
+    if (!deadline) return setError("Pick later dates: answers need time to come in.");
+    setBusy(true);
+    setError(null);
+    const r = await createGroup({
+      occasion,
+      title: title.trim() || undefined,
+      dateFrom: start,
+      dateTo: end,
+      deadline: new Date(deadline.at).toISOString(),
+      expected: expected ?? undefined,
+      organiserName: name.trim(),
+    });
+    setBusy(false);
+    if (!r.ok) {
+      if (r.error === "groups_limit") return setPaywalled(true);
+      return setError(
+        r.error === "name" ? "Use letters and numbers for your name." : r.error === "account_needed" ? "Sign in with an account first." : "That didn't go through. Try again."
+      );
+    }
+    const what = title.trim() || OCCASIONS.find((o) => o.id === occasion)!.label.toLowerCase();
+    await Share.share({
+      message: `I'm planning ${what} on Duro! Say when you're free and what you're into, your budget stays private: ${groupLink(r.data.code)}`,
+    }).catch(() => null);
+    router.replace(`/group/${r.data.code}`);
+  }
+
+  return (
+    <Screen
+      contentStyle={{ paddingHorizontal: GUTTER, gap: space.xl, paddingTop: space.md }}
+      footer={
+        <View style={{ paddingHorizontal: GUTTER, paddingVertical: space.md, backgroundColor: c.background }}>
+          <Button title={busy ? "Starting…" : "Start and invite friends"} icon="person.3.fill" onPress={() => void start_()} disabled={busy} />
+        </View>
+      }
+    >
+      <View style={{ gap: space.sm }}>
+        <Text variant="display">Plan with friends</Text>
+        <Text variant="body" tone="secondary">
+          Everyone says when they&apos;re free, what they&apos;re into and what they can spend. Duro picks the day and one plan, with each person&apos;s order sized to their own budget. Nobody sees anyone else&apos;s.
+        </Text>
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="headline">What is it?</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+          {OCCASIONS.map((o) => (
+            <Chip key={o.id} label={o.label} selected={occasion === o.id} onPress={() => setOccasion(o.id)} />
+          ))}
+        </View>
+        <Field value={title} onChangeText={setTitle} maxLength={80} placeholder="Give it a name (optional), e.g. Ama's birthday" />
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="headline">From which day?</Text>
+        <DayStrip value={start} onChange={setStart} />
+        <Text variant="headline" style={{ marginTop: space.sm }}>
+          How many days can it be?
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+          {SPANS.map((n) => (
+            <Chip key={n} label={n === 1 ? "Just that day" : `${n} days`} selected={span === n} onPress={() => setSpan(n)} />
+          ))}
+        </View>
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="headline">Answers close</Text>
+        {deadlines.length ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+            {deadlines.map((d) => (
+              <Chip key={d.key} label={d.label} selected={deadline?.key === d.key} onPress={() => setDeadlineKey(d.key)} />
+            ))}
+          </View>
+        ) : (
+          <Text variant="footnote" tone="secondary">
+            Pick a later first day so people have time to answer.
+          </Text>
+        )}
+      </View>
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="headline">How many people, roughly? (optional)</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+          {SIZES.map((n) => (
+            <Chip key={n} label={String(n)} selected={expected === n} onPress={() => setExpected(expected === n ? null : n)} />
+          ))}
+        </View>
+        <Text variant="footnote" tone="secondary">
+          We&apos;ll tell you when that many have answered.
+        </Text>
+      </View>
+
+      <Field label="Your name, as your friends know you" value={name} onChangeText={setName} maxLength={24} />
+
+      {error ? (
+        <Text variant="subheadline" weight="600" style={{ color: c.danger }}>
+          {error}
+        </Text>
+      ) : null}
+    </Screen>
+  );
+}

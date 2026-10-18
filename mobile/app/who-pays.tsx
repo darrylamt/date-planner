@@ -11,6 +11,7 @@ import { GUTTER, radius, space, Spacing } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { isMe, rememberNames, rememberedNames, startingNames } from "../src/lib/people";
 import { afterSharing } from "../src/lib/review";
+import { billSource } from "../src/lib/bill";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -35,7 +36,10 @@ export default function WhoPays() {
   const pop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    void rememberedNames().then((saved) => setNames(startingNames(saved, Number(params.count) || 2)));
+    // From a group outing's plan, everyone's real names; otherwise the ones this phone remembers.
+    const fromPlan = billSource()?.names;
+    if (fromPlan?.length) setNames(fromPlan);
+    else void rememberedNames().then((saved) => setNames(startingNames(saved, Number(params.count) || 2)));
   }, [params.count]);
 
   async function spin() {

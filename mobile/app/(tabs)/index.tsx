@@ -28,6 +28,9 @@ import { setBillSource } from "../../src/lib/bill";
 import { useSeason } from "../../src/lib/season";
 import { HalloweenBanner, SpookyDrift } from "../../src/components/home/Halloween";
 import { fetchProfile } from "../../src/lib/account";
+import { supabase } from "../../src/lib/supabase";
+import { myGroups } from "../../src/lib/groupApi";
+import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
 
@@ -43,12 +46,20 @@ const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
   solo_day: "figure.walk",
 };
 
+/*
+ * Group outings, before launch: shown to admin accounts only, so they can be
+ * tried on a real phone. Set true to show everybody.
+ */
+const GROUPS_LAUNCHED = false;
+
 export default function Home() {
   const c = useTheme();
   const { season } = useSeason();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
   const [pro, setPro] = useState(false);
+  const [groupsOn, setGroupsOn] = useState(GROUPS_LAUNCHED);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -66,6 +77,22 @@ export default function Home() {
           )
         )
         .catch(() => undefined);
+      // Group outings: everyone once launched, admins until then; their groups either way.
+      void (async () => {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) return;
+        let on = GROUPS_LAUNCHED;
+        if (!on) {
+          const { data: row } = await supabase.from("profiles").select("is_admin").eq("id", data.user.id).maybeSingle();
+          on = Boolean((row as { is_admin?: boolean } | null)?.is_admin);
+        }
+        if (!active) return;
+        setGroupsOn(on);
+        if (on) {
+          const r = await myGroups();
+          if (active && r.ok) setGroups(r.data.groups.filter((g) => g.status !== "cancelled").slice(0, 3));
+        }
+      })().catch(() => undefined);
       // On focus too, so the star is there when they come back from buying Pro.
       void fetchAllowance()
         .then((a) => active && setPro(a?.tier === "pro"))
@@ -186,6 +213,62 @@ export default function Home() {
           </View>
           <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
         </Pressable>
+
+        {groupsOn ? (
+          <Pressable
+            onPress={() => router.push("/group/new")}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: Spacing.three,
+              padding: Spacing.three,
+              marginBottom: Spacing.three,
+              borderRadius: Radius.xl,
+              backgroundColor: c.backgroundElement,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+              opacity: pressed ? 0.75 : 1,
+            })}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
+              <Symbol name="person.3.fill" size={20} color={c.accent} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="headline">Plan with friends</Text>
+              <Text variant="footnote" tone="secondary">
+                Everyone says when they&apos;re free. One plan that works for every budget.
+              </Text>
+            </View>
+            <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
+          </Pressable>
+        ) : null}
+        {groups.map((g) => (
+          <Pressable
+            key={g.code}
+            onPress={() => router.push(`/group/${g.code}`)}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: Spacing.two,
+              paddingVertical: Spacing.two,
+              paddingHorizontal: Spacing.three,
+              marginBottom: Spacing.two,
+              borderRadius: Radius.lg,
+              backgroundColor: c.accentSoft,
+              opacity: pressed ? 0.75 : 1,
+            })}
+          >
+            <Symbol name="person.3.fill" size={14} color={c.accent} />
+            <Text variant="subheadline" weight="600" style={{ flex: 1 }} numberOfLines={1}>
+              {g.title || "Group outing"}
+            </Text>
+            <Text variant="footnote" tone="secondary">
+              {g.status === "locked" ? "Planned" : g.role === "organiser" ? "Collecting answers" : "Answered"}
+            </Text>
+          </Pressable>
+        ))}
 
         {/* The two money tools, for a night that was never planned here. */}
         <View style={{ flexDirection: "row", gap: Spacing.three, marginBottom: Spacing.three }}>

@@ -28,6 +28,7 @@ export function StopCard({
   onReported,
   swapping,
   reserving,
+  locked = false,
 }: {
   stop: ItineraryStop;
   /** The stop before this one, which is where they will be setting off from. */
@@ -39,6 +40,11 @@ export function StopCard({
   onReported: (message: string) => void;
   swapping: boolean;
   reserving: boolean;
+  /**
+   * A group outing's plan: everyone's orders were sized to their own budgets,
+   * so nobody may swap the venue or edit the shared lines from one phone.
+   */
+  locked?: boolean;
 }) {
   const c = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -46,7 +52,7 @@ export function StopCard({
   const [reportOpen, setReportOpen] = useState(false);
   const [tripOpen, setTripOpen] = useState(false);
 
-  const editable = stop.kind !== "event";
+  const editable = stop.kind !== "event" && !locked;
   /*
    * Places you do something at. Read from the venue's own type rather than
    * guessed from the menu, so the button is there before anything is fetched
@@ -183,7 +189,7 @@ export function StopCard({
               <Text variant="title3">{stop.name}</Text>
             )}
           </View>
-          <SwapButton onPress={onSwap} busy={swapping} hint={index === 0} />
+          {locked ? null : <SwapButton onPress={onSwap} busy={swapping} hint={index === 0} />}
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>

@@ -40,7 +40,9 @@ export default function Split() {
   const [momo, setMomo] = useState("");
 
   useEffect(() => {
-    void rememberedNames().then((saved) => setNames(startingNames(saved, source?.party ?? 2)));
+    // A group outing knows everyone's names; otherwise the ones this phone remembers.
+    if (source?.names?.length) setNames(source.names);
+    else void rememberedNames().then((saved) => setNames(startingNames(saved, source?.party ?? 2)));
     void rememberedMomo().then(setMomo);
   }, [source?.party]);
 
@@ -135,7 +137,11 @@ export default function Split() {
       <View style={{ paddingHorizontal: GUTTER, paddingTop: space.md }}>
         <Text variant="display">Split the bill</Text>
         <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two }}>
-          {source ? `From ${source.title}. Change the total if the bill said something different.` : "Type the total, choose who's in, and send everyone their share."}
+          {source?.ownOrders
+            ? `From ${source.title}. Everyone pays for their own order; this splits what you share: entry, bookings and rides.`
+            : source
+              ? `From ${source.title}. Change the total if the bill said something different.`
+              : "Type the total, choose who's in, and send everyone their share."}
         </Text>
       </View>
 

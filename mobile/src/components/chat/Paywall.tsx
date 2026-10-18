@@ -79,12 +79,12 @@ export function AccountlessNote() {
   );
 }
 
-type Reason = "limit" | "browse" | "venue";
+type Reason = "limit" | "browse" | "venue" | "groups";
 
 export type Perk = { icon: SymbolViewProps["name"]; title: string; body: string };
 
 /** What Pro unlocks, and nothing it does not. */
-export const PERKS: Record<"chat" | "venue" | "order", Perk> = {
+export const PERKS: Record<"chat" | "venue" | "order" | "groups", Perk> = {
   chat: {
     icon: "bubble.left.and.text.bubble.right.fill",
     title: "Plan by chatting with Durobot",
@@ -102,6 +102,11 @@ export const PERKS: Record<"chat" | "venue" | "order", Perk> = {
     icon: "fork.knife",
     title: "Know what to order",
     body: "Ask Durobot what is good there, and what fits your budget, when you arrive.",
+  },
+  groups: {
+    icon: "person.3.fill",
+    title: "Plan with as many groups as you like",
+    body: "Free accounts run two group outings at once. Pro has no limit.",
   },
 };
 
@@ -121,6 +126,11 @@ const COPY: Record<Reason, { title: string; line: string; perks: (keyof typeof P
     title: "See the whole page",
     line: "Menus, hours and booking for every place, with Duro Pro.",
     perks: ["venue", "chat", "order"],
+  },
+  groups: {
+    title: "You have two group outings going",
+    line: "Finish one, or plan as many as you like with Duro Pro.",
+    perks: ["groups", "chat", "venue"],
   },
 };
 

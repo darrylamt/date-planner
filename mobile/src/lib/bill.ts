@@ -26,6 +26,13 @@ export interface BillSource {
   extras: { label: string; ghs: number }[];
   /** The rides between stops, all together. */
   rides: number;
+  /** Everyone's names, when the plan knows them: a group outing. Used before remembered names. */
+  names?: string[];
+  /**
+   * A group outing: each person pays for their own order, so these lines are
+   * only what everyone shares (entry, a court, rides) and the split says so.
+   */
+  ownOrders?: boolean;
 }
 
 /** What a plan hands to the split screen. In memory: it is one tap away. */
@@ -46,7 +53,16 @@ export function billFromPlan(inputs: PlanInputs, itinerary: Itinerary): BillSour
     for (const ch of s.charges ?? []) if (ch.ghs > 0) extras.push({ label: `${ch.label}, ${s.name}`, ghs: ch.ghs });
   });
   const rides = inputs.driving ? 0 : itinerary.hops.reduce((sum, h) => sum + (h.cost_ghs || 0), 0);
-  return { title: itinerary.title, party: inputs.partySize, lines, extras, rides };
+  const names = inputs.companions?.length === inputs.partySize ? inputs.companions : undefined;
+  return {
+    title: itinerary.title,
+    party: inputs.partySize,
+    lines,
+    extras,
+    rides,
+    ...(names ? { names } : {}),
+    ...(itinerary.stops.some((s) => s.own_orders) ? { ownOrders: true } : {}),
+  };
 }
 
 export interface SplitInput {

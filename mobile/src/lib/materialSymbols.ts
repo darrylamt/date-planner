@@ -74,6 +74,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "leaf.fill": "eco",
   link: "link",
   "location.fill": "near_me",
+  "lock.fill": "lock",
   "lock.iphone": "mobile_lock_portrait",
   magnifyingglass: "search",
   map: "map",
