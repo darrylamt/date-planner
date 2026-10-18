@@ -541,8 +541,7 @@ export default function PlanNew() {
         onSave={handleSave}
         shareSlug={shareSlug}
         saving={saving}
-        // Switched on once migration 0081 (vibe_feedback) has been run.
-        askVibe={false}
+        askVibe
       />
     );
   }
