@@ -1,0 +1,25 @@
+# Silverbird's Ghana showtimes into cinema_showtimes, once a day
+# (scripts/scrape-silverbird.ts). Two pages; nothing in the app reads the
+# table until Silverbird says we may show their listings.
+name: Silverbird
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # 03:30 Accra (UTC), after Gaderin
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsx scripts/scrape-silverbird.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
