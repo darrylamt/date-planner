@@ -6,13 +6,14 @@ import { Text } from "../../src/components/Text";
 import { Chip } from "../../src/components/Chip";
 import { Field } from "../../src/components/Field";
 import { Button } from "../../src/components/Button";
-import { DayStrip } from "../../src/components/plan/DayStrip";
+import { RangeCalendar, addDaysISO, localISO, spanDays, type DayRange } from "../../src/components/plan/RangeCalendar";
+import { Segmented } from "../../src/components/Segmented";
 import { Paywall } from "../../src/components/chat/Paywall";
 import { GUTTER, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
 import { createGroup, groupLink } from "../../src/lib/groupApi";
-import { GROUP_MAX_PICKED, type GroupOccasion } from "../../src/lib/groups";
+import { GROUP_MAX_DAYS, GROUP_MAX_PICKED, GROUP_PICK_WINDOW_DAYS, type GroupOccasion } from "../../src/lib/groups";
 
 /**
  * Start a group outing: what it is, which days, and when answers close.
@@ -26,7 +27,6 @@ const OCCASIONS: { id: GroupOccasion; label: string }[] = [
   { id: "celebration", label: "Celebration" },
   { id: "graduation", label: "Graduation" },
 ];
-const SPANS = [1, 2, 3, 5, 7];
 const SIZES = [3, 4, 5, 6, 8, 10, 12];
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -41,8 +41,11 @@ export default function NewGroup() {
   const { session, anonymous, loading } = useAuth();
   const [occasion, setOccasion] = useState<GroupOccasion>("friend_outing");
   const [title, setTitle] = useState("");
-  const [start, setStart] = useState(() => addDays(iso(new Date()), 3));
-  const [span, setSpan] = useState(3);
+  // Three days from three days out, until they choose: a weekend-ish default.
+  const [range, setRange] = useState<DayRange>(() => {
+    const s = addDaysISO(localISO(new Date()), 3);
+    return { start: s, end: addDaysISO(s, 2) };
+  });
   // A run of days, or particular days ("Friday or Saturday", "any Saturday this month").
   const [mode, setMode] = useState<"range" | "pick">("range");
   const [picked, setPicked] = useState<string[]>([]);
@@ -53,10 +56,16 @@ export default function NewGroup() {
   const [error, setError] = useState<string | null>(null);
   const [paywalled, setPaywalled] = useState(false);
 
+  // A range still waiting for its last day is that one day.
+  const start = range.start ?? addDaysISO(localISO(new Date()), 3);
+  const rangeEnd = range.end ?? start;
   const first = mode === "pick" && picked.length ? [...picked].sort()[0] : start;
-  const end = mode === "pick" && picked.length ? [...picked].sort()[picked.length - 1] : addDays(start, span - 1);
-  // The next four weeks, for picking particular days.
-  const pickable = useMemo(() => Array.from({ length: 28 }, (_, i) => addDays(iso(new Date()), i + 1)), []);
+  const end = mode === "pick" && picked.length ? [...picked].sort()[picked.length - 1] : rangeEnd;
+  // From tomorrow, so answers have time to come in, to the edge of what a group may span (0084).
+  const minDay = useMemo(() => addDaysISO(localISO(new Date()), 1), []);
+  const maxDay = useMemo(() => addDaysISO(localISO(new Date()), GROUP_PICK_WINDOW_DAYS), []);
+  const fmt = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   // When answers close: never later than the evening before the first day.
   const deadlines = useMemo(() => {
     const now = Date.now();
@@ -146,41 +155,36 @@ export default function NewGroup() {
 
       <View style={{ gap: space.sm }}>
         <Text variant="headline">Which days could work?</Text>
-        <View style={{ flexDirection: "row", gap: space.sm }}>
-          <Chip label="A run of days" selected={mode === "range"} onPress={() => setMode("range")} />
-          <Chip label="Pick days" selected={mode === "pick"} onPress={() => setMode("pick")} />
-        </View>
-        {mode === "range" ? (
-          <>
-            <Text variant="subheadline" tone="secondary">
-              From
-            </Text>
-            <DayStrip value={start} onChange={setStart} />
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-              {SPANS.map((n) => (
-                <Chip key={n} label={n === 1 ? "Just that day" : `${n} days`} selected={span === n} onPress={() => setSpan(n)} />
-              ))}
-            </View>
-          </>
-        ) : (
-          <>
-            <Text variant="subheadline" tone="secondary">
-              Up to {GROUP_MAX_PICKED} days in the next four weeks.
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-              {pickable.map((d) => (
-                <Chip
-                  key={d}
-                  label={new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
-                  selected={picked.includes(d)}
-                  onPress={() =>
-                    setPicked((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : cur.length >= GROUP_MAX_PICKED ? cur : [...cur, d]))
-                  }
-                />
-              ))}
-            </View>
-          </>
-        )}
+        <Segmented
+          options={[
+            { value: "range", label: "A run of days" },
+            { value: "pick", label: "Pick days" },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
+        <Text variant="subheadline" tone="secondary">
+          {mode === "range"
+            ? range.start && !range.end
+              ? `From ${fmt(range.start)}. Now tap the last day (up to ${GROUP_MAX_DAYS}).`
+              : start === rangeEnd
+                ? `${fmt(start)}, just that day. Tap another day to start again.`
+                : `${fmt(start)} to ${fmt(rangeEnd)}, ${spanDays(start, rangeEnd)} days`
+            : picked.length
+              ? `${picked.length} day${picked.length === 1 ? "" : "s"} picked, up to ${GROUP_MAX_PICKED}.`
+              : `Tap the days that could work, up to ${GROUP_MAX_PICKED}.`}
+        </Text>
+        <RangeCalendar
+          mode={mode}
+          min={minDay}
+          max={maxDay}
+          range={range}
+          onRange={setRange}
+          picked={picked}
+          onPicked={setPicked}
+          maxSpan={GROUP_MAX_DAYS}
+          maxPicked={GROUP_MAX_PICKED}
+        />
       </View>
 
       <View style={{ gap: space.sm }}>
