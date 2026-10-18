@@ -4,6 +4,7 @@ import { dishMatchesCuisine } from "./cuisineDishes";
 import { MENU_ONLY_TYPES, freeToVisit, isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
+import { genreFits } from "./movies";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
@@ -1457,7 +1458,24 @@ function planWith(
       })
       .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
 
-    return placeable[0] ?? null;
+    /*
+     * A film, when one was asked for, and only then.
+     *
+     * The showings are only loaded on request (movies.ts), and asked for,
+     * the film is the point: it outranks any other night. Among showings,
+     * the genres asked for first, then one that leaves room for something
+     * before it (an hour in, near enough), then the earliest. A film at the
+     * very start of the outing is fine when it is the only one that fits.
+     */
+    if (inputs.movie) {
+      const films = placeable.filter((x) => x.event.kind === "movie" && (x.at == null || x.at >= startMinutes));
+      if (films.length) {
+        const room = (x: Anchor) => Math.abs((x.at ?? startMinutes) - (startMinutes + 60));
+        const fits = (x: Anchor) => genreFits(x.event.vibe_tags, inputs.movieGenres);
+        return [...films].sort((a, b) => fits(b) - fits(a) || room(a) - room(b))[0];
+      }
+    }
+    return placeable.find((x) => x.event.kind !== "movie") ?? null;
   })();
 
   /** Every way one slot could be filled, cheapest order first within a venue. */
@@ -1527,6 +1545,8 @@ function planWith(
       ticket?: number | null;
       /** This slot is a dated event's: priced by its door alone (see below). */
       event?: boolean;
+      /** What the door line says, when not "Entry". */
+      doorLabel?: string;
       /** A later bar on a club-hopping night: priced by its door alone (see below). */
       doorOnly?: boolean;
     } = {}
@@ -1611,9 +1631,11 @@ function planWith(
      */
     const doorKnown = covers.length > 0 || ticket != null || usual != null;
 
-    const doorLabel = fixtures.length
-      ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
-      : "Entry";
+    const doorLabel = opts.doorLabel
+      ? opts.doorLabel
+      : fixtures.length
+        ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
+        : "Entry";
     /*
      * A free door is still worth a line.
      *
@@ -1986,7 +2008,8 @@ function planWith(
         });
         return best;
       };
-      const strict = Boolean(meetingRole(inputs)) || focusTypes.length > 0;
+      // A film asked for goes in whatever stop is nearest its time, focus or not.
+      const strict = pin.event.kind !== "movie" && (Boolean(meetingRole(inputs)) || focusTypes.length > 0);
       pinnedIndex = nearest((role) => ROLE_TYPES[role].includes(pin.venue.type));
       if (pinnedIndex < 0 && !strict) pinnedIndex = nearest((role) => role !== "wellness");
     }
@@ -2012,6 +2035,8 @@ function planWith(
            */
           ticket: pin.event.cost_ghs == null ? null : Number(pin.event.cost_ghs),
           event: true,
+          // No Ghana prices are published; the figure is ours, and says so.
+          ...(pin.event.kind === "movie" ? { doorLabel: "Ticket and snacks (estimate)" } : {}),
         }
       );
       if (!built.length) return null;
@@ -2301,10 +2326,25 @@ function planWith(
         if (early > 0) {
           for (let i = pinnedIndex; i < laid.length; i++) laid[i].arrivalMinutes += early;
         }
+        /*
+         * And never after a film has started. Arriving at 18:43 for 18:40
+         * is missing the opening, so the stop before gives up the minutes,
+         * down to a forty-minute floor; past that the attempt fails below
+         * and a plan with fewer stops, or none of the film, is tried.
+         */
+        const late = laid[pinnedIndex].arrivalMinutes - pin.at;
+        const before = laid[pinnedIndex - 1];
+        if (pin.event.kind === "movie" && late > 0 && before && before.durationMins - late >= 40) {
+          before.durationMins -= late;
+          for (let i = pinnedIndex; i < laid.length; i++) laid[i].arrivalMinutes -= late;
+        }
       }
       return { stops: laid, hops: rides };
     };
     let { stops, hops } = lay();
+    const filmMissed = () =>
+      pinnedIndex >= 0 && pin?.event.kind === "movie" && pin.at != null && stops[pinnedIndex].arrivalMinutes > pin.at;
+    if (filmMissed()) return null;
 
     /*
      * Open when they actually get there.
@@ -2339,6 +2379,7 @@ function planWith(
         if (!instead) return null;
         chosen[shut] = instead;
         ({ stops, hops } = lay());
+        if (filmMissed()) return null;
       }
       if (
         stops.some(
@@ -2416,7 +2457,10 @@ function planWith(
             : ROLE_TYPES[role].includes(p.venue.type)
               ? ROLE_LABEL[role]
               : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
-          durationMins: roleMinutes(role),
+          durationMins:
+            onTonight?.kind === "movie" && onTonight.runtime_mins
+              ? Math.round(onTonight.runtime_mins) + 20
+              : roleMinutes(role),
           arrivalMinutes: 0,
           orders: p.orders,
           cost: p.cost,

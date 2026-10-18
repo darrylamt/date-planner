@@ -7,10 +7,11 @@
  * Daily on GitHub Actions (.github/workflows/silverbird.yml). Env: the
  * Supabase URL and service role key, from the environment or .env.local.
  *
- * ── not shown to anyone yet ───────────────────────────────────────────────
- * Silverbird's terms reserve their content, so nothing in the app or the
- * planner reads this table until they have said yes. This collects and keeps
- * it current so it is ready, and so the parser has met every format first.
+ * ── who reads it ──────────────────────────────────────────────────────────
+ * The planner, only when someone ticks "Catch a movie" (src/lib/movies.ts):
+ * the evening is built round a real showing, priced at MOVIE_PRICE_GHS a
+ * person because the site publishes no Ghana prices. Silverbird's terms
+ * reserve their content; the owner chose to go ahead before they replied.
  *
  * ── what it reads ─────────────────────────────────────────────────────────
  * Each cinema's page (/cinema/accra/, /cinema/westhills/) lists the week's

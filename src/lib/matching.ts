@@ -11,6 +11,7 @@ import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
+import { movieEvents } from "./movies";
 
 /**
  * Server-side candidate selection: pull venues, menus and events that
@@ -143,7 +144,10 @@ export async function fetchCandidates(
     .select("*")
     .eq("is_active", true);
 
-  const [eventsRes, schedulesRes] = await Promise.all([eventsPromise, schedulesPromise]);
+  // A film's showings, only when one was asked for (movies.ts).
+  const moviesPromise = movieEvents(inputs);
+
+  const [eventsRes, schedulesRes, movies] = await Promise.all([eventsPromise, schedulesPromise, moviesPromise]);
 
   let events = (eventsRes.data ?? []) as EventRow[];
   if (scope) {
@@ -181,6 +185,20 @@ export async function fetchCandidates(
    */
   const crew = inputs.crew ?? "mixed";
   events = events.filter((e) => audienceAllows(e.audience, crew));
+  /*
+   * The film's showings join after the area scope, which they are exempt
+   * from: someone who asked for a movie in Osu is going to the cinema, and
+   * Accra Mall is where it is. Started-already showings go the same way as
+   * any night that has begun.
+   */
+  events = [
+    ...events,
+    ...movies.filter((m) => {
+      if (inputs.date !== today || !m.start_time) return true;
+      const [h, mm] = m.start_time.split(":").map(Number);
+      return h * 60 + mm > now.getUTCHours() * 60 + now.getUTCMinutes();
+    }),
+  ];
   const fixturesRaw = (schedulesRes.data ?? []) as VenueSchedule[];
   const [sh, sm] = inputs.startTime.split(":").map(Number);
   const planStart = sh * 60 + (sm || 0);
@@ -328,6 +346,23 @@ export async function fetchCandidates(
     // Events follow the venues: only nights in an area the plan can reach.
     const reached = new Set([...pickedAreas, ...venues.map((v) => v.area_id)]);
     events = events.filter((e) => !e.area_id || reached.has(e.area_id));
+  }
+
+  /*
+   * The cinema itself, wherever the plan is, so its showings can be placed:
+   * an event only counts at a venue in the shortlist, and the shortlist is
+   * the plan's areas, which the cinema may not be in.
+   */
+  const cinemaIds = [...new Set(movies.map((m) => m.venue_id).filter((id): id is string => Boolean(id)))].filter(
+    (id) => !venues.some((v) => v.id === id)
+  );
+  if (cinemaIds.length) {
+    const { data } = await supabase
+      .from("venues")
+      .select(`${columns.join(",")},areas(name)`)
+      .eq("is_active", true)
+      .in("id", cinemaIds);
+    venues = [...venues, ...((data ?? []) as unknown as Venue[])];
   }
 
   if (opts.excludeVenueIds?.length) {

@@ -82,6 +82,8 @@ export const planInputsSchema = z.object({
   radiusKm: z.number().min(0).max(20).optional(),
   near: z.object({ lat: z.number().min(4).max(12), lng: z.number().min(-4).max(2) }).optional(),
   wellnessKinds: z.array(z.enum(["massage", "facial", "nails"])).max(3).optional(),
+  movie: z.boolean().optional(),
+  movieGenres: z.array(z.string().regex(/^[A-Za-z -]{1,24}$/)).max(12).optional().catch(undefined),
   ai: z.boolean().optional(),
   // Which entry point started the plan (0085). Lenient: a value this server
   // does not know is dropped, never a reason to refuse the plan.
@@ -154,5 +156,6 @@ export const itinerarySchema = z.object({
   transport_total_ghs: z.number(),
   est_total_ghs: z.number(),
   budget_note: z.string().nullable().default(null),
+  notice: z.string().max(400).nullable().optional(),
   personal_summary: z.string().default(""),
 });

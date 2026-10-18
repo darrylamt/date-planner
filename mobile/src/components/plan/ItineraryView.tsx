@@ -713,6 +713,15 @@ export function ItineraryView({
             driving={driving}
             note={itinerary.budget_note ?? null}
           />
+          {/* What the plan could not do as asked, where it is seen. */}
+          {itinerary.notice ? (
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: space.xs, marginTop: space.sm }}>
+              <Symbol name="info.circle" size={13} color={c.textSecondary} />
+              <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
+                {itinerary.notice}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {/*

@@ -47,6 +47,8 @@ import {
   INTEREST_OPTIONS,
   asksFocus,
   asksDressCode,
+  MOVIE_GENRES,
+  MOVIE_PRICE_GHS,
 } from "../../lib/planConstants";
 import { time12 } from "../../lib/format";
 import { isDriving } from "../../lib/budget";
@@ -548,6 +550,44 @@ export function PlanSteps({
                       const next = on ? chosen.filter((x) => x !== k.id) : [...chosen, k.id as never];
                       update({ wellnessKinds: next, wellnessKind: next[0] ?? "any" });
                     }}
+                  />
+                );
+              })}
+            </ChipRow>
+          </>
+        ) : null}
+
+        {/*
+          A film in the evening, at Silverbird. Accra only, where the cinemas
+          are. The price is named here for the same reason as the spa's: it
+          is most of the question. Genres are asked the moment it is ticked;
+          none chosen is any film.
+        */}
+        {(inputs.city ?? DEFAULT_CITY) === DEFAULT_CITY && inputs.occasion !== "business_meeting" ? (
+          <Group>
+            <Row
+              icon="film"
+              title="Catch a movie"
+              subtitle={`At Silverbird, about ${MOVIE_PRICE_GHS} cedis a person with snacks`}
+              selected={Boolean(inputs.movie)}
+              onPress={() => update({ movie: !inputs.movie })}
+            />
+          </Group>
+        ) : null}
+        {inputs.movie ? (
+          <>
+            <GroupLabel>What kind of film? Pick any</GroupLabel>
+            <ChipRow>
+              <Chip label="Any" selected={!inputs.movieGenres?.length} onPress={() => update({ movieGenres: [] })} />
+              {MOVIE_GENRES.map((g) => {
+                const chosen = inputs.movieGenres ?? [];
+                const on = chosen.includes(g);
+                return (
+                  <Chip
+                    key={g}
+                    label={g}
+                    selected={on}
+                    onPress={() => update({ movieGenres: on ? chosen.filter((x) => x !== g) : [...chosen, g] })}
                   />
                 );
               })}

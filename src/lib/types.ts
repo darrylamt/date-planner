@@ -287,6 +287,10 @@ export interface EventRow {
   reservation_required?: boolean;
   /** Where this night is booked, if not through the venue. */
   booking_url?: string | null;
+  /** A cinema showing rather than an organised night (src/lib/movies.ts). */
+  kind?: "movie";
+  /** A film's running time, so its stop lasts as long as the film. */
+  runtime_mins?: number | null;
   is_active: boolean;
 }
 
@@ -459,6 +463,13 @@ export interface PlanInputs {
    * wellnessKind; empty means any single treatment.
    */
   wellnessKinds?: ("massage" | "facial" | "nails")[];
+  /**
+   * A film in the evening: the plan is built round a real showing at a
+   * cinema (cinema_showtimes, 0086), of one of these genres, any when empty.
+   * See MOVIE_GENRES and MOVIE_PRICE_GHS in planConstants.
+   */
+  movie?: boolean;
+  movieGenres?: string[];
   /**
    * False when the person declined sending their answers to Anthropic
    * (guideline 5.1.2(i)). The plan is unaffected -- our own code builds it --
@@ -728,6 +739,12 @@ export interface Itinerary {
    */
   price_confidence?: PriceConfidence;
   budget_note: string | null; // honest note when budget is tight
+  /**
+   * Something the plan could not do as asked, said where it is seen: under
+   * the budget, not behind its info button. "No horror showing fits this
+   * evening", "There was not enough in Osu alone".
+   */
+  notice?: string | null;
   personal_summary: string; // "Built around them" card text
   /** Set on a group outing's plan: the totals are what everyone pays, not anyone's whole evening. */
   group?: { code: string };

@@ -1,10 +1,9 @@
 -- Cinema showtimes, read from Silverbird's site (scripts/scrape-silverbird.ts).
 --
 -- One row per film per showing: "Street Fighter, Accra Mall, Sat 24 Oct,
--- 21:10". Kept apart from events on purpose: nothing in the app or the
--- planner reads this table yet. Showtimes go into plans only once Silverbird
--- has said we may use them; until then this is collected and checked, and
--- nobody sees it.
+-- 21:10". Kept apart from events on purpose: showings are read only when
+-- someone asks for a film (src/lib/movies.ts), and then become events for
+-- that one plan.
 --
 -- Written and read only with the service role, like every table since 0080:
 -- RLS on, everything revoked from anon and authenticated, no policies.

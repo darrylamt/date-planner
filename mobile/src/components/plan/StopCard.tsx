@@ -85,6 +85,8 @@ export function StopCard({
    * page needs no confirmation because opening it commits to nothing.
    */
   const tickets = stop.event?.booking_url?.trim() || null;
+  /** A cinema showing (movies.ts on the server), not an organised night. */
+  const movie = Boolean(stop.event?.id?.startsWith("movie:"));
   /*
    * Every restaurant, not only the ones that insist on booking.
    *
@@ -195,7 +197,7 @@ export function StopCard({
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Text variant="caption1" tone="tint" weight="700" style={{ letterSpacing: 0.6 }}>
             {/* The label is the event's title, which is now the heading below. */}
-            {(stop.event ? "Event" : stop.label).toUpperCase()}
+            {(movie ? "Movie" : stop.event ? "Event" : stop.label).toUpperCase()}
           </Text>
           <Text variant="caption1" tone="secondary" tabular>
             {stop.arrival_time} · {stop.duration_mins} min
@@ -225,8 +227,9 @@ export function StopCard({
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
             <Symbol name="ticket" size={12} color={c.accent} />
             <Text variant="footnote" tone="tint" weight="600">
-              On this date only
-              {stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}
+              {movie
+                ? `Showing at ${stop.event.start_time ? time12(stop.event.start_time) : "the time above"}${stop.event.organiser_name ? ` · ${stop.event.organiser_name}` : ""}`
+                : `On this date only${stop.event.start_time ? ` · starts ${time12(stop.event.start_time)}` : ""}`}
             </Text>
           </View>
         ) : null}
@@ -449,7 +452,7 @@ export function StopCard({
           {tickets ? (
             <StopAction
               icon="ticket"
-              label={stop.event?.reservation_required ? "Book a spot" : "Tickets"}
+              label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
               onPress={() => void Linking.openURL(tickets)}
               grow
             />

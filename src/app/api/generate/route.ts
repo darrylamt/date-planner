@@ -75,8 +75,10 @@ async function reachFurther(
     const note = anyInside
       ? `There was not enough in ${here} alone, so this plan also uses ${listOf(outside)}.`
       : `There was not enough in ${here} for this one, so it is in ${listOf(outside)}, the nearest that could fill it.`;
-    itinerary.budget_note = itinerary.budget_note ? `${note} ${itinerary.budget_note}` : note;
+    itinerary.notice = note;
   }
+  const missed = movieNotice(wider, plan);
+  if (missed) itinerary.notice = itinerary.notice ? `${missed} ${itinerary.notice}` : missed;
   return NextResponse.json({
     status: "ok",
     itinerary,
@@ -367,5 +369,18 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);
 
-  return NextResponse.json({ status: "ok", itinerary: assembleItinerary(inputs, plan, copy) });
+  const itinerary = assembleItinerary(inputs, plan, copy);
+  const missed = movieNotice(inputs, plan);
+  if (missed) itinerary.notice = missed;
+  return NextResponse.json({ status: "ok", itinerary });
+}
+
+/**
+ * A film was asked for and none is in the plan: say so, and why it usually
+ * is. Without it the plan quietly reads as if the question had been ignored.
+ */
+function movieNotice(inputs: PlanInputs, plan: { stops: { event?: { id: string } | null }[] }): string | null {
+  if (!inputs.movie || plan.stops.some((s) => s.event?.id.startsWith("movie:"))) return null;
+  const which = inputs.movieGenres?.length ? `${inputs.movieGenres.join(" or ").toLowerCase()} ` : "";
+  return `No ${which}showing at Silverbird fits this evening and budget, so there is no film in this plan. Try another time, genre or day.`;
 }

@@ -197,6 +197,30 @@ export const RADIUS_OPTIONS: { km: number; label: string }[] = [
  */
 export type WellnessKind = "massage" | "facial" | "nails" | "any";
 
+/**
+ * A film in the evening, at Silverbird (scripts/scrape-silverbird.ts).
+ *
+ * The cinema publishes no Ghana prices, so a seat and snacks is costed at a
+ * flat GHS 130 a person, the figure the owner set, and the stop says it is
+ * an estimate. The genres are the cinema's own, the ones that appear week
+ * to week; Nollywood and Ghallywood are kept because people ask for them by
+ * name. Asked only when "Catch a movie" is ticked; none chosen means any.
+ */
+export const MOVIE_PRICE_GHS = 130;
+export const MOVIE_GENRES = [
+  "Action",
+  "Comedy",
+  "Horror",
+  "Thriller",
+  "Romance",
+  "Drama",
+  "Animation",
+  "Adventure",
+  "Sci-fi",
+  "Nollywood",
+  "Ghallywood",
+] as const;
+
 export const WELLNESS_KINDS: { id: WellnessKind; label: string }[] = [
   { id: "massage", label: "Massage" },
   { id: "facial", label: "Facial" },

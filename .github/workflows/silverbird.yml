@@ -1,6 +1,6 @@
 # Silverbird's Ghana showtimes into cinema_showtimes, once a day
-# (scripts/scrape-silverbird.ts). Two pages; nothing in the app reads the
-# table until Silverbird says we may show their listings.
+# (scripts/scrape-silverbird.ts). Two pages; the planner reads the table
+# when someone asks for a film.
 name: Silverbird
 
 on:
