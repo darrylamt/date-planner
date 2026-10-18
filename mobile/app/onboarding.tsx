@@ -1,14 +1,17 @@
-import { useRef, useState } from "react";
-import { Animated, Easing, PanResponder, Pressable, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, PanResponder, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../src/components/Text";
 import { Mascot, SpeechBubble } from "../src/components/Mascot";
 import { Symbol } from "../src/components/Symbol";
-import { GUTTER, HAIRLINE, Radius, Spacing } from "../src/theme";
+import { OccasionGrid } from "../src/components/home/OccasionGrid";
+import { useReducedMotion } from "../src/components/motion";
+import { GUTTER, Radius, Spacing } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { markOnboarded } from "../src/lib/onboarding";
+import { startNewPlan } from "../src/lib/startPlan";
 import type { Occasion } from "../src/lib/types";
 
 interface Slide {
@@ -19,56 +22,58 @@ interface Slide {
 }
 
 /**
- * Four slides, each fronted by a different costume, so the mascot's range is
- * shown by using it rather than explained.
+ * Three slides, then the first real choice: what are you planning?
  *
- * The last slide is the honest one. People are about to hand over a budget and
- * details about someone they like, and saying plainly what happens to that is
- * worth more than a fourth feature card.
+ * The old intro was four slides that asked nothing and ended on Home, where
+ * a new person still had to work out where to start. Now the last step is
+ * the occasion picker itself, and choosing opens the planner on its next
+ * question, so the intro ends inside a plan rather than in front of one.
+ *
+ * Each slide wears a different costume, so the mascot's range is shown by
+ * using it rather than explained. The third is the honest one: people are
+ * about to hand over a budget, and saying plainly what we will and will not
+ * do with it is worth more than another feature card.
  */
 const SLIDES: Slide[] = [
   {
     occasion: "first_date",
-    says: "Hello. I plan outings.",
-    title: "A whole outing, not a list of places.",
-    body: "Somewhere to eat, something to do, somewhere to end up, timed one after another so you are not left working it out on the night.",
+    says: "Hello, I'm Duro.",
+    title: "Tell us the occasion. We plan the whole outing.",
+    body: "Somewhere to eat, something to do, somewhere to end up in Accra, timed one after another.",
   },
   {
     occasion: "date_night",
-    says: "Real menus. Real prices.",
-    title: "Know what it costs before you go.",
-    body: "Every price comes from the venue's own menu, and we add up the Uber or Bolt between stops too. Set a budget and the plan stays inside it.",
-  },
-  {
-    occasion: "friend_outing",
-    says: "Two of you, six of you, or just you.",
-    title: "We ask about the occasion first.",
-    body: "A first date and a friend's birthday need very different evenings, so the questions you get change depending on which one it is.",
+    says: "Budget first.",
+    title: "Set a budget. See real prices.",
+    body: "Prices come from each venue's own menu, with the Uber or Bolt between stops added in. The plan stays inside what you set.",
   },
   {
     occasion: "solo_day",
     says: "One promise.",
-    title: "Every place is real.",
-    body: "We only suggest places we actually hold prices for. If we cannot build your outing from those, we tell you so rather than filling the gap with a guess.",
+    title: "Only real places.",
+    body: "We only suggest places we hold prices for. If we can't fill your outing, we say so instead of guessing.",
   },
 ];
+
+/** The picker comes after the slides, and the dots count it as a step. */
+const PICKER = SLIDES.length;
+const STEPS = SLIDES.length + 1;
 
 export default function Onboarding() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const fade = useRef(new Animated.Value(1)).current;
-
-  const slide = SLIDES[index];
-  const last = index === SLIDES.length - 1;
+  const picking = index === PICKER;
 
   /*
-   * Swipe, because four dots and a Next button look like something you swipe.
+   * Swipe, because dots and a Next button look like something you swipe.
    *
    * PanResponder rather than a gesture-handler or reanimated version: it is in
-   * React Native itself, it needs no worklet, and this is four slides rather
-   * than a carousel. The gesture is only claimed once the finger has clearly
-   * gone sideways, so a vertical scroll or a tap on Next still behaves.
+   * React Native itself and needs no worklet. The gesture is only claimed once
+   * the finger has clearly gone sideways, so the picker still scrolls and a tap
+   * on Next still behaves.
    */
   const swipe = useRef(
     PanResponder.create({
@@ -82,19 +87,25 @@ export default function Onboarding() {
   ).current;
 
   /*
-   * The gesture reads the slide from a ref rather than from state.
+   * The gesture reads the step from a ref rather than from state.
    *
    * PanResponder is built once and keeps whatever it closed over, so a handler
-   * reading `index` would act on the slide that was showing when the screen
-   * mounted, for the whole of onboarding. The ref is rewritten on every render
-   * and is always current.
+   * reading `index` would act on the step that was showing when the screen
+   * mounted. The ref is rewritten on every render and is always current.
    */
   const indexRef = useRef(0);
   indexRef.current = index;
+  const reducedRef = useRef(reduced);
+  reducedRef.current = reduced;
+
+  const safety = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (safety.current) clearTimeout(safety.current);
+  }, []);
 
   /** Forward and back, stopping at the ends rather than wrapping. */
   function advance() {
-    if (indexRef.current < SLIDES.length - 1) go(indexRef.current + 1);
+    if (indexRef.current < PICKER) go(indexRef.current + 1);
   }
 
   function retreat() {
@@ -103,28 +114,59 @@ export default function Onboarding() {
 
   function go(next: number) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Fade the copy out and back so the slide changes as one movement rather
-    // than three elements swapping at slightly different times.
+    if (reducedRef.current) {
+      setIndex(next);
+      return;
+    }
+    /*
+     * Fade the copy out and back so the step changes as one movement.
+     *
+     * The JS driver, not the native one: native-driven entrances never started
+     * in a modal on the phone and left the screen blank. And whatever happens
+     * to the animation, the copy is back at full opacity shortly after.
+     */
     Animated.timing(fade, {
       toValue: 0,
       duration: 140,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(() => {
       setIndex(next);
       Animated.timing(fade, {
         toValue: 1,
         duration: 220,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     });
+    if (safety.current) clearTimeout(safety.current);
+    safety.current = setTimeout(() => {
+      setIndex(next);
+      fade.setValue(1);
+    }, 600);
   }
 
+  /** Done with the intro, and nothing chosen: Home. */
   async function finish() {
     await markOnboarded();
     router.replace("/");
   }
+
+  /**
+   * Done, and straight into a plan for what they chose.
+   *
+   * Home goes underneath first, so Back from the planner lands somewhere
+   * sensible rather than on the intro again. The push waits a tick so it is
+   * not lost in the replace.
+   */
+  async function pick(occasion: Occasion) {
+    void Haptics.selectionAsync();
+    await markOnboarded();
+    router.replace("/");
+    setTimeout(() => void startNewPlan(occasion, "onboarding"), 0);
+  }
+
+  const slide = picking ? null : SLIDES[index];
 
   return (
     <View
@@ -136,44 +178,58 @@ export default function Onboarding() {
         paddingBottom: (insets.bottom || Spacing.three) + Spacing.three,
       }}
     >
-      {/* Skip. Always available, an intro nobody can leave is a trap. */}
-      <View style={{ alignItems: "flex-end", paddingHorizontal: GUTTER }}>
-        <Pressable onPress={finish} hitSlop={12}>
-          <Text variant="footnote" tone="secondary" weight="600">
-            Skip
-          </Text>
-        </Pressable>
+      {/* Skip goes to the choice, not past it: it is the one thing worth stopping for. */}
+      <View style={{ alignItems: "flex-end", paddingHorizontal: GUTTER, minHeight: 20 }}>
+        {picking ? null : (
+          <Pressable onPress={() => go(PICKER)} hitSlop={12}>
+            <Text variant="footnote" tone="secondary" weight="600">
+              Skip
+            </Text>
+          </Pressable>
+        )}
       </View>
 
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: GUTTER,
-        }}
-      >
-        <Animated.View style={{ opacity: fade, alignItems: "center" }}>
-          <SpeechBubble text={slide.says} />
-          <Mascot occasion={slide.occasion} size={132} style={{ marginTop: Spacing.two }} />
-
-          <Text
-            variant="title1"
-            center
-            style={{ marginTop: Spacing.five, paddingHorizontal: Spacing.two }}
+      <Animated.View style={{ flex: 1, opacity: fade }}>
+        {slide ? (
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: GUTTER,
+            }}
           >
-            {slide.title}
-          </Text>
-          <Text
-            variant="body"
-            tone="secondary"
-            center
-            style={{ marginTop: Spacing.three }}
+            <SpeechBubble text={slide.says} />
+            <Mascot
+              occasion={slide.occasion}
+              size={132}
+              animate={!reduced}
+              style={{ marginTop: Spacing.two }}
+            />
+            <Text
+              variant="title1"
+              center
+              style={{ marginTop: Spacing.five, paddingHorizontal: Spacing.two }}
+            >
+              {slide.title}
+            </Text>
+            <Text variant="body" tone="secondary" center style={{ marginTop: Spacing.three }}>
+              {slide.body}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: Spacing.three, paddingBottom: Spacing.four }}
+            showsVerticalScrollIndicator={false}
           >
-            {slide.body}
-          </Text>
-        </Animated.View>
-      </View>
+            <Text variant="title1">What are you planning first?</Text>
+            <Text variant="body" tone="secondary" style={{ marginTop: Spacing.one, marginBottom: Spacing.four }}>
+              Pick one and we'll start there.
+            </Text>
+            <OccasionGrid onPick={(id) => void pick(id)} />
+          </ScrollView>
+        )}
+      </Animated.View>
 
       {/* Progress */}
       <View
@@ -181,10 +237,11 @@ export default function Onboarding() {
           flexDirection: "row",
           justifyContent: "center",
           gap: Spacing.two,
+          marginTop: Spacing.three,
           marginBottom: Spacing.four,
         }}
       >
-        {SLIDES.map((_, i) => (
+        {Array.from({ length: STEPS }, (_, i) => (
           <View
             key={i}
             style={{
@@ -198,29 +255,43 @@ export default function Onboarding() {
       </View>
 
       <View style={{ paddingHorizontal: GUTTER, gap: Spacing.two }}>
-        <Pressable
-          onPress={() => (last ? void finish() : go(index + 1))}
-          style={({ pressed }) => ({
-            height: 52,
-            borderRadius: Radius.md,
-            backgroundColor: c.brand,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: Spacing.two,
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Text variant="headline" style={{ color: c.textOnBrand }}>
-            {last ? "Plan my first date" : "Next"}
-          </Text>
-          <Symbol
-            name="arrow.right"
-            size={14}
-            color={c.textOnBrand}
-            weight="semibold"
-          />
-        </Pressable>
+        {picking ? (
+          <Pressable
+            onPress={() => void finish()}
+            style={({ pressed }) => ({
+              height: 52,
+              borderRadius: Radius.md,
+              borderWidth: 1,
+              borderColor: c.border,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text variant="headline" tone="secondary">
+              Skip for now
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => go(index + 1)}
+            style={({ pressed }) => ({
+              height: 52,
+              borderRadius: Radius.md,
+              backgroundColor: c.brand,
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: Spacing.two,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text variant="headline" style={{ color: c.textOnBrand }}>
+              {index === PICKER - 1 ? "Choose what you're planning" : "Next"}
+            </Text>
+            <Symbol name="arrow.right" size={14} color={c.textOnBrand} weight="semibold" />
+          </Pressable>
+        )}
 
         {index > 0 ? (
           <Pressable
@@ -232,10 +303,9 @@ export default function Onboarding() {
             </Text>
           </Pressable>
         ) : (
-          <View style={{ height: 40, borderColor: c.border, borderWidth: 0 }} />
+          <View style={{ height: 40 }} />
         )}
       </View>
-      <View style={{ height: HAIRLINE }} />
     </View>
   );
 }

@@ -15,7 +15,7 @@ import type { PlanInputs } from "../../lib/types";
  */
 export function OccasionGrid({ onPick }: { onPick: (id: PlanInputs["occasion"]) => void }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.two, justifyContent: "space-between" }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: Spacing.two, justifyContent: "space-between" }}>
       {OCCASIONS.map((o) => (
         <Tile key={o.id} occasion={o} onPress={() => onPick(o.id as PlanInputs["occasion"])} />
       ))}
@@ -26,42 +26,48 @@ export function OccasionGrid({ onPick }: { onPick: (id: PlanInputs["occasion"]) 
 function Tile({ occasion, onPress }: { occasion: { id: string; title: string; sub: string }; onPress: () => void }) {
   const c = useTheme();
   const hue = useOccasionHue(occasion.id);
+  /*
+   * The width sits on a wrapper. PressScale styles its inner view, where a
+   * percentage resolves against the shrink-wrapped Pressable rather than the
+   * grid, and every tile collapsed to the width of its words.
+   */
   return (
-    <PressScale
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${occasion.title}. ${occasion.sub}`}
-      style={{
-        width: "48.5%",
-        padding: Spacing.three,
-        borderRadius: Radius.lg,
-        backgroundColor: c.backgroundElement,
-        borderWidth: HAIRLINE,
-        borderColor: c.border,
-        gap: Spacing.two,
-      }}
-    >
-      <View
+    <View style={{ width: "48.5%" }}>
+      <PressScale
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${occasion.title}. ${occasion.sub}`}
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: hue.bg,
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
+          padding: Spacing.three,
+          borderRadius: Radius.lg,
+          backgroundColor: c.backgroundElement,
+          borderWidth: HAIRLINE,
+          borderColor: c.border,
+          gap: Spacing.two,
         }}
       >
-        <Mascot occasion={occasion.id as PlanInputs["occasion"]} size={40} animate={false} style={{ marginTop: 6 }} />
-      </View>
-      <View style={{ gap: 1 }}>
-        <Text variant="subheadline" weight="600">
-          {occasion.title}
-        </Text>
-        <Text variant="footnote" tone="secondary" numberOfLines={2}>
-          {occasion.sub}
-        </Text>
-      </View>
-    </PressScale>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: hue.bg,
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <Mascot occasion={occasion.id as PlanInputs["occasion"]} size={40} animate={false} style={{ marginTop: 6 }} />
+        </View>
+        <View style={{ gap: 1 }}>
+          <Text variant="subheadline" weight="600">
+            {occasion.title}
+          </Text>
+          <Text variant="footnote" tone="secondary" numberOfLines={2}>
+            {occasion.sub}
+          </Text>
+        </View>
+      </PressScale>
+    </View>
   );
 }
