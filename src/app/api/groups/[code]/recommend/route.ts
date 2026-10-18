@@ -6,7 +6,9 @@ import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { REACH_FALLBACK_KM } from "@/lib/planConstants";
 import { hardNosOf, mergeInputs, type MergeMember } from "@/lib/groupMerge";
 import { planForCopy, planGroup, sharedItinerary, type GroupPerson } from "@/lib/groupPlan";
-import { SLOTS } from "@/lib/groups";
+import { SLOTS, groupDays } from "@/lib/groups";
+import { areaCentroids } from "@/lib/areaCentroids";
+import { liveAreas } from "@/lib/coverage";
 import { json, loadGroup, loadMembers } from "@/lib/groupServer";
 import type { PlanInputs } from "@/lib/types";
 
@@ -67,11 +69,30 @@ export async function POST(req: Request, { params }: { params: { code: string } 
     tags: m.hard_no_tags,
     fromAreaId: m.from_area_id,
   }));
-  const { data: areas } = await db.from("areas").select("id, name, city");
+  // Areas with their centres and whether a plan can be built there, for the fairest meeting point.
+  const [{ data: areas }, centres, live] = await Promise.all([
+    db.from("areas").select("id, name, city"),
+    areaCentroids(db),
+    liveAreas(db),
+  ]);
+  const centreOf = new Map(centres.map((a) => [a.id, a]));
+  const plannable = new Set(live.map((a) => a.id));
+  const areaRows = ((areas ?? []) as { id: string; name: string; city: string | null }[]).map((a) => ({
+    ...a,
+    lat: centreOf.get(a.id)?.lat ?? null,
+    lng: centreOf.get(a.id)?.lng ?? null,
+    plannable: plannable.has(a.id),
+  }));
   const merged = mergeInputs(
-    { occasion: group.occasion, dateFrom: group.date_from, dateTo: group.date_to, areaHintId: group.area_hint_id },
+    {
+      occasion: group.occasion,
+      dateFrom: group.date_from,
+      dateTo: group.date_to,
+      days: groupDays(group),
+      areaHintId: group.area_hint_id,
+    },
     merge,
-    (areas ?? []) as { id: string; name: string; city: string | null }[],
+    areaRows,
     { date: body.date, slot: body.slot, ai: body.ai }
   );
   if (merged.status !== "ok") return json({ status: "not_enough" });

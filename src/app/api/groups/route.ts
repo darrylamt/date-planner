@@ -3,7 +3,7 @@ import { createServiceClient, getCaller } from "@/lib/supabase/server";
 import { isProUser } from "@/lib/entitlements";
 import { newGroupCode } from "@/lib/groupToken";
 import { cleanName, isAllowedName } from "@/lib/namePoll";
-import { FREE_ACTIVE_GROUPS, GROUP_MAX, GROUP_MAX_DAYS, GROUP_OCCASIONS, type GroupSummary } from "@/lib/groups";
+import { FREE_ACTIVE_GROUPS, GROUP_MAX, GROUP_MAX_DAYS, GROUP_MAX_PICKED, GROUP_OCCASIONS, GROUP_PICK_WINDOW_DAYS, type GroupSummary } from "@/lib/groups";
 import { json } from "@/lib/groupServer";
 
 /**
@@ -20,8 +20,10 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const createSchema = z.object({
   occasion: z.enum(GROUP_OCCASIONS),
   title: z.string().trim().max(80).optional(),
-  dateFrom: z.string().regex(DAY),
-  dateTo: z.string().regex(DAY),
+  // Either a range (dateFrom to dateTo) or chosen days (days), not both.
+  dateFrom: z.string().regex(DAY).optional(),
+  dateTo: z.string().regex(DAY).optional(),
+  days: z.array(z.string().regex(DAY)).min(1).max(GROUP_MAX_PICKED).optional(),
   areaHintId: z.string().uuid().nullable().optional(),
   deadline: z.string().datetime({ offset: true }),
   expected: z.number().int().min(2).max(GROUP_MAX).optional(),
@@ -41,12 +43,16 @@ export async function POST(req: Request) {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const from = new Date(`${body.dateFrom}T12:00:00Z`).getTime();
-  const to = new Date(`${body.dateTo}T12:00:00Z`).getTime();
+  const days = body.days ? [...new Set(body.days)].sort() : null;
+  const dateFrom = days ? days[0] : body.dateFrom;
+  const dateTo = days ? days[days.length - 1] : body.dateTo;
+  if (!dateFrom || !dateTo) return json({ error: "dates" }, 400);
+  const from = new Date(`${dateFrom}T12:00:00Z`).getTime();
+  const to = new Date(`${dateTo}T12:00:00Z`).getTime();
   const deadline = new Date(body.deadline).getTime();
-  if (body.dateFrom < today || to < from || (to - from) / 86_400_000 > GROUP_MAX_DAYS - 1) {
-    return json({ error: "dates" }, 400);
-  }
+  const span = (to - from) / 86_400_000;
+  const tooLong = days ? (to - Date.now()) / 86_400_000 > GROUP_PICK_WINDOW_DAYS : span > GROUP_MAX_DAYS - 1;
+  if (dateFrom < today || to < from || tooLong) return json({ error: "dates" }, 400);
   // Answers close before the last day of the range ends, and after now.
   if (deadline <= Date.now() || deadline > to + 12 * 3_600_000) return json({ error: "deadline" }, 400);
 
@@ -75,8 +81,8 @@ export async function POST(req: Request) {
       p_code: code,
       p_occasion: body.occasion,
       p_title: body.title || null,
-      p_date_from: body.dateFrom,
-      p_date_to: body.dateTo,
+      p_date_from: dateFrom,
+      p_date_to: dateTo,
       p_area_hint: body.areaHintId ?? null,
       p_deadline: new Date(deadline).toISOString(),
       p_expected: body.expected ?? null,
@@ -91,6 +97,7 @@ export async function POST(req: Request) {
     }
     const row = (Array.isArray(data) ? data[0] : data) as { group_id: string | null; active: number } | null;
     if (!row?.group_id) return json({ error: "groups_limit", active: row?.active ?? FREE_ACTIVE_GROUPS, limit }, 402);
+    if (days) await db.from("groups").update({ day_options: days }).eq("id", row.group_id);
     return json({ code }, 201);
   }
   return json({ error: "unavailable" }, 500);

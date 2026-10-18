@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCaller } from "./supabase/server";
 import { hashToken, tokensMatch } from "./groupToken";
 import { sendExpoPush, tokensForUsers } from "./pushServer";
-import type { Availability, GroupOccasion, GroupPublic, GroupStatus, HardNo } from "./groups";
+import { groupDays, type Availability, type GroupOccasion, type GroupPublic, type GroupStatus, type HardNo } from "./groups";
 import type { Itinerary } from "./types";
 
 /**
@@ -37,10 +37,12 @@ export interface GroupRow {
   answers_version: number;
   locked_plan_id: string | null;
   plan_date: string | null;
+  /** 0084: chosen days instead of a range. */
+  day_options: string[] | null;
 }
 
 export const GROUP_COLUMNS =
-  "id, code, owner_id, occasion, title, date_from, date_to, area_hint_id, answer_deadline, expected_count, max_members, status, answers_version, locked_plan_id, plan_date";
+  "id, code, owner_id, occasion, title, date_from, date_to, area_hint_id, answer_deadline, expected_count, max_members, status, answers_version, locked_plan_id, plan_date, day_options";
 
 export interface MemberRow {
   id: string;
@@ -167,6 +169,7 @@ export async function publicView(db: SupabaseClient, group: GroupRow, members?: 
     organiser: firstName(organiser?.name ?? "Your friend"),
     dateFrom: group.date_from,
     dateTo: group.date_to,
+    days: groupDays(group),
     deadline: group.answer_deadline,
     area,
     status: group.status,

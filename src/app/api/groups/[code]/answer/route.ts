@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { cleanName, isAllowedName } from "@/lib/namePoll";
 import { VIBES } from "@/lib/planConstants";
-import { HARD_NO_IDS, SLOTS, datesInRange } from "@/lib/groups";
+import { HARD_NO_IDS, SLOTS, groupDays } from "@/lib/groups";
 import { fingerprint, recentCount } from "@/lib/rateLimit";
 import { hashToken, newEditToken } from "@/lib/groupToken";
 import { json, loadGroup, loadMembers, pushOnce, resolveMember, type GroupRow } from "@/lib/groupServer";
@@ -30,7 +30,7 @@ const answerSchema = z.object({
 });
 
 function cleanAvailability(group: GroupRow, raw: Record<string, string[]>) {
-  const allowed = new Set(datesInRange(group.date_from, group.date_to));
+  const allowed = new Set(groupDays(group));
   const out: Record<string, string[]> = {};
   for (const [date, slots] of Object.entries(raw)) {
     if (allowed.has(date) && slots.length) out[date] = [...new Set(slots)];

@@ -40,7 +40,10 @@ export function GroupAnswerForm({
   onSubmit: (answer: GroupAnswer) => void;
 }) {
   const c = useTheme();
-  const dates = useMemo(() => datesInRange(group.dateFrom, group.dateTo), [group.dateFrom, group.dateTo]);
+  const dates = useMemo(
+    () => (group.days?.length ? group.days : datesInRange(group.dateFrom, group.dateTo)),
+    [group.days, group.dateFrom, group.dateTo]
+  );
   const [name, setName] = useState(initial?.name ?? defaultName);
   const [availability, setAvailability] = useState<Availability>(initial?.availability ?? {});
   const [budget, setBudget] = useState(initial?.budget ?? 300);

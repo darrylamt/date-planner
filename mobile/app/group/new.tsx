@@ -12,7 +12,7 @@ import { GUTTER, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
 import { createGroup, groupLink } from "../../src/lib/groupApi";
-import type { GroupOccasion } from "../../src/lib/groups";
+import { GROUP_MAX_PICKED, type GroupOccasion } from "../../src/lib/groups";
 
 /**
  * Start a group outing: what it is, which days, and when answers close.
@@ -43,6 +43,9 @@ export default function NewGroup() {
   const [title, setTitle] = useState("");
   const [start, setStart] = useState(() => addDays(iso(new Date()), 3));
   const [span, setSpan] = useState(3);
+  // A run of days, or particular days ("Friday or Saturday", "any Saturday this month").
+  const [mode, setMode] = useState<"range" | "pick">("range");
+  const [picked, setPicked] = useState<string[]>([]);
   const [expected, setExpected] = useState<number | null>(null);
   const [name, setName] = useState(() => String(session?.user?.user_metadata?.display_name ?? "").split(/\s+/)[0] ?? "");
   const [deadlineKey, setDeadlineKey] = useState<"tomorrow" | "two_days" | "day_before">("tomorrow");
@@ -50,18 +53,21 @@ export default function NewGroup() {
   const [error, setError] = useState<string | null>(null);
   const [paywalled, setPaywalled] = useState(false);
 
-  const end = addDays(start, span - 1);
+  const first = mode === "pick" && picked.length ? [...picked].sort()[0] : start;
+  const end = mode === "pick" && picked.length ? [...picked].sort()[picked.length - 1] : addDays(start, span - 1);
+  // The next four weeks, for picking particular days.
+  const pickable = useMemo(() => Array.from({ length: 28 }, (_, i) => addDays(iso(new Date()), i + 1)), []);
   // When answers close: never later than the evening before the first day.
   const deadlines = useMemo(() => {
     const now = Date.now();
-    const dayBefore = new Date(`${addDays(start, -1)}T18:00:00Z`).getTime();
+    const dayBefore = new Date(`${addDays(first, -1)}T18:00:00Z`).getTime();
     const opts = [
       { key: "tomorrow" as const, label: "Tomorrow evening", at: new Date(`${addDays(iso(new Date()), 1)}T18:00:00Z`).getTime() },
       { key: "two_days" as const, label: "In two days", at: new Date(`${addDays(iso(new Date()), 2)}T18:00:00Z`).getTime() },
       { key: "day_before" as const, label: "The day before", at: dayBefore },
     ];
     return opts.filter((o) => o.at > now + 3_600_000 && o.at <= dayBefore);
-  }, [start]);
+  }, [first]);
   const deadline = deadlines.find((d) => d.key === deadlineKey) ?? deadlines[deadlines.length - 1] ?? null;
 
   if (!loading && (!session || anonymous)) {
@@ -86,14 +92,14 @@ export default function NewGroup() {
 
   async function start_() {
     if (name.trim().length < 2) return setError("Add the name your friends know you by.");
+    if (mode === "pick" && !picked.length) return setError("Pick at least one day.");
     if (!deadline) return setError("Pick later dates: answers need time to come in.");
     setBusy(true);
     setError(null);
     const r = await createGroup({
       occasion,
       title: title.trim() || undefined,
-      dateFrom: start,
-      dateTo: end,
+      ...(mode === "pick" ? { days: [...picked].sort() } : { dateFrom: start, dateTo: end }),
       deadline: new Date(deadline.at).toISOString(),
       expected: expected ?? undefined,
       organiserName: name.trim(),
@@ -139,16 +145,42 @@ export default function NewGroup() {
       </View>
 
       <View style={{ gap: space.sm }}>
-        <Text variant="headline">From which day?</Text>
-        <DayStrip value={start} onChange={setStart} />
-        <Text variant="headline" style={{ marginTop: space.sm }}>
-          How many days can it be?
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-          {SPANS.map((n) => (
-            <Chip key={n} label={n === 1 ? "Just that day" : `${n} days`} selected={span === n} onPress={() => setSpan(n)} />
-          ))}
+        <Text variant="headline">Which days could work?</Text>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <Chip label="A run of days" selected={mode === "range"} onPress={() => setMode("range")} />
+          <Chip label="Pick days" selected={mode === "pick"} onPress={() => setMode("pick")} />
         </View>
+        {mode === "range" ? (
+          <>
+            <Text variant="subheadline" tone="secondary">
+              From
+            </Text>
+            <DayStrip value={start} onChange={setStart} />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+              {SPANS.map((n) => (
+                <Chip key={n} label={n === 1 ? "Just that day" : `${n} days`} selected={span === n} onPress={() => setSpan(n)} />
+              ))}
+            </View>
+          </>
+        ) : (
+          <>
+            <Text variant="subheadline" tone="secondary">
+              Up to {GROUP_MAX_PICKED} days in the next four weeks.
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+              {pickable.map((d) => (
+                <Chip
+                  key={d}
+                  label={new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
+                  selected={picked.includes(d)}
+                  onPress={() =>
+                    setPicked((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : cur.length >= GROUP_MAX_PICKED ? cur : [...cur, d]))
+                  }
+                />
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       <View style={{ gap: space.sm }}>

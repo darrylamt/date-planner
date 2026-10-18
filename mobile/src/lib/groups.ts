@@ -23,6 +23,15 @@ export const FREE_ACTIVE_GROUPS = 2;
 /** Longest range of dates a group can be asked about: two weeks. */
 export const GROUP_MAX_DAYS = 14;
 
+/** Chosen days instead of a range: up to ten, within the next two months (0084). */
+export const GROUP_MAX_PICKED = 10;
+export const GROUP_PICK_WINDOW_DAYS = 60;
+
+/** The days a group asks people about: the chosen days, or every day of the range. */
+export function groupDays(g: { day_options?: string[] | null; date_from: string; date_to: string }): string[] {
+  return g.day_options?.length ? [...g.day_options].sort() : datesInRange(g.date_from, g.date_to);
+}
+
 export const GROUP_OCCASIONS = ["friend_outing", "birthday", "celebration", "graduation"] as const;
 export type GroupOccasion = (typeof GROUP_OCCASIONS)[number];
 
@@ -106,6 +115,8 @@ export interface GroupPublic {
   organiser: string;
   dateFrom: string;
   dateTo: string;
+  /** Every day people answer for: chosen days, or the whole range. */
+  days: string[];
   deadline: string;
   area: string | null;
   status: GroupStatus;

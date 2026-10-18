@@ -1,6 +1,7 @@
 import { planInputsSchema } from "./schemas";
 import { VIBES } from "./planConstants";
 import { DEFAULT_CITY } from "./planConstants";
+import { haversineKm } from "./transport";
 import {
   SLOTS,
   SLOT_START,
@@ -36,6 +37,8 @@ export interface MergeGroup {
   occasion: GroupOccasion;
   dateFrom: string;
   dateTo: string;
+  /** Chosen days (0084); absent means every day of the range. */
+  days?: string[];
   areaHintId: string | null;
 }
 
@@ -43,6 +46,45 @@ export interface AreaRow {
   id: string;
   name: string;
   city: string | null;
+  /** The area's centre, from its venues (areaCentroids.ts). Null when none is located. */
+  lat?: number | null;
+  lng?: number | null;
+  /** Whether a plan can be built there at all (coverage.ts liveAreas). */
+  plannable?: boolean;
+}
+
+/**
+ * The meeting area that is fairest to everyone: the plannable area whose
+ * longest journey, from where any one person is coming, is shortest. Two
+ * friends in Dansoman and one in East Legon meet in between, not in Dansoman;
+ * if everyone is coming from one place, it is that place. Ties go to the
+ * shorter journeys overall. Null when nobody said where they are coming from.
+ */
+export function fairestArea(attending: MergeMember[], areas: AreaRow[]): AreaRow | null {
+  const byId = new Map(areas.map((a) => [a.id, a]));
+  const points = attending
+    .map((m) => (m.fromAreaId ? byId.get(m.fromAreaId) : undefined))
+    .filter((a): a is AreaRow => Boolean(a && a.lat != null && a.lng != null));
+  if (!points.length) return null;
+  // Stay in the city most people are coming from: Kumasi friends are not sent to Accra.
+  const cityCount = new Map<string, number>();
+  for (const p of points) cityCount.set(p.city ?? "", (cityCount.get(p.city ?? "") ?? 0) + 1);
+  const city = [...cityCount.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const candidates = areas.filter((a) => a.plannable && a.lat != null && a.lng != null && (a.city ?? "") === city);
+  let best: AreaRow | null = null;
+  let bestWorst = Infinity;
+  let bestSum = Infinity;
+  for (const a of candidates) {
+    const d = points.map((p) => haversineKm({ lat: a.lat!, lng: a.lng! }, { lat: p.lat!, lng: p.lng! }));
+    const worst = Math.max(...d);
+    const sum = d.reduce((s, x) => s + x, 0);
+    if (worst < bestWorst - 0.05 || (Math.abs(worst - bestWorst) <= 0.05 && sum < bestSum)) {
+      best = a;
+      bestWorst = worst;
+      bestSum = sum;
+    }
+  }
+  return best;
 }
 
 /** Hard no's for one person: what they ticked plus what their typed words match. */
@@ -68,7 +110,7 @@ export function pickSlot(
   override?: { date?: string; slot?: Slot }
 ): { date: string; slot: Slot; attending: MergeMember[] } | null {
   const answered = members.filter((m) => m.answered);
-  const dates = datesInRange(group.dateFrom, group.dateTo);
+  const dates = group.days?.length ? group.days : datesInRange(group.dateFrom, group.dateTo);
   const candidates: { date: string; slot: Slot; attending: MergeMember[] }[] = [];
   for (const date of dates) {
     if (override?.date && override.date !== date) continue;
@@ -123,17 +165,9 @@ export function mergeInputs(
   const { date, slot, attending } = picked;
 
   const byId = new Map(areas.map((a) => [a.id, a]));
-  const areaCount = new Map<string, number>();
-  for (const m of attending) {
-    if (m.fromAreaId && byId.has(m.fromAreaId)) areaCount.set(m.fromAreaId, (areaCount.get(m.fromAreaId) ?? 0) + 1);
-  }
-  const organiserArea = attending.find((m) => m.isOrganiser)?.fromAreaId ?? null;
-  const commonArea =
-    [...areaCount.entries()].sort(
-      (a, b) => b[1] - a[1] || Number(b[0] === organiserArea) - Number(a[0] === organiserArea)
-    )[0]?.[0] ?? null;
-  const areaId = group.areaHintId && byId.has(group.areaHintId) ? group.areaHintId : commonArea;
-  const area = areaId ? byId.get(areaId)! : null;
+  // The organiser's own pick wins; otherwise the fairest place to meet.
+  const area =
+    group.areaHintId && byId.has(group.areaHintId) ? byId.get(group.areaHintId)! : fairestArea(attending, areas);
 
   const nos = new Set<HardNo>();
   for (const m of attending) for (const id of hardNosOf(m)) nos.add(id);

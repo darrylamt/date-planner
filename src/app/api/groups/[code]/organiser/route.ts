@@ -1,7 +1,7 @@
 import { createServiceClient, getCaller } from "@/lib/supabase/server";
 import { json, loadGroup, loadMembers, publicView } from "@/lib/groupServer";
 import { hardNosOf } from "@/lib/groupMerge";
-import { HARD_NO_IDS, SLOTS, datesInRange, hardNoFromTag, type GroupOrganiserView, type Slot } from "@/lib/groups";
+import { HARD_NO_IDS, SLOTS, groupDays, hardNoFromTag, type GroupOrganiserView, type Slot } from "@/lib/groups";
 import type { Itinerary } from "@/lib/types";
 
 /**
@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: { code: string } }
   const answered = members.filter((m) => m.answered_at);
 
   const tally: GroupOrganiserView["tally"] = [];
-  for (const date of datesInRange(group.date_from, group.date_to)) {
+  for (const date of groupDays(group)) {
     for (const slot of SLOTS) {
       const names = answered.filter((m) => (m.availability[date] ?? []).includes(slot)).map((m) => m.name);
       tally.push({ date, slot, count: names.length, names });

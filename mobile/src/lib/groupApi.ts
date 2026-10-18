@@ -48,8 +48,10 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<Re
 export function createGroup(input: {
   occasion: GroupOccasion;
   title?: string;
-  dateFrom: string;
-  dateTo: string;
+  dateFrom?: string;
+  dateTo?: string;
+  /** Chosen days instead of a range. */
+  days?: string[];
   areaHintId?: string | null;
   deadline: string;
   expected?: number;

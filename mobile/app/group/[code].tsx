@@ -231,6 +231,15 @@ export default function GroupScreen() {
           )}
         </>
       ) : !answered ? (
+        <>
+        {me?.isOrganiser ? (
+          <View style={{ gap: 4 }}>
+            <Text variant="title3">Add your own answer first</Text>
+            <Text variant="subheadline" tone="secondary">
+              You&apos;re in the group too. Answer here, then invite your friends with the link; they answer on theirs.
+            </Text>
+          </View>
+        ) : null}
         <GroupAnswerForm
           group={group}
           initial={me?.answer ?? null}
@@ -239,6 +248,7 @@ export default function GroupScreen() {
           error={error}
           onSubmit={(a) => void submit(a)}
         />
+        </>
       ) : me?.isOrganiser && org ? (
         <>
           <Button title="Invite friends" kind="tinted" icon="square.and.arrow.up" onPress={invite} />
@@ -282,6 +292,11 @@ export default function GroupScreen() {
             {org.vibes.length ? (
               <Text variant="footnote" tone="secondary">
                 Into: {org.vibes.map((v) => `${v.vibe} (${v.count})`).join(", ")}
+              </Text>
+            ) : null}
+            {org.areas.length ? (
+              <Text variant="footnote" tone="secondary">
+                Coming from: {org.areas.map((a) => `${a.name} (${a.count})`).join(", ")}. The plan meets somewhere fair for everyone.
               </Text>
             ) : null}
           </Card>

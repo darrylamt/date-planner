@@ -92,8 +92,14 @@ async function main() {
   ok("organiser starts a group", a.status === 201 && a.json?.code, JSON.stringify(a.json));
   const code: string = a.json?.code;
   codes.push(code);
-  const b = await call("POST", "/api/groups", draft, bearer);
+  // The second group offers chosen days rather than a range (0084).
+  const { dateFrom: _f, dateTo: _t, ...noRange } = draft;
+  void _f;
+  void _t;
+  const b = await call("POST", "/api/groups", { ...noRange, days: [day(9), day(4)] }, bearer);
   if (b.json?.code) codes.push(b.json.code);
+  const bPub = b.json?.code ? await call("GET", `/api/groups/${b.json.code}`) : null;
+  ok("a group can offer chosen days", JSON.stringify(bPub?.json?.days) === JSON.stringify([day(4), day(9)]), JSON.stringify(bPub?.json?.days));
   const c = await call("POST", "/api/groups", draft, bearer);
   if (c.json?.code) codes.push(c.json.code);
   ok("third active group on a free account is refused", c.status === 402 && c.json?.error === "groups_limit", c.status);

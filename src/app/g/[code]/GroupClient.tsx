@@ -42,7 +42,11 @@ export function GroupClient({ initial, appStore }: { initial: GroupPublic; appSt
   const [editing, setEditing] = useState(false);
   const [areas, setAreas] = useState<{ id: string; name: string }[]>([]);
 
-  const dates = useMemo(() => datesInRange(group.dateFrom, group.dateTo), [group.dateFrom, group.dateTo]);
+  // The days the organiser offered: chosen days, or every day of the range.
+  const dates = useMemo(
+    () => (group.days?.length ? group.days : datesInRange(group.dateFrom, group.dateTo)),
+    [group.days, group.dateFrom, group.dateTo]
+  );
   const [name, setName] = useState("");
   const [availability, setAvailability] = useState<Availability>({});
   const [budget, setBudget] = useState(300);
@@ -154,7 +158,16 @@ export function GroupClient({ initial, appStore }: { initial: GroupPublic; appSt
 
   return (
     <main className="mx-auto w-full max-w-[560px] px-5 pb-16 pt-6">
-      <Wordmark height={24} />
+      <div className="flex items-center justify-between gap-3">
+        <Wordmark height={24} />
+        {/* For anyone who has the app: open the same group there. The page works without it. */}
+        <a
+          className="rounded-full border border-[var(--p-line)] bg-[var(--p-surface)] px-3.5 py-1.5 text-[13px] font-bold text-[var(--p-accent)]"
+          href={`aduro://group/${initial.code}`}
+        >
+          Open in the app
+        </a>
+      </div>
 
       <h1 className="pl-up mt-8 text-[28px] font-bold leading-tight">
         {group.organiser} is planning {occasion}
@@ -347,12 +360,8 @@ export function GroupClient({ initial, appStore }: { initial: GroupPublic; appSt
       )}
 
       <div className="mt-8 text-center">
-        <a className="text-[14px] font-bold text-[var(--p-accent)] underline" href={`aduro://group/${initial.code}`}>
-          Open in the Duro app
-        </a>
-        <span className="text-[14px] text-[var(--p-muted)]"> · </span>
         <a className="text-[14px] font-bold text-[var(--p-accent)] underline" href={appStore} target="_blank" rel="noopener">
-          Get Duro
+          Don&apos;t have Duro? Get the app
         </a>
       </div>
     </main>
