@@ -396,6 +396,23 @@ function looksScore(v: Venue, occasion: string): number {
  */
 /** How far a swap may move a stop: a neighbourhood, not a different town. */
 const SWAP_RADIUS_KM = 5;
+/** Runners-up kept per stop: enough that a few taps keep finding somewhere new. */
+const SWAP_OPTIONS = 4;
+/** How far a fallback swap may be, when nothing within SWAP_RADIUS_KM fits. */
+const SWAP_FAR_KM = 8;
+/**
+ * How far over budget a fallback swap may take the plan: a fifth of it, at
+ * least GHS 50.
+ *
+ * Plans are fitted to the budget, so most leave little unspent, and a swap
+ * held strictly inside it often had nowhere to go: a dessert stop at 80 with
+ * 55 spare, and the next dessert place at 180. A place a little dearer, with
+ * the card saying exactly how far over the plan now is, is a choice; "Nothing
+ * else fits here" is none. Options inside the budget always come first.
+ */
+function swapStretch(budget: number): number {
+  return Math.max(50, Math.round(budget * 0.2));
+}
 
 function cuisineFit(v: Venue, want: PlanCuisine): boolean | null {
   if (want === "either") return true;
@@ -1915,6 +1932,14 @@ function planWith(
     const slots = roles.map((role, i) =>
       optionsFor(role, nominalStart(roles, i), clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"))
     );
+    /*
+     * What each slot could swap to, kept before an event takes its slot over.
+     * The event is chosen for the plan, not by the person (most days carry a
+     * Gaderin activity or two), so it must be swappable like any other stop:
+     * an event's slot offered nothing, and was most of the Swap taps that
+     * said "Nothing else fits here".
+     */
+    const swapPools = slots.slice();
 
     /*
      * The event's slot, and its venue nailed into it.
@@ -2255,7 +2280,9 @@ function planWith(
       if (!moved) break;
     }
 
-    const stops = toStops(chosen);
+    // What the finished plan leaves unspent, so a swap may use it (see toStops).
+    const headroom = Math.max(0, inputs.budget - totalOf(chosen));
+    const stops = toStops(chosen, headroom);
     const hops = hopsFor(stops, driving, cars);
     schedule(stops, startMinutes, hops);
 
@@ -2308,7 +2335,7 @@ function planWith(
       trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops),
     };
 
-    function toStops(picks: Option[]): PlannedStop[] {
+    function toStops(picks: Option[], headroom = 0): PlannedStop[] {
       return picks.map((p, i) => {
         const role = roles[i];
         const taken = new Set(picks.map((x) => brandOf(x.venue)));
@@ -2349,23 +2376,28 @@ function planWith(
           charges: p.charges,
           tier: p.tier,
           basis: p.basis ?? "menu",
-          // Runners-up this slot could have had, for an instant swap. Only
-          // ones that fit what is left of the budget, so a swap can never
-          // push the plan over.
           /*
-           * And only ones near the stop they would replace. Price was the only
-           * test, so a free castle in Cape Coast was offered as the swap for
-           * an Osu stop, three hours from the next one. The route around a
-           * swap is re-timed on the phone, but a swap is meant to be the same
-           * evening with a different place in it, not a different evening.
+           * Runners-up this slot could have had, for an instant swap, near the
+           * stop they would replace. Price was once the only test, so a free
+           * castle in Cape Coast was offered as the swap for an Osu stop; a
+           * swap is the same evening with a different place in it.
+           *
+           * Two passes. First the ones that keep the whole plan inside the
+           * budget (what it leaves unspent, not "no dearer than this stop",
+           * which left half of all stops with nothing) within SWAP_RADIUS_KM.
+           * Then, to fill the rest, a little over budget and a little further
+           * (swapStretch, SWAP_FAR_KM). Measured on replayed real plans with
+           * scripts/swap-check.ts.
            */
-          alternates: slots[i]
-            .filter((o) => !taken.has(brandOf(o.venue)) && o.cost <= p.cost + 1)
-            .filter((o) => kmBetween(o.venue, p.venue) <= SWAP_RADIUS_KM)
-            .filter(
-              (o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx
-            )
-            .slice(0, 2)
+          alternates: (() => {
+            const pool = swapPools[i].filter((o) => o.venue.id !== p.venue.id && !taken.has(brandOf(o.venue)));
+            const strict = pool.filter((o) => o.cost <= p.cost + headroom + 1 && kmBetween(o.venue, p.venue) <= SWAP_RADIUS_KM);
+            const loose = pool.filter(
+              (o) => o.cost <= p.cost + headroom + swapStretch(inputs.budget) && kmBetween(o.venue, p.venue) <= SWAP_FAR_KM
+            );
+            return [...strict, ...loose].filter((o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx);
+          })()
+            .slice(0, SWAP_OPTIONS)
             .map((o) => ({
               venue: o.venue,
               orders: o.orders,
