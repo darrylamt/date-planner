@@ -7,7 +7,8 @@
  * Replays real answers from saved plans through today's planner and catalogue
  * (dates moved to the same weekday ahead, so opening hours still apply) and
  * counts the alternates each stop carries. A stop with none is a Swap tap
- * that says "Nothing else fits here." Read-only: nothing is written.
+ * that says "Nothing else fits here." Also counts stops that would be closed
+ * at the time the plan has them arriving. Read-only: nothing is written.
  */
 import fs from "fs";
 import path from "path";
@@ -15,6 +16,7 @@ import { createClient } from "@supabase/supabase-js";
 import { fetchCandidates } from "../src/lib/matching";
 import { planItinerary } from "../src/lib/planner";
 import { planInputsSchema } from "../src/lib/schemas";
+import { isOpenThroughout, parsePeriods, weekdayOf } from "../src/lib/hours";
 import type { PlanInputs } from "../src/lib/types";
 
 const env: Record<string, string> = { ...(process.env as Record<string, string>) };
@@ -41,6 +43,7 @@ async function main() {
   if (error) throw error;
   let plans = 0;
   let stops = 0;
+  let shut = 0;
   const byCount = [0, 0, 0, 0, 0, 0];
   const emptyByType: Record<string, number> = {};
   const stopsByType: Record<string, number> = {};
@@ -55,8 +58,14 @@ async function main() {
     const plan = planItinerary(inputs, candidates);
     if (!plan) continue;
     plans++;
+    const weekday = weekdayOf(inputs.date);
     for (const s of plan.stops) {
       stops++;
+      // Closed when they actually arrive (the event's own stop aside).
+      if (!s.event && weekday !== null && isOpenThroughout(parsePeriods(s.venue.opening_periods), weekday, s.arrivalMinutes, s.durationMins) === false) {
+        shut++;
+        console.log(`    closed on arrival: ${s.venue.name} at ${Math.floor(s.arrivalMinutes / 60)}:${String(s.arrivalMinutes % 60).padStart(2, "0")}`);
+      }
       const n = Math.min(5, s.alternates.length);
       byCount[n]++;
       stopsByType[s.venue.type] = (stopsByType[s.venue.type] ?? 0) + 1;
@@ -64,7 +73,7 @@ async function main() {
     }
   }
   const pct = (x: number) => `${Math.round((x / Math.max(1, stops)) * 100)}%`;
-  console.log(`${plans} plans, ${stops} stops`);
+  console.log(`${plans} plans, ${stops} stops, ${shut} closed when they get there`);
   byCount.forEach((n, i) => console.log(`  ${i}${i === 5 ? "+" : ""} alternates: ${n} (${pct(n)})`));
   console.log("  no swap, by kind:", Object.entries(emptyByType).map(([t, n]) => `${t} ${n}/${stopsByType[t]}`).join(", "));
 }

@@ -2281,26 +2281,73 @@ function planWith(
     }
 
     // What the finished plan leaves unspent, so a swap may use it (see toStops).
-    const headroom = Math.max(0, inputs.budget - totalOf(chosen));
-    const stops = toStops(chosen, headroom);
-    const hops = hopsFor(stops, driving, cars);
-    schedule(stops, startMinutes, hops);
+    /**
+     * The stops, their rides and their real times, from what is chosen.
+     *
+     * Never turn up before the doors open: arrival times are laid out from
+     * the start of the evening, so the stop that exists because of an event
+     * can land before the event does. That stop is pushed to the hour it
+     * starts and everything after it moves along, which reads as a longer
+     * dinner beforehand rather than an hour standing outside.
+     */
+    const lay = () => {
+      // What the finished plan leaves unspent, so a swap may use it (see toStops).
+      const headroom = Math.max(0, inputs.budget - totalOf(chosen));
+      const laid = toStops(chosen, headroom);
+      const rides = hopsFor(laid, driving, cars);
+      schedule(laid, startMinutes, rides);
+      if (pinnedIndex >= 0 && pin?.at != null) {
+        const early = pin.at - laid[pinnedIndex].arrivalMinutes;
+        if (early > 0) {
+          for (let i = pinnedIndex; i < laid.length; i++) laid[i].arrivalMinutes += early;
+        }
+      }
+      return { stops: laid, hops: rides };
+    };
+    let { stops, hops } = lay();
 
     /*
-     * Never turn up before the doors open.
+     * Open when they actually get there.
      *
-     * Arrival times are laid out from the start of the evening, so the stop
-     * that exists because of an event can land before the event does: a 6:00
-     * PM arrival printed under a 7:00 PM block party is the plan contradicting
-     * itself on one line. Push that stop to the hour it starts and carry
-     * everything after it along, which reads as a longer dinner beforehand
-     * rather than an hour spent standing outside.
+     * Every venue was checked against its slot's nominal time, which allows a
+     * short ride between stops. Real rides can be far longer (La to Aburi is
+     * an hour and three quarters), and a plan sent four friends to Kwame
+     * Nkrumah Memorial Park at 9:17 PM, two hours after it shut. So, with the
+     * real times laid out, a stop that would be closed is replaced by the
+     * slot's best option that is open then and still fits the budget, and the
+     * times are laid out again. When nothing in the slot is open, this many
+     * stops do not work tonight and the caller tries one fewer. Unknown hours
+     * stay assumed open, as everywhere else; the event's stop is the event's
+     * own night and is left alone.
      */
-    if (pinnedIndex >= 0 && pin?.at != null) {
-      const early = pin.at - stops[pinnedIndex].arrivalMinutes;
-      if (early > 0) {
-        for (let i = pinnedIndex; i < stops.length; i++) stops[i].arrivalMinutes += early;
+    if (weekday !== null) {
+      for (let pass = 0; pass < chosen.length; pass++) {
+        const shut = stops.findIndex(
+          (st, i) =>
+            i !== pinnedIndex &&
+            isOpenThroughout(parsePeriods(st.venue.opening_periods), weekday, st.arrivalMinutes, st.durationMins) === false
+        );
+        if (shut < 0) break;
+        const at = stops[shut].arrivalMinutes;
+        const others = new Set(chosen.filter((_, j) => j !== shut).map((o) => brandOf(o.venue)));
+        const instead = slots[shut].find(
+          (o) =>
+            !others.has(brandOf(o.venue)) &&
+            isOpenThroughout(parsePeriods(o.venue.opening_periods), weekday, at, stops[shut].durationMins) !== false &&
+            totalOf(chosen.map((x, j) => (j === shut ? o : x))) <= inputs.budget
+        );
+        if (!instead) return null;
+        chosen[shut] = instead;
+        ({ stops, hops } = lay());
       }
+      if (
+        stops.some(
+          (st, i) =>
+            i !== pinnedIndex &&
+            isOpenThroughout(parsePeriods(st.venue.opening_periods), weekday, st.arrivalMinutes, st.durationMins) === false
+        )
+      )
+        return null;
     }
 
     const foodTotal = stops.reduce((s, x) => s + x.cost, 0);
