@@ -32,7 +32,10 @@ export interface Venue {
   name: string;
   type: VenueType;
   area_id: string;
+  /** How it feels in the evening. See day_energy for the day. */
   vibe_tags: string[];
+  /** 0082. Its energy before 18:00 when that differs from the evening's; null means the same all day. */
+  day_energy?: "calm" | "chill" | "lively" | null;
   dress_code: string | null;
   price_band: PriceBand;
   avg_cost_per_person_ghs: number;

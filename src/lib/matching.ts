@@ -6,6 +6,7 @@ import { haversineKm } from "./transport";
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
 import { schedulesDuring } from "./schedules";
+import { venueAt, vibeTagsDuring } from "./dayEnergy";
 import { weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
@@ -182,6 +183,8 @@ export async function fetchCandidates(
   events = events.filter((e) => audienceAllows(e.audience, crew));
   const fixturesRaw = (schedulesRes.data ?? []) as VenueSchedule[];
   const [sh, sm] = inputs.startTime.split(":").map(Number);
+  const planStart = sh * 60 + (sm || 0);
+  const planLength = Math.round(inputs.hours * 60);
   const closedTonight = new Set(
     schedulesDuring(
       fixturesRaw.filter((f) => !audienceAllows(f.audience, crew)),
@@ -454,16 +457,22 @@ export async function fetchCandidates(
   // pool so a low-overlap request still gets real options rather than none.
   const scored = venues
     .map((v) => {
-      const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
+      /*
+       * Any tag the venue carries during the plan, so a place that is calm at
+       * four and lively at nine reaches the shortlist for either; the planner
+       * then scores each stop at its own time.
+       */
+      const overlap = vibeTagsDuring(v, planStart, planLength).filter((t) => wantedTags.includes(t)).length;
       const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
+      const atStart = venueAt(v, planStart);
       /*
        * The same preferences the planner scores, so a beachside place can
        * reach the shortlist at all: a venue left out here is one no amount of
        * planner scoring can choose.
        */
       const prefs =
-        placeFit(v, inputs.partner?.place ?? "") -
-        avoidPenalty(v, inputs.partner?.avoid ?? "") +
+        placeFit(atStart, inputs.partner?.place ?? "") -
+        avoidPenalty(atStart, inputs.partner?.avoid ?? "") +
         familyBonus(v, inputs) +
         // Here too, or a premium restaurant never reaches the planner to be chosen.
         premiumLean(v, inputs);

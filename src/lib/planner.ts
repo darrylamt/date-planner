@@ -8,6 +8,7 @@ import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
 import { schedulesDuring } from "./schedules";
+import { venueAt, vibeTagsAt } from "./dayEnergy";
 import {
   focusesOf,
   WELLNESS_TREATMENT_MIN_GHS,
@@ -1381,7 +1382,11 @@ function planWith(
        * without doubling back.
        */
       .map((x) => {
-        const tags = new Set([...((x.event as EventRow & { vibe_tags?: string[] }).vibe_tags ?? []), ...x.venue.vibe_tags]);
+        const tags = new Set([
+          ...((x.event as EventRow & { vibe_tags?: string[] }).vibe_tags ?? []),
+          // The venue as it is when the event starts, not as it is at night.
+          ...vibeTagsAt(x.venue, x.at ?? startMinutes),
+        ]);
         return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length };
       })
       .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
@@ -1498,7 +1503,9 @@ function planWith(
       roleMinutes(role)
     );
     const score =
-      scoreVenue(venue, inputs, wantedTags) +
+      // Scored as it is at this slot's time: a café-by-day, bar-by-night
+      // counts as calm for brunch and lively for ten o'clock (dayEnergy.ts).
+      scoreVenue(venueAt(venue, slotStart), inputs, wantedTags) +
       (fixtures.length ? (FIXTURE_WEIGHT[inputs.occasion] ?? 1) : 0) +
       variety(venue.id);
 

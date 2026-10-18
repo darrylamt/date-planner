@@ -289,6 +289,8 @@ export function compactVenue(
     type: v.type,
     price: describePrice(v, menu),
     vibes: v.vibe_tags ?? [],
+    // The vibes above are the evening's; this is how it feels before six.
+    ...(v.day_energy ? { by_day: v.day_energy } : {}),
     cuisine: v.cuisine ?? null,
     ...(v.cuisines?.length ? { serves: v.cuisines } : {}),
   };

@@ -33,6 +33,7 @@ The catalogue distinguishes "no" from "we have not recorded it", and so must you
 - Cuisine: null means nobody recorded what kind of kitchen it is. It does not mean the food is neither local nor continental. Never infer cuisine from dish names.
 - Price: "unknown" means we hold no price. It is not free. Only a venue explicitly marked free is free.
 - Looks: an unrated venue is not average, it is unjudged. Do not describe how somewhere looks unless the data says so.
+- Feel by time of day: a venue's vibes describe it in the evening. Where a result also carries by_day, that is how it feels before six, so a place can be calm at lunch and lively at night. Answer for the time they asked about.
 
 # Money
 

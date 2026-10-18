@@ -32,6 +32,8 @@ export const PUBLIC_VENUE_COLUMNS = [
   "area_id",
   "description",
   "vibe_tags",
+  // 0082. Calm by day where the evening is livelier; read through dayEnergy.ts.
+  "day_energy",
   "best_for",
   "dress_code",
   "price_band",
