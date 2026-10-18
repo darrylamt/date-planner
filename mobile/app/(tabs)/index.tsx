@@ -2,49 +2,32 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
-import { Mascot } from "../../src/components/Mascot";
-import {
-  Elevation,
-  GUTTER,
-  HAIRLINE,
-  Radius,
-  Spacing,
-  TAB_BAR,
-} from "../../src/theme";
-import { useOccasionHue, useTheme } from "../../src/lib/useTheme";
+import { Chip } from "../../src/components/Chip";
+import { GUTTER, HAIRLINE, Radius, Spacing, TAB_BAR } from "../../src/theme";
+import { useTheme } from "../../src/lib/useTheme";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
-import { OCCASIONS, TOTAL_STEPS } from "../../src/lib/planConstants";
+import { TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
 import { CityChip } from "../../src/components/home/CityChip";
 import { SectionHeading } from "../../src/components/home/SectionHeading";
-import { AskBar } from "../../src/components/home/AskBar";
 import { Avatar } from "../../src/components/home/Avatar";
+import { OccasionRow } from "../../src/components/home/OccasionRow";
+import { OccasionGrid } from "../../src/components/home/OccasionGrid";
+import { NativeSheet } from "../../src/components/native/NativeSheet";
 import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { setBillSource } from "../../src/lib/bill";
 import { useSeason } from "../../src/lib/season";
-import { HalloweenBanner, SpookyDrift } from "../../src/components/home/Halloween";
-import { fetchProfile } from "../../src/lib/account";
+import { HalloweenStrip, SpookyDrift } from "../../src/components/home/Halloween";
+import { countSavedPlans, fetchProfile } from "../../src/lib/account";
 import { supabase } from "../../src/lib/supabase";
 import { myGroups } from "../../src/lib/groupApi";
 import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
-import type { SymbolViewProps } from "expo-symbols";
-
-/** One icon per occasion, so a card is recognisable before it is read. */
-const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
-  first_date: "sparkles",
-  anniversary: "heart.fill",
-  date_night: "moon.stars.fill",
-  birthday: "gift.fill",
-  graduation: "graduationcap.fill",
-  celebration: "party.popper.fill",
-  friend_outing: "person.2.fill",
-  solo_day: "figure.walk",
-};
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -52,6 +35,39 @@ const OCCASION_ICON: Record<string, SymbolViewProps["name"]> = {
  */
 const GROUPS_LAUNCHED = false;
 
+/*
+ * The occasion row's order: most planned first, from plan_demand over the 60
+ * days to 18 Oct 2026 (date night 48, birthday 32, first date 27, solo 25,
+ * friends 18, graduation 16). Most people only see the first two and a half
+ * without swiping. Here rather than in the mirrored constants so it can be
+ * reordered over the air.
+ */
+const ROW_ORDER: PlanInputs["occasion"][] = [
+  "date_night",
+  "birthday",
+  "first_date",
+  "solo_day",
+  "friend_outing",
+  "graduation",
+  "anniversary",
+  "business_meeting",
+  "family_day",
+  "celebration",
+];
+
+/** Set once the first plan is saved; "How it works" is only for people who have not planned yet. */
+const FIRST_SAVE_KEY = "duro.firstSave.v1";
+
+/**
+ * Home: what are you planning?
+ *
+ * A new user should know what to do from the first screen, so the occasions
+ * come first, as one row of big cards, and everything else follows in order
+ * of how often it is needed: a plan already under way, "out already", the
+ * week's featured places, how it works for first-timers, and the bill tools
+ * for a night that was never planned here. Durobot has its own tab now, so
+ * it no longer takes the top of this screen.
+ */
 export default function Home() {
   const c = useTheme();
   const { season } = useSeason();
@@ -60,6 +76,8 @@ export default function Home() {
   const [pro, setPro] = useState(false);
   const [groupsOn, setGroupsOn] = useState(GROUPS_LAUNCHED);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [newcomer, setNewcomer] = useState(false);
+  const [allOpen, setAllOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -77,6 +95,17 @@ export default function Home() {
           )
         )
         .catch(() => undefined);
+      // "How it works" until the first plan is saved, on this phone or on the account.
+      void (async () => {
+        const seen = await AsyncStorage.getItem(FIRST_SAVE_KEY).catch(() => null);
+        if (seen) return active && setNewcomer(false);
+        const saved = await countSavedPlans().catch(() => 0);
+        if (saved > 0) {
+          await AsyncStorage.setItem(FIRST_SAVE_KEY, "1").catch(() => undefined);
+          return active && setNewcomer(false);
+        }
+        if (active) setNewcomer(true);
+      })();
       // Group outings: everyone once launched, admins until then; their groups either way.
       void (async () => {
         const { data } = await supabase.auth.getUser();
@@ -104,7 +133,7 @@ export default function Home() {
   );
 
   const draftInputs = draft?.inputs as PlanInputs | undefined;
-  // Once saved it is no longer in progress: it is in Saved.
+  // Once saved it is no longer in progress: it is in Plans.
   const hasDraft = Boolean(draftInputs && !draft?.shareSlug && (draft?.itinerary || draft?.step));
   const draftDone = draft?.itinerary ? TOTAL_STEPS : Math.min(draft?.step ?? 0, TOTAL_STEPS);
   const draftPct = Math.round((draftDone / TOTAL_STEPS) * 100);
@@ -119,130 +148,106 @@ export default function Home() {
       showsVerticalScrollIndicator={false}
     >
       {season === "halloween" ? <SpookyDrift /> : null}
-      <View style={{ paddingHorizontal: GUTTER, paddingTop: Spacing.five }}>
-        {/*
-          The concierge, as a bar rather than a button in the corner.
-          *
-          * It was a 64pt circle pinned to the right, which left most of a row
-          * empty above the first line of the screen: a band of nothing across
-          * two thirds of the width, which read as a layout waiting for
-          * something rather than as space.
-          *
-          * A bar uses the whole width it was already taking and can say what
-          * it does. A circle with a glyph in it has to be recognised; a bar
-          * with words in it is read.
-          *
-          * Still not a tab. It answers a question rather than being somewhere
-          * you go, and a fifth destination would have turned the bar into a
-          * list.
-        */}
-        {/*
-          The bar and "you", side by side.
-          *
-          * Settings left the tab bar to make room for Venues, and the top
-          * right corner is where people already look for themselves: it is
-          * where every other app keeps the avatar. Sharing the row also takes
-          * the bar down from the full width, which was more than a button
-          * needs.
-        */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.three }}>
-        {/*
-          The bar: a ring of colour turning round its edge, and words that
-          turn over between its name and the questions it answers. See AskBar.
-        */}
-        <AskBar onPress={() => router.push("/chat")} />
 
-        {/* You: calm for everybody, gold with a star for Pro. See Avatar. */}
+      {/* Where, and you. One slim row: the city a plan starts in, and Settings. */}
+      <View
+        style={{
+          paddingHorizontal: GUTTER,
+          paddingTop: Spacing.four,
+          minHeight: 44,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <CityChip style={{ marginBottom: 0 }} />
         <Avatar
+          size={40}
           avatarUrl={me?.avatarUrl ?? null}
           initial={me?.initial || null}
           pro={pro}
           onPress={() => router.push("/profile")}
         />
-        </View>
+      </View>
 
-        {/*
-          Wider than an evening out, because the app is.
-
-          It said "Plan something worth turning up for" over a sprite of two
-          people at a table, which was right when every plan was a date. The
-          same screen now starts meetings, family days, spa afternoons and
-          outings across the city, and the first words decide what people
-          think the app is for. The table scene went with it: a picture of a
-          dinner for two argues with every other kind of plan.
-        */}
-        {season === "halloween" ? <HalloweenBanner onPlan={() => void startNewPlan()} /> : null}
-
-        <Text variant="display" style={{ marginTop: Spacing.four }}>
-          Where to next?
-        </Text>
-        <Text variant="body" tone="secondary" style={{ marginTop: Spacing.two, marginBottom: Spacing.three }}>
-          Dates, days out, meetings and trips, planned to your budget with real prices.
-        </Text>
-
-        {/* Which city everything starts from, so "Where next" never searches the wrong one. */}
-        <CityChip />
-
-        {/*
-          For somebody already out: no plan, no questions, one place. Under
-          the headline because it answers it more literally than anything else
-          on the screen does.
-        */}
-        <Pressable
-          onPress={() => router.push("/where-next")}
-          accessibilityRole="button"
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            gap: Spacing.three,
-            padding: Spacing.three,
-            marginBottom: Spacing.three,
-            borderRadius: Radius.xl,
-            backgroundColor: c.accentSoft,
-            opacity: pressed ? 0.75 : 1,
-          })}
-        >
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
-            <Symbol name="iphone.radiowaves.left.and.right" size={20} color={c.textOnBrand} />
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text variant="headline">Out already?</Text>
-            <Text variant="footnote" tone="secondary">
-              Pick a mood and shake your phone for somewhere near you.
+      {/* What are you planning? */}
+      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.one }}>
+        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: Spacing.two }}>
+          <Text variant="title1" style={{ flex: 1 }}>
+            What are you planning?
+          </Text>
+          <Pressable hitSlop={10} onPress={() => setAllOpen(true)} accessibilityRole="button">
+            <Text variant="subheadline" weight="600" style={{ color: c.accent }}>
+              See all
             </Text>
-          </View>
-          <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
-        </Pressable>
+          </Pressable>
+        </View>
+        {season === "halloween" ? (
+          <HalloweenStrip />
+        ) : (
+          <Text variant="footnote" tone="secondary">
+            Pick one. We plan the whole outing to your budget, with real prices.
+          </Text>
+        )}
+      </View>
+      <View style={{ marginTop: Spacing.three }}>
+        <OccasionRow order={ROW_ORDER} onPick={(id) => void startNewPlan(id, "home_row")} />
+      </View>
 
-        {groupsOn ? (
+      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.two }}>
+        {/* A plan already under way: one slim bar, straight back into it. */}
+        {hasDraft && draftInputs ? (
           <Pressable
-            onPress={() => router.push("/group/new")}
+            onPress={() => router.push("/plan/new")}
             accessibilityRole="button"
+            accessibilityLabel="Resume your plan in progress"
             style={({ pressed }) => ({
+              height: 56,
               flexDirection: "row",
               alignItems: "center",
               gap: Spacing.three,
-              padding: Spacing.three,
-              marginBottom: Spacing.three,
-              borderRadius: Radius.xl,
+              paddingHorizontal: Spacing.three,
+              borderRadius: Radius.lg,
               backgroundColor: c.backgroundElement,
               borderWidth: HAIRLINE,
               borderColor: c.border,
+              overflow: "hidden",
               opacity: pressed ? 0.75 : 1,
             })}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.accentSoft, alignItems: "center", justifyContent: "center" }}>
-              <Symbol name="person.3.fill" size={20} color={c.accent} />
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text variant="headline">Plan with friends</Text>
+            {draftImage ? (
+              <Image source={{ uri: draftImage }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.skeleton }} contentFit="cover" />
+            ) : (
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.backgroundSunken, alignItems: "center", justifyContent: "center" }}>
+                <Symbol name="calendar" size={16} color={c.textTertiary} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text variant="subheadline" weight="600" numberOfLines={1}>
+                {draft?.itinerary ? draft.itinerary.title : `Plan for ${longDate(draftInputs.date)}`}
+              </Text>
               <Text variant="footnote" tone="secondary">
-                Everyone says when they&apos;re free. One plan that works for every budget.
+                {draft?.itinerary ? "Ready to view" : `${draftPct}% done`}
               </Text>
             </View>
-            <Symbol name="chevron.right" size={14} weight="semibold" color={c.textTertiary} />
+            <Symbol name="play.fill" size={14} color={c.accent} />
+            <View style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${draftPct}%`, backgroundColor: c.accent }} />
           </Pressable>
         ) : null}
+
+        {/* Out already, and with friends when that is switched on. */}
+        <View style={{ flexDirection: "row", gap: Spacing.two }}>
+          <QuickTile
+            icon="iphone.radiowaves.left.and.right"
+            title="Out already?"
+            sub={groupsOn ? "Shake for a spot" : "Shake for somewhere near you"}
+            tint
+            onPress={() => router.push("/where-next")}
+          />
+          {groupsOn ? (
+            <QuickTile icon="person.3.fill" title="Plan with friends" sub="Every budget fits" onPress={() => router.push("/group/new")} />
+          ) : null}
+        </View>
         {groups.map((g) => (
           <Pressable
             key={g.code}
@@ -254,7 +259,6 @@ export default function Home() {
               gap: Spacing.two,
               paddingVertical: Spacing.two,
               paddingHorizontal: Spacing.three,
-              marginBottom: Spacing.two,
               borderRadius: Radius.lg,
               backgroundColor: c.accentSoft,
               opacity: pressed ? 0.75 : 1,
@@ -269,255 +273,118 @@ export default function Home() {
             </Text>
           </Pressable>
         ))}
-
-        {/* The two money tools, for a night that was never planned here. */}
-        <View style={{ flexDirection: "row", gap: Spacing.three, marginBottom: Spacing.three }}>
-          {(
-            [
-              { title: "Who pays?", sub: "Spin for it", icon: "dice.fill", go: () => router.push("/who-pays") },
-              { title: "Split a bill", sub: "Fair shares, fast", icon: "banknote", go: () => router.push("/split") },
-            ] as const
-          ).map((t) => (
-            <Pressable
-              key={t.title}
-              onPress={() => {
-                setBillSource(null);
-                t.go();
-              }}
-              accessibilityRole="button"
-              style={({ pressed }) => ({
-                flex: 1,
-                gap: 6,
-                padding: Spacing.three,
-                borderRadius: Radius.xl,
-                backgroundColor: c.backgroundElement,
-                borderWidth: HAIRLINE,
-                borderColor: c.border,
-                opacity: pressed ? 0.75 : 1,
-              })}
-            >
-              <Symbol name={t.icon} size={22} color={c.accent} />
-              <Text variant="headline">{t.title}</Text>
-              <Text variant="footnote" tone="secondary">
-                {t.sub}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </View>
 
-      {/* In progress */}
-      {hasDraft && draftInputs ? (
+      <FeaturedRow />
+
+      {/* Only for somebody who has not planned yet. */}
+      {newcomer ? (
         <>
-          <SectionHeading title="In progress" />
-          <Pressable
-            onPress={() => router.push("/plan/new")}
-            style={({ pressed }) => [
-              {
-                marginHorizontal: GUTTER,
-                padding: Spacing.three,
-                borderRadius: Radius.xl,
-                borderWidth: HAIRLINE,
-                borderColor: c.border,
-                backgroundColor: c.backgroundElement,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: Spacing.three,
-                opacity: pressed ? 0.7 : 1,
-              },
-              Elevation.card,
-            ]}
-          >
-            {draftImage ? (
-              <Image
-                source={{ uri: draftImage }}
-                style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 29,
-                  backgroundColor: c.skeleton,
-                }}
-                contentFit="cover"
-                transition={200}
-              />
-            ) : (
-              <View
-                style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 29,
-                  backgroundColor: c.backgroundSunken,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Symbol name="calendar" size={22} color={c.textTertiary} />
-              </View>
-            )}
-
-            <View style={{ flex: 1, gap: Spacing.one }}>
-              <Text variant="title3" numberOfLines={1}>
-                {draft?.itinerary
-                  ? draft.itinerary.title
-                  : `Plan for ${longDate(draftInputs.date)}`}
-              </Text>
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <Symbol
-                  name={draft?.itinerary ? "checkmark.circle" : "clock"}
-                  size={12}
-                  color={c.textSecondary}
-                />
-                <Text variant="footnote" tone="secondary">
-                  {draft?.itinerary ? "Ready to view" : `${draftPct}% complete`}
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  height: 6,
-                  borderRadius: Radius.pill,
-                  backgroundColor: c.backgroundSelected,
-                  marginTop: Spacing.one,
-                  overflow: "hidden",
-                }}
-              >
-                <View
-                  style={{
-                    width: `${draftPct}%`,
-                    height: "100%",
-                    backgroundColor: c.accent,
-                  }}
-                />
-              </View>
-            </View>
-
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: c.accentSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Symbol name="play.fill" size={15} color={c.accent} />
-            </View>
-          </Pressable>
+          <SectionHeading title="How it works" />
+          <View style={{ paddingHorizontal: GUTTER, gap: Spacing.three }}>
+            <Step n="01" title="Pick the occasion" body="A date, a birthday, a day on your own, a night out with friends." />
+            <Step n="02" title="Area, budget and day" body="Where, how much, and when. Everything else is optional." />
+            <Step n="03" title="Get the whole outing, priced" body="Back-to-back stops from real menus, inside your budget." />
+          </View>
         </>
       ) : null}
 
-      {/*
-        Above the occasions, below anything in progress. Somebody with a plan
-        already on the go is here to finish it; somebody who has not started is
-        the person a recommendation is for.
-      */}
-      <FeaturedRow />
-
-      {/* Occasions */}
-      <SectionHeading title="Occasions" />
+      {/* For a night that was never planned here. Inside a plan they are already one tap away. */}
       <View
         style={{
           paddingHorizontal: GUTTER,
+          marginTop: Spacing.section,
           flexDirection: "row",
+          alignItems: "center",
           flexWrap: "wrap",
-          gap: Spacing.three,
+          gap: Spacing.two,
         }}
       >
-        {OCCASIONS.map((o) => (
-          <OccasionCard key={o.id} occasion={o} />
-        ))}
-      </View>
-
-      {/* How it works */}
-      <SectionHeading title="How it works" />
-      <View style={{ paddingHorizontal: GUTTER, gap: Spacing.four }}>
-        <Step
-          n="01"
-          title="Pick an area and a budget"
-          body="Osu, Labone, Cantonments, or let us surprise you."
+        <Text variant="footnote" tone="secondary" style={{ marginRight: Spacing.one }}>
+          Out with no plan?
+        </Text>
+        <Chip
+          label="🎲 Who pays?"
+          onPress={() => {
+            setBillSource(null);
+            router.push("/who-pays");
+          }}
         />
-        <Step
-          n="02"
-          title="Tell us about them"
-          body="Food they love, places they like, anything to avoid."
-        />
-        <Step
-          n="03"
-          title="Get a full itinerary"
-          body="Back-to-back stops that stay inside your budget."
+        <Chip
+          label="💸 Split a bill"
+          onPress={() => {
+            setBillSource(null);
+            router.push("/split");
+          }}
         />
       </View>
 
-      <Text
-        variant="footnote"
-        tone="tertiary"
-        style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}
-      >
-        Menu prices come from our catalogue and can change. Transport is always an
-        estimate.
+      <Text variant="footnote" tone="tertiary" style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}>
+        Menu prices come from our catalogue and can change. Transport is always an estimate.
       </Text>
+
+      {/* Every occasion, with what each is for. Closes before the planner opens. */}
+      <NativeSheet visible={allOpen} onClose={() => setAllOpen(false)} detents={["medium", "large"]}>
+        <ScrollView contentContainerStyle={{ padding: GUTTER, gap: Spacing.three }}>
+          <Text variant="title2">What are you planning?</Text>
+          <OccasionGrid
+            onPick={(id) => {
+              setAllOpen(false);
+              setTimeout(() => void startNewPlan(id, "home_all"), 350);
+            }}
+          />
+        </ScrollView>
+      </NativeSheet>
     </ScrollView>
   );
 }
 
-/**
- * One occasion. Its own component so the per-occasion hue can be looked up
- * with a hook, which a callback inside a map cannot do.
- */
-function OccasionCard({
-  occasion,
+function QuickTile({
+  icon,
+  title,
+  sub,
+  tint = false,
+  onPress,
 }: {
-  occasion: { id: string; title: string; sub: string };
+  icon: "iphone.radiowaves.left.and.right" | "person.3.fill";
+  title: string;
+  sub: string;
+  tint?: boolean;
+  onPress: () => void;
 }) {
   const c = useTheme();
-  const hue = useOccasionHue(occasion.id);
-
   return (
     <Pressable
-      onPress={() => void startNewPlan(occasion.id as PlanInputs["occasion"], "home_row")}
+      onPress={onPress}
+      accessibilityRole="button"
       style={({ pressed }) => ({
-        // Two per row, accounting for the gap between them.
-        width: "47.5%",
-        flexGrow: 1,
-        padding: Spacing.three,
-        borderRadius: Radius.xl,
-        borderWidth: HAIRLINE,
+        flex: 1,
+        minHeight: 56,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.two,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: Spacing.two,
+        borderRadius: Radius.lg,
+        backgroundColor: tint ? c.accentSoft : c.backgroundElement,
+        borderWidth: tint ? 0 : HAIRLINE,
         borderColor: c.border,
-        backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
+        opacity: pressed ? 0.75 : 1,
       })}
     >
-      {/* The costume, not a glyph, the card is recognisable at a glance and
-          the character appears where people actually choose a pathway. */}
-      <View
-        style={{
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: hue.bg,
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <Mascot
-          occasion={occasion.id as PlanInputs["occasion"]}
-          size={46}
-          animate={false}
-          style={{ marginTop: 6 }}
-        />
+      <Symbol name={icon} size={18} color={c.accent} />
+      <View style={{ flex: 1 }}>
+        <Text variant="subheadline" weight="600" numberOfLines={1}>
+          {title}
+        </Text>
+        <Text variant="caption1" tone="secondary" numberOfLines={1}>
+          {sub}
+        </Text>
       </View>
-      <Text variant="headline" style={{ marginTop: Spacing.three }}>
-        {occasion.title}
-      </Text>
-      <Text variant="footnote" tone="secondary" numberOfLines={2} style={{ marginTop: 1 }}>
-        {occasion.sub}
-      </Text>
+      <Symbol name="chevron.right" size={12} weight="semibold" color={c.textTertiary} />
     </Pressable>
   );
 }
-
 
 function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (

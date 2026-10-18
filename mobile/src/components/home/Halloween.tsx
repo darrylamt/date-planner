@@ -99,6 +99,79 @@ export function HalloweenBanner({ onPlan }: { onPlan: () => void }) {
 }
 
 /**
+ * The season on Home, in one slim line instead of a banner.
+ *
+ * The banner pushed the occasion row below the first screen, and the row is
+ * the call to action, so the season now says so in a 32pt pill and gets out
+ * of the way. The pumpkin keeps the banner's secret: three quick taps say
+ * boo, seven bring the bats.
+ */
+export function HalloweenStrip() {
+  const burst = useBurst();
+  const taps = useRef<number[]>([]);
+
+  function poke(x: number, y: number) {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 1500), now];
+    const n = taps.current.length;
+    if (n === 3) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      burst(x, y, ["👻"], 1, 64);
+      burst(x, y, ["👻", "💀"], 5);
+    } else if (n >= 7) {
+      taps.current = [];
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      burst(x, y, ["🦇"], 24);
+    } else {
+      void Haptics.selectionAsync();
+    }
+  }
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space.sm,
+        height: 32,
+        paddingHorizontal: space.sm,
+        borderRadius: 999,
+        backgroundColor: NIGHT,
+        alignSelf: "flex-start",
+      }}
+    >
+      <Pressable hitSlop={8} onPress={(e) => poke(e.nativeEvent.pageX, e.nativeEvent.pageY)} accessibilityLabel="Pumpkin">
+        <Text style={{ fontSize: 16 }}>🎃</Text>
+      </Pressable>
+      <Text variant="footnote" weight="700" style={{ color: "#FFE3C2" }}>
+        Spooky season in Accra
+      </Text>
+      {appIconsAvailable() ? (
+        <Pressable
+          hitSlop={8}
+          onPress={() =>
+            void setHalloweenIcon().then((msg) => {
+              if (!msg.startsWith("Spooky")) Alert.alert("Halloween icon", msg);
+            })
+          }
+          style={({ pressed }) => ({
+            paddingHorizontal: space.sm,
+            paddingVertical: 2,
+            borderRadius: 999,
+            backgroundColor: "rgba(255,146,43,0.2)",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text variant="caption1" weight="700" style={{ color: "#FF922B" }}>
+            Get the icon
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/**
  * Bats and a ghost drifting across the top of Home, behind everything and
  * untouchable. Decoration only, so the native driver, and nothing at all
  * under Reduce Motion.

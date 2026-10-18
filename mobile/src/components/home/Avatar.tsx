@@ -26,11 +26,14 @@ export function Avatar({
   initial,
   pro,
   onPress,
+  size = SIZE,
 }: {
   avatarUrl: string | null;
   initial: string | null;
   pro: boolean;
   onPress: () => void;
+  /** Diameter in points; Home's compact header uses 40. */
+  size?: number;
 }) {
   const c = useTheme();
   const signedIn = Boolean(avatarUrl || initial);
@@ -41,12 +44,12 @@ export function Avatar({
       accessibilityLabel={pro ? "You and settings, Pro account" : "You and settings"}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => ({ width: SIZE, height: SIZE, opacity: pressed ? 0.75 : 1 })}
+      style={({ pressed }) => ({ width: size, height: size, opacity: pressed ? 0.75 : 1 })}
     >
       <View
         style={{
           flex: 1,
-          borderRadius: SIZE / 2,
+          borderRadius: size / 2,
           borderWidth: pro ? 2.5 : 1.5,
           borderColor: pro ? GOLD : c.border,
           padding: 2.5,
@@ -60,7 +63,7 @@ export function Avatar({
         <View
           style={{
             flex: 1,
-            borderRadius: SIZE,
+            borderRadius: size,
             overflow: "hidden",
             alignItems: "center",
             justifyContent: "center",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, Share, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Button } from "../../src/components/Button";
@@ -17,6 +18,12 @@ import { deletePlan, listPlans } from "../../src/lib/data";
 import { ghs, longDate } from "../../src/lib/format";
 import type { SavedPlan } from "../../src/lib/types";
 import { SkeletonSaved } from "../../src/components/Skeleton";
+import { Segmented } from "../../src/components/Segmented";
+import { PlansCalendar } from "../../src/components/plans/PlansCalendar";
+
+/** The last view chosen on Plans: the list, or the calendar. */
+const VIEW_KEY = "duro.plans.view";
+type PlansView = "list" | "calendar";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -28,6 +35,27 @@ export default function Plans() {
   const { session, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<SavedPlan[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  /*
+   * Plans holds what used to be two tabs: Saved as a list, and Calendar. A
+   * ?view= link (old calendar links redirect here) wins over the last view
+   * chosen, which is remembered on the phone.
+   */
+  const params = useLocalSearchParams<{ view?: string }>();
+  const [view, setView] = useState<PlansView>("list");
+  useEffect(() => {
+    if (params.view === "calendar" || params.view === "list") {
+      setView(params.view);
+      void AsyncStorage.setItem(VIEW_KEY, params.view).catch(() => undefined);
+      return;
+    }
+    void AsyncStorage.getItem(VIEW_KEY)
+      .then((v) => (v === "calendar" || v === "list") && setView(v))
+      .catch(() => undefined);
+  }, [params.view]);
+  const chooseView = (v: PlansView) => {
+    setView(v);
+    void AsyncStorage.setItem(VIEW_KEY, v).catch(() => undefined);
+  };
 
   const load = useCallback(async () => {
     if (!session) {
@@ -84,7 +112,7 @@ export default function Plans() {
       <Empty
         bubble="Nothing saved here yet."
         title="Sign in to see your plans"
-        body="Saved plans live on your account, so you can open them on any device."
+        body="Saved plans live on your account, by list or by the day they happen, on any device."
         action={<Button title="Sign in" onPress={() => router.push("/login")} />}
       />
     );
@@ -126,15 +154,22 @@ export default function Plans() {
         />
       }
     >
-      <Text
-        variant="display"
-        uppercase
-        style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}
-      >
-        Saved plans
+      <Text variant="display" style={{ paddingHorizontal: GUTTER, marginBottom: space.md }}>
+        Plans
       </Text>
+      <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}>
+        <Segmented
+          options={[
+            { value: "list", label: "List" },
+            { value: "calendar", label: "Calendar" },
+          ]}
+          value={view}
+          onChange={chooseView}
+        />
+      </View>
 
-      {plans.map((plan) => (
+      {view === "calendar" ? <PlansCalendar plans={plans} /> : null}
+      {view === "calendar" ? null : plans.map((plan) => (
         <Group key={plan.id} header={longDate(plan.inputs.date)}>
           {/*
             The plan itself, and the reason this row exists.

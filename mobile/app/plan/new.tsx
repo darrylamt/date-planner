@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -383,6 +384,8 @@ export default function PlanNew() {
       const slug = await savePlan(inputs, phase.itinerary);
       setShareSlug(slug);
       void saveDraft({ shareSlug: slug });
+      // Home stops explaining how it works once somebody has saved a plan.
+      void AsyncStorage.setItem("duro.firstSave.v1", "1").catch(() => undefined);
 
       /*
        * Ask about reminders here, and nowhere else.

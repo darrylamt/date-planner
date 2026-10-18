@@ -68,15 +68,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: "map", selected: "map.fill" }} md="map" />
         <NativeTabs.Trigger.Label>Venues</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="calendar" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
-        <NativeTabs.Trigger.Label>Calendar</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="saved" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} md="bookmark" />
-        <NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      {/* Settings lives behind the avatar on Home, not in the bar. */}
+      {/*
+        New plan, in the middle where a thumb finds it. On iOS 26 the search
+        role draws it as its own circle of glass at the end of the bar instead.
+      */}
       <NativeTabs.Trigger
         name="create"
         role={OWN_CIRCLE ? "search" : undefined}
@@ -86,6 +81,26 @@ export default function TabsLayout() {
       >
         <NativeTabs.Trigger.Icon sf="plus" md="add" />
         <NativeTabs.Trigger.Label>New plan</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      {/* Plans: what used to be Saved and Calendar, one list with a calendar view. */}
+      <NativeTabs.Trigger name="saved" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon sf={{ default: "calendar", selected: "calendar" }} md="calendar_month" />
+        <NativeTabs.Trigger.Label>Plans</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      {/*
+        Durobot opens the one chat screen rather than living inside the tab:
+        chat lays its keyboard and composer out under a header, and a second
+        copy here would be a second conversation. So, like New plan, the tap
+        is refused and the chat is pushed.
+      */}
+      <NativeTabs.Trigger
+        name="durobot"
+        disabled
+        accessibilityLabel="Durobot, ask Duro"
+        listeners={{ tabPress: () => router.navigate("/chat") }}
+      >
+        <NativeTabs.Trigger.Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} md="forum" />
+        <NativeTabs.Trigger.Label>Durobot</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

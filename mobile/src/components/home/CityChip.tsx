@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Platform, Pressable, View } from "react-native";
+import { Platform, Pressable, View, type StyleProp, type ViewStyle } from "react-native";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
@@ -29,7 +29,7 @@ const GLASS = Platform.OS === "ios" && parseInt(String(Platform.Version), 10) >=
  * planned in quietly became the city everything started from. This puts it
  * in plain sight above "Where next", with "Near me" as the first choice.
  */
-export function CityChip() {
+export function CityChip({ style }: { style?: StyleProp<ViewStyle> } = {}) {
   const c = useTheme();
   const isDark = useIsDark();
   const [city, setCity] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export function CityChip() {
   const m = swiftMods;
 
   return (
-    <View style={{ marginBottom: Spacing.two, flexDirection: "row" }}>
+    <View style={[{ marginBottom: Spacing.two, flexDirection: "row" }, style]}>
       {ui && m ? (
         <ui.Host matchContents colorScheme={isDark ? "dark" : "light"} seedColor={c.accent}>
           <ui.Menu
