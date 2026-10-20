@@ -105,11 +105,14 @@ Only real problems. Prices, budgets and the venues' quality are not yours to jud
   }
   const problems = (r.data.problems ?? []).filter((p) => p && Number.isInteger(p.stop) && p.stop >= 1 && p.stop <= plan.stops.length);
   /*
-   * A stop worth changing: serious, and not the night the plan was built
-   * round. An event or a film is the point of the evening, and swapping it
-   * out to fix the stop around it gets the order backwards.
+   * A stop worth changing: serious, and not something the person asked for.
+   * Events are mostly the planner's own choice (a Gaderin night that fitted
+   * the vibe), and one that is wrong for the occasion is the commonest thing
+   * the check catches: a Saturday hype party in a first date. A film is
+   * different: "Catch a movie" was asked for, so it stays and the check's
+   * point about it is only recorded.
    */
-  const target = problems.find((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event);
+  const target = problems.find((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event?.id.startsWith("movie:"));
   if (r.data.verdict === "good" || !target) {
     await record(problems.length ? "flagged" : "good", problems, "kept", r.model);
     return plan;
