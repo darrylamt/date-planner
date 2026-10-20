@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ensureAreaId } from "@/lib/areas";
 import { csvToObjects } from "@/lib/csv";
 import { Toast } from "@/components/Toast";
+import { MenuReaderPanel } from "@/components/admin/MenuReaderPanel";
 import { MENU_CATEGORIES, normaliseCategory } from "@/lib/catalog";
 import type { Area } from "@/lib/types";
 
@@ -609,6 +610,19 @@ export function CsvImporter({
             </>
           )}
         </div>
+
+        {mode === "menu_items" ? (
+          <MenuReaderPanel
+            venues={venues}
+            disabled={busy}
+            onCsv={async (csv, notes) => {
+              setRaw(csv);
+              // Straight into the check, never straight into the catalogue; the reader's notes go first.
+              await run(csv, true);
+              setReport((r) => [...notes, ...r]);
+            }}
+          />
+        ) : null}
 
         {/* Paste or choose. Pasting is how most of these arrive. */}
         <textarea
