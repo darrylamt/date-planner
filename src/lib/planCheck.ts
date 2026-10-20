@@ -81,6 +81,8 @@ export async function checkPlan(
   plan: PlannedItinerary,
   log?: SupabaseClient | null
 ): Promise<PlannedItinerary> {
+  // Off unless PLAN_CHECK=on: live, generation still ran past 60 s with it (20 Oct 2026).
+  if (process.env.PLAN_CHECK !== "on") return plan;
   const started = Date.now();
   const r = await judge(inputs, plan, DEADLINE_MS);
 
