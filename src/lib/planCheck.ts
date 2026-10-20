@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchCandidates } from "./matching";
+import type { Candidates } from "./matching";
 import { planItinerary, type PlannedItinerary } from "./planner";
 import { geminiJSON } from "./gemini";
 import type { PlanInputs } from "./types";
@@ -24,10 +24,8 @@ import type { PlanInputs } from "./types";
  * read rather than assumed.
  */
 const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemma-4-31b-it"];
-/** Whether a serious problem sends the planner round again. */
-const REPLAN = false;
-/** The most a plan waits for its check. */
-const DEADLINE_MS = 7000;
+/** The most a plan waits for its check, rebuild and second look included. */
+const DEADLINE_MS = 9000;
 
 type Problem = {
   stop: number;
@@ -78,19 +76,13 @@ export function describePlan(inputs: PlanInputs, plan: PlannedItinerary): string
 }
 
 export async function checkPlan(
-  supabase: SupabaseClient,
+  candidates: Candidates,
   inputs: PlanInputs,
   plan: PlannedItinerary,
   log?: SupabaseClient | null
 ): Promise<PlannedItinerary> {
   const started = Date.now();
-  const prompt = `${describePlan(inputs, plan)}
-
-You are checking an outing plan made by software for people in Accra, Ghana, before they see it. Would a thoughtful local friend say something is wrong? Look for: a stop that does not suit the occasion (a sports bar on an anniversary, a club for a business meeting), a place too loud to talk at for a date or meeting, the same kind of stop twice in a row (two dessert places, two dinners), a long ride for a short stop or a ride across town late at night, an odd order (dessert before dinner, coffee at midnight), and a time that does not suit the place.
-Only real problems. Prices, budgets and the venues' quality are not yours to judge. "serious" means you would change that stop; "minor" means worth a mention. stop is the stop's number (1 is the first). If nothing is wrong, verdict "good" and no problems.`;
-
-  const timer = new Promise<null>((r) => setTimeout(() => r(null), DEADLINE_MS));
-  const r = await Promise.race([geminiJSON<{ verdict: string; problems: Problem[] }>({ prompt, schema: SCHEMA, parts: [], models: MODELS, timeoutMs: 6000 }), timer]);
+  const r = await judge(inputs, plan, DEADLINE_MS);
 
   const record = (verdict: "good" | "flagged" | "skipped", problems: Problem[], action: "kept" | "replanned" | "replan_failed", model: string | null) =>
     log
@@ -101,11 +93,11 @@ Only real problems. Prices, budgets and the venues' quality are not yours to jud
         () => undefined
       );
 
-  if (!r || !r.ok) {
+  if (!r) {
     await record("skipped", [], "kept", null);
     return plan;
   }
-  const problems = (r.data.problems ?? []).filter((p) => p && Number.isInteger(p.stop) && p.stop >= 1 && p.stop <= plan.stops.length);
+  const { problems, model } = r;
   /*
    * A stop worth changing: serious, and not something the person asked for.
    * Events are mostly the planner's own choice (a Gaderin night that fitted
@@ -114,24 +106,59 @@ Only real problems. Prices, budgets and the venues' quality are not yours to jud
    * different: "Catch a movie" was asked for, so it stays and the check's
    * point about it is only recorded.
    */
-  const target = problems.find((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event?.id.startsWith("movie:"));
-  // Rebuilding is switched off while a hang in it is found: the check only records.
-  if (r.data.verdict === "good" || !target || !REPLAN) {
-    await record(problems.length ? "flagged" : "good", problems, "kept", r.model);
+  const targets = [
+    ...new Set(problems.filter((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event?.id.startsWith("movie:")).map((p) => p.stop)),
+  ].slice(0, 2);
+  if (!targets.length) {
+    await record(problems.length ? "flagged" : "good", problems, "kept", model);
     return plan;
   }
 
-  const venueId = plan.stops[target.stop - 1].venue.id;
+  /*
+   * Round again from the same candidates, less those venues (the first two
+   * seriously flagged; one at a time left the worst in): a tenth of a
+   * second. Fetching them again took ten, and a check that rebuilt a plan
+   * that way pushed generation past Vercel's sixty seconds.
+   *
+   * And the new plan is checked too, once: it replaces the first only with
+   * fewer serious problems. Taking it unseen swapped a dessert place for an
+   * arcade on a first date, which fixed one thing by breaking another.
+   */
+  const out = new Set(targets.map((n) => plan.stops[n - 1].venue.id));
   try {
-    const candidates = await fetchCandidates(supabase, inputs, { excludeVenueIds: [venueId] });
-    const again = candidates.venues.length >= 2 ? planItinerary(inputs, candidates) : null;
+    const fewer: Candidates = {
+      ...candidates,
+      venues: candidates.venues.filter((v) => !out.has(v.id)),
+      events: candidates.events.filter((e) => !e.venue_id || !out.has(e.venue_id)),
+    };
+    const again = fewer.venues.length >= 2 ? planItinerary(inputs, fewer) : null;
     if (again && again.stops.length >= plan.stops.length) {
-      await record("flagged", problems, "replanned", r.model);
-      return again;
+      const second = await judge(inputs, again, Math.max(2000, DEADLINE_MS - (Date.now() - started)));
+      const serious = (ps: Problem[]) => ps.filter((p) => p.severity === "serious").length;
+      if (second && serious(second.problems) < serious(problems)) {
+        await record("flagged", problems, "replanned", model);
+        return again;
+      }
     }
   } catch {
     // The first plan stands.
   }
-  await record("flagged", problems, "replan_failed", r.model);
+  await record("flagged", problems, "replan_failed", model);
   return plan;
+}
+
+/** One read of a plan: its problems, or null when no answer came in time. */
+async function judge(inputs: PlanInputs, plan: PlannedItinerary, withinMs: number): Promise<{ problems: Problem[]; model: string } | null> {
+  const prompt = `${describePlan(inputs, plan)}
+
+You are checking an outing plan made by software for people in Accra, Ghana, before they see it. Would a thoughtful local friend say something is wrong? Look for: a stop that does not suit the occasion (a sports bar on an anniversary, a club for a business meeting), a place too loud to talk at for a date or meeting, the same kind of stop twice in a row (two dessert places, two dinners), a long ride for a short stop or a ride across town late at night, an odd order (dessert before dinner, coffee at midnight), and a time that does not suit the place.
+Only real problems. Prices, budgets and the venues' quality are not yours to judge. "serious" means you would change that stop; "minor" means worth a mention. stop is the stop's number (1 is the first). If nothing is wrong, verdict "good" and no problems.`;
+  const timer = new Promise<null>((r) => setTimeout(() => r(null), withinMs));
+  const r = await Promise.race([
+    geminiJSON<{ verdict: string; problems: Problem[] }>({ prompt, schema: SCHEMA, parts: [], models: MODELS, timeoutMs: Math.min(6000, withinMs) }),
+    timer,
+  ]);
+  if (!r || !r.ok) return null;
+  const problems = (r.data.problems ?? []).filter((p) => p && Number.isInteger(p.stop) && p.stop >= 1 && p.stop <= plan.stops.length);
+  return { problems: r.data.verdict === "good" ? problems.filter((p) => p.severity !== "serious") : problems, model: r.model };
 }

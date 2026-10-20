@@ -57,7 +57,7 @@ async function reachFurther(
   const first = planItinerary(wider, candidates);
   if (!first) return null;
   // A second look before it is shown (planCheck.ts): names never leave.
-  const plan = await checkPlan(supabase, wider, first, createServiceClient());
+  const plan = await checkPlan(candidates, wider, first, createServiceClient());
 
   const outside = [
     ...new Set(
@@ -370,7 +370,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
    * description is written from the plan itself, here, with no model call.
    */
   // A second look before it is shown (planCheck.ts): names never leave.
-  plan = await checkPlan(supabase, inputs, plan, createServiceClient());
+  plan = await checkPlan(candidates, inputs, plan, createServiceClient());
 
   const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);

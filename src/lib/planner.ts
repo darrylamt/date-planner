@@ -1483,7 +1483,21 @@ function planWith(
         return [...films].sort((a, b) => fits(b) - fits(a) || room(a) - room(b))[0];
       }
     }
-    return placeable.find((x) => x.event.kind !== "movie") ?? null;
+    /*
+     * Not a party in a plan for talking. A first date, an anniversary, a
+     * date night or a meeting was handed the best-matching night of the day,
+     * and on a Saturday that was a hype night: the plan check's commonest
+     * complaint. Unless they asked for lively or dancing, those occasions
+     * skip nights at loud venues (the study, insights.ts) and nights that
+     * are dancing or clubbing; a quiet live set or a tasting still fits.
+     */
+    const talking = ["first_date", "anniversary", "date_night", "business_meeting"].includes(inputs.occasion);
+    const wantsNoise = (inputs.vibes ?? []).some((x) => ["lively", "dancing", "club hopping"].includes(x.toLowerCase()));
+    const tooLoud = (x: Anchor) => {
+      const tags = ((x.event as EventRow & { vibe_tags?: string[] }).vibe_tags ?? []).map((t) => t.toLowerCase());
+      return x.venue.insights?.noise === "loud" || tags.includes("dancing") || /party|rave|club|turn ?up|hype/i.test(`${x.event.title} ${x.event.category}`);
+    };
+    return placeable.find((x) => x.event.kind !== "movie" && !(talking && !wantsNoise && tooLoud(x))) ?? null;
   })();
 
   /** Every way one slot could be filled, cheapest order first within a venue. */
