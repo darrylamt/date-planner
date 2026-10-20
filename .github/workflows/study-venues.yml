@@ -1,0 +1,32 @@
+# Gemini studies new and changed venues once a week (scripts/study-venues.ts):
+# noise, fit per occasion, signature dishes and features, into venue_insights.
+# Unchanged venues are skipped, so a week's run is a few minutes. Needs the
+# GEMINI_API_KEY repository secret as well as the Supabase ones.
+name: Study venues
+
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays 04:00 Accra (UTC)
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "Study every venue again, changed or not"
+        type: boolean
+        default: false
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsx scripts/study-venues.ts ${{ (github.event_name == 'workflow_dispatch' && inputs.all) && '--all' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

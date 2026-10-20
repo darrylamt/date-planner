@@ -32,6 +32,7 @@
     "reach:check": "tsx scripts/reach-check.ts",
     "gaderin": "tsx scripts/scrape-gaderin.ts",
     "silverbird": "tsx scripts/scrape-silverbird.ts",
+    "study-venues": "tsx scripts/study-venues.ts",
     "widget:mascots": "tsx scripts/widget-mascots.ts",
     "brand:assets": "tsx scripts/brand-assets.ts",
     "transit:import": "tsx scripts/import-route-map.ts",

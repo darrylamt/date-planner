@@ -11,7 +11,8 @@ import {
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand } from "@/lib/demand";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { checkPlan } from "@/lib/planCheck";
 import { BUDGET_MAX, freeToVisit } from "@/lib/budget";
 import { DEFAULT_RADIUS_KM, DEFAULT_WELLNESS_KIND, REACH_FALLBACK_KM, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
@@ -53,8 +54,10 @@ async function reachFurther(
     return null;
   }
   if (candidates.venues.length < 2) return null;
-  const plan = planItinerary(wider, candidates);
-  if (!plan) return null;
+  const first = planItinerary(wider, candidates);
+  if (!first) return null;
+  // A second look before it is shown (planCheck.ts): names never leave.
+  const plan = await checkPlan(supabase, wider, first, createServiceClient());
 
   const outside = [
     ...new Set(
@@ -230,7 +233,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
     });
   }
 
-  const plan = planItinerary(inputs, candidates);
+  let plan = planItinerary(inputs, candidates);
 
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want. First, the next neighbourhood over.
@@ -366,6 +369,9 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
    * sending their answers to a third-party AI (guideline 5.1.2(i)), so the
    * description is written from the plan itself, here, with no model call.
    */
+  // A second look before it is shown (planCheck.ts): names never leave.
+  plan = await checkPlan(supabase, inputs, plan, createServiceClient());
+
   const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);
 

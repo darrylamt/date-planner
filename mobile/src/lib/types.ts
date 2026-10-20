@@ -27,6 +27,18 @@ export interface Area {
   city: string;
 }
 
+export type NoiseLevel = "quiet" | "conversational" | "buzzy" | "loud";
+
+/** One venue's study (venue_insights, 0088). */
+export interface VenueInsight {
+  noise: NoiseLevel | null;
+  /** 0 to 10 per occasion key. */
+  occasion_fit: Partial<Record<string, number>>;
+  signature_dishes: string[];
+  features: string[];
+  confidence: "low" | "medium" | "high";
+}
+
 export interface Venue {
   id: string;
   name: string;
@@ -141,6 +153,12 @@ export interface Venue {
    * deliberately not the same as average.
    */
   aesthetics: number | null;
+  /**
+   * What Gemini learned from the venue's photos, menu and listing
+   * (venue_insights, 0088; scripts/study-venues.ts). Absent until studied,
+   * and then read by the planner's scoring (insights.ts).
+   */
+  insights?: VenueInsight | null;
   /**
    * Where the price came from. An estimate is shown as a range rather than a
    * figure, because presenting a guess to the cedi is the same lie as an

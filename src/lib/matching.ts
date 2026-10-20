@@ -8,10 +8,11 @@ import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
 import { schedulesDuring } from "./schedules";
 import { venueAt, vibeTagsDuring } from "./dayEnergy";
 import { weekdayOf } from "./hours";
-import type { EventRow, MenuItem, PlanInputs, Venue, VenueSchedule, VenueType } from "./types";
+import type { EventRow, MenuItem, PlanInputs, Venue, VenueInsight, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
 import { movieEvents } from "./movies";
+import { insightScore } from "./insights";
 
 /**
  * Server-side candidate selection: pull venues, menus and events that
@@ -304,6 +305,20 @@ export async function fetchCandidates(
    * database grants, and Venue is what the planner reads.
    */
   let venues = (venuesRaw ?? []) as unknown as Venue[];
+
+  /*
+   * What Gemini learned about each place (venue_insights, 0088), on the venue
+   * itself, so both the shortlist below and the planner can weigh it. One
+   * read of a small public table; without it (before 0088) nothing changes.
+   */
+  if (venues.length) {
+    // The whole table, not the venues' ids: five hundred ids in a URL is too long a request.
+    const insights = await fetchAllRows<VenueInsight & { venue_id: string }>((from, to) =>
+      supabase.from("venue_insights").select("venue_id,noise,occasion_fit,signature_dishes,features,confidence").range(from, to)
+    ).catch(() => []);
+    const byVenue = new Map(insights.map((i) => [i.venue_id, i]));
+    venues = venues.map((v) => (byVenue.has(v.id) ? { ...v, insights: byVenue.get(v.id)! } : v));
+  }
   if (closedTonight.size) venues = venues.filter((v) => !closedTonight.has(v.id));
 
   /*
@@ -510,7 +525,9 @@ export async function fetchCandidates(
         avoidPenalty(atStart, inputs.partner?.avoid ?? "") +
         familyBonus(v, inputs) +
         // Here too, or a premium restaurant never reaches the planner to be chosen.
-        premiumLean(v, inputs);
+        premiumLean(v, inputs) +
+        // And the study's noise and fit, or a quiet place a first date needs may never be offered.
+        insightScore(v, inputs);
       /*
        * The areas they named come first. With a reach, the shortlist spans
        * the neighbourhoods around them too, and scored on feel alone the

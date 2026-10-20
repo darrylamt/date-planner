@@ -5,6 +5,7 @@ import { MENU_ONLY_TYPES, freeToVisit, isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { genreFits } from "./movies";
+import { insightScore, isSignature } from "./insights";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
@@ -466,7 +467,9 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number 
     placeFit(v, inputs.partner?.place ?? "") -
     avoidPenalty(v, inputs.partner?.avoid ?? "") +
     formalityScore(v, inputs.formality) +
-    looksScore(v, inputs.occasion)
+    looksScore(v, inputs.occasion) +
+    // Gemini's study of the place: noise against the occasion, fit for it (insights.ts).
+    insightScore(v, inputs)
   );
 }
 
@@ -942,7 +945,12 @@ export function planOrders(
      * dealt most-recommended first, so a couple's two dishes are the two
      * people liked. With no recommendations anywhere near, nothing changes.
      */
-    const rec = (m: MenuItem) => m.recommend_count ?? 0;
+    /*
+     * And what the place is known for (the study's signature dishes), worth
+     * two recommendations: the shawarma people come for, not a side that
+     * happened to sit at the right price.
+     */
+    const rec = (m: MenuItem) => (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0);
     const near = items.slice(Math.max(0, from - 2), from + WIDTH + 2);
     const outsiders = near.filter((m) => rec(m) > 0 && !candidates.includes(m)).sort((a, b) => rec(b) - rec(a));
     for (const m of outsiders) {
