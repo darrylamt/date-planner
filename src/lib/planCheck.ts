@@ -24,6 +24,8 @@ import type { PlanInputs } from "./types";
  * read rather than assumed.
  */
 const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemma-4-31b-it"];
+/** Whether a serious problem sends the planner round again. */
+const REPLAN = false;
 /** The most a plan waits for its check. */
 const DEADLINE_MS = 7000;
 
@@ -113,7 +115,8 @@ Only real problems. Prices, budgets and the venues' quality are not yours to jud
    * point about it is only recorded.
    */
   const target = problems.find((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event?.id.startsWith("movie:"));
-  if (r.data.verdict === "good" || !target) {
+  // Rebuilding is switched off while a hang in it is found: the check only records.
+  if (r.data.verdict === "good" || !target || !REPLAN) {
     await record(problems.length ? "flagged" : "good", problems, "kept", r.model);
     return plan;
   }
