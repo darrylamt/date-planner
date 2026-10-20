@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/planner/Sheet";
 import { PosterUpload } from "@/components/planner/PosterUpload";
+import { PosterStart } from "@/components/planner/PosterStart";
+import { KINDS as ALL_KINDS } from "@/components/planner/nights";
 import { IconCalendar, IconCopy, IconPlus } from "@/components/planner/icons";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
 import type { Audience, EventRow, VenueSchedule } from "@/lib/types";
@@ -487,6 +489,35 @@ export function NightsManager({
               void saveEvent();
             }}
           >
+            {/*
+              Their poster read into the form. One date here; a poster with
+              several says so, and the rest are added the same way.
+            */}
+            <PosterStart
+              compact
+              onDraft={(p, imageUrl) => {
+                const listed = kindOf(p.kind);
+                setEvent({
+                  ...event,
+                  title: p.title || event.title,
+                  kind: !p.title ? event.kind : listed ? listed.id : "custom",
+                  customKind: !p.title || listed ? event.customKind : p.otherKind || (ALL_KINDS.find((k) => k.id === p.kind)?.label ?? ""),
+                  date: p.dates[0] ?? event.date,
+                  time: p.time || event.time,
+                  // "No price on the poster" leaves the price as it was rather than calling it free.
+                  free: p.costMode === "free" ? true : p.costMode === "paid" ? false : event.free,
+                  cost: p.costMode === "paid" && p.cost ? String(p.cost) : event.cost,
+                  image: imageUrl,
+                  description: p.description || event.description,
+                  vibes: p.vibes.length ? p.vibes.slice(0, 3) : event.vibes,
+                  phone: p.phone || event.phone,
+                  audience: p.title ? p.audience : event.audience,
+                });
+                if (p.dates.length > 1) {
+                  setError(`The poster lists ${p.dates.length} dates. This fills the first; add the others the same way, or make it a weekly night.`);
+                }
+              }}
+            />
             <label className="block">
               <span className="pl-label">What is it called?</span>
               <input className="pl-input" autoFocus={!event.id} value={event.title} placeholder="Highlife Friday with the Ebo Taylor band" onChange={(e) => setEvent({ ...event, title: e.target.value })} />

@@ -9,6 +9,9 @@ import type { Audience } from "@/lib/types";
 import { NightPreview, type PreviewData } from "./NightPreview";
 import { PlaceForm } from "./PlaceForm";
 import { PosterUpload } from "./PosterUpload";
+import { PosterStart } from "./PosterStart";
+import { guessVenue } from "@/lib/menuRead";
+import type { FlyerDraft } from "@/lib/flyerReader";
 import { Confetti } from "./Confetti";
 import { Sheet } from "./Sheet";
 import {
@@ -131,6 +134,33 @@ export function NightWizard({
   const top = useRef<HTMLDivElement>(null);
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((cur) => ({ ...cur, [k]: v }));
+
+  /*
+   * What a poster said, over what is there. Only what it actually said: a
+   * blank stays whatever they had typed, and the place is only changed to
+   * one of theirs that the poster names. One date when editing a single
+   * night, every date when making new ones.
+   */
+  function applyPoster(p: FlyerDraft, imageUrl: string) {
+    const place = p.venueName ? guessVenue(p.venueName, places) : null;
+    setD((cur) => ({
+      ...cur,
+      title: p.title || cur.title,
+      category: p.title ? (p.kind === "other" ? "custom" : p.kind) : cur.category,
+      customKind: p.kind === "other" && p.otherKind ? p.otherKind : cur.customKind,
+      dates: p.dates.length ? (mode === "edit" ? p.dates.slice(0, 1) : p.dates) : cur.dates,
+      time: p.time || cur.time,
+      venueId: place?.id ?? cur.venueId,
+      costMode: p.title ? p.costMode : cur.costMode,
+      cost: p.costMode === "paid" && p.cost ? String(p.cost) : cur.cost,
+      bookingUrl: p.bookingUrl || cur.bookingUrl,
+      audience: p.title ? p.audience : cur.audience,
+      vibes: p.vibes.length ? p.vibes.slice(0, MAX_VIBES) : cur.vibes,
+      description: p.description || cur.description,
+      image: imageUrl,
+      phone: p.phone || cur.phone,
+    }));
+  }
 
   /*
    * A new night's draft lives in this tab until it is published, so a detour
@@ -394,6 +424,7 @@ export function NightWizard({
           <div className="mt-6">
             {s.key === "basics" ? (
               <div className="flex flex-col gap-6">
+                <PosterStart onDraft={applyPoster} />
                 <label className="block">
                   <span className="pl-label">Name</span>
                   <input

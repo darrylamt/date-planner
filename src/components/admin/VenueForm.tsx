@@ -222,6 +222,49 @@ export function VenueForm({
   );
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  /** Gemini's read of this venue's photos and menu (venueSuggest.ts), shown under its button. */
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<{
+    reasons: string;
+    photos: { url: string; verdict: string; note: string }[];
+    bestPhoto: string | null;
+    model: string;
+  } | null>(null);
+
+  /*
+   * Fill the listing from the venue's own photos and menu. Through applyDraft,
+   * the same path the old research used, so only what came back is changed;
+   * cuisines join what is there rather than replacing it. Nothing is saved.
+   */
+  async function suggestWithGemini() {
+    if (!venue?.id) return;
+    setSuggesting(true);
+    setSuggestion(null);
+    try {
+      const res = await fetch("/api/admin/venue-suggest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ venueId: venue.id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.draft) {
+        setToast(json.error ?? "Gemini didn't answer. Try again.");
+        return;
+      }
+      await applyDraft(json.draft as VenueDraft);
+      const cuisines = json.cuisines as string[];
+      if (cuisines.length) {
+        setV((cur) => ({
+          ...cur,
+          cuisines: [...new Set([...cur.cuisines.split(",").map((c) => c.trim()).filter(Boolean), ...cuisines])].join(", "),
+        }));
+      }
+      setSuggestion({ reasons: json.reasons, photos: json.photos, bestPhoto: json.bestPhoto, model: json.model });
+      setToast("Suggested from its photos and menu. Check it before saving.");
+    } finally {
+      setSuggesting(false);
+    }
+  }
   const [error, setError] = useState<string | null>(null);
 
   const toggle = (list: string[], val: string) =>
@@ -1116,6 +1159,48 @@ export function VenueForm({
             onChange={(e) => setV({ ...v, dress_code: e.target.value })}
           />
         </div>
+        {venue?.id ? (
+          <div className="md:col-span-2 rounded-xl border border-dashed border-line p-3.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" className="btn2 btnsm px-5" disabled={suggesting} onClick={() => void suggestWithGemini()}>
+                {suggesting ? "Looking at its photos and menu…" : "✨ Suggest with Gemini"}
+              </button>
+              <span className="text-[13px] text-mutedbrown">
+                Description, vibe tags, best for, cuisines and dress code from its photos and menu. Checks the photos too.
+              </span>
+            </div>
+            {suggestion ? (
+              <div className="mt-3 text-[13.5px] text-cocoa">
+                <div className="text-mutedbrown">
+                  {suggestion.reasons} <span className="text-[12px]">({suggestion.model})</span>
+                </div>
+                {suggestion.photos.some((p) => p.verdict !== "good") || suggestion.bestPhoto ? (
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {suggestion.photos
+                      .filter((p) => p.verdict !== "good" || p.url === suggestion.bestPhoto)
+                      .map((p) => (
+                        <div key={p.url} className="w-[150px]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.url} alt="" className="h-[96px] w-full rounded-lg object-cover" />
+                          <div className={`mt-1 text-[12px] font-semibold ${p.verdict === "good" ? "text-[#15803D]" : "text-flame"}`}>
+                            {p.url === suggestion.bestPhoto ? "Best photo: lead with this" : p.verdict.replace(/_/g, " ")}
+                          </div>
+                          {p.note ? <div className="text-[11.5px] text-mutedbrown">{p.note}</div> : null}
+                          {p.url === suggestion.bestPhoto && v.image_url !== p.url ? (
+                            <button type="button" className="text-[12px] font-semibold text-flame" onClick={() => setV({ ...v, image_url: p.url })}>
+                              Make it the main photo
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                  </div>
+                ) : suggestion.photos.length ? (
+                  <div className="mt-1 text-[12.5px] text-[#15803D]">The photos look right.</div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="md:col-span-2">
           <span className="flbl">Description</span>
           <textarea

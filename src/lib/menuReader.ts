@@ -14,24 +14,9 @@
  * nothing but the menu is ever sent.
  */
 
-/**
- * Tried in order, each with its own free daily allowance (AI Studio, Oct
- * 2026): the full Flash models read untidy photos best but allow 20 a day
- * each; Flash Lite allows 500 and read the test menu as well; Gemma 4 allows
- * 14,400. Any one busy or used up hands on to the next, so the reader stops
- * only when all of them have. 2.5 Flash is closed to new keys.
- */
-const MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
-  "gemini-3-flash-preview",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemma-4-31b-it",
-];
-
 export const MENU_READ_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
+
+import { geminiJSON } from "./gemini";
 
 export type MenuPart = { mime: string; data: Buffer } | { text: string; name: string };
 
@@ -55,7 +40,7 @@ export interface ReadItem {
 }
 
 export type MenuReadResult =
-  | { ok: true; items: ReadItem[]; chargesNotes: string[]; skipped: string[]; deliveryApp: boolean; model: string }
+  | { ok: true; items: ReadItem[]; chargesNotes: string[]; skipped: string[]; deliveryApp: boolean; venueName: string; model: string }
   | { ok: false; reason: "no_key" | "limit" | "unreadable" | "failed"; message: string };
 
 /*
@@ -94,7 +79,8 @@ alcoholic: "yes" or "no" on every row, food included. yes: beer, wine, champagne
 dietary: the menu's own words only, such as "Vegan" or "Vegetarian" (a printed (V) counts), else "".
 unsure: true when a name or price was hard to read, a time was unclear, or items look merged.
 chargesNotes: menu-wide lines about tax, VAT or service charges, word for word.
-deliveryApp: true when this is a screenshot of a delivery app (Bolt Food, Glovo, Jumia Food and the like) rather than the venue's own menu.`;
+deliveryApp: true when this is a screenshot of a delivery app (Bolt Food, Glovo, Jumia Food and the like) rather than the venue's own menu.
+venueName: the venue's name as printed on the menu (header, logo text, footer), else "".`;
 
 const SCHEMA = {
   type: "OBJECT",
@@ -102,6 +88,7 @@ const SCHEMA = {
     deliveryApp: { type: "BOOLEAN" },
     chargesNotes: { type: "ARRAY", items: { type: "STRING" } },
     skipped: { type: "ARRAY", items: { type: "STRING" } },
+    venueName: { type: "STRING" },
     items: {
       type: "ARRAY",
       items: {
@@ -132,81 +119,28 @@ const SCHEMA = {
 };
 
 export async function readMenu(parts: MenuPart[]): Promise<MenuReadResult> {
-  const key = process.env.GEMINI_API_KEY?.trim();
-  if (!key) return { ok: false, reason: "no_key", message: "GEMINI_API_KEY is not set on the server." };
-
-  const body = {
-    contents: [
-      {
-        parts: [
-          ...parts.map((p) =>
-            "text" in p
-              ? { text: `File "${p.name}":\n${p.text.slice(0, 200_000)}` }
-              : { inline_data: { mime_type: p.mime, data: p.data.toString("base64") } }
-          ),
-          { text: PROMPT },
-        ],
-      },
-    ],
-    generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0 },
-  };
-
-  let limited = false;
-  for (const model of MODELS) {
-    const gemma = model.startsWith("gemma");
-    const request = gemma
-      ? {
-          ...body,
-          contents: [{ parts: [...body.contents[0].parts, { text: `Answer with JSON only, shaped like this schema: ${JSON.stringify(SCHEMA)}` }] }],
-          generationConfig: { temperature: 0 },
-        }
-      : body;
-    let res: Response;
-    try {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "x-goog-api-key": key, "content-type": "application/json" },
-        body: JSON.stringify(request),
-        signal: AbortSignal.timeout(45_000),
-      });
-    } catch {
-      continue;
-    }
-    // Over the free limit, or busy: the next model has its own quota.
-    if (res.status === 429 || res.status === 503 || res.status === 404) {
-      if (res.status === 429) limited = true;
-      continue;
-    }
-    if (!res.ok) continue;
-    const json = (await res.json().catch(() => null)) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    } | null;
-    const text = json?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
-    let out: { items?: ReadItem[]; chargesNotes?: string[]; skipped?: string[]; deliveryApp?: boolean } | null = null;
-    try {
-      // A model without a response schema may wrap its JSON in a code fence.
-      out = JSON.parse(text.replace(/^[^{]*/, "").replace(/[^}]*$/, ""));
-    } catch {
-      out = null;
-    }
-    if (!out?.items) continue;
-    const items = out.items
-      .filter((i) => i && typeof i.name === "string" && i.name.trim() && Number.isFinite(Number(i.price_ghs)) && Number(i.price_ghs) > 0)
-      .slice(0, 600)
-      .map((i) => ({ ...i, name: i.name.trim().slice(0, 160), price_ghs: Math.round(Number(i.price_ghs) * 100) / 100 }));
-    if (!items.length) {
-      return { ok: false, reason: "unreadable", message: "No priced items could be read from that. Try a sharper, straighter photo." };
-    }
-    return {
-      ok: true,
-      items,
-      chargesNotes: (out.chargesNotes ?? []).slice(0, 10),
-      skipped: (out.skipped ?? []).slice(0, 50),
-      deliveryApp: Boolean(out.deliveryApp),
-      model,
-    };
+  const r = await geminiJSON<{ items?: ReadItem[]; chargesNotes?: string[]; skipped?: string[]; deliveryApp?: boolean; venueName?: string }>({
+    parts: parts.map((p) => ("text" in p ? { text: `File "${p.name}":
+${p.text.slice(0, 200_000)}` } : { inline: { mime: p.mime, data: p.data } })),
+    prompt: PROMPT,
+    schema: SCHEMA,
+  });
+  if (!r.ok) return { ok: false, reason: r.reason === "no_key" ? "no_key" : r.reason, message: r.message };
+  const out = r.data;
+  const items = (out.items ?? [])
+    .filter((i) => i && typeof i.name === "string" && i.name.trim() && Number.isFinite(Number(i.price_ghs)) && Number(i.price_ghs) > 0)
+    .slice(0, 600)
+    .map((i) => ({ ...i, name: i.name.trim().slice(0, 160), price_ghs: Math.round(Number(i.price_ghs) * 100) / 100 }));
+  if (!items.length) {
+    return { ok: false, reason: "unreadable", message: "No priced items could be read from that. Try a sharper, straighter photo." };
   }
-  return limited
-    ? { ok: false, reason: "limit", message: "Gemini's free daily limit is used up. It resets at midnight Pacific time (8 am in Accra)." }
-    : { ok: false, reason: "failed", message: "Gemini didn't answer. Try again in a minute." };
+  return {
+    ok: true,
+    items,
+    chargesNotes: (out.chargesNotes ?? []).slice(0, 10),
+    skipped: (out.skipped ?? []).slice(0, 50),
+    deliveryApp: Boolean(out.deliveryApp),
+    venueName: (out.venueName ?? "").trim().slice(0, 120),
+    model: r.model,
+  };
 }

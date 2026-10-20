@@ -1,83 +1,17 @@
 "use client";
 
-import { useState } from "react";
-
-type ReadItem = {
-  name: string;
-  category: string;
-  price_ghs: number;
-  notes?: string;
-  covers_people?: number;
-  alcoholic?: string;
-  dietary?: string;
-  days?: string;
-  from?: string;
-  to?: string;
-  min_players?: number;
-  max_players?: number;
-  duration_minutes?: number;
-  min_age?: number;
-  requires_gear?: string;
-  unsure?: boolean;
-};
-
-const HEADERS = [
-  "venue", "name", "category", "price_ghs", "notes", "covers_people",
-  "min_players", "max_players", "duration_minutes", "min_age", "requires_gear",
-  "days", "from", "to", "alcoholic", "dietary",
-];
-/** A count the reader filled with 0 for "not said" is left blank. */
-const n = (v: number | undefined) => (v && v > 0 ? v : "");
-
-function cell(v: unknown): string {
-  const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/** The rows as the importer's menu CSV, for one venue. */
-export function menuCsv(venue: string, items: ReadItem[]): string {
-  const lines = items.map((i) =>
-    [
-      venue, i.name, i.category, i.price_ghs, i.notes ?? "", i.covers_people && i.covers_people > 1 ? i.covers_people : "",
-      n(i.min_players), n(i.max_players), n(i.duration_minutes), n(i.min_age), i.requires_gear ?? "",
-      i.days ?? "", i.from ?? "", i.to ?? "", i.alcoholic ?? "", i.dietary ?? "",
-    ]
-      .map(cell)
-      .join(",")
-  );
-  return [HEADERS.join(","), ...lines].join("\n");
-}
+import { useEffect, useState } from "react";
+import { guessVenue, menuCsv, readMenuFiles, type MenuReadResponse } from "@/lib/menuRead";
 
 /**
- * A photo the size a menu needs to be read, not the size a phone takes it.
- *
- * A Vercel function takes about 4.5 MB a request, and a phone photo alone is
- * often more. 1800 pixels on the long side keeps small print legible. A
- * format the browser cannot draw (HEIC outside Safari) goes as it is.
- */
-async function shrink(file: File): Promise<Blob> {
-  if (!file.type.startsWith("image/")) return file;
-  try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    return blob ?? file;
-  } catch {
-    return file;
-  }
-}
-
-/**
- * Read a menu from photos, a PDF or an untidy spreadsheet (/api/admin/menu-read,
+ * Read a menu from photos, a PDF or an untidy spreadsheet (/api/ai/menu,
  * Gemini's free tier), and hand the importer a CSV to check.
  *
- * Nothing is written here. The CSV goes through the importer's own check and
- * preview, the same as a pasted one, so a misread price is seen before it is
- * saved. It can also be downloaded, to fix in a spreadsheet first.
+ * Files first, venue second: the reader reads the venue's name off the menu
+ * and offers the match, which can be searched and changed before anything
+ * happens. Nothing is written here. The CSV goes through the importer's own
+ * check and preview, the same as a pasted one, so a misread price is seen
+ * before it is saved, and changing the venue checks it again.
  */
 export function MenuReaderPanel({
   venues,
@@ -87,54 +21,46 @@ export function MenuReaderPanel({
   venues: { id: string; name: string }[];
   disabled: boolean;
   /** The CSV, and what the reader wants said above the importer's own report. */
-  onCsv: (csv: string, notes: string[]) => void;
+  onCsv: (csv: string, notes: string[]) => void | Promise<void>;
 }) {
-  const [venue, setVenue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastCsv, setLastCsv] = useState<string | null>(null);
+  const [read, setRead] = useState<MenuReadResponse | null>(null);
+  const [venue, setVenue] = useState("");
 
-  async function read() {
+  const sorted = [...venues].sort((a, b) => a.name.localeCompare(b.name));
+  const chosen = venues.find((v) => v.name.toLowerCase() === venue.trim().toLowerCase()) ?? null;
+  const csv = read && chosen ? menuCsv(chosen.name, read.items) : null;
+
+  // A venue settled on, or changed: the rows go to the importer's check under it.
+  useEffect(() => {
+    if (!read || !chosen || !csv) return;
+    const unsure = read.items.filter((i) => i.unsure).map((i) => `${i.name} (GHS ${i.price_ghs})`);
+    void onCsv(csv, [
+      `Read ${read.items.length} item${read.items.length === 1 ? "" : "s"} with ${read.model} for ${chosen.name}. Check every price against the photo before importing.`,
+      ...(unsure.length ? [`The reader wasn't sure of: ${unsure.join("; ")}.`] : []),
+      ...(read.skipped.length ? [`Left out, no readable price: ${read.skipped.join("; ")}. Add them by hand if you know the price.`] : []),
+      ...(read.chargesNotes.length
+        ? [`The menu says: "${read.chargesNotes.join(" ")}" Set the venue's charges on its page if they aren't already.`]
+        : []),
+      "",
+    ]);
+    // onCsv is the parent's and changes every render; the read and the venue are what matter.
+  }, [read, chosen?.id]);
+
+  async function doRead() {
     setBusy(true);
     setError(null);
-    try {
-      const form = new FormData();
-      for (const f of files) {
-        const blob = await shrink(f);
-        form.append("files", blob, blob === f ? f.name : f.name.replace(/\.\w+$/, "") + ".jpg");
-      }
-      const res = await fetch("/api/admin/menu-read", { method: "POST", body: form });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.items) {
-        setError(json?.error ?? "That didn't go through. Try again.");
-        return;
-      }
-      // Delivery-app prices are marked up and never become menu rows.
-      if (json.deliveryApp) {
-        setError("That looks like a delivery app (Bolt Food, Glovo…). Their prices are marked up, so they don't go in as menu prices. Use the venue's own menu.");
-        return;
-      }
-      const items = json.items as ReadItem[];
-      const csv = menuCsv(venue, items);
-      setLastCsv(csv);
-      const unsure = items.filter((i) => i.unsure).map((i) => `${i.name} (GHS ${i.price_ghs})`);
-      const notes = [
-        `Read ${items.length} item${items.length === 1 ? "" : "s"} with ${json.model}. Check every price against the photo before importing.`,
-        ...(unsure.length ? [`The reader wasn't sure of: ${unsure.join("; ")}.`] : []),
-        ...(json.skipped?.length
-          ? [`Left out, no readable price: ${(json.skipped as string[]).join("; ")}. Add them by hand if you know the price.`]
-          : []),
-        ...(json.chargesNotes?.length
-          ? [`The menu says: "${(json.chargesNotes as string[]).join(" ")}" Set the venue's charges on its page if they aren't already.`]
-          : []),
-        "",
-      ];
-      onCsv(csv, notes);
-    } catch {
-      setError("That didn't go through. Try again.");
-    } finally {
-      setBusy(false);
+    setRead(null);
+    const r = await readMenuFiles(files);
+    setBusy(false);
+    if (!r.ok) return setError(r.error);
+    setRead(r.data);
+    // The name on the menu, matched to the catalogue, unless a venue is already chosen.
+    if (!chosen) {
+      const guess = r.data.venueName ? guessVenue(r.data.venueName, venues) : null;
+      setVenue(guess?.name ?? "");
     }
   }
 
@@ -142,20 +68,11 @@ export function MenuReaderPanel({
     <div className="mt-4 rounded-xl border border-dashed border-line p-4">
       <div className="text-[15px] font-semibold text-cocoa">Read a menu from photos, a PDF or a spreadsheet</div>
       <div className="mt-1 text-[13px] text-mutedbrown">
-        Up to 6 files at a time. The rows land in the box below as a CSV and go through the usual check; nothing is saved
-        until you import.
+        Up to 6 files at a time. Pick the files, read them, then confirm the venue. The rows go through the usual check
+        below; nothing is saved until you import.
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2.5">
-        <select className="inp max-w-[280px]" value={venue} disabled={busy || disabled} onChange={(e) => setVenue(e.target.value)}>
-          <option value="">Which venue?</option>
-          {[...venues].sort((a, b) => a.name.localeCompare(b.name)).map((v) => (
-            <option key={v.id} value={v.name}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-
         <label className="btn2 btnsm inline-flex w-fit cursor-pointer px-5">
           {files.length ? `${files.length} file${files.length === 1 ? "" : "s"} chosen` : "Choose photos or files"}
           <input
@@ -166,30 +83,62 @@ export function MenuReaderPanel({
             disabled={busy || disabled}
             onChange={(e) => {
               setFiles([...(e.target.files ?? [])].slice(0, 6));
+              setRead(null);
               e.target.value = "";
             }}
           />
         </label>
 
-        <button className="btn btnsm px-6" disabled={busy || disabled || !venue || !files.length} onClick={() => void read()}>
-          {busy ? "Reading the menu…" : "Read it"}
+        <button className="btn btnsm px-6" disabled={busy || disabled || !files.length} onClick={() => void doRead()}>
+          {busy ? "Reading the menu…" : read ? "Read again" : "Read it"}
         </button>
-
-        {lastCsv ? (
-          <button
-            className="text-[13px] font-semibold text-mutedbrown hover:text-flame"
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = URL.createObjectURL(new Blob([lastCsv], { type: "text/csv" }));
-              a.download = `${venue.replace(/[^\w-]+/g, "-").toLowerCase() || "menu"}-menu.csv`;
-              a.click();
-              URL.revokeObjectURL(a.href);
-            }}
-          >
-            Download CSV
-          </button>
-        ) : null}
       </div>
+
+      {read ? (
+        <div className="mt-3">
+          <label className="text-[13px] font-semibold text-cocoa">Which venue is this?</label>
+          {read.venueName ? (
+            <span className="ml-2 text-[12.5px] text-mutedbrown">The menu says &ldquo;{read.venueName}&rdquo;</span>
+          ) : null}
+          <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+            <input
+              className="inp h-[42px] max-w-[340px]"
+              list="menu-reader-venues"
+              placeholder="Type to search venues…"
+              value={venue}
+              disabled={busy || disabled}
+              onChange={(e) => setVenue(e.target.value)}
+            />
+            <datalist id="menu-reader-venues">
+              {sorted.map((v) => (
+                <option key={v.id} value={v.name} />
+              ))}
+            </datalist>
+            {chosen ? (
+              <span className="text-[13px] font-semibold text-[#15803D]">✓ {chosen.name}</span>
+            ) : venue.trim() ? (
+              <span className="text-[13px] text-mutedbrown">Keep typing and pick one from the list</span>
+            ) : null}
+            {csv ? (
+              <button
+                className="text-[13px] font-semibold text-mutedbrown hover:text-flame"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                  a.download = `${chosen!.name.replace(/[^\w-]+/g, "-").toLowerCase()}-menu.csv`;
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+              >
+                Download CSV
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-1 text-[12.5px] text-mutedbrown">
+            {read.items.length} item{read.items.length === 1 ? "" : "s"} read. {chosen ? "Checked below." : "Choose the venue to check them."}
+          </div>
+        </div>
+      ) : null}
 
       {error ? <div className="mt-2 text-[13px] font-semibold text-flame">{error}</div> : null}
     </div>

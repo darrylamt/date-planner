@@ -8,6 +8,7 @@ import { Confetti } from "@/components/planner/Confetti";
 import { IconPlus, IconSearch, IconWarn } from "@/components/planner/icons";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 import { useToast } from "./ui";
+import { MenuFromPhotos } from "./MenuFromPhotos";
 
 const COURSES: { value: MenuCategory; label: string; emoji: string }[] = [
   { value: "starter", label: "Starters", emoji: "🥗" },
@@ -198,6 +199,21 @@ export function MenuManager({ scope, items }: { scope: MenuScope; items: MenuIte
         ) : null}
       </div>
 
+      {/* The whole menu from a photo, read and checked here (Gemini). */}
+      <div className="pl-up mb-4" style={{ animationDelay: "30ms" }}>
+        <MenuFromPhotos
+          scope={scope}
+          existing={rows}
+          onSaved={(added, updated) => {
+            const changed = new Map(updated.map((u) => [u.id, u]));
+            setRows((rs) => [...rs.map((r) => changed.get(r.id) ?? r), ...added]);
+            if (added.length || updated.length) {
+              say(`${added.length ? `Added ${added.length}` : ""}${added.length && updated.length ? ", " : ""}${updated.length ? `updated ${updated.length}` : ""}`);
+            }
+          }}
+        />
+      </div>
+
       {branched ? (
         <div className="pl-up mb-4 rounded-2xl bg-[var(--p-sunken)] px-4 py-3 text-[14px] leading-snug text-[var(--p-ink-2)]" style={{ animationDelay: "40ms" }}>
           This menu is shared by all {scope.branchCount} branches. A change here shows everywhere, unless you add a dish to {scope.venueName} only.
@@ -225,7 +241,7 @@ export function MenuManager({ scope, items }: { scope: MenuScope; items: MenuIte
             <IconPlus size={20} /> Add your first dish
           </button>
           <p className="mt-5 max-w-[360px] text-[13.5px] text-[var(--p-muted)]">
-            Got a long menu? Send us a photo or PDF of it at{" "}
+            Got a long menu? Use &ldquo;Add from a photo of your menu&rdquo; above, or send a photo or PDF to{" "}
             <a className="font-bold text-[var(--p-accent)] underline" href={`mailto:planbyaduro@gmail.com?subject=${encodeURIComponent(`Menu for ${scope.venueName}`)}`}>
               planbyaduro@gmail.com
             </a>{" "}

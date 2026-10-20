@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { Area, EventRow } from "@/lib/types";
 import { ImageField } from "./ImageField";
+import { PosterStart } from "@/components/planner/PosterStart";
+import { guessVenue } from "@/lib/menuRead";
 
 const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "workshop", "film_night", "other"];
 
@@ -174,8 +176,35 @@ export function EventsManager({
         Live music, sip &amp; paint, festivals, what makes a date memorable.
       </div>
 
+      {/* A poster read into the form below (Gemini). The planner portal's card, in its own colours. */}
+      <div className="planner mt-5">
+        <PosterStart
+          compact
+          uploadUrl="/api/admin/upload"
+          onDraft={(p, imageUrl) => {
+            const venue = p.venueName ? guessVenue(p.venueName, venues) : null;
+            setForm({
+              ...form,
+              title: p.title || form.title,
+              description: p.description || form.description,
+              venue_id: venue?.id ?? form.venue_id,
+              event_date: p.dates[0] ?? form.event_date,
+              start_time: p.time || form.start_time,
+              cost_ghs: p.costMode === "free" ? "0" : p.costMode === "paid" && p.cost ? String(p.cost) : form.cost_ghs,
+              category: CATEGORIES.includes(p.kind) ? p.kind : p.title ? "other" : form.category,
+              image_url: imageUrl,
+              contact_phone: p.phone || form.contact_phone,
+              vibe_tags: p.vibes.length ? p.vibes.join(", ") : form.vibe_tags,
+              booking_url: p.bookingUrl || form.booking_url,
+              audience: p.title ? p.audience : form.audience,
+            });
+            if (p.dates.length > 1) setToast(`The poster lists ${p.dates.length} dates: ${p.dates.join(", ")}. This fills the first.`);
+          }}
+        />
+      </div>
+
       {/* Add / edit form */}
-      <div className="card mt-5 grid gap-3 p-5 md:grid-cols-3">
+      <div className="card mt-4 grid gap-3 p-5 md:grid-cols-3">
         <div className="md:col-span-2">
           <span className="flbl">Title</span>
           <input className="inp h-[42px]" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
