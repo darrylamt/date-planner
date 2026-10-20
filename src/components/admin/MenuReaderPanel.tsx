@@ -13,10 +13,21 @@ type ReadItem = {
   days?: string;
   from?: string;
   to?: string;
+  min_players?: number;
+  max_players?: number;
+  duration_minutes?: number;
+  min_age?: number;
+  requires_gear?: string;
   unsure?: boolean;
 };
 
-const HEADERS = ["venue", "name", "category", "price_ghs", "notes", "days", "from", "to", "alcoholic", "dietary", "covers_people"];
+const HEADERS = [
+  "venue", "name", "category", "price_ghs", "notes", "covers_people",
+  "min_players", "max_players", "duration_minutes", "min_age", "requires_gear",
+  "days", "from", "to", "alcoholic", "dietary",
+];
+/** A count the reader filled with 0 for "not said" is left blank. */
+const n = (v: number | undefined) => (v && v > 0 ? v : "");
 
 function cell(v: unknown): string {
   const s = v == null ? "" : String(v);
@@ -26,7 +37,11 @@ function cell(v: unknown): string {
 /** The rows as the importer's menu CSV, for one venue. */
 export function menuCsv(venue: string, items: ReadItem[]): string {
   const lines = items.map((i) =>
-    [venue, i.name, i.category, i.price_ghs, i.notes ?? "", i.days ?? "", i.from ?? "", i.to ?? "", i.alcoholic ?? "", i.dietary ?? "", i.covers_people && i.covers_people > 1 ? i.covers_people : ""]
+    [
+      venue, i.name, i.category, i.price_ghs, i.notes ?? "", i.covers_people && i.covers_people > 1 ? i.covers_people : "",
+      n(i.min_players), n(i.max_players), n(i.duration_minutes), n(i.min_age), i.requires_gear ?? "",
+      i.days ?? "", i.from ?? "", i.to ?? "", i.alcoholic ?? "", i.dietary ?? "",
+    ]
       .map(cell)
       .join(",")
   );
@@ -107,6 +122,9 @@ export function MenuReaderPanel({
       const notes = [
         `Read ${items.length} item${items.length === 1 ? "" : "s"} with ${json.model}. Check every price against the photo before importing.`,
         ...(unsure.length ? [`The reader wasn't sure of: ${unsure.join("; ")}.`] : []),
+        ...(json.skipped?.length
+          ? [`Left out, no readable price: ${(json.skipped as string[]).join("; ")}. Add them by hand if you know the price.`]
+          : []),
         ...(json.chargesNotes?.length
           ? [`The menu says: "${(json.chargesNotes as string[]).join(" ")}" Set the venue's charges on its page if they aren't already.`]
           : []),
