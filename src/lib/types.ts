@@ -743,6 +743,8 @@ export interface TransportHop {
 }
 
 export interface Itinerary {
+  /** One generated plan, so what is done with its stops can be read together (plan_signals, 0089). */
+  plan_key?: string;
   title: string;
   date: string;
   summary_route: string; // "Osu → Labone → Cantonments"

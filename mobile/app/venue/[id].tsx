@@ -18,6 +18,7 @@ import { OCCASIONS } from "../../src/lib/planConstants";
 import { fetchMenu, fetchMyRecommendations, fetchVenue, isFeaturedToday, setRecommendation, type VenueDetail } from "../../src/lib/data";
 import { Alert } from "react-native";
 import { router } from "expo-router";
+import { track } from "../../src/lib/signals";
 import { fetchAllowance } from "../../src/lib/chat";
 import { useAuth } from "../../src/lib/useAuth";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
@@ -99,6 +100,12 @@ export default function VenuePage() {
     return () => {
       active = false;
     };
+  }, [id]);
+
+  // Time spent here, sent when they leave: part of the venue's pull (signals.ts).
+  useEffect(() => {
+    const opened = Date.now();
+    return () => track("venue_viewed", id, { value: Math.min(Date.now() - opened, 3_600_000) });
   }, [id]);
 
   const checkPro = useCallback(async () => {

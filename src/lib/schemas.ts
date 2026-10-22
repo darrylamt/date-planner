@@ -158,4 +158,5 @@ export const itinerarySchema = z.object({
   budget_note: z.string().nullable().default(null),
   notice: z.string().max(400).nullable().optional(),
   personal_summary: z.string().default(""),
+  plan_key: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/).optional().catch(undefined),
 });

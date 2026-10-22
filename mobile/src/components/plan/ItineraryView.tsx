@@ -50,6 +50,7 @@ import { fetchNextSpots, type NextSpot } from "../../lib/api";
 import { NextSpotSheet } from "./NextSpotSheet";
 import { afterSharing } from "../../lib/review";
 import { billFromPlan, setBillSource } from "../../lib/bill";
+import { track, trackStops } from "../../lib/signals";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -246,6 +247,9 @@ export function ItineraryView({
       return;
     }
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // What was turned down and what took its place: a venue's pull, and their taste (signals.ts).
+    track("swapped_away", itinerary.stops[index]?.venue_id, { planKey: itinerary.plan_key, occasion: inputs.occasion });
+    track("swapped_in", result.itinerary.stops[index]?.venue_id, { planKey: itinerary.plan_key, occasion: inputs.occasion });
     onItineraryChange(result.itinerary);
     setToast(result.message);
   }
@@ -469,6 +473,7 @@ export function ItineraryView({
   async function handleShare() {
     const slug = shareSlug ?? (await onSave());
     if (!slug) return; // onSave surfaced the sign-in prompt
+    trackStops("shared", itinerary, inputs.occasion);
 
     // The sheet decides; sharing continues in shareWith once it closes.
     setPendingSlug(slug);

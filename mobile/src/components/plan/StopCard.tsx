@@ -13,6 +13,7 @@ import { HAIRLINE, radius, space } from "../../theme";
 import { useIsDark, useTheme } from "../../lib/useTheme";
 import { chooseAction } from "../../lib/actionSheet";
 import { ghs, instagramUrl, time12 } from "../../lib/format";
+import { track } from "../../lib/signals";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -156,8 +157,11 @@ export function StopCard({
       title: stop.name,
       dark,
       actions: [
-        { text: "Open in Maps", onPress: openMaps },
-        ...(instagram ? [{ text: "Instagram", onPress: () => void Linking.openURL(instagram) }] : []),
+        // What they reached for at this stop: part of the venue's pull (signals.ts).
+        { text: "Open in Maps", onPress: () => (track("maps_opened", stop.venue_id), openMaps()) },
+        ...(instagram
+          ? [{ text: "Instagram", onPress: () => (track("instagram_opened", stop.venue_id), void Linking.openURL(instagram)) }]
+          : []),
         ...(organiser ? [{ text: "Call the organiser", onPress: () => void Linking.openURL(`tel:${organiser}`) }] : []),
         { text: "Report a problem", onPress: () => setReportOpen(true) },
       ],
@@ -280,6 +284,7 @@ export function StopCard({
         <Pressable
           onPress={() => {
             void Haptics.selectionAsync();
+            if (!open) track("details_opened", stop.venue_id);
             setOpen(!open);
           }}
           accessibilityRole="button"
@@ -432,11 +437,20 @@ export function StopCard({
                       ? "Change what you order, or add to it"
                       : "Pick something to order here"
                 }
-                onPress={() => (isActivityVenue ? setActivityOpen(true) : setMenuOpen(true))}
+                onPress={() => {
+                  track("menu_opened", stop.venue_id);
+                  if (isActivityVenue) setActivityOpen(true);
+                  else setMenuOpen(true);
+                }}
               />
             ) : null}
             {editable && isActivityVenue ? (
-              <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one" onPress={() => setMenuOpen(true)} />
+              <BigAction icon="fork.knife" title="Food and drink here" sub="The menu, if they serve one"
+                onPress={() => {
+                  track("menu_opened", stop.venue_id);
+                  setMenuOpen(true);
+                }}
+              />
             ) : null}
           </View>
         ) : null}
@@ -448,16 +462,30 @@ export function StopCard({
           behind "More".
         */}
         <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.xs }}>
-          <StopAction icon="car.fill" label="Get there" onPress={() => setTripOpen(true)} grow />
+          <StopAction icon="car.fill" label="Get there"
+            onPress={() => {
+              track("directions_tapped", stop.venue_id);
+              setTripOpen(true);
+            }}
+            grow
+          />
           {tickets ? (
             <StopAction
               icon="ticket"
               label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
-              onPress={() => void Linking.openURL(tickets)}
+              onPress={() => {
+                track("book_tapped", stop.venue_id);
+                void Linking.openURL(tickets);
+              }}
               grow
             />
           ) : canReserve ? (
-            <StopAction icon="phone.fill" label="Reserve" onPress={onReserve} busy={reserving} grow />
+            <StopAction icon="phone.fill" label="Reserve"
+              onPress={() => {
+                track("book_tapped", stop.venue_id);
+                onReserve();
+              }}
+              busy={reserving} grow />
           ) : null}
           <StopAction icon="ellipsis" label="More" iconOnly onPress={more} />
         </View>

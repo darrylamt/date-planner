@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { newPlanKey, trackStops } from "../../src/lib/signals";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -375,8 +376,11 @@ export default function PlanNew() {
 
       if (data.status === "ok") {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setPhase({ name: "result", itinerary: data.itinerary });
-        void saveDraft({ itinerary: data.itinerary });
+        // A key for this plan, kept through swaps and saving, and its stops counted as shown (signals.ts).
+        const itinerary = { ...data.itinerary, plan_key: newPlanKey() };
+        trackStops("shown", itinerary, finalInputs.occasion);
+        setPhase({ name: "result", itinerary });
+        void saveDraft({ itinerary });
       } else if (data.status === "no_match") {
         setPhase({ name: "no_match", data });
       } else {
@@ -395,6 +399,8 @@ export default function PlanNew() {
     try {
       const slug = await savePlan(inputs, phase.itinerary);
       setShareSlug(slug);
+      // The stops they kept: the strongest thing a plan can say about a place.
+      if (slug) trackStops("saved", phase.itinerary, inputs.occasion);
       void saveDraft({ shareSlug: slug });
       // Home stops explaining how it works once somebody has saved a plan.
       void AsyncStorage.setItem("duro.firstSave.v1", "1").catch(() => undefined);

@@ -9,7 +9,7 @@ export const metadata = {
   description: "What Duro collects, why, and how to get rid of it.",
 };
 
-const UPDATED = "3 October 2026";
+const UPDATED = "22 October 2026";
 const CONTACT = "planbyaduro@gmail.com";
 
 /**
@@ -97,6 +97,14 @@ export default function PrivacyPage() {
           position), the occasion, party size, a budget range, the day, and
           whether we found a plan. It carries no account or device identifier.
           Venues see only totals from it, never anything about a person.
+        </p>
+        <p>
+          <strong>To suggest better places:</strong> which places in your plans
+          you keep, swap out, save, share or open, and how long you spend on a
+          venue&apos;s page, with your device identifier and, when you are
+          signed in, your account. Duro learns from this which places people
+          are glad to be sent to, and later what you like. Venues see only
+          totals, never anything about a person.
         </p>
         <p>
           <strong>When you recommend a dish:</strong> that your account
