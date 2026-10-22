@@ -10,28 +10,45 @@ import type { PlanInputs, Venue } from "./types";
  * on: a venue read from a name and a type counts for half.
  *
  * ── noise ─────────────────────────────────────────────────────────────────
- * The most common complaint about vibes was a first date somewhere nobody
- * could hear each other. Talking occasions lean hard away from loud places
- * and towards quiet ones; celebrations lean the other way. Loud is never
- * ruled out: when nothing else fits the budget, a loud place beats no plan.
+ * Follows what the person asked for, not the occasion. A date may want a
+ * quiet table and nothing else, or dinner and then a rave; the owner's rule
+ * (22 Oct 2026) is that wanting it decides it.
+ *   asked for lively, dancing or club hopping: loud and buzzy are welcome,
+ *     on a first date as much as a birthday.
+ *   asked for calm, romantic or chill: quiet wins and loud is a long way
+ *     down, never ruled out (a loud place beats no plan at all).
+ *   asked for both: quiet early, loud welcome from ten at night, which is
+ *     the shape of "a nice dinner, then out".
+ *   asked for neither: a mild lean from the occasion, softer late at night.
  */
 const TALKING = new Set(["first_date", "anniversary", "date_night", "business_meeting"]);
 const PARTYING = new Set(["birthday", "friend_outing", "celebration", "graduation"]);
 const QUIET_VIBES = ["calm", "romantic", "chill"];
-const LOUD_VIBES = ["lively", "dancing", "club hopping", "fun"];
+const LOUD_VIBES = ["lively", "dancing", "club hopping"];
+/** From here, a night has turned into a night out. */
+const LATE = 22 * 60;
 
 const CONFIDENCE = { low: 0.5, medium: 0.8, high: 1 } as const;
 
-export function noiseScore(v: Venue, inputs: Pick<PlanInputs, "occasion" | "vibes">): number {
+const QUIET_WINS = { quiet: 1.5, conversational: 1, buzzy: -1, loud: -4 } as const;
+const LOUD_WINS = { quiet: -1, conversational: 0, buzzy: 1.5, loud: 1.5 } as const;
+
+/** Whether this plan asked for noise, for quiet, both, or neither. */
+export function noiseWanted(inputs: Pick<PlanInputs, "vibes">): { quiet: boolean; loud: boolean } {
+  const vibes = (inputs.vibes ?? []).map((x) => x.toLowerCase());
+  return { quiet: vibes.some((x) => QUIET_VIBES.includes(x)), loud: vibes.some((x) => LOUD_VIBES.includes(x)) };
+}
+
+export function noiseScore(v: Venue, inputs: Pick<PlanInputs, "occasion" | "vibes">, atMinute?: number): number {
   const noise = v.insights?.noise;
   if (!noise) return 0;
-  const vibes = (inputs.vibes ?? []).map((x) => x.toLowerCase());
-  const wantsQuiet = TALKING.has(inputs.occasion) || vibes.some((x) => QUIET_VIBES.includes(x));
-  const wantsLoud = PARTYING.has(inputs.occasion) || vibes.some((x) => LOUD_VIBES.includes(x));
-  // Asked for both (a lively date night): no lean either way.
-  if (wantsQuiet && wantsLoud) return 0;
-  if (wantsQuiet) return { quiet: 1.5, conversational: 1, buzzy: -1, loud: -4 }[noise];
-  if (wantsLoud) return { quiet: -1, conversational: 0, buzzy: 1.5, loud: 1 }[noise];
+  const want = noiseWanted(inputs);
+  const late = atMinute != null && atMinute >= LATE;
+  if (want.loud && want.quiet) return late ? LOUD_WINS[noise] : { quiet: 1.5, conversational: 1, buzzy: 0, loud: -2 }[noise];
+  if (want.loud) return LOUD_WINS[noise];
+  if (want.quiet) return QUIET_WINS[noise];
+  if (TALKING.has(inputs.occasion)) return { quiet: 0.5, conversational: 0.5, buzzy: 0, loud: late ? -1 : -2 }[noise];
+  if (PARTYING.has(inputs.occasion)) return { quiet: -0.5, conversational: 0, buzzy: 1, loud: 0.5 }[noise];
   return 0;
 }
 
@@ -43,10 +60,10 @@ export function fitScore(v: Venue, occasion: string): number {
 }
 
 /** Everything the study adds to a venue's score for this plan. */
-export function insightScore(v: Venue, inputs: Pick<PlanInputs, "occasion" | "vibes">): number {
+export function insightScore(v: Venue, inputs: Pick<PlanInputs, "occasion" | "vibes">, atMinute?: number): number {
   if (!v.insights) return 0;
   const weight = CONFIDENCE[v.insights.confidence] ?? 0.5;
-  return (noiseScore(v, inputs) + fitScore(v, inputs.occasion)) * weight;
+  return (noiseScore(v, inputs, atMinute) + fitScore(v, inputs.occasion)) * weight;
 }
 
 /**

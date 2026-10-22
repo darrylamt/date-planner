@@ -147,6 +147,11 @@ export async function fetchCandidates(
 
   // A film's showings, only when one was asked for (movies.ts).
   const moviesPromise = movieEvents(inputs);
+  // The venue study (0088), alongside: it needs nothing from the venue query.
+  // The whole table, not the venues' ids: five hundred ids in a URL is too long a request.
+  const insightsPromise = fetchAllRows<VenueInsight & { venue_id: string }>((from, to) =>
+    supabase.from("venue_insights").select("venue_id,noise,occasion_fit,signature_dishes,features,confidence").order("venue_id").range(from, to)
+  ).catch(() => [] as (VenueInsight & { venue_id: string })[]);
 
   const [eventsRes, schedulesRes, movies] = await Promise.all([eventsPromise, schedulesPromise, moviesPromise]);
 
@@ -312,10 +317,7 @@ export async function fetchCandidates(
    * read of a small public table; without it (before 0088) nothing changes.
    */
   if (venues.length) {
-    // The whole table, not the venues' ids: five hundred ids in a URL is too long a request.
-    const insights = await fetchAllRows<VenueInsight & { venue_id: string }>((from, to) =>
-      supabase.from("venue_insights").select("venue_id,noise,occasion_fit,signature_dishes,features,confidence").range(from, to)
-    ).catch(() => []);
+    const insights = await insightsPromise;
     const byVenue = new Map(insights.map((i) => [i.venue_id, i]));
     venues = venues.map((v) => (byVenue.has(v.id) ? { ...v, insights: byVenue.get(v.id)! } : v));
   }
@@ -412,7 +414,11 @@ export async function fetchCandidates(
       // Both, for the same reason as below: a branch with a dish of its
       // own is priced even before its owner's list is counted.
       .in("venue_id", [...new Set(venues.flatMap((v) => [v.id, menuOwnerOf(v)]))])
-      .range(from, to)
+      .order("id")
+      .range(from, to),
+    1000,
+    // Six pages at a time: this is every price in the catalogue (fetchAll.ts).
+    6
   );
   const pricedVenueIds = new Set(menuRows.map((m) => m.venue_id));
 
@@ -527,7 +533,7 @@ export async function fetchCandidates(
         // Here too, or a premium restaurant never reaches the planner to be chosen.
         premiumLean(v, inputs) +
         // And the study's noise and fit, or a quiet place a first date needs may never be offered.
-        insightScore(v, inputs);
+        insightScore(v, inputs, planStart);
       /*
        * The areas they named come first. With a reach, the shortlist spans
        * the neighbourhoods around them too, and scored on feel alone the
@@ -670,7 +676,9 @@ export async function fetchCandidates(
    */
   const ownerMenuItems = menuIds.length
     ? await fetchAllRows<MenuItem>((from, to) =>
-        supabase.from("menu_items").select("*").in("venue_id", menuIds).range(from, to)
+        supabase.from("menu_items").select("*").in("venue_id", menuIds).order("id").range(from, to),
+        1000,
+        4
       )
     : ([] as MenuItem[]);
 

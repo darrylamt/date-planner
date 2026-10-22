@@ -5,7 +5,7 @@ import { MENU_ONLY_TYPES, freeToVisit, isDriving } from "./budget";
 import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { genreFits } from "./movies";
-import { insightScore, isSignature } from "./insights";
+import { insightScore, isSignature, noiseWanted } from "./insights";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
@@ -376,6 +376,26 @@ const FIXTURE_WEIGHT: Record<string, number> = {
   anniversary: 0,
 };
 
+/*
+ * A cocktail over a shot.
+ *
+ * Drinks are dealt from a window around the tier's price, and a shot is the
+ * cheapest line on most bar lists, so plans kept sending people out for
+ * shots: the owner's complaint. A cocktail counts as one and a half
+ * recommendations and a shot as minus three, so a cocktail near the price
+ * takes a shot's place and is dealt first. Read from the name and the notes
+ * (the importer writes "Single shot" for spirits by the glass).
+ */
+const COCKTAIL = /cocktail|mojito|margarita|martini|daiquiri|spritz|negroni|old fashioned|pi[nñ]a colada|sangria|long island|mai tai|cosmopolitan|caipirinha|\bsour\b|\bmule\b|colada|paloma|bellini|mimosa|sex on the beach|tequila sunrise|blue lagoon|zombie|\bpunch\b/i;
+const SHOT = /\bshots?\b|\bshooters?\b|single shot|\btots?\b|jager ?bomb|j[aä]germeister/i;
+function drinkLean(m: MenuItem): number {
+  if (m.category !== "drink") return 0;
+  const text = `${m.name} ${m.notes ?? ""}`;
+  if (SHOT.test(text)) return -3;
+  if (COCKTAIL.test(text) && m.is_alcoholic !== false && !/mocktail|non-alcoholic|\bvirgin\b/i.test(text)) return 1.5;
+  return 0;
+}
+
 function looksScore(v: Venue, occasion: string): number {
   /*
    * Unrated scores zero rather than a middling two or three. Treating an
@@ -424,7 +444,7 @@ function cuisineFit(v: Venue, want: PlanCuisine): boolean | null {
   return v.cuisine === "both" || v.cuisine === want;
 }
 
-function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number {
+function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute?: number): number {
   const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
   const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
   const inArea = inputs.areaIds.includes(v.area_id) ? 1 : 0;
@@ -468,8 +488,8 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[]): number 
     avoidPenalty(v, inputs.partner?.avoid ?? "") +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion) +
-    // Gemini's study of the place: noise against the occasion, fit for it (insights.ts).
-    insightScore(v, inputs)
+    // Gemini's study of the place: noise against what they asked for, fit for the occasion (insights.ts).
+    insightScore(v, inputs, atMinute)
   );
 }
 
@@ -885,6 +905,16 @@ export function planOrders(
     // A drink each means a glass each, never a bottle per head. See bottles.ts.
     if (category === "drink") all = byTheGlass(all);
     /*
+     * And not a round of shots, where the bar pours anything else. Weighting
+     * alone moved shots from 48% of drink lines to 44% (they fill whole price
+     * windows), so with three or more other drinks to order, shots are left
+     * off the order. A bar that is mostly shots still gets them.
+     */
+    if (category === "drink") {
+      const noShots = all.filter((m) => !SHOT.test(`${m.name} ${m.notes ?? ""}`));
+      if (noShots.length >= 3) all = noShots;
+    }
+    /*
      * At a table, a side is never somebody's meal and a stew is only ordered
      * where it can be eaten. See accompaniments.ts: plain rice filed as a
      * starter was a dinner on a tight budget, and an egg stew with nothing to
@@ -950,11 +980,11 @@ export function planOrders(
      * two recommendations: the shawarma people come for, not a side that
      * happened to sit at the right price.
      */
-    const rec = (m: MenuItem) => (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0);
+    const rec = (m: MenuItem) => (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0) + drinkLean(m);
     const near = items.slice(Math.max(0, from - 2), from + WIDTH + 2);
     const outsiders = near.filter((m) => rec(m) > 0 && !candidates.includes(m)).sort((a, b) => rec(b) - rec(a));
     for (const m of outsiders) {
-      const unliked = candidates.map((c, i) => [c, i] as const).filter(([c]) => rec(c) === 0).pop();
+      const unliked = candidates.map((c, i) => [c, i] as const).filter(([c]) => rec(c) <= 0).pop();
       if (!unliked) break;
       candidates = candidates.map((c, i) => (i === unliked[1] ? m : c));
     }
@@ -1492,10 +1522,15 @@ function planWith(
      * are dancing or clubbing; a quiet live set or a tasting still fits.
      */
     const talking = ["first_date", "anniversary", "date_night", "business_meeting"].includes(inputs.occasion);
-    const wantsNoise = (inputs.vibes ?? []).some((x) => ["lively", "dancing", "club hopping"].includes(x.toLowerCase()));
+    // Asking for lively, dancing or club hopping is asking for exactly these nights (insights.ts).
+    const wantsNoise = noiseWanted(inputs).loud;
     const tooLoud = (x: Anchor) => {
       const tags = ((x.event as EventRow & { vibe_tags?: string[] }).vibe_tags ?? []).map((t) => t.toLowerCase());
-      return x.venue.insights?.noise === "loud" || tags.includes("dancing") || /party|rave|club|turn ?up|hype/i.test(`${x.event.title} ${x.event.category}`);
+      return (
+        x.venue.insights?.noise === "loud" ||
+        tags.includes("dancing") ||
+        /party|rave|club|turn ?up|hype|vibes?\b|nights?\b.*dj|\bdj\b|amapiano|afrobeats/i.test(`${x.event.title} ${x.event.category} ${x.event.description ?? ""}`)
+      );
     };
     return placeable.find((x) => x.event.kind !== "movie" && !(talking && !wantsNoise && tooLoud(x))) ?? null;
   })();
@@ -1615,7 +1650,7 @@ function planWith(
     const score =
       // Scored as it is at this slot's time: a café-by-day, bar-by-night
       // counts as calm for brunch and lively for ten o'clock (dayEnergy.ts).
-      scoreVenue(venueAt(venue, slotStart), inputs, wantedTags) +
+      scoreVenue(venueAt(venue, slotStart), inputs, wantedTags, slotStart) +
       (fixtures.length ? (FIXTURE_WEIGHT[inputs.occasion] ?? 1) : 0) +
       variety(venue.id);
 

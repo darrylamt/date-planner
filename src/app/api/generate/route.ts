@@ -40,7 +40,8 @@ const listOf = (names: string[]) =>
  */
 async function reachFurther(
   supabase: ReturnType<typeof createClient>,
-  inputs: PlanInputs
+  inputs: PlanInputs,
+  requestStart: number = Date.now()
 ): Promise<NextResponse<GenerateResponse> | null> {
   if (inputs.surpriseMe || inputs.near || !inputs.areaIds.length) return null;
   const chosen = inputs.radiusKm ?? DEFAULT_RADIUS_KM;
@@ -57,7 +58,7 @@ async function reachFurther(
   const first = planItinerary(wider, candidates);
   if (!first) return null;
   // A second look before it is shown (planCheck.ts): names never leave.
-  const plan = await checkPlan(candidates, wider, first, createServiceClient());
+  const plan = await checkPlan(candidates, wider, first, createServiceClient(), requestStart);
 
   const outside = [
     ...new Set(
@@ -126,6 +127,8 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
 }
 
 async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
+  // For the plan check's time budget (planCheck.ts).
+  const requestStart = Date.now();
   let inputs: PlanInputs;
   try {
     inputs = planInputsSchema.parse(await req.json()) as PlanInputs;
@@ -182,7 +185,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   if (inputs.budget <= 0) {
     const free = candidates.venues.filter((v) => freeToVisit(v)).length;
     if (free < 2) {
-      const reached = await reachFurther(supabase, inputs);
+      const reached = await reachFurther(supabase, inputs, requestStart);
       if (reached) return reached;
       return NextResponse.json({
         status: "no_match",
@@ -203,7 +206,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   }
 
   if (candidates.venues.length < 2) {
-    const reached = await reachFurther(supabase, inputs);
+    const reached = await reachFurther(supabase, inputs, requestStart);
     if (reached) return reached;
     /*
      * The whole city already searched and still nothing: a city we are only
@@ -238,7 +241,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want. First, the next neighbourhood over.
   if (!plan) {
-    const reached = await reachFurther(supabase, inputs);
+    const reached = await reachFurther(supabase, inputs, requestStart);
     if (reached) return reached;
     /*
      * A floor under the nudge, because half again of nothing is nothing.
@@ -370,7 +373,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
    * description is written from the plan itself, here, with no model call.
    */
   // A second look before it is shown (planCheck.ts): names never leave.
-  plan = await checkPlan(candidates, inputs, plan, createServiceClient());
+  plan = await checkPlan(candidates, inputs, plan, createServiceClient(), requestStart);
 
   const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);

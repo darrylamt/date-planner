@@ -24,6 +24,8 @@ import type { PlanInputs } from "./types";
  * read rather than assumed.
  */
 const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemma-4-31b-it"];
+/** How far into a request the check may still start, leaving room for the plan's words. */
+const SPARE_UNTIL_MS = 25_000;
 /** The most a plan waits for its check, rebuild and second look included. */
 const DEADLINE_MS = 9000;
 
@@ -79,12 +81,31 @@ export async function checkPlan(
   candidates: Candidates,
   inputs: PlanInputs,
   plan: PlannedItinerary,
-  log?: SupabaseClient | null
+  log?: SupabaseClient | null,
+  /**
+   * When the request began. The check spends only what the request can
+   * spare: on 20 Oct it ran inside requests that already took ten seconds
+   * to gather candidates, and three plans hit Vercel's sixty. Past
+   * SPARE_UNTIL_MS it is skipped; near it, it gets less time.
+   */
+  requestStart: number = Date.now()
 ): Promise<PlannedItinerary> {
-  // Off unless PLAN_CHECK=on: live, generation still ran past 60 s with it (20 Oct 2026).
-  if (process.env.PLAN_CHECK !== "on") return plan;
+  // PLAN_CHECK=off turns it off without a deploy of code.
+  if (process.env.PLAN_CHECK === "off") return plan;
   const started = Date.now();
-  const r = await judge(inputs, plan, DEADLINE_MS);
+  const spare = SPARE_UNTIL_MS - (started - requestStart);
+  if (spare < 3000) {
+    await log
+      ?.from("plan_checks")
+      .insert({ occasion: inputs.occasion, verdict: "skipped", problems: [], action: "kept", model: null, ms: 0 })
+      .then(
+        () => undefined,
+        () => undefined
+      );
+    return plan;
+  }
+  const budget = Math.min(DEADLINE_MS, spare);
+  const r = await judge(inputs, plan, budget);
 
   const record = (verdict: "good" | "flagged" | "skipped", problems: Problem[], action: "kept" | "replanned" | "replan_failed", model: string | null) =>
     log
@@ -135,7 +156,7 @@ export async function checkPlan(
     };
     const again = fewer.venues.length >= 2 ? planItinerary(inputs, fewer) : null;
     if (again && again.stops.length >= plan.stops.length) {
-      const second = await judge(inputs, again, Math.max(2000, DEADLINE_MS - (Date.now() - started)));
+      const second = await judge(inputs, again, Math.max(2000, budget - (Date.now() - started)));
       const serious = (ps: Problem[]) => ps.filter((p) => p.severity === "serious").length;
       if (second && serious(second.problems) < serious(problems)) {
         await record("flagged", problems, "replanned", model);
@@ -154,6 +175,7 @@ async function judge(inputs: PlanInputs, plan: PlannedItinerary, withinMs: numbe
   const prompt = `${describePlan(inputs, plan)}
 
 You are checking an outing plan made by software for people in Accra, Ghana, before they see it. Would a thoughtful local friend say something is wrong? Look for: a stop that does not suit the occasion (a sports bar on an anniversary, a club for a business meeting), a place too loud to talk at for a date or meeting, the same kind of stop twice in a row (two dessert places, two dinners), a long ride for a short stop or a ride across town late at night, an odd order (dessert before dinner, coffee at midnight), and a time that does not suit the place.
+What they asked for wins: if they asked for lively, dancing or club hopping, loud places and late nights are what they want, on a date too, and are never a problem; only judge noise against a plan that asked for calm or romantic, or asked for nothing and is a date or a meeting.
 Only real problems. Prices, budgets and the venues' quality are not yours to judge. "serious" means you would change that stop; "minor" means worth a mention. stop is the stop's number (1 is the first). If nothing is wrong, verdict "good" and no problems.`;
   const timer = new Promise<null>((r) => setTimeout(() => r(null), withinMs));
   const r = await Promise.race([

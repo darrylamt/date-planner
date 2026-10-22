@@ -18,24 +18,39 @@
  */
 export async function fetchAllRows<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  pageSize = 1000
+  pageSize = 1000,
+  /**
+   * Pages asked for at once. One at a time, the planner's read of every
+   * menu price was eighteen pages end to end, five and a half seconds of a
+   * plan's ten; six at once is three rounds. The query must be ordered (by
+   * id) when this is more than one, or pages fetched side by side can
+   * overlap and miss rows.
+   */
+  wave = 1
 ): Promise<T[]> {
   const out: T[] = [];
 
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await page(from, from + pageSize - 1);
-    if (error) throw error;
-
-    const batch = data ?? [];
-    out.push(...batch);
-
-    /*
-     * A short page means the end. A full one might be the end exactly on the
-     * boundary, in which case the next request returns nothing and the loop
-     * stops one round later, which costs one empty query and never a missing
-     * row.
-     */
-    if (batch.length < pageSize) break;
+  for (let from = 0; ; from += pageSize * wave) {
+    const pages = await Promise.all(
+      Array.from({ length: wave }, (_, i) => page(from + i * pageSize, from + (i + 1) * pageSize - 1))
+    );
+    let short = false;
+    for (const { data, error } of pages) {
+      if (error) throw error;
+      const batch = data ?? [];
+      out.push(...batch);
+      /*
+       * A short page means the end. A full one might be the end exactly on
+       * the boundary, in which case the next request returns nothing and the
+       * loop stops one round later, which costs one empty query and never a
+       * missing row.
+       */
+      if (batch.length < pageSize) {
+        short = true;
+        break;
+      }
+    }
+    if (short) break;
 
     // A catalogue this size cannot legitimately need more than this, and an
     // unbounded loop against a paging bug would hammer the database.
