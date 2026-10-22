@@ -162,7 +162,7 @@ export interface StoredMessage {
  * the model needed, not what the person said.
  */
 export async function fetchConversation(conversationId: string): Promise<
-  { role: "user" | "assistant"; text: string }[]
+  { role: "user" | "assistant"; text: string; at: string }[]
 > {
   const { data } = await supabase
     .from("messages")
@@ -173,6 +173,7 @@ export async function fetchConversation(conversationId: string): Promise<
   return ((data ?? []) as StoredMessage[])
     .map((m) => ({
       role: m.role,
+      at: m.created_at,
       text: (m.content ?? [])
         .filter((b) => b.type === "text")
         .map((b) => b.text ?? "")

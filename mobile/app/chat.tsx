@@ -13,7 +13,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Text } from "../src/components/Text";
 import { Symbol } from "../src/components/Symbol";
@@ -41,6 +42,9 @@ import {
   streamChat,
 } from "../src/lib/chat";
 import { SkeletonChat } from "../src/components/Skeleton";
+import { Mascot } from "../src/components/Mascot";
+import { Rise, useReducedMotion } from "../src/components/motion";
+import { useOccasionHue } from "../src/lib/useTheme";
 
 /**
  * The concierge.
@@ -54,7 +58,14 @@ import { SkeletonChat } from "../src/components/Skeleton";
 interface Bubble {
   role: "user" | "assistant";
   text: string;
+  /** When it was said, for the day dividers. Missing on a bubble from an older reply. */
+  at?: string;
+  /** Arrived while the screen was open, so it rises in rather than just appearing. */
+  fresh?: boolean;
 }
+
+/** Durobot's face: the mascot on its own (the suited costume is two people). */
+const DUROBOT = "solo_day" as const;
 
 /*
  * The best things to ask, as the first thing on the screen.
@@ -66,20 +77,21 @@ interface Bubble {
  * The last opener is a draft rather than a question: it goes into the
  * composer for them to finish, because only they know where they are.
  */
-const OPENERS = [
-  "Where can I get good jollof under 100?",
-  "Somewhere romantic in Osu for Saturday",
-  "What can we do that isn't eating?",
-  "I have 400 cedis for two. What's realistic?",
+const OPENERS: { text: string; icon: Parameters<typeof Symbol>[0]["name"] }[] = [
+  { text: "Somewhere romantic in Osu for Saturday", icon: "heart.fill" },
+  { text: "Where can I get good jollof under 100?", icon: "fork.knife" },
+  { text: "What's showing at Silverbird this week?", icon: "film" },
+  { text: "What can we do that isn't eating?", icon: "figure.walk" },
+  { text: "I have 400 cedis for two. What's realistic?", icon: "banknote" },
 ];
 const AT_THE_TABLE = "I'm at ";
 
 /** At Halloween, openers for the season: still things the catalogue can answer. */
-const HALLOWEEN_OPENERS = [
-  "Anything on for Halloween this weekend?",
-  "A spooky night out for four, under 1,500",
-  "Somewhere lively in Osu for Halloween",
-  "Dessert somewhere after a scary film?",
+const HALLOWEEN_OPENERS: typeof OPENERS = [
+  { text: "Anything on for Halloween this weekend?", icon: "sparkles" },
+  { text: "A horror film and dinner after", icon: "film" },
+  { text: "A spooky night out for four, under 1,500", icon: "person.3.fill" },
+  { text: "Somewhere lively in Osu for Halloween", icon: "music.note" },
 ];
 /** "Trick or treat", and the ways people actually type it. */
 const TRICK_OR_TREAT = /trick\s*(or|'?r|n|&)\s*treat/i;
@@ -121,10 +133,11 @@ export default function ChatScreen() {
    * in the bubble, because the plan is a thing you go and look at, not a
    * paragraph: the assistant says what it made and this opens it.
    */
-  const [plan, setPlan] = useState<{ title: string; total: number } | null>(null);
+  const [plan, setPlan] = useState<PlanPreview | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   const scroller = useRef<ScrollView>(null);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   const toBottom = useCallback(() => {
     requestAnimationFrame(() => scroller.current?.scrollToEnd({ animated: true }));
   }, []);
@@ -145,7 +158,7 @@ export default function ChatScreen() {
       if (id) {
         setConversationId(id);
         const past = await fetchConversation(id);
-        if (active) setBubbles(past.map((m) => ({ role: m.role, text: m.text })));
+        if (active) setBubbles(past.map((m) => ({ role: m.role, text: m.text, at: m.at })));
       }
       if (active) setLoadingHistory(false);
     })();
@@ -234,7 +247,7 @@ export default function ChatScreen() {
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDraft("");
-    setBubbles((b) => [...b, { role: "user", text: message }]);
+    setBubbles((b) => [...b, { role: "user", text: message, at: new Date().toISOString(), fresh: true }]);
     setBusy(true);
     setPlan(null);
     // Whatever went wrong last time is no longer what is on screen.
@@ -250,8 +263,9 @@ export default function ChatScreen() {
       answer = answer ? `${answer}\n\n${chunk}` : chunk;
       setBubbles((b) => {
         const next = [...b];
-        if (next[next.length - 1]?.role === "assistant") next[next.length - 1] = { role: "assistant", text: answer };
-        else next.push({ role: "assistant", text: answer });
+        const at = new Date().toISOString();
+        if (next[next.length - 1]?.role === "assistant") next[next.length - 1] = { ...next[next.length - 1], text: answer };
+        else next.push({ role: "assistant", text: answer, at, fresh: true });
         return next;
       });
       toBottom();
@@ -273,7 +287,14 @@ export default function ChatScreen() {
            */
           // Counted as a plan from chat (0085).
           await saveDraft({ inputs: { ...ev.inputs, entry: "chat" }, itinerary: ev.itinerary, shareSlug: null });
-          setPlan({ title: ev.itinerary.title, total: ev.itinerary.est_total_ghs });
+          setPlan({
+            title: ev.itinerary.title,
+            total: ev.itinerary.est_total_ghs,
+            budget: ev.inputs.budget,
+            stops: ev.itinerary.stops.length,
+            image: ev.itinerary.stops.find((s) => s.image_url)?.image_url ?? null,
+            route: ev.itinerary.summary_route,
+          });
         } else if (ev.type === "tool") {
           setStatus(ev.label);
         } else if (ev.type === "text") {
@@ -335,6 +356,7 @@ export default function ChatScreen() {
        */
       keyboardVerticalOffset={insets.top + 44}
     >
+      <Stack.Screen options={{ headerTitle: () => <ChatTitle />, headerRight: () => null }} />
       <ScrollView
         ref={scroller}
         style={{ flex: 1 }}
@@ -346,102 +368,44 @@ export default function ChatScreen() {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={toBottom}
+        scrollEventThrottle={64}
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          setAwayFromBottom(contentSize.height - contentOffset.y - layoutMeasurement.height > 320);
+        }}
       >
-        {bubbles.length === 0 && (
-          <Text variant="footnote" tone="secondary" style={{ marginBottom: space.xl }}>
-            Everything here comes from our own catalogue. If we do not hold it, it will say so.
-          </Text>
-        )}
-
         {empty ? (
-          <View style={{ gap: space.sm }}>
-            {(season === "halloween" ? HALLOWEEN_OPENERS : OPENERS).map((o) => (
-              <Pressable
-                key={o}
-                onPress={() => void send(o)}
-                style={({ pressed }) => ({
-                  backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
-                  borderRadius: radius.row,
-                  paddingHorizontal: space.lg,
-                  paddingVertical: space.md,
-                  borderWidth: HAIRLINE,
-                  borderColor: c.border,
-                })}
-              >
-                <Text variant="body" tone="secondary">
-                  {o}
-                </Text>
-              </Pressable>
-            ))}
-            {/*
-              Started for them rather than sent, because the one word that
-              matters is where they are. The cursor lands after "I'm at " and
-              the keyboard is already up.
-            */}
-            <Pressable
-              onPress={() => {
-                setDraft(`${AT_THE_TABLE}`);
-                setTimeout(() => composer.current?.focus(), 50);
-              }}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
-                borderRadius: radius.row,
-                paddingHorizontal: space.lg,
-                paddingVertical: space.md,
-                borderWidth: HAIRLINE,
-                borderColor: c.accent,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: space.sm,
-              })}
-            >
-              <Symbol name="fork.knife" size={15} color={c.accent} />
-              <Text variant="body" style={{ flex: 1 }}>
-                I&apos;m at… what should I order?
-              </Text>
-            </Pressable>
-          </View>
+          <Welcome
+            openers={season === "halloween" ? HALLOWEEN_OPENERS : OPENERS}
+            onAsk={(o) => void send(o)}
+            onAtTheTable={() => {
+              setDraft(`${AT_THE_TABLE}`);
+              setTimeout(() => composer.current?.focus(), 50);
+            }}
+          />
         ) : (
-          bubbles.map((b, i) => <BubbleView key={i} bubble={b} />)
+          bubbles.map((b, i) => {
+            const prev = bubbles[i - 1];
+            const next = bubbles[i + 1];
+            const day = dayOf(b.at);
+            const newDay = Boolean(day && day !== dayOf(prev?.at));
+            return (
+              <View key={i}>
+                {newDay ? <DayDivider iso={b.at!} /> : null}
+                <BubbleView
+                  bubble={b}
+                  // A run of messages from one side reads as one turn: close together, one face.
+                  first={!prev || prev.role !== b.role || newDay}
+                  last={!next || next.role !== b.role || Boolean(dayOf(next.at) && dayOf(next.at) !== day)}
+                />
+              </View>
+            );
+          })
         )}
 
-        {status && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.md }}>
-            <ActivityIndicator size="small" color={c.textSecondary} />
-            <Text variant="footnote" tone="secondary">
-              {status}…
-            </Text>
-          </View>
-        )}
+        {status ? <TypingBubble status={status} /> : null}
 
-        {plan && (
-          <Pressable
-            onPress={() => router.push("/plan/new")}
-            style={({ pressed }) => ({
-              marginTop: space.sm,
-              marginBottom: space.md,
-              alignSelf: "flex-start",
-              maxWidth: "88%",
-              backgroundColor: pressed ? c.backgroundSunken : c.accent,
-              borderRadius: radius.card,
-              paddingHorizontal: space.lg,
-              paddingVertical: space.md,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.sm,
-            })}
-          >
-            <Symbol name="calendar" size={18} color={c.textOnBrand} />
-            <View>
-              <Text variant="body" tone="onTint">
-                View plan
-              </Text>
-              <Text variant="caption1" tone="onTint">
-                {plan.title} · GHS {plan.total}
-              </Text>
-            </View>
-          </Pressable>
-        )}
+        {plan ? <PlanCard plan={plan} onOpen={() => router.push("/plan/new")} /> : null}
 
         {/*
           Offered only after something has actually failed.
@@ -494,6 +458,38 @@ export default function ChatScreen() {
         )}
       </ScrollView>
 
+      {/* Back to the newest message, after scrolling up through an old conversation. */}
+      {awayFromBottom && !empty ? (
+        <View pointerEvents="box-none" style={{ alignItems: "center", marginTop: -52, marginBottom: space.sm }}>
+          <Pressable
+            onPress={() => {
+              void Haptics.selectionAsync();
+              toBottom();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Jump to the latest message"
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.backgroundElement,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+              shadowColor: "#000",
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 3,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Symbol name="arrow.down" size={16} color={c.text} />
+          </Pressable>
+        </View>
+      ) : null}
+
       <Composer
         inputRef={composer}
         value={draft}
@@ -531,9 +527,21 @@ export default function ChatScreen() {
   );
 }
 
-function BubbleView({ bubble }: { bubble: Bubble }) {
+type PlanPreview = { title: string; total: number; budget: number; stops: number; image: string | null; route: string };
+
+/**
+ * One message, as part of a run.
+ *
+ * Shaped like the chats people already know: a run of messages from one side
+ * sits close together, and only the last of a run tapers towards its sender
+ * and, on Durobot's side, carries its face. Durobot's words sit on a card
+ * with a fine edge; theirs are in the brand colour. New ones rise in.
+ */
+function BubbleView({ bubble, first, last }: { bubble: Bubble; first: boolean; last: boolean }) {
   const c = useTheme();
   const mine = bubble.role === "user";
+  const R = 20;
+  const TIGHT = 6;
 
   /*
    * Only on the assistant's side. A number somebody typed themselves is one
@@ -541,16 +549,20 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
    */
   const links = mine ? [] : linksIn(bubble.text);
 
-  return (
+  const body = (
     <View
       style={{
-        alignSelf: mine ? "flex-end" : "flex-start",
-        maxWidth: "88%",
-        marginBottom: space.md,
+        maxWidth: mine ? "82%" : "100%",
+        flexShrink: 1,
         backgroundColor: mine ? c.accent : c.backgroundElement,
-        borderRadius: radius.card,
-        paddingHorizontal: space.lg,
-        paddingVertical: space.md,
+        borderWidth: mine ? 0 : HAIRLINE,
+        borderColor: c.border,
+        borderTopLeftRadius: !mine && !first ? TIGHT : R,
+        borderBottomLeftRadius: !mine && last ? TIGHT : !mine ? TIGHT : R,
+        borderTopRightRadius: mine && !first ? TIGHT : R,
+        borderBottomRightRadius: mine && last ? TIGHT : mine ? TIGHT : R,
+        paddingHorizontal: space.md + 2,
+        paddingVertical: space.sm + 2,
       }}
     >
       {/* Their own words exactly as typed; ours with the formatting it asked for. */}
@@ -571,14 +583,7 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
         prose exactly as the model wrote it.
       */}
       {links.length > 0 ? (
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: space.sm,
-            marginTop: space.md,
-          }}
-        >
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.sm }}>
           {links.map((link) => (
             <ChatLinkChip key={link.href} link={link} />
           ))}
@@ -586,6 +591,304 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
       ) : null}
     </View>
   );
+
+  const row = (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: mine ? "flex-end" : "flex-start",
+        alignItems: "flex-end",
+        gap: space.sm,
+        marginBottom: last ? space.md : 3,
+        // Durobot's runs line up behind its face, which only the last one shows.
+        paddingRight: mine ? 0 : space.xl,
+      }}
+    >
+      {mine ? null : last ? <DurobotFace /> : <View style={{ width: FACE }} />}
+      {body}
+    </View>
+  );
+
+  return bubble.fresh ? <Rise distance={10}>{row}</Rise> : row;
+}
+
+const FACE = 30;
+
+/** Durobot's face: the mascot in its suit, on its own colour. */
+function DurobotFace({ size = FACE }: { size?: number }) {
+  const hue = useOccasionHue(DUROBOT);
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: hue.bg,
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
+    >
+      <Mascot occasion={DUROBOT} size={size * 0.95} animate={false} style={{ marginTop: size * 0.18 }} />
+    </View>
+  );
+}
+
+/** The header: who this is and what it is for, in place of a robot emoji. */
+function ChatTitle() {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+      <DurobotFace size={30} />
+      <View>
+        <Text variant="headline">Durobot</Text>
+        <Text variant="caption1" tone="secondary">
+          Plans nights out in Accra
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Durobot typing: three dots in its own bubble, with what it is doing
+ * underneath ("Checking menus"). It was a spinner and a line of grey text,
+ * which read as the app loading rather than somebody answering. JS-driven,
+ * like every animation here (native-driven ones stalled on the phone), and
+ * still under Reduce Motion.
+ */
+function TypingBubble({ status }: { status: string }) {
+  const c = useTheme();
+  const reduced = useReducedMotion();
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reduced) return;
+    const loop = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1100, useNativeDriver: false }));
+    loop.start();
+    return () => loop.stop();
+  }, [reduced, t]);
+  const dot = (i: number) => ({
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: c.textSecondary,
+    opacity: reduced
+      ? 0.6
+      : t.interpolate({
+          inputRange: [0, 0.2 + i * 0.15, 0.45 + i * 0.15, 1],
+          outputRange: [0.25, 0.9, 0.25, 0.25],
+          extrapolate: "clamp",
+        }),
+  });
+  return (
+    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space.sm, marginBottom: space.md }}>
+      <DurobotFace />
+      <View style={{ gap: 4 }}>
+        <View
+          accessibilityLabel={`${status}`}
+          style={{
+            flexDirection: "row",
+            gap: 5,
+            alignSelf: "flex-start",
+            paddingHorizontal: space.md + 2,
+            paddingVertical: space.md,
+            backgroundColor: c.backgroundElement,
+            borderWidth: HAIRLINE,
+            borderColor: c.border,
+            borderRadius: 20,
+            borderBottomLeftRadius: 6,
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <Animated.View key={i} style={dot(i)} />
+          ))}
+        </View>
+        <Text variant="caption1" tone="tertiary">
+          {status}…
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The plan Durobot just built, as a card worth tapping: the first stop's
+ * picture, the title, the shape of the evening and what it comes to against
+ * the budget. It was a small "View plan" pill that looked like any other
+ * button.
+ */
+function PlanCard({ plan, onOpen }: { plan: PlanPreview; onOpen: () => void }) {
+  const c = useTheme();
+  return (
+    <Rise distance={12}>
+      <Pressable
+        onPress={() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onOpen();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`Open plan: ${plan.title}, ${plan.stops} stops, GHS ${plan.total}`}
+        style={({ pressed }) => ({
+          marginLeft: FACE + space.sm,
+          marginBottom: space.lg,
+          maxWidth: 320,
+          borderRadius: radius.card,
+          overflow: "hidden",
+          backgroundColor: c.backgroundElement,
+          borderWidth: HAIRLINE,
+          borderColor: c.border,
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        {plan.image ? (
+          <Image source={{ uri: plan.image }} style={{ width: "100%", height: 120, backgroundColor: c.backgroundSunken }} contentFit="cover" />
+        ) : null}
+        <View style={{ padding: space.md + 2, gap: 2 }}>
+          <Text variant="caption1" tone="tint" weight="700" style={{ letterSpacing: 0.6 }}>
+            YOUR PLAN
+          </Text>
+          <Text variant="headline" numberOfLines={2}>
+            {plan.title}
+          </Text>
+          <Text variant="footnote" tone="secondary" numberOfLines={1}>
+            {plan.stops} stop{plan.stops === 1 ? "" : "s"}
+            {plan.route ? ` · ${plan.route}` : ""}
+          </Text>
+          <Text variant="footnote" weight="600" style={{ color: plan.total > plan.budget ? c.danger : c.success, marginTop: 2 }}>
+            GHS {plan.total} of your {plan.budget}
+          </Text>
+          <View
+            style={{
+              marginTop: space.sm,
+              alignSelf: "flex-start",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: space.md,
+              height: 34,
+              borderRadius: radius.pill,
+              backgroundColor: c.accent,
+            }}
+          >
+            <Text variant="subheadline" weight="700" style={{ color: c.textOnBrand }}>
+              Open plan
+            </Text>
+            <Symbol name="arrow.right" size={13} color={c.textOnBrand} weight="semibold" />
+          </View>
+        </View>
+      </Pressable>
+    </Rise>
+  );
+}
+
+/**
+ * The first screen of a new conversation: who Durobot is, then things to
+ * ask, as chips, then the one people do not think to ask a planning app
+ * (standing in a restaurant not knowing what to order), set apart.
+ */
+function Welcome({
+  openers,
+  onAsk,
+  onAtTheTable,
+}: {
+  openers: typeof OPENERS;
+  onAsk: (text: string) => void;
+  onAtTheTable: () => void;
+}) {
+  const c = useTheme();
+  const hue = useOccasionHue(DUROBOT);
+  return (
+    <View style={{ gap: space.lg, paddingTop: space.md }}>
+      <View style={{ alignItems: "center", gap: space.sm }}>
+        <View style={{ width: 104, height: 104, borderRadius: 52, backgroundColor: hue.bg, alignItems: "center", justifyContent: "center" }}>
+          <Mascot occasion={DUROBOT} size={84} />
+        </View>
+        <Text variant="title2" center>
+          Hi, I&apos;m Durobot
+        </Text>
+        <Text variant="subheadline" tone="secondary" center style={{ maxWidth: 300 }}>
+          Ask me where to go, what to order or what&apos;s on. I only talk about places Duro! knows, with real prices.
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+        {openers.map((o) => (
+          <Pressable
+            key={o.text}
+            onPress={() => onAsk(o.text)}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.sm,
+              paddingHorizontal: space.md,
+              paddingVertical: space.sm + 2,
+              borderRadius: radius.pill,
+              backgroundColor: pressed ? c.backgroundSunken : c.backgroundElement,
+              borderWidth: HAIRLINE,
+              borderColor: c.border,
+            })}
+          >
+            <Symbol name={o.icon} size={14} color={c.accent} />
+            <Text variant="subheadline">{o.text}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/*
+        Started for them rather than sent, because the one word that matters
+        is where they are. The cursor lands after "I'm at " and the keyboard
+        is already up.
+      */}
+      <Pressable
+        onPress={onAtTheTable}
+        accessibilityRole="button"
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space.md,
+          padding: space.md + 2,
+          borderRadius: radius.card,
+          backgroundColor: c.accentSoft,
+          opacity: pressed ? 0.8 : 1,
+        })}
+      >
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
+          <Symbol name="fork.knife" size={17} color={c.textOnBrand} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variant="headline">At a restaurant now?</Text>
+          <Text variant="footnote" tone="secondary">
+            Tell me where, and I&apos;ll say what to order from their menu.
+          </Text>
+        </View>
+        <Symbol name="chevron.right" size={14} color={c.accent} weight="semibold" />
+      </Pressable>
+    </View>
+  );
+}
+
+/** "Today", "Yesterday" or "Mon 19 Oct", between days in a long conversation. */
+function DayDivider({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  const today = new Date();
+  const y = new Date();
+  y.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const label = same(d, today)
+    ? "Today"
+    : same(d, y)
+      ? "Yesterday"
+      : d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return (
+    <Text variant="caption1" tone="tertiary" center style={{ marginVertical: space.md }}>
+      {label}
+    </Text>
+  );
+}
+
+/** The calendar day of a timestamp, to tell when one changes. */
+function dayOf(iso: string | undefined): string | null {
+  return iso ? new Date(iso).toDateString() : null;
 }
 
 /**
@@ -760,30 +1063,56 @@ function Composer({
       style={{
         paddingHorizontal: GUTTER,
         paddingTop: space.sm,
-        paddingBottom: insets.bottom + space.md,
-        borderTopWidth: HAIRLINE,
-        borderTopColor: c.border,
+        paddingBottom: insets.bottom + space.sm,
         backgroundColor: c.background,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space.sm }}>
+      {remaining !== null ? (
+        <View
+          style={{
+            alignSelf: "center",
+            marginBottom: space.sm,
+            paddingHorizontal: space.md,
+            paddingVertical: 3,
+            borderRadius: radius.pill,
+            backgroundColor: remaining > 0 ? c.backgroundSunken : c.accentSoft,
+          }}
+        >
+          <Text variant="caption1" weight="600" tone={remaining > 0 ? "secondary" : "tint"}>
+            {remaining > 0 ? `${remaining} free ${remaining === 1 ? "message" : "messages"} left` : "No free messages left"}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* One pill: the words, then the mic or the send button inside it. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: space.xs,
+          minHeight: 48,
+          paddingLeft: space.lg,
+          paddingRight: 5,
+          paddingVertical: 5,
+          borderRadius: 24,
+          backgroundColor: c.backgroundElement,
+          borderWidth: HAIRLINE,
+          borderColor: c.border,
+        }}
+      >
         <TextInput
           ref={inputRef}
           value={value}
           onChangeText={onChange}
           editable={!disabled}
-          placeholder={disabled ? "You have used your free messages" : listening ? "Listening…" : "Ask about a place, a dish, a plan…"}
+          placeholder={disabled ? "You have used your free messages" : listening ? "Listening…" : "Ask Durobot anything…"}
           placeholderTextColor={c.textSecondary}
           multiline
           style={{
             flex: 1,
-            minHeight: 44,
             maxHeight: 120,
-            backgroundColor: c.backgroundElement,
-            borderRadius: radius.row,
-            paddingHorizontal: space.lg,
-            paddingTop: space.md,
-            paddingBottom: space.md,
+            paddingTop: 9,
+            paddingBottom: 9,
             color: c.text,
             fontSize: 17,
           }}
@@ -798,48 +1127,40 @@ function Composer({
           >
             <Animated.View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: 38,
+                height: 38,
+                borderRadius: 19,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: listening ? c.danger : c.backgroundSunken,
+                backgroundColor: listening ? c.danger : "transparent",
                 transform: [{ scale: pulse }],
               }}
             >
-              <Symbol name={listening ? "waveform" : "mic.fill"} size={19} color={listening ? "#FFFFFF" : c.textSecondary} />
+              <Symbol name={listening ? "waveform" : "mic.fill"} size={18} color={listening ? "#FFFFFF" : c.textSecondary} />
             </Animated.View>
           </Pressable>
         ) : (
-        <Pressable
-          onPress={onSend}
-          disabled={!ready}
-          accessibilityLabel="Send"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: ready ? c.accent : c.backgroundSunken,
-          }}
-        >
-          {busy ? (
-            <ActivityIndicator size="small" color={c.textSecondary} />
-          ) : (
-            <Symbol name="arrow.up" size={20} color={ready ? c.textOnBrand : c.textSecondary} />
-          )}
-        </Pressable>
+          <Pressable
+            onPress={onSend}
+            disabled={!ready}
+            accessibilityLabel="Send"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: ready ? c.accent : c.backgroundSunken,
+            }}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color={c.textSecondary} />
+            ) : (
+              <Symbol name="arrow.up" size={18} color={ready ? c.textOnBrand : c.textSecondary} weight="semibold" />
+            )}
+          </Pressable>
         )}
       </View>
-
-      {remaining !== null && (
-        <Text variant="caption1" tone="tertiary" style={{ marginTop: space.xs }}>
-          {remaining > 0
-            ? `${remaining} free ${remaining === 1 ? "message" : "messages"} left`
-            : "No free messages left"}
-        </Text>
-      )}
     </View>
   );
 }

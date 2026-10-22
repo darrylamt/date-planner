@@ -47,6 +47,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "doc.text": "description",
   "ellipsis.circle": "more_horiz",
   ellipsis: "more_horiz",
+  "arrow.down": "arrow_downward",
   film: "movie",
   envelope: "mail",
   "envelope.fill": "mail",
