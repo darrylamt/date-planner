@@ -2115,7 +2115,7 @@ function planWith(
            */
           ticket: pin.event.cost_ghs == null ? null : Number(pin.event.cost_ghs),
           event: true,
-          // No Ghana prices are published; the figure is ours, and says so.
+          // Our estimate for a seat and snacks, and the line says so.
           ...(pin.event.kind === "movie" ? { doorLabel: "Ticket and snacks (estimate)" } : {}),
         }
       );

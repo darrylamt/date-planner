@@ -195,9 +195,9 @@ export type WellnessKind = "massage" | "facial" | "nails" | "any";
 /**
  * A film in the evening, at Silverbird (scripts/scrape-silverbird.ts).
  *
- * The cinema publishes no Ghana prices, so a seat and snacks is costed at a
- * flat GHS 130 a person, the figure the owner set, and the stop says it is
- * an estimate. The genres are the cinema's own, the ones that appear week
+ * A seat and snacks is costed at a flat GHS 130 a person, the figure the
+ * owner set, and the stop says it is an estimate; the exact ticket price is
+ * on Silverbird's app and website, which the stop's Book seats opens. The genres are the cinema's own, the ones that appear week
  * to week; Nollywood and Ghallywood are kept because people ask for them by
  * name. Asked only when "Catch a movie" is ticked; none chosen means any.
  */

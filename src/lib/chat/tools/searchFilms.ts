@@ -12,8 +12,9 @@ import type { ChatTool } from "./types";
  * (cinema_showtimes, scraped daily from Silverbird's site), grouped by film,
  * with the times on each day asked about.
  *
- * Silverbird publishes no Ghana prices, so the price is Duro!'s own estimate
- * for a ticket and snacks, and says so. A cinema not in the catalogue (West
+ * The price is Duro!'s own estimate for a ticket and snacks, and says so;
+ * the exact ticket price is on Silverbird's app and website, where tickets
+ * are bought. A cinema not in the catalogue (West
  * Hills, for now) is listed but cannot be put in a plan, and says that too.
  */
 const MAX_SPAN_DAYS = 14;
@@ -108,7 +109,7 @@ export const searchFilms: ChatTool<SearchFilmsArgs> = {
       from,
       to,
       films: list,
-      price: `About GHS ${MOVIE_PRICE_GHS} a person for a ticket and snacks. This is Duro's estimate; Silverbird does not publish Ghana prices, so say it is an estimate.`,
+      price: `About GHS ${MOVIE_PRICE_GHS} a person for a ticket and snacks. This is Duro's estimate: say so, and that the exact ticket price is on Silverbird's app or website, where tickets are bought.`,
       book_via: "silverbirdcinemas.com",
       ...(list.some((f) => !f.can_plan)
         ? { note: "Films with can_plan false are at a cinema Duro cannot put in a plan yet; mention them, but build plans only round the others." }

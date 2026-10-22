@@ -10,7 +10,7 @@
  * ── who reads it ──────────────────────────────────────────────────────────
  * The planner, only when someone ticks "Catch a movie" (src/lib/movies.ts):
  * the evening is built round a real showing, priced at MOVIE_PRICE_GHS a
- * person because the site publishes no Ghana prices. Silverbird's terms
+ * person (a seat and snacks), labelled as an estimate. Silverbird's terms
  * reserve their content; the owner chose to go ahead before they replied.
  *
  * ── what it reads ─────────────────────────────────────────────────────────
