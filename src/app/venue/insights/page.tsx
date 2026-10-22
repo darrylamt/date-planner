@@ -6,6 +6,7 @@ import { fetchAllRows } from "@/lib/fetchAll";
 import { CHECKLIST_VENUE_COLUMNS, checklistScore, venueChecklist } from "@/lib/venueChecklist";
 import { VenueShell } from "@/components/venue/VenueShell";
 import { Ring } from "@/components/venue/ui";
+import { VenueResponse, type VenueResponseData } from "@/components/venue/VenueResponse";
 import { IconCheck, IconChevron } from "@/components/planner/icons";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -59,10 +60,12 @@ export default async function VenueInsightsPage({ searchParams }: { searchParams
     return `${path}${q()}${hash ? `#${hash}` : ""}`;
   };
 
-  const [{ data: insights, error }, { data: me }, { data: area }] = await Promise.all([
+  const [{ data: insights, error }, { data: me }, { data: area }, { data: response }] = await Promise.all([
     supabase.rpc("venue_insights", { p_venue: venue.id, p_days: days }),
     supabase.from("venues").select(CHECKLIST_VENUE_COLUMNS).eq("id", venue.id).maybeSingle(),
     supabase.from("venues").select("areas(name)").eq("id", venue.id).maybeSingle(),
+    // Kept or swapped out, and with Pro the detail (0094). Null before it runs.
+    supabase.rpc("venue_response", { p_venue: venue.id, p_days: days }),
   ]);
   const v = me as Record<string, unknown> | null;
   const owner = (v?.menu_shared_from as string | null) || venue.id;
@@ -119,6 +122,10 @@ export default async function VenueInsightsPage({ searchParams }: { searchParams
               </div>
             ))}
           </div>
+
+          {response ? (
+            <VenueResponse data={response as VenueResponseData} areaName={areaName} venueName={venue.name} days={days} />
+          ) : null}
 
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             <Card title="What you're chosen for" delay={120}>
