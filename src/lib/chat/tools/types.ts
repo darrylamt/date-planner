@@ -1,3 +1,4 @@
+import type { Taste } from "../../taste";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -34,6 +35,13 @@ export interface ToolContext {
 
   /** Today in Accra, ISO yyyy-mm-dd. Ghana is GMT year-round. */
   today: string;
+
+  /**
+   * This person's taste (taste.ts), worked out the first time a tool asks and
+   * kept for the rest of the message, so a plan built in chat leans the way
+   * their plans built in the app do. Null when there is nothing to go on.
+   */
+  taste: () => Promise<Taste | null>;
 }
 
 /**

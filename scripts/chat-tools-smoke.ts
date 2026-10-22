@@ -44,6 +44,7 @@ const ctx: ToolContext = {
   admin: anon, // no user-scoped tool in this phase
   userId: "00000000-0000-0000-0000-000000000000",
   today: new Date().toISOString().slice(0, 10),
+  taste: async () => null,
 };
 
 function show(label: string, value: unknown) {

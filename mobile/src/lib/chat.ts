@@ -80,11 +80,15 @@ export async function* streamChat(opts: {
 
   const doFetch = (streamingFetch ?? globalThis.fetch) as typeof globalThis.fetch;
 
+  // The phone's id, so plans built here lean on what this phone kept before sign-in too.
+  const deviceId = await import("./deviceId").then((m) => m.getDeviceId()).catch(() => null);
+
   const res = await doFetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.access_token}`,
+      ...(deviceId ? { "x-duro-device": deviceId } : {}),
     },
     body: JSON.stringify({
       message: opts.message,

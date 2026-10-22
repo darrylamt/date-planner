@@ -206,7 +206,8 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
 
     const start = args.start_time ?? defaultStart(args.date, ctx.today);
     const inputs = toPlanInputs(args, areas, start);
-    const candidates = await fetchCandidates(ctx.catalog, inputs);
+    // Leaning towards what they keep, as their plans in the app do (taste.ts).
+    const candidates = await fetchCandidates(ctx.catalog, inputs, { taste: await ctx.taste() });
 
     if (candidates.totalActiveVenues < 2) {
       return {

@@ -108,7 +108,8 @@ export async function POST(req: Request) {
    */
   const now = new Date();
   const today = todayInAccra();
-  const ctx = buildToolContext(userId);
+  // The phone's id too, so what they did before signing in counts towards their taste.
+  const ctx = buildToolContext(userId, req.headers.get("x-duro-device"));
   /*
    * Grouped by city, so the assistant can tell Kumasi from a neighbourhood of
    * Accra. Only areas with something a plan can use, as the app lists them:

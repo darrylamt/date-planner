@@ -1,3 +1,4 @@
+import { tasteFor, type Taste } from "../../taste";
 import { createClient, createServiceClient } from "../../supabase/server";
 import type { ChatTool, ToolContext } from "./types";
 import { todayInAccra } from "./types";
@@ -46,12 +47,15 @@ export type { ChatTool, ToolContext };
  * enforce the phone gate rather than each tool remembering to. admin is the
  * service role and is only ever for the caller's own rows.
  */
-export function buildToolContext(userId: string): ToolContext {
+export function buildToolContext(userId: string, deviceId: string | null = null): ToolContext {
+  const admin = createServiceClient();
+  let taste: Promise<Taste | null> | null = null;
   return {
     catalog: createClient(),
-    admin: createServiceClient(),
+    admin,
     userId,
     today: todayInAccra(),
+    taste: () => (taste ??= tasteFor(admin, { userId, deviceId }).catch(() => null)),
   };
 }
 
