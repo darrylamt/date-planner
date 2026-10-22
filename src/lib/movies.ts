@@ -37,6 +37,39 @@ export function genreFits(genres: string[] | null | undefined, wanted: string[] 
   return wanted.filter((w) => have.has(w.toLowerCase())).length;
 }
 
+/** A service-role client for cinema_showtimes, or null without the key. */
+function showtimesDb() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+  return url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
+}
+
+export type Showing = ShowtimeRow & { genres: string[] };
+
+/**
+ * Every showing between two dates, for Durobot's search_films. Nothing when
+ * the table, the key or the listings are missing.
+ */
+export async function listShowtimes(from: string, to: string): Promise<Showing[]> {
+  const db = showtimesDb();
+  if (!db) return [];
+  try {
+    const { data, error } = await db
+      .from("cinema_showtimes")
+      .select("id,venue_id,cinema_name,title,runtime_mins,genres,language,film_url,poster_url,show_date,show_time")
+      .eq("is_active", true)
+      .gte("show_date", from)
+      .lte("show_date", to)
+      .order("show_date")
+      .order("show_time")
+      .limit(1000);
+    if (error || !data) return [];
+    return (data as ShowtimeRow[]).map((r) => ({ ...r, genres: r.genres ?? [] }));
+  } catch {
+    return [];
+  }
+}
+
 export async function movieEvents(inputs: PlanInputs): Promise<EventRow[]> {
   if (!inputs.movie) return [];
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

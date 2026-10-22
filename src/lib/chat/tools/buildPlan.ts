@@ -73,6 +73,9 @@ const argsSchema = z.object({
     .optional(),
   /** For the copy on the card, never for filtering. */
   about_them: z.string().max(300).optional(),
+  /** Build the evening round a real Silverbird showing ("Catch a movie" in the app). */
+  movie: z.boolean().optional(),
+  movie_genres: z.array(z.string().max(24)).max(6).optional(),
 });
 
 export type BuildPlanArgs = z.infer<typeof argsSchema>;
@@ -166,6 +169,16 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         type: "string",
         description:
           "Anything they said about who it is for, in their own words. Used for the card's wording, never to filter.",
+      },
+      movie: {
+        type: "boolean",
+        description:
+          "True when they want a film in the evening. The plan is built round a real Silverbird showing that fits the time and budget, at Duro's estimate of GHS 130 a person with snacks.",
+      },
+      movie_genres: {
+        type: "array",
+        items: { type: "string" },
+        description: "With movie: only these genres (Action, Comedy, Horror, Romance, Thriller, Drama, Animation, Adventure, Sci-fi, Nollywood, Ghallywood). Omit for any film.",
       },
     },
     // The date alone. Everything else has a default worth more than a question.
@@ -263,6 +276,19 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         ordering: s.orders.map((o) => `${o.qty}x ${o.item}`),
       })),
       transport_ghs: itinerary.transport_total_ghs,
+      /*
+       * The film, or why there is none. A plan asked for with a film that
+       * came back without one must say so, or it reads as the request being
+       * ignored.
+       */
+      ...(args.movie
+        ? (() => {
+            const film = plan.stops.find((s) => s.event?.id.startsWith("movie:"));
+            return film
+              ? { film: { title: film.event!.title, starts: film.event!.start_time?.slice(0, 5) ?? null, cinema: film.venue.name, price: "about GHS 130 a person with snacks, an estimate" } }
+              : { film: null, film_note: "No showing at Silverbird fitted this evening, its genres and budget, so the plan has no film. Say so plainly and offer another time or genre." };
+          })()
+        : {}),
       price_confidence: itinerary.price_confidence?.exact
         ? "every stop priced from a menu"
         : "some stops are estimates, so give the total as a range",
@@ -362,6 +388,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas, start: string):
     crew: args.crew,
     occasion: args.occasion ?? "date_night",
     occasionDetail: {},
+    ...(args.movie ? { movie: true, movieGenres: args.movie_genres ?? [] } : {}),
     partner: {
       name: "",
       gender: "unspecified",
