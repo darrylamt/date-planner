@@ -1,7 +1,5 @@
 import { Fragment } from "react";
-import { View } from "react-native";
 import { Text } from "../Text";
-import { space } from "../../theme";
 
 /**
  * The assistant's words, with the little formatting it is allowed.
@@ -20,27 +18,33 @@ import { space } from "../../theme";
  */
 export function ChatText({ text, tone }: { text: string; tone: "label" | "onTint" }) {
   const blocks = toBlocks(text);
+  /*
+   * One Text for the whole reply, so a long press copies all of it.
+   *
+   * It was a View of separate Texts, a row per bullet, none of them
+   * selectable, so nothing Durobot said could be copied, a phone number or a
+   * dish to send a friend included. iOS offers Copy on a selectable Text as a
+   * whole, and a reply in pieces would copy a line at a time. Bullets keep
+   * their marker; lines are joined with breaks.
+   */
   return (
-    <View style={{ gap: space.xs }}>
-      {blocks.map((b, i) =>
-        b.kind === "bullet" ? (
-          <View key={i} style={{ flexDirection: "row", gap: space.sm, paddingRight: space.xs }}>
-            <Text variant="body" tone={tone}>
-              {b.marker}
-            </Text>
-            <Text variant="body" tone={tone} style={{ flex: 1 }}>
+    <Text variant="body" tone={tone} selectable>
+      {blocks.map((b, i) => (
+        <Fragment key={i}>
+          {i > 0 ? "\n" : null}
+          {b.kind === "bullet" ? (
+            <>
+              <Text tone={tone} weight="600">
+                {b.marker === "•" ? "•  " : `${b.marker}  `}
+              </Text>
               {inline(b.text, tone)}
-            </Text>
-          </View>
-        ) : b.kind === "gap" ? (
-          <View key={i} style={{ height: space.xs }} />
-        ) : (
-          <Text key={i} variant="body" tone={tone}>
-            {inline(b.text, tone)}
-          </Text>
-        )
-      )}
-    </View>
+            </>
+          ) : b.kind === "gap" ? null : (
+            inline(b.text, tone)
+          )}
+        </Fragment>
+      ))}
+    </Text>
   );
 }
 

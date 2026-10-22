@@ -555,7 +555,8 @@ function BubbleView({ bubble }: { bubble: Bubble }) {
     >
       {/* Their own words exactly as typed; ours with the formatting it asked for. */}
       {mine ? (
-        <Text variant="body" tone="onTint">
+        // Selectable, so a long press offers Copy: their own words, to reuse or send on.
+        <Text variant="body" tone="onTint" selectable>
           {bubble.text}
         </Text>
       ) : (
