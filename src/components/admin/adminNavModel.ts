@@ -59,6 +59,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     label: "Insights",
     links: [
       { href: "/admin/demand", label: "Demand", icon: "chart", keywords: "plans searches requests" },
+      { href: "/admin/pull", label: "Pull", icon: "pulse", keywords: "kept swapped signals ranking popular" },
       { href: "/admin/sharing", label: "Sharing", icon: "share", keywords: "shares links" },
       { href: "/admin/poll", label: "Name poll", icon: "vote", keywords: "votes" },
     ],

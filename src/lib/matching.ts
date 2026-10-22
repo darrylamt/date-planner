@@ -153,6 +153,11 @@ export async function fetchCandidates(
     supabase.from("venue_insights").select("venue_id,noise,occasion_fit,signature_dishes,features,confidence").order("venue_id").range(from, to)
   ).catch(() => [] as (VenueInsight & { venue_id: string })[]);
 
+  // Each venue's pull (0091, pull.ts): one number per venue, read alongside for the same reason.
+  const pullPromise = fetchAllRows<{ venue_id: string; effect: number }>((from, to) =>
+    supabase.from("venue_pull").select("venue_id,effect").order("venue_id").range(from, to)
+  ).catch(() => [] as { venue_id: string; effect: number }[]);
+
   const [eventsRes, schedulesRes, movies] = await Promise.all([eventsPromise, schedulesPromise, moviesPromise]);
 
   let events = (eventsRes.data ?? []) as EventRow[];
@@ -317,9 +322,14 @@ export async function fetchCandidates(
    * read of a small public table; without it (before 0088) nothing changes.
    */
   if (venues.length) {
-    const insights = await insightsPromise;
+    const [insights, pulls] = await Promise.all([insightsPromise, pullPromise]);
     const byVenue = new Map(insights.map((i) => [i.venue_id, i]));
-    venues = venues.map((v) => (byVenue.has(v.id) ? { ...v, insights: byVenue.get(v.id)! } : v));
+    const pullOf = new Map(pulls.map((p) => [p.venue_id, Number(p.effect)]));
+    venues = venues.map((v) => {
+      const insight = byVenue.get(v.id);
+      const pull = pullOf.get(v.id);
+      return insight || pull ? { ...v, ...(insight ? { insights: insight } : {}), ...(pull ? { pull } : {}) } : v;
+    });
   }
   if (closedTonight.size) venues = venues.filter((v) => !closedTonight.has(v.id));
 

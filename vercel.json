@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/birthdays",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/pull",
+      "schedule": "30 2 * * *"
     }
   ]
 }

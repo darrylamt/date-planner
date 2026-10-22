@@ -16,6 +16,7 @@
     "mirror": "tsx scripts/mirror-shared.ts",
     "mirror:check": "tsx scripts/mirror-shared.ts --check",
     "chat:smoke": "tsx scripts/chat-tools-smoke.ts",
+    "pull:smoke": "tsx --env-file=.env.local scripts/pull-smoke.ts",
     "chat:ask": "tsx scripts/chat-smoke.ts",
     "chat:first": "tsx scripts/chat-first-questions.mts",
     "grant": "tsx scripts/grant-pro.ts",

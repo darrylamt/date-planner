@@ -160,6 +160,12 @@ export interface Venue {
    */
   insights?: VenueInsight | null;
   /**
+   * Points from how often people keep this venue once a plan shows it
+   * (venue_pull, 0091; pull.ts), -2 to +2.75. Absent before 0091 or before
+   * the first nightly run, and then it changes nothing.
+   */
+  pull?: number | null;
+  /**
    * Where the price came from. An estimate is shown as a range rather than a
    * figure, because presenting a guess to the cedi is the same lie as an
    * invented price, only better dressed.

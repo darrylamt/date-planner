@@ -6,6 +6,7 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { genreFits } from "./movies";
 import { insightScore, isSignature, noiseWanted } from "./insights";
+import { pullScore } from "./pull";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
@@ -495,7 +496,9 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion) +
     // Gemini's study of the place: noise against what they asked for, fit for the occasion (insights.ts).
-    insightScore(v, inputs, atMinute)
+    insightScore(v, inputs, atMinute) +
+    // How often people keep it once they are shown it, at most two points either way (pull.ts).
+    pullScore(v)
   );
 }
 
