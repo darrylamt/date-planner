@@ -100,7 +100,7 @@ export function VenueTable({ rows, queues = [] }: { rows: Row[]; queues?: Queue[
           return (
             <Link
               key={f.id}
-              href={f.id === "all" ? "/admin" : `/admin?filter=${f.id}`}
+              href={f.id === "all" ? "/admin/venues" : `/admin/venues?filter=${f.id}`}
               scroll={false}
               className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors ${
                 on

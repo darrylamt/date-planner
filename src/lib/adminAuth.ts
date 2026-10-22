@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
@@ -80,8 +81,11 @@ export async function requireAdmin(): Promise<
  * reading is elevated, and only after the caller has been shown to be an
  * admin, so this is not a way around the gate.
  */
+/** Once per request: a page that reads through several helpers checks the session once. */
+const pageGate = cache(() => requireAdmin());
+
 export async function adminDataClient() {
-  const gate = await requireAdmin();
+  const gate = await pageGate();
   if (!gate.ok) {
     // Pages sit behind the admin layout, which redirects first. Reaching here
     // means that guarantee has broken, and refusing loudly beats handing back

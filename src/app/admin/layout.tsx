@@ -1,13 +1,21 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { Logo } from "@/components/Logo";
-import { AdminNav } from "@/components/admin/AdminNav";
+import { AdminChrome } from "@/components/admin/AdminChrome";
+import { AdminActivity } from "@/components/admin/AdminActivity";
+import type { PaletteVenue } from "@/components/admin/CommandPalette";
 import { adminCounts } from "@/lib/adminCounts";
 
 export const dynamic = "force-dynamic";
 
-/** /admin, gated by profiles.is_admin; dark sidenav layout as designed. */
+/**
+ * /admin, gated by profiles.is_admin.
+ *
+ * The frame draws at once and the sidebar's counts stream in after it: they
+ * used to be awaited here, so every admin page sat blank for the five seconds
+ * it took to count the menus before a single pixel arrived.
+ */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const {
@@ -16,11 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect("/login?next=/admin");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
 
   if (!profile?.is_admin) {
     return (
@@ -28,8 +32,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="vic h-14 w-14 rounded-bar text-[24px]">🔒</div>
         <h1 className="mt-6 font-display text-[28px] font-bold">Admins only</h1>
         <p className="mt-3 text-body text-mutedbrown">
-          Your account isn&apos;t flagged as an admin. Set <code>is_admin = true</code> on your
-          profile row in Supabase to get in.
+          Your account isn&apos;t flagged as an admin. Set <code>is_admin = true</code> on your profile row in Supabase to
+          get in.
         </p>
         <Link href="/" className="btn2 btnsm mt-6 px-6">
           Back home
@@ -38,30 +42,37 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
-  // Read once here and handed down, so the badges cost one query per page
-  // load rather than one per link.
-  /*
-   * Counted through the service role, not the caller's own client.
-   *
-   * The cookie client runs as `authenticated`, and 0014 revoked SELECT on the
-   * venue columns from that role so an ordinary account cannot read unapproved
-   * phone numbers. adminCounts reads venues with select("*"), so leaving it on
-   * the caller's client made every admin page fail with "permission denied"
-   * the moment that migration ran. Elevated only after the is_admin check
-   * above has passed, which is the same trade adminDataClient makes.
-   */
-  const counts = await adminCounts(createServiceClient());
-
+  const email = user.email ?? "";
   return (
-    <div className="admin flex min-h-screen flex-col md:flex-row">
-      <aside className="admin-aside flex shrink-0 flex-col gap-0.5 bg-lagoon py-6 md:min-h-screen md:w-[220px]">
-        <div className="flex items-baseline gap-2 px-6 pb-5">
-          <Logo size={22} dark href="/" />
-          <span className="text-[12px] text-lagoon-soft">admin</span>
-        </div>
-        <AdminNav counts={counts} />
-      </aside>
-      <div className="admin-main flex-1 px-4 py-6 md:px-8">{children}</div>
+    <div className="admin adm-root">
+      <Suspense fallback={<AdminChrome counts={null} venues={null} email={email} />}>
+        <ChromeWithCounts email={email} />
+      </Suspense>
+      <main className="adm-main">
+        <div className="adm-content">{children}</div>
+      </main>
+      <Suspense fallback={null}>
+        <AdminActivity />
+      </Suspense>
     </div>
   );
+}
+
+/**
+ * The counts and the venue names for the search, through the service role
+ * (0014 revoked the venue columns from `authenticated`, and an admin is
+ * `authenticated` too). Elevated only after the is_admin check above.
+ */
+async function ChromeWithCounts({ email }: { email: string }) {
+  const [counts, { data }] = await Promise.all([
+    adminCounts(),
+    createServiceClient().from("venues").select("id, name, is_active, areas(name)").order("name"),
+  ]);
+  const venues: PaletteVenue[] = ((data ?? []) as any[]).map((v) => ({
+    id: v.id,
+    name: v.name,
+    area: v.areas?.name ?? null,
+    active: v.is_active !== false,
+  }));
+  return <AdminChrome counts={counts} venues={venues} email={email} />;
 }

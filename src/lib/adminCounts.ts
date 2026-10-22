@@ -1,6 +1,7 @@
 import { avgIsNotAPrice, freeToVisit } from "./budget";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchAllRows } from "./fetchAll";
+import { cache } from "react";
+import { createServiceClient } from "./supabase/server";
+import { menuStats } from "./menuStats";
 
 /**
  * What currently needs attention, in one query.
@@ -55,78 +56,59 @@ export interface AdminCounts {
 
 const STALE_DAYS = 90;
 
-export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts> {
-  const [{ data: venues }, { data: menuMeta }] = await Promise.all([
-    /*
-     * Deliberately `*` rather than a column list. Naming is_free here would
-     * make the whole admin section 500 on any database that has not run
-     * migration 0005 yet, and the page whose job is to show what needs doing
-     * is the worst one to have fail closed.
-     */
-    supabase.from("venues").select("*"),
-    /*
-     * Paged, because an unbounded select stops at PostgREST's row cap. The
-     * catalogue passed a thousand menu items and these counts silently began
-     * reading a fraction of it: Bistro 22 has 156 dishes and was counted as
-     * having none, so it appeared in the thin-menu queue it does not belong in.
-     */
-    fetchAllRows<{ venue_id: string; updated_at: string | null; category: string }>(
-      (from, to) =>
-        supabase.from("menu_items").select("venue_id, updated_at, category").range(from, to)
-    ).then((data) => ({ data })),
-  ]);
-
-  /*
-   * Its own query, and tolerant of failing. This table arrived in migration
-   * 0009, and the page whose job is to show what needs doing is the worst one
-   * to take down on a database that has not run it.
-   */
-  const { data: reports } = await supabase
-    .from("venue_reports")
-    .select("id")
-    .eq("status", "open");
-
-  // Same tolerance, newer table: 0052. Unrun, this is null and the queue
-  // reads zero rather than taking the dashboard down.
-  const { data: issues } = await supabase
-    .from("issue_reports")
-    .select("id")
-    .eq("status", "open");
-
-  const rows = venues ?? [];
-  const active = rows.filter((v: any) => v.is_active);
+/**
+ * Cached per request, so the sidebar and the dashboard share one count. Service
+ * role: call it only behind the admin gate.
+ *
+ * Every read at once. They were five round trips end to end after the menu
+ * read, which was itself twenty pages one after another.
+ */
+export const adminCounts = cache(async (): Promise<AdminCounts> => {
+  const supabase = createServiceClient();
+  const [{ data: venues }, stats, { data: reports }, { data: issues }, { count: gaderinWaiting }, { count: vendorApplications }] =
+    await Promise.all([
+      /*
+       * Deliberately `*` rather than a column list. Naming is_free here would
+       * make the whole admin section 500 on any database that has not run
+       * migration 0005 yet, and the page whose job is to show what needs doing
+       * is the worst one to have fail closed.
+       */
+      supabase.from("venues").select("*"),
+      // Grouped per venue (0090), or every row in parallel pages before it.
+      menuStats(),
+      /*
+       * Tolerant of failing. This table arrived in migration 0009, and the
+       * page whose job is to show what needs doing is the worst one to take
+       * down on a database that has not run it.
+       */
+      supabase.from("venue_reports").select("id").eq("status", "open"),
+      // Same tolerance, newer table: 0052. Unrun, this is null and the queue
+      // reads zero rather than taking the dashboard down.
+      supabase.from("issue_reports").select("id").eq("status", "open"),
+      // Null, not an error, before 0073 and 0074 have run: the badge just stays off.
+      supabase
+        .from("gaderin_activities")
+        .select("slug", { count: "exact", head: true })
+        .eq("is_active", true)
+        .eq("dismissed", false)
+        .is("venue_id", null),
+      supabase.from("vendor_applications").select("id", { count: "exact", head: true }).eq("status", "new"),
+    ]);
 
   const menuCount = new Map<string, number>();
-  const mainCount = new Map<string, number>();
   /** Items per category per venue, so a queue can ask the right question. */
   const buckets = new Map<string, Record<string, number>>();
   const menuLatest = new Map<string, string>();
-  for (const m of menuMeta ?? []) {
-    const id = (m as any).venue_id as string;
-    menuCount.set(id, (menuCount.get(id) ?? 0) + 1);
-    if ((m as any).category === "main") mainCount.set(id, (mainCount.get(id) ?? 0) + 1);
-    const b = buckets.get(id) ?? {};
-    const cat = (m as any).category as string;
-    b[cat] = (b[cat] ?? 0) + 1;
-    buckets.set(id, b);
-    const at = (m as any).updated_at as string | null;
-    if (at && (!menuLatest.get(id) || at > menuLatest.get(id)!)) menuLatest.set(id, at);
+  for (const [id, st] of stats) {
+    menuCount.set(id, st.items);
+    buckets.set(id, st.byCategory);
+    if (st.latest) menuLatest.set(id, st.latest);
   }
 
   const cutoff = Date.now() - STALE_DAYS * 86400000;
 
-  // Null, not an error, before 0073 and 0074 have run: the badge just stays off.
-  const { count: gaderinWaiting } = await supabase
-    .from("gaderin_activities")
-    .select("slug", { count: "exact", head: true })
-    .eq("is_active", true)
-    .eq("dismissed", false)
-    .is("venue_id", null);
-
-  const { count: vendorApplications } = await supabase
-    .from("vendor_applications")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "new");
+  const rows = venues ?? [];
+  const active = rows.filter((v: any) => v.is_active);
 
   return {
     gaderinWaiting: gaderinWaiting ?? 0,
@@ -191,4 +173,4 @@ export async function adminCounts(supabase: SupabaseClient): Promise<AdminCounts
       return new Date(latest).getTime() < cutoff;
     }).length,
   };
-}
+});

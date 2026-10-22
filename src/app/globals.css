@@ -272,38 +272,44 @@ input[type="range"].budget-slider::-moz-range-thumb {
    correct everywhere else on the site and wrong on exactly these pages.
    ───────────────────────────────────────────────────────────────────────── */
 .admin {
-  --a-bg: #f5f7f9;
+  /*
+   * Redesigned 22 Oct 2026. Warm neutrals instead of cool grey, and the
+   * brand's deep rose as the one accent (the planner portal's, white on it
+   * is 4.9:1), so the admin reads as Duro rather than as a generic dashboard.
+   * Warnings stay amber-brown: the only warm colour that is not the accent.
+   */
+  --a-bg: #f6f5f3;
   --a-surface: #ffffff;
-  --a-sunken: #eef1f5;
-  --a-text: #111827;
-  --a-text-2: #46505f;
-  /*
-   * Darkened from #6b7280, which cleared AA on a white card at 5.1:1 and
-   * missed it on a sunken one at 4.27:1 -- and the sunken panels are exactly
-   * where the muted captions live. This clears it on both.
-   */
-  --a-muted: #5c6470;
-  --a-line: #dde3ea;
-  --a-line-soft: #eaeff4;
-  --a-accent: #0f766e;
-  --a-accent-dark: #0b5a54;
-  --a-accent-faint: #d8f0ed;
-  /*
-   * Darkened from #b45309, which cleared AA on a white card at 5.0:1 but
-   * missed it at 4.43:1 on a sunken panel -- and the sunken panel is where
-   * the .why notes live, which is most of the warn text in the admin. This
-   * clears 5.4:1 there and 6.1:1 on a card, and white on it as a badge.
-   */
+  --a-sunken: #f1efec;
+  --a-hover: #ece9e5;
+  --a-text: #1a1718;
+  --a-text-2: #45403f;
+  /* 5.6:1 on the sunken panels where most captions live, 6.3:1 on a card. */
+  --a-muted: #5f5957;
+  --a-line: #e5e1dc;
+  --a-line-soft: #efece8;
+  --a-accent: #c92c58;
+  --a-accent-dark: #a8214a;
+  --a-accent-faint: #fde8ef;
+  --a-ok: #0f766e;
+  --a-ok-faint: #d8f0ed;
   --a-warn: #9e4a07;
   --a-warn-bg: #fdf1dc;
   --a-danger: #b42318;
-  --a-nav: #111827;
-  --a-nav-2: #1f2937;
-  --a-nav-text: #e5e7eb;
-  --a-nav-muted: #9aa4b2;
+  --a-danger-faint: #fee4e2;
+  --a-nav: #1a1718;
+  --a-nav-2: #2a2526;
+  --a-nav-text: #f4f1ee;
+  --a-nav-muted: #b7aeab;
+  --a-shadow: 0 1px 2px rgb(26 23 24 / 0.05), 0 1px 1px rgb(26 23 24 / 0.03);
+  --a-shadow-lg: 0 12px 32px -12px rgb(26 23 24 / 0.28), 0 2px 6px rgb(26 23 24 / 0.06);
+  --a-sidebar: 252px;
 
+  color-scheme: light;
   background: var(--a-bg);
   color: var(--a-text);
+  font-size: 14.5px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /*
@@ -422,106 +428,381 @@ input[type="range"].budget-slider::-moz-range-thumb {
 .admin [class*=" text-lagoon"] { color: var(--a-nav-muted) !important; }
 
 
+/* ── The shell ─────────────────────────────────────────────────────────── */
+
+.adm-root { min-height: 100vh; }
+
+.adm-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  display: flex;
+  width: var(--a-sidebar);
+  flex-direction: column;
+  background: var(--a-surface);
+  border-right: 1px solid var(--a-line);
+}
+.adm-main { min-height: 100vh; padding: 72px 16px 48px; }
+.adm-content { margin: 0 auto; max-width: 1240px; }
+@media (min-width: 1024px) {
+  .adm-main { margin-left: var(--a-sidebar); padding: 28px 36px 64px; }
+  .admin .adm-topbar, .admin .adm-scrim, .admin .adm-drawer-close { display: none; }
+}
+@media (max-width: 1023px) {
+  .adm-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: var(--a-shadow-lg);
+  }
+  .adm-sidebar[data-open="true"] { transform: none; }
+}
+
+.adm-brand { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; }
+.adm-brand-tag {
+  border-radius: 6px;
+  background: var(--a-accent-faint);
+  color: var(--a-accent-dark);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.adm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 10px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--a-line);
+  border-radius: 9px;
+  background: var(--a-sunken);
+  color: var(--a-muted);
+  font-size: 13.5px;
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.adm-search:hover { border-color: #d3cdc6; background: var(--a-surface); }
+.adm-kbd {
+  margin-left: auto;
+  border: 1px solid var(--a-line);
+  border-radius: 5px;
+  background: var(--a-surface);
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--a-muted);
+}
+
+.adm-nav { flex: 1; overflow-y: auto; padding: 4px 10px 16px; overscroll-behavior: contain; }
+.adm-group { margin-top: 14px; }
+.adm-group:first-child { margin-top: 2px; }
+.adm-group-label {
+  padding: 0 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--a-muted);
+}
+.adm-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--a-text-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background-color 0.12s, color 0.12s;
+}
+.adm-link svg { flex-shrink: 0; color: var(--a-muted); transition: color 0.12s; }
+.adm-link:hover { background: var(--a-sunken); color: var(--a-text); }
+.adm-link:active { background: var(--a-hover); }
+.adm-link[aria-current="page"] { background: var(--a-accent-faint); color: var(--a-accent-dark); font-weight: 600; }
+.adm-link[aria-current="page"] svg { color: var(--a-accent); }
+.adm-link[data-pending] { background: var(--a-sunken); }
+.adm-link[data-pending] .adm-count { visibility: hidden; }
+.adm-link[data-pending]::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--a-accent);
+  border-right-color: transparent;
+  animation: adm-spin 0.7s linear infinite;
+}
+
+.adm-count {
+  margin-left: auto;
+  min-width: 20px;
+  border-radius: 999px;
+  background: var(--a-sunken);
+  color: var(--a-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 0 6px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.adm-count[data-urgent] { background: var(--a-accent); color: #fff; }
+.adm-count-skel { margin-left: auto; width: 20px; height: 14px; border-radius: 999px; }
+
+.adm-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--a-line);
+  padding: 10px 12px;
+}
+.adm-avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--a-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.adm-icon-btn {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--a-muted);
+  transition: background-color 0.12s, color 0.12s;
+}
+.adm-icon-btn:hover { background: var(--a-sunken); color: var(--a-text); }
+
+.adm-topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 56px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--a-line);
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: saturate(1.4) blur(10px);
+}
+.adm-topbar-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; }
+.adm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgb(26 23 24 / 0.35);
+  animation: adm-fade 0.18s ease-out both;
+}
+
+/* ── Page furniture ────────────────────────────────────────────────────── */
+
+/* Every page's own title, whichever way it was written. */
+.adm-content h1 { font-size: 24px !important; font-weight: 700 !important; letter-spacing: -0.015em; line-height: 1.25; }
+.adm-content > div > h1:first-child,
+.adm-content > h1:first-child { margin-bottom: 4px; }
+
+.adm-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--a-muted); }
+.adm-section-title { font-size: 15px; font-weight: 700; color: var(--a-text); }
+
+/* No display here: unlayered, it would beat the flex and grid utilities on each tile. */
+.adm-tile {
+  border: 1px solid var(--a-line);
+  border-radius: 14px;
+  background: var(--a-surface);
+  box-shadow: var(--a-shadow);
+  padding: 16px;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+a.adm-tile:hover { border-color: #d3cdc6; box-shadow: var(--a-shadow-lg); }
+a.adm-tile:active { transform: scale(0.985); }
+.adm-tile[data-tone="urgent"] { border-color: #f3c3d2; background: linear-gradient(180deg, #fff 0%, #fff7fa 100%); }
+.adm-tile[data-tone="clear"] { background: var(--a-sunken); box-shadow: none; }
+.adm-num { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+/* Placeholder shapes while a page loads. */
+.adm-skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--a-sunken) 25%, #f8f6f4 50%, var(--a-sunken) 75%);
+  background-size: 200% 100%;
+  animation: adm-shimmer 1.3s linear infinite;
+}
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+
 /* Surfaces. */
 .admin .card {
   background: var(--a-surface) !important;
-  border-color: var(--a-line) !important;
-  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+  border: 1px solid var(--a-line) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--a-shadow);
 }
 
-/* Controls. Shorter than the app's 54px: a form of thirty fields is a
-   different thing from a questionnaire of one. */
+/* Shorter than the app's 54px: a form of thirty fields is a different thing
+   from a questionnaire of one. */
 .admin .inp,
 .admin .ta,
 .admin .pinp {
   background: var(--a-surface) !important;
-  border-color: var(--a-line) !important;
+  border: 1px solid #d9d4ce !important;
   color: var(--a-text) !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.admin .inp { height: 40px; font-size: 14.5px; border-radius: 8px; }
-.admin .ta { font-size: 14.5px; border-radius: 8px; }
+.admin .inp { height: 38px; font-size: 14px; border-radius: 9px; padding: 0 12px; }
+.admin .ta { font-size: 14px; border-radius: 9px; padding: 9px 12px; }
+.admin .pinp { border-radius: 7px; }
+.admin .inp:hover,
+.admin .ta:hover,
+.admin select:hover { border-color: #c9c2bb !important; }
 .admin .inp:focus,
 .admin .ta:focus,
-.admin .pinp:focus { border-color: var(--a-accent) !important; }
+.admin .pinp:focus,
+.admin select:focus {
+  border-color: var(--a-accent) !important;
+  box-shadow: 0 0 0 3px rgb(201 44 88 / 0.14) !important;
+  outline: none;
+}
+.admin .inp::placeholder,
+.admin .ta::placeholder { color: #9b928f !important; }
 
 .admin .flbl {
   color: var(--a-text-2) !important;
   font-size: 12.5px;
-  letter-spacing: 0.02em;
-  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 5px;
 }
 
 .admin select {
   background: var(--a-surface);
-  border: 1.5px solid var(--a-line);
-  border-radius: 8px;
+  border: 1px solid #d9d4ce;
+  border-radius: 9px;
   color: var(--a-text);
-  height: 40px;
+  height: 38px;
   padding: 0 10px;
-  font-size: 14.5px;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .admin input[type="time"],
 .admin input[type="number"] { color: var(--a-text); }
+.admin input[type="checkbox"],
+.admin input[type="radio"] { accent-color: var(--a-accent); }
 
+.admin .btn,
+.admin .btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  border-radius: 9px;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.08s, opacity 0.15s;
+}
 .admin .btn {
   background: var(--a-accent) !important;
   color: #fff !important;
-  height: 42px;
-  font-size: 15px;
-  border-radius: 9px;
+  height: 38px;
+  font-size: 14px;
+  box-shadow: 0 1px 2px rgb(169 33 74 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.12);
 }
 .admin .btn:hover { background: var(--a-accent-dark) !important; }
 .admin .btn2 {
-  border-color: var(--a-line) !important;
+  border: 1px solid #d9d4ce !important;
   color: var(--a-text) !important;
   background: var(--a-surface) !important;
-  height: 40px;
+  height: 38px;
   font-size: 14px;
-  border-radius: 9px;
+  box-shadow: var(--a-shadow);
 }
-.admin .btn2:hover { background: var(--a-sunken) !important; }
-.admin .btnsm { height: 34px; padding: 0 12px; font-size: 13.5px; }
+.admin .btn2:hover { background: var(--a-sunken) !important; border-color: #c9c2bb !important; }
+.admin .btnsm { height: 32px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
 
 /*
- * `.why`, and why it needs a rule of its own.
- *
- * Everything above overrides a Tailwind utility by matching the class
- * attribute. That cannot work here: `.why` is `@apply rounded-icon bg-whybg
- * ... text-cocoa`, which Tailwind compiles into a plain `.why` rule holding
- * the colours directly, and the element's class attribute only ever says
- * "why". No selector looking for `bg-whybg` will ever see it.
- *
- * So it stayed #2E1522 -- dark plum -- behind brown warning text at 3.3:1, in
- * six places, through two rounds of fixing the utilities. It was the last
- * dark panel in the admin.
- *
- * An audit of every @apply class used in the admin says this is the only one
- * without an override; .card, .inp, .badge and the rest already have theirs.
+ * Every press shows. Buttons sink a little under the finger, and anything
+ * disabled says so, so "did that click?" is answered before anything loads.
+ */
+.admin button:not(:disabled):active,
+.admin [role="button"]:active,
+.admin a.btn:active,
+.admin a.btn2:active { transform: scale(0.97); }
+.admin button:disabled,
+.admin .btn:disabled,
+.admin .btn2:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin button:focus-visible,
+.admin a:focus-visible,
+.admin [role="button"]:focus-visible {
+  outline: 2px solid var(--a-accent);
+  outline-offset: 2px;
+}
+
+/*
+ * A button whose click started a request (AdminActivity) is busy until the
+ * request is answered, then flashes how it went. The spinner sits on the
+ * corner rather than over the label, so nothing has to be rewritten to wear it.
+ */
+.admin [data-busy] { opacity: 0.7; cursor: progress; pointer-events: none; }
+.admin [data-busy]:not([class*="absolute"]):not([class*="fixed"]):not([class*="sticky"]) { position: relative; }
+.admin [data-busy]::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--a-accent);
+  border-right-color: transparent;
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff;
+  animation: adm-spin 0.7s linear infinite;
+}
+.admin [data-flash="done"] { animation: adm-done 1.4s ease-out; }
+.admin [data-flash="error"] { animation: adm-error 0.5s ease-in-out, adm-error-ring 1.8s ease-out; }
+
+/*
+ * `.why`, and why it needs a rule of its own: it is an @apply class, so its
+ * colours are compiled into `.why` itself and no selector looking for
+ * `bg-whybg` will ever see them.
  */
 .admin .why {
   background: var(--a-sunken) !important;
   color: var(--a-text-2) !important;
   border: 1px solid var(--a-line);
+  border-radius: 10px;
+  font-style: normal;
+  font-size: 13.5px;
 }
 
 /*
- * A destructive button says so.
- *
- * `!text-staletext` on a .btn2 loses to `.admin .btn2`, which is one class
- * more specific, so every Remove button in the admin renders in ordinary body
- * colour and reads as one more neutral action next to Save. Matched here at
- * the same specificity as the rule that was beating it.
+ * A destructive button says so. `!text-staletext` on a .btn2 loses to
+ * `.admin .btn2`, which is one class more specific.
  */
-.admin .btn2[class*="!text-staletext"] { color: var(--a-warn) !important; }
+.admin .btn2[class*="!text-staletext"] { color: var(--a-danger) !important; }
+.admin .btn2[class*="!text-staletext"]:hover { background: var(--a-danger-faint) !important; border-color: #f5b5ae !important; }
 
-/* Tables: denser, lighter rules, and a header that survives a long scroll. */
-.admin .tbl { background: var(--a-surface); }
+/* Tables: dense, light rules, and a header that survives a long scroll. */
+.admin .tbl { background: var(--a-surface); border-collapse: separate; border-spacing: 0; }
 .admin .tbl th {
   background: var(--a-sunken) !important;
   border-bottom: 1px solid var(--a-line) !important;
-  color: var(--a-text-2) !important;
-  font-size: 11.5px;
-  padding: 8px 12px;
+  color: var(--a-muted) !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 9px 12px;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -529,38 +810,155 @@ input[type="range"].budget-slider::-moz-range-thumb {
 .admin .tbl td {
   border-bottom: 1px solid var(--a-line-soft) !important;
   color: var(--a-text) !important;
-  font-size: 14px;
-  padding: 9px 12px;
+  font-size: 13.5px;
+  padding: 10px 12px;
 }
-.admin .tbl tbody tr:hover td { background: var(--a-sunken) !important; }
+.admin .tbl tbody tr { transition: background-color 0.1s; }
+.admin .tbl tbody tr:hover td { background: #faf8f6 !important; }
 
-.admin .badge { border-radius: 999px; padding: 2px 9px; font-size: 11.5px; }
-.admin .b-ok { background: var(--a-accent-faint) !important; color: var(--a-accent-dark) !important; }
+.admin .badge { border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 600; }
+.admin .b-ok { background: var(--a-ok-faint) !important; color: var(--a-ok) !important; }
 .admin .b-stale { background: var(--a-warn-bg) !important; color: var(--a-warn) !important; }
 
-.admin .vic { background: var(--a-sunken) !important; }
+.admin .vic { background: var(--a-sunken) !important; border-radius: 10px; }
 
 /* Only the table scrolls sideways on a phone, never the page. */
 .admin .overflow-x-auto { -webkit-overflow-scrolling: touch; }
 
-/* The nav's own surfaces, including the alpha variants Tailwind emits. */
-.admin .bg-lagoon-mid\/50 { background-color: var(--a-nav-2) !important; }
-.admin .snav { color: var(--a-nav-muted); }
-.admin .snav:hover { background: var(--a-nav-2); color: #fff; }
-.admin .snav.on { background: var(--a-accent); color: #fff; }
+/* ── Progress, toasts, the palette ─────────────────────────────────────── */
 
-/* A sidebar that scrolls away is a sidebar you scroll back up to find. */
-@media (min-width: 768px) {
-  .admin-aside {
-    position: sticky;
-    top: 0;
-    max-height: 100vh;
-    overflow-y: auto;
-  }
+.adm-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 80;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s 0.1s;
+}
+.adm-progress[data-on="true"] { opacity: 1; transition-delay: 0.12s; }
+.adm-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--a-accent), #e5b04e);
+  animation: adm-indeterminate 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Long forms read better bounded than full-bleed on a wide monitor. */
-.admin-main { max-width: 1240px; }
+.adm-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.adm-toast {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(420px, calc(100vw - 32px));
+  border-radius: 11px;
+  background: var(--a-nav);
+  color: var(--a-nav-text);
+  box-shadow: var(--a-shadow-lg);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 14px;
+  pointer-events: auto;
+  animation: adm-toast-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.adm-toast-dot { width: 18px; height: 18px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; }
+.adm-toast[data-kind="ok"] .adm-toast-dot { background: #22c55e; color: #052e16; }
+.adm-toast[data-kind="error"] .adm-toast-dot { background: #f87171; color: #450a0a; }
+
+.adm-palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgb(26 23 24 / 0.38);
+  animation: adm-fade 0.14s ease-out both;
+}
+.adm-palette {
+  width: 100%;
+  max-width: 600px;
+  overflow: hidden;
+  border: 1px solid var(--a-line);
+  border-radius: 16px;
+  background: var(--a-surface);
+  box-shadow: 0 24px 64px -16px rgb(26 23 24 / 0.45);
+  animation: adm-pop 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.adm-palette-input {
+  width: 100%;
+  height: 54px;
+  border: 0;
+  border-bottom: 1px solid var(--a-line);
+  background: transparent;
+  padding: 0 16px 0 46px;
+  font-size: 16px;
+  color: var(--a-text);
+  outline: none;
+}
+.adm-palette-list { max-height: min(56vh, 440px); overflow-y: auto; padding: 6px; }
+.adm-palette-head { padding: 8px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--a-muted); }
+.adm-palette-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--a-text);
+}
+.adm-palette-item svg { color: var(--a-muted); flex-shrink: 0; }
+.adm-palette-item[aria-selected="true"] { background: var(--a-accent-faint); color: var(--a-accent-dark); }
+.adm-palette-item[aria-selected="true"] svg { color: var(--a-accent); }
+.adm-palette-sub { margin-left: auto; font-size: 12px; color: var(--a-muted); white-space: nowrap; }
+
+@keyframes adm-spin { to { transform: rotate(360deg); } }
+@keyframes adm-fade { from { opacity: 0; } }
+@keyframes adm-pop { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+@keyframes adm-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes adm-indeterminate { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@keyframes adm-toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes adm-done {
+  0% { box-shadow: 0 0 0 0 rgb(15 118 110 / 0.55); }
+  100% { box-shadow: 0 0 0 10px rgb(15 118 110 / 0); }
+}
+@keyframes adm-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+@keyframes adm-error-ring {
+  0% { box-shadow: 0 0 0 3px rgb(180 35 24 / 0.5); }
+  100% { box-shadow: 0 0 0 3px rgb(180 35 24 / 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin *,
+  .admin *::before,
+  .admin *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* Still shows that something is happening, without moving. */
+  .admin [data-busy]::after,
+  .adm-link[data-pending]::after { border-right-color: var(--a-accent); opacity: 0.6; }
+}
 
 /*
  * The home page's row of places, drifting left. The track holds the photos

@@ -559,7 +559,7 @@ export function VenueForm({
       }
 
       setToast("Saved");
-      setTimeout(() => router.push("/admin"), 700);
+      setTimeout(() => router.push("/admin/venues"), 700);
       router.refresh();
     } catch (e: any) {
       setError(await explainSaveError(e));
@@ -607,7 +607,7 @@ export function VenueForm({
       setBusy(false);
       return;
     }
-    router.push("/admin");
+    router.push("/admin/venues");
     router.refresh();
   }
 

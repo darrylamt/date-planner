@@ -1,6 +1,6 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { ThinMenus } from "@/components/admin/ThinMenus";
-import { fetchAllRows } from "@/lib/fetchAll";
+import { menuStats } from "@/lib/menuStats";
 
 export const dynamic = "force-dynamic";
 
@@ -20,25 +20,17 @@ export const dynamic = "force-dynamic";
 export default async function AdminMenusPage() {
   const supabase = await adminDataClient();
 
-  const [{ data: venues }, items] = await Promise.all([
+  const [{ data: venues }, stats] = await Promise.all([
     supabase
       .from("venues")
       .select("id, name, type, is_active, cuisine, menu_shared_from, areas(name)")
       .eq("is_active", true)
       .in("type", ["restaurant", "cafe"])
       .order("name"),
-    fetchAllRows<{ venue_id: string; category: string }>((from, to) =>
-      supabase.from("menu_items").select("venue_id, category").range(from, to)
-    ),
+    // Dishes per category per venue, grouped in the database (0090).
+    menuStats(),
   ]);
-
-  const counts = new Map<string, Record<string, number>>();
-  for (const it of items) {
-    const row = it as { venue_id: string; category: string };
-    const bucket = counts.get(row.venue_id) ?? {};
-    bucket[row.category] = (bucket[row.category] ?? 0) + 1;
-    counts.set(row.venue_id, bucket);
-  }
+  const counts = new Map<string, Record<string, number>>([...stats].map(([id, s]) => [id, s.byCategory]));
 
   /*
    * A branch is not thin because its menu lives on another row.
