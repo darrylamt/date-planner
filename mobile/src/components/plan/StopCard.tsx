@@ -14,6 +14,7 @@ import { useIsDark, useTheme } from "../../lib/useTheme";
 import { chooseAction } from "../../lib/actionSheet";
 import { ghs, instagramUrl, time12 } from "../../lib/format";
 import { track } from "../../lib/signals";
+import { QtyStepper } from "./QtyStepper";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
 /**
@@ -106,7 +107,10 @@ export function StopCard({
 
   /** Quantity stepper. Dropping to zero removes the line entirely. */
   function changeQty(at: number, delta: number) {
-    void Haptics.selectionAsync();
+    // One more of a dish says they want it; taking it off says the opposite (taste, on the server).
+    const line = stop.orders[at];
+    if (line && delta > 0) track("dish_added", stop.venue_id, { item: line.item });
+    if (line && delta < 0 && line.qty <= 1) track("dish_removed", stop.venue_id, { item: line.item });
     const next: ItineraryOrder[] = [];
     stop.orders.forEach((o, i) => {
       if (i !== at) {
@@ -383,17 +387,7 @@ export function StopCard({
                   )}
 
                   {editable ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-                      <Pressable onPress={() => changeQty(i, -1)} hitSlop={8} accessibilityLabel={`Remove one ${o.item}`}>
-                        <Symbol name="minus.circle" size={22} color={c.textSecondary} />
-                      </Pressable>
-                      <Text variant="subheadline" tabular weight="600" style={{ minWidth: 16, textAlign: "center" }}>
-                        {o.qty}
-                      </Text>
-                      <Pressable onPress={() => changeQty(i, 1)} hitSlop={8} accessibilityLabel={`Add one ${o.item}`}>
-                        <Symbol name="plus.circle" size={22} />
-                      </Pressable>
-                    </View>
+                    <QtyStepper qty={o.qty} label={o.item} onChange={(d) => changeQty(i, d)} />
                   ) : (
                     <Text variant="subheadline" tone="secondary" tabular>
                       x{o.qty}

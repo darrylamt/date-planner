@@ -42,6 +42,7 @@ import {
 } from "../src/lib/account";
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
+import { resetLearning } from "../src/lib/signals";
 import { useSeason } from "../src/lib/season";
 
 /*
@@ -520,6 +521,36 @@ export default function Profile() {
                   onPress: async () => {
                     await clearDraft();
                     setHasDraft(false);
+                  },
+                },
+              ],
+            })
+          }
+        />
+        {/*
+          Plans lean towards what someone keeps and away from what they swap
+          out (taste, on the server). This is the way to make them stop: it
+          deletes what this phone, and the account if signed in, has told Duro.
+        */}
+        <Row
+          icon="wand.and.stars"
+          title="Reset what Duro has learned"
+          subtitle="Places and dishes you keep or swap out"
+          onPress={() =>
+            chooseAction({
+              title: "Reset what Duro has learned?",
+              message:
+                "Your plans lean towards places and dishes like the ones you keep, and away from ones you swap out. This forgets all of it. Saved plans are not affected.",
+              actions: [
+                {
+                  text: "Reset",
+                  destructive: true,
+                  onPress: async () => {
+                    const ok = await resetLearning();
+                    Alert.alert(
+                      ok ? "Done" : "That didn't go through",
+                      ok ? "Your next plans start fresh." : "Check your connection and try again."
+                    );
                   },
                 },
               ],

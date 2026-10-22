@@ -13,6 +13,8 @@ import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand } from "@/lib/demand";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkPlan } from "@/lib/planCheck";
+import { tasteFor, type Taste } from "@/lib/taste";
+import { getCaller } from "@/lib/supabase/server";
 import { BUDGET_MAX, freeToVisit } from "@/lib/budget";
 import { DEFAULT_RADIUS_KM, DEFAULT_WELLNESS_KIND, REACH_FALLBACK_KM, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
@@ -41,7 +43,8 @@ const listOf = (names: string[]) =>
 async function reachFurther(
   supabase: ReturnType<typeof createClient>,
   inputs: PlanInputs,
-  requestStart: number = Date.now()
+  requestStart: number = Date.now(),
+  taste: Taste | null = null
 ): Promise<NextResponse<GenerateResponse> | null> {
   if (inputs.surpriseMe || inputs.near || !inputs.areaIds.length) return null;
   const chosen = inputs.radiusKm ?? DEFAULT_RADIUS_KM;
@@ -50,7 +53,7 @@ async function reachFurther(
   const wider: PlanInputs = { ...inputs, radiusKm: REACH_FALLBACK_KM };
   let candidates;
   try {
-    candidates = await fetchCandidates(supabase, wider);
+    candidates = await fetchCandidates(supabase, wider, { taste });
   } catch {
     return null;
   }
@@ -138,9 +141,21 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
 
   const supabase = createClient();
 
+  /*
+   * Who is asking, so the plan can lean towards what they keep (taste.ts):
+   * the account when the app sends its token, otherwise the phone's random
+   * id. Either missing is fine; a failure here costs the plan its tilt and
+   * nothing else.
+   */
+  const caller = req.headers.get("authorization") ? await getCaller(req).catch(() => null) : null;
+  const taste = await tasteFor(createServiceClient(), {
+    userId: caller && !caller.anonymous ? caller.id : null,
+    deviceId: req.headers.get("x-duro-device"),
+  }).catch(() => null);
+
   let candidates;
   try {
-    candidates = await fetchCandidates(supabase, inputs);
+    candidates = await fetchCandidates(supabase, inputs, { taste });
   } catch (e) {
     console.error("candidate fetch failed", e);
     return NextResponse.json(
@@ -185,7 +200,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   if (inputs.budget <= 0) {
     const free = candidates.venues.filter((v) => freeToVisit(v)).length;
     if (free < 2) {
-      const reached = await reachFurther(supabase, inputs, requestStart);
+      const reached = await reachFurther(supabase, inputs, requestStart, taste);
       if (reached) return reached;
       return NextResponse.json({
         status: "no_match",
@@ -206,7 +221,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   }
 
   if (candidates.venues.length < 2) {
-    const reached = await reachFurther(supabase, inputs, requestStart);
+    const reached = await reachFurther(supabase, inputs, requestStart, taste);
     if (reached) return reached;
     /*
      * The whole city already searched and still nothing: a city we are only
@@ -241,7 +256,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want. First, the next neighbourhood over.
   if (!plan) {
-    const reached = await reachFurther(supabase, inputs, requestStart);
+    const reached = await reachFurther(supabase, inputs, requestStart, taste);
     if (reached) return reached;
     /*
      * A floor under the nudge, because half again of nothing is nothing.

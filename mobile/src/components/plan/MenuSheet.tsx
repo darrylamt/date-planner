@@ -12,6 +12,7 @@ import { fetchMenu } from "../../lib/data";
 import type { ItineraryOrder, MenuItem } from "../../lib/types";
 import { NativeSheet } from "../native/NativeSheet";
 import { SkeletonMenu } from "../Skeleton";
+import { track } from "../../lib/signals";
 
 /*
  * "activity" is its own category, not a kind of "other".
@@ -73,10 +74,25 @@ export function MenuSheet({
    * and costs nothing per keystroke.
    */
   const [query, setQuery] = useState("");
+  /*
+   * The dish just added, for the line at the foot of the sheet. A tap on a
+   * row used to change nothing on the sheet itself (the order is behind it),
+   * so it was impossible to tell whether it had landed.
+   */
+  const [added, setAdded] = useState<{ name: string; qty: number; at: number } | null>(null);
 
   useEffect(() => {
-    if (!visible) setQuery("");
+    if (!visible) {
+      setQuery("");
+      setAdded(null);
+    }
   }, [visible]);
+
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded((a) => (a?.at === added.at ? null : a)), 1800);
+    return () => clearTimeout(t);
+  }, [added]);
 
   useEffect(() => {
     if (!visible || menu !== null || loading) return;
@@ -90,8 +106,11 @@ export function MenuSheet({
 
   function addItem(item: MenuItem) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // What they choose to eat, for their own plans' taste (on the server).
+    track("dish_added", venueId, { item: item.name });
     const unit = Number(item.price_ghs);
     const at = orders.findIndex((o) => o.item === item.name);
+    setAdded({ name: item.name, qty: (at >= 0 ? orders[at].qty : 0) + 1, at: Date.now() });
 
     if (at >= 0) {
       const next = orders.map((o, i) =>
@@ -226,12 +245,17 @@ export function MenuSheet({
                     overflow: "hidden",
                   }}
                 >
-                  {g.items.map((item, i) => (
+                  {g.items.map((item, i) => {
+                    const inOrder = orders.find((o) => o.item === item.name)?.qty ?? 0;
+                    return (
                     <Pressable
                       key={item.id}
                       onPress={() => addItem(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.name}, ${ghs(Number(item.price_ghs))}${inOrder ? `, ${inOrder} in your order` : ""}`}
+                      accessibilityHint="Adds one to your order"
                       style={({ pressed }) => ({
-                        backgroundColor: pressed ? c.backgroundSunken : "transparent",
+                        backgroundColor: pressed ? c.accentBorder : inOrder ? c.accentSoft : "transparent",
                         borderTopWidth: i === 0 ? 0 : HAIRLINE,
                         borderTopColor: c.border,
                       })}
@@ -268,15 +292,67 @@ export function MenuSheet({
                         <Text variant="body" tone="secondary" tabular>
                           {ghs(Number(item.price_ghs))}
                         </Text>
-                        <Symbol name="plus.circle.fill" size={22} />
+                        {/* In the order: a tick and how many, so a tap visibly lands. */}
+                        {inOrder ? (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 3,
+                              minWidth: 44,
+                              justifyContent: "center",
+                              paddingHorizontal: space.sm,
+                              paddingVertical: 3,
+                              borderRadius: 999,
+                              backgroundColor: c.accent,
+                            }}
+                          >
+                            <Symbol name="checkmark" size={12} weight="bold" color={c.textOnBrand} />
+                            <Text variant="footnote" weight="700" tabular style={{ color: c.textOnBrand }}>
+                              {inOrder}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Symbol name="plus.circle.fill" size={24} color={c.accent} />
+                        )}
                       </View>
                     </Pressable>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             ))
           )}
         </ScrollView>
+
+        {/* What the last tap did, at the foot of the sheet, for a moment. */}
+        {added ? (
+          <View
+            pointerEvents="none"
+            accessibilityLiveRegion="polite"
+            style={{
+              position: "absolute",
+              left: GUTTER,
+              right: GUTTER,
+              bottom: insets.bottom + space.md,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space.sm,
+              paddingHorizontal: space.lg,
+              paddingVertical: space.md,
+              borderRadius: radius.row,
+              backgroundColor: c.text,
+            }}
+          >
+            <Symbol name="checkmark.circle.fill" size={18} color={c.background} />
+            <Text variant="subheadline" weight="600" numberOfLines={1} style={{ flex: 1, color: c.background }}>
+              Added {added.name}
+            </Text>
+            <Text variant="footnote" style={{ color: c.background, opacity: 0.8 }}>
+              {added.qty} in your order
+            </Text>
+          </View>
+        ) : null}
       </View>
     </NativeSheet>
   );

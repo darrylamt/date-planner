@@ -166,6 +166,13 @@ export interface Venue {
    */
   pull?: number | null;
   /**
+   * This person's own lean towards it (taste.ts), -1.5 to +1.5, and the dish
+   * words they favour, for choosing what a stop orders. Set per request on the
+   * server only.
+   */
+  taste?: number | null;
+  tasteWords?: Record<string, number>;
+  /**
    * Where the price came from. An estimate is shown as a range rather than a
    * figure, because presenting a guess to the cedi is the same lie as an
    * invented price, only better dressed.

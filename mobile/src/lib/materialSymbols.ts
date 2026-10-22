@@ -111,6 +111,8 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   plus: "add",
   "plus.circle": "add_circle",
   "plus.circle.fill": "add_circle",
+  "trash.circle": "delete",
+  "trash.circle.fill": "delete",
   "rectangle.portrait.and.arrow.right": "logout",
   sparkles: "auto_awesome",
   "square.and.arrow.up": "share",

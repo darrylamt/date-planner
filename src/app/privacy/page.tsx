@@ -100,11 +100,14 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong>To suggest better places:</strong> which places in your plans
-          you keep, swap out, save, share or open, and how long you spend on a
-          venue&apos;s page, with your device identifier and, when you are
-          signed in, your account. Duro learns from this which places people
-          are glad to be sent to, and later what you like. Venues see only
-          totals, never anything about a person.
+          you keep, swap out, save, share or open, which dishes you add or take
+          off an order, and how long you spend on a venue&apos;s page, with your
+          device identifier and, when you are signed in, your account. Duro
+          learns from this which places people are glad to be sent to, and your
+          own plans lean towards places and dishes like the ones you keep.
+          Venues see only totals, never anything about a person. To make Duro
+          forget all of it, use Reset what Duro has learned in the app&apos;s
+          profile.
         </p>
         <p>
           <strong>When you recommend a dish:</strong> that your account

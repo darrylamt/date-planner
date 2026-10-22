@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { refreshPull } from "@/lib/pull";
+import { embedChangedVenues } from "@/lib/embeddings";
 
 /**
  * Nightly: every active venue's pull, from the last ninety days of what
  * people did with it in their plans (pull.ts). Run in the small hours so the
  * day's plans are in and nobody is planning while it writes.
+ *
+ * Then up to a minute's worth of venue embeddings (embeddings.ts) for places
+ * whose description changed, so a person's taste reaches new venues too.
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,7 +21,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Not authorised." }, { status: 401 });
   }
   try {
-    return NextResponse.json({ ok: true, ...(await refreshPull(createServiceClient())) });
+    const db = createServiceClient();
+    const pull = await refreshPull(db);
+    // Embeddings failing (the free quota) must not lose the pull that worked.
+    const embedded = await embedChangedVenues(db).catch((e) => ({ error: (e as Error).message }));
+    return NextResponse.json({ ok: true, ...pull, embedded });
   } catch (e) {
     console.error("pull refresh failed", e);
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });

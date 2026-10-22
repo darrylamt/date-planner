@@ -7,6 +7,7 @@ import { isOpenAt, isOpenThroughout, parsePeriods, weekdayOf } from "./hours";
 import { genreFits } from "./movies";
 import { insightScore, isSignature, noiseWanted } from "./insights";
 import { pullScore } from "./pull";
+import { dishTaste } from "./taste";
 import { estimateHop, haversineKm } from "./transport";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
@@ -498,7 +499,9 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute
     // Gemini's study of the place: noise against what they asked for, fit for the occasion (insights.ts).
     insightScore(v, inputs, atMinute) +
     // How often people keep it once they are shown it, at most two points either way (pull.ts).
-    pullScore(v)
+    pullScore(v) +
+    // How much like the places this person keeps, at most 1.5 either way (taste.ts).
+    (v.taste ?? 0)
   );
 }
 
@@ -1006,7 +1009,9 @@ export function planOrders(
      * two recommendations: the shawarma people come for, not a side that
      * happened to sit at the right price.
      */
-    const rec = (m: MenuItem) => (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0) + drinkLean(m);
+    // And what this person adds and takes off at other stops (taste.ts), up to two either way.
+    const rec = (m: MenuItem) =>
+      (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0) + drinkLean(m) + dishTaste(venue.tasteWords, m.name);
     const near = items.slice(Math.max(0, from - 2), from + WIDTH + 2);
     const outsiders = near.filter((m) => rec(m) > 0 && !candidates.includes(m)).sort((a, b) => rec(b) - rec(a));
     for (const m of outsiders) {

@@ -30,6 +30,8 @@ const KINDS = [
   "maps_opened",
   "instagram_opened",
   "venue_viewed",
+  "dish_added",
+  "dish_removed",
 ] as const;
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{6,64}$/);
@@ -43,12 +45,30 @@ const bodySchema = z.object({
         planKey: key.optional(),
         occasion: z.string().regex(/^[a-z_]{1,32}$/).optional(),
         value: z.number().int().min(0).max(3_600_000).optional(),
+        // The dish, for dish_added and dish_removed (0093).
+        item: z.string().trim().min(1).max(120).optional(),
         at: z.string().datetime().optional(),
       })
     )
     .min(1)
     .max(60),
 });
+
+/**
+ * Forget what Duro has learned: every signal from this phone and, when the
+ * token is sent, this account ("Reset what Duro has learned" in the app).
+ * The place-level pull loses their share at its next nightly run.
+ */
+export async function DELETE(req: Request) {
+  const parsed = z.object({ deviceId: key }).safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
+  const caller = await getCaller(req).catch(() => null);
+  const db = createServiceClient();
+  const byDevice = await db.from("plan_signals").delete().eq("device_id", parsed.data.deviceId);
+  const byUser = caller && !caller.anonymous ? await db.from("plan_signals").delete().eq("user_id", caller.id) : { error: null };
+  if (byDevice.error || byUser.error) return NextResponse.json({ ok: false }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
@@ -79,6 +99,7 @@ export async function POST(req: Request) {
         plan_key: e.planKey ?? null,
         occasion: e.occasion ?? null,
         value: e.kind === "venue_viewed" ? (e.value ?? null) : null,
+        ...(e.kind === "dish_added" || e.kind === "dish_removed" ? { item: e.item ?? null } : {}),
       };
     });
   if (!rows.length) return NextResponse.json({ ok: true, saved: 0 });

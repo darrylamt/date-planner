@@ -14,13 +14,13 @@ if (!BASE) {
 /** Generation can take a while; fail loudly rather than hanging forever. */
 const TIMEOUT_MS = 90_000;
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+async function postJson<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(`${BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -31,9 +31,25 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   }
 }
 
+/**
+ * Who a plan is for, so it can lean towards what they keep (the server's
+ * taste.ts): this phone's random id, and the account's token when signed in.
+ * Neither is needed; without them the plan is the same for everybody.
+ */
+async function whoIsAsking(): Promise<Record<string, string>> {
+  try {
+    const [{ getDeviceId }, { supabase }] = await Promise.all([import("./deviceId"), import("./supabase")]);
+    const [deviceId, { data }] = await Promise.all([getDeviceId(), supabase.auth.getSession()]);
+    const token = data.session?.access_token;
+    return { "x-duro-device": deviceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  } catch {
+    return {};
+  }
+}
+
 export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse> {
   try {
-    return await postJson<GenerateResponse>("/api/generate", inputs);
+    return await postJson<GenerateResponse>("/api/generate", inputs, await whoIsAsking());
   } catch (e) {
     const aborted = (e as Error)?.name === "AbortError";
     return {

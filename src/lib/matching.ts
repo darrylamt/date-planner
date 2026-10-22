@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Taste } from "./taste";
 import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
 import { avgIsNotAPrice, freeToVisit } from "./budget";
@@ -63,7 +64,8 @@ export function allowedBands(budget: number): string[] {
 export async function fetchCandidates(
   supabase: SupabaseClient,
   inputs: PlanInputs,
-  opts: { excludeVenueIds?: string[] } = {}
+  /** taste: the person's own lean (taste.ts), put on each venue for the planner. */
+  opts: { excludeVenueIds?: string[]; taste?: Taste | null } = {}
 ): Promise<Candidates> {
   const bands = allowedBands(inputs.budget);
   const wantedTags = expandVibes(inputs.vibes);
@@ -325,10 +327,21 @@ export async function fetchCandidates(
     const [insights, pulls] = await Promise.all([insightsPromise, pullPromise]);
     const byVenue = new Map(insights.map((i) => [i.venue_id, i]));
     const pullOf = new Map(pulls.map((p) => [p.venue_id, Number(p.effect)]));
+    const taste = opts.taste;
+    const words = taste && Object.keys(taste.words).length ? taste.words : undefined;
     venues = venues.map((v) => {
       const insight = byVenue.get(v.id);
       const pull = pullOf.get(v.id);
-      return insight || pull ? { ...v, ...(insight ? { insights: insight } : {}), ...(pull ? { pull } : {}) } : v;
+      const mine = taste?.places.get(v.id);
+      return insight || pull || mine || words
+        ? {
+            ...v,
+            ...(insight ? { insights: insight } : {}),
+            ...(pull ? { pull } : {}),
+            ...(mine ? { taste: mine } : {}),
+            ...(words ? { tasteWords: words } : {}),
+          }
+        : v;
     });
   }
   if (closedTonight.size) venues = venues.filter((v) => !closedTonight.has(v.id));

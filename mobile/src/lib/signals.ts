@@ -29,16 +29,22 @@ export type SignalKind =
   | "directions_tapped"
   | "maps_opened"
   | "instagram_opened"
-  | "venue_viewed";
+  | "venue_viewed"
+  | "dish_added"
+  | "dish_removed";
 
-type Pending = { kind: SignalKind; venueId: string; planKey?: string; occasion?: string; value?: number; at: string };
+type Pending = { kind: SignalKind; venueId: string; planKey?: string; occasion?: string; value?: number; item?: string; at: string };
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const queue: Pending[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
-export function track(kind: SignalKind, venueId: string | null | undefined, extra: { planKey?: string; occasion?: string; value?: number } = {}) {
+export function track(
+  kind: SignalKind,
+  venueId: string | null | undefined,
+  extra: { planKey?: string; occasion?: string; value?: number; item?: string } = {}
+) {
   if (!venueId || !UUID.test(venueId) || !BASE) return;
   queue.push({ kind, venueId, ...extra, at: new Date().toISOString() });
   if (queue.length >= 20) void flush();
@@ -51,6 +57,23 @@ export function track(kind: SignalKind, venueId: string | null | undefined, extr
 /** The same thing for every stop of a plan: shown, saved, shared. */
 export function trackStops(kind: "shown" | "saved" | "shared", itinerary: Itinerary | null | undefined, occasion?: string) {
   for (const s of itinerary?.stops ?? []) track(kind, s.venue_id, { planKey: itinerary?.plan_key, occasion });
+}
+
+/** Forget everything this phone (and the signed-in account) has told Duro. */
+export async function resetLearning(): Promise<boolean> {
+  queue.length = 0;
+  try {
+    const [{ data }, deviceId] = await Promise.all([supabase.auth.getSession(), getDeviceId()]);
+    const token = data.session?.access_token;
+    const res = await fetch(`${BASE}/api/signals`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ deviceId }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 /** A key for a newly generated plan, kept on it through swaps and saving. */
