@@ -388,6 +388,12 @@ const FIXTURE_WEIGHT: Record<string, number> = {
  */
 const COCKTAIL = /cocktail|mojito|margarita|martini|daiquiri|spritz|negroni|old fashioned|pi[nñ]a colada|sangria|long island|mai tai|cosmopolitan|caipirinha|\bsour\b|\bmule\b|colada|paloma|bellini|mimosa|sex on the beach|tequila sunrise|blue lagoon|zombie|\bpunch\b/i;
 const SHOT = /\bshots?\b|\bshooters?\b|single shot|\btots?\b|jager ?bomb|j[aä]germeister/i;
+/** Breakfast on a menu, left off a meal from EVENING (see orderFrom). */
+const BREAKFAST = /\b(omelet(te)?s?|scrambled?|scramble|eggs? benedict|benedict|pancakes?|french toast|porridge|granola|croissants?|breakfast|full english|bagels?|oats|oatmeal|cereal|waffles?|crepes?|egg (and|&) |eggs on toast|avocado toast)\b/i;
+/** Coffee and tea, left off the drinks from LATE_NIGHT. */
+const HOT_DRINK = /\b(coffee|cappuc+ino|latte|espresso|americano|macchiato|mocha|flat white|cortado|hot choc(olate)?|tea|chai)\b/i;
+const EVENING = 17 * 60;
+const LATE_NIGHT = 21 * 60;
 function drinkLean(m: MenuItem): number {
   if (m.category !== "drink") return 0;
   const text = `${m.name} ${m.notes ?? ""}`;
@@ -913,6 +919,23 @@ export function planOrders(
     if (category === "drink") {
       const noShots = all.filter((m) => !SHOT.test(`${m.name} ${m.notes ?? ""}`));
       if (noShots.length >= 3) all = noShots;
+    }
+    /*
+     * And what suits the hour. The plan check kept finding scrambled eggs and
+     * an omelette ordered for a seven o'clock dinner, and cappuccinos at a
+     * half-ten nightcap: a café's whole menu is all-day, and price alone does
+     * not know breakfast from dinner. From five, breakfast dishes are left
+     * off a meal; from nine, coffee and tea are left off the drinks. Each only
+     * where three or more other things remain, so a breakfast place still
+     * serves breakfast.
+     */
+    if (slotStartMinute >= EVENING && (category === "main" || category === "starter")) {
+      const notBreakfast = all.filter((m) => !BREAKFAST.test(`${m.name} ${m.notes ?? ""}`));
+      if (notBreakfast.length >= 3) all = notBreakfast;
+    }
+    if (slotStartMinute >= LATE_NIGHT && category === "drink") {
+      const notCoffee = all.filter((m) => !HOT_DRINK.test(m.name));
+      if (notCoffee.length >= 3) all = notCoffee;
     }
     /*
      * At a table, a side is never somebody's meal and a stew is only ordered
