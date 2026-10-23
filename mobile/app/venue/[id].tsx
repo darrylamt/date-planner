@@ -25,7 +25,7 @@ import { VENUE_KIND } from "../../src/lib/venueKinds";
 import type { MenuItem } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
-import { MENUS_FREE_LABEL, menusFree } from "../../src/lib/freeMenus";
+import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../src/lib/freeMenus";
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -401,7 +401,7 @@ export default function VenuePage() {
         ) : (
           <>
             {/* Said where it is given, so the end of it is no surprise. */}
-            {freeMonth && pro !== true ? (
+            {SAY_MENUS_FREE_UNTIL && freeMonth && pro !== true ? (
               <View
                 style={{
                   flexDirection: "row",

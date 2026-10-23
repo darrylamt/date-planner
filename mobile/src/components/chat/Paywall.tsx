@@ -20,7 +20,7 @@ import {
 } from "../../lib/purchases";
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonOffer } from "../Skeleton";
-import { MENUS_FREE_LABEL, menusFree } from "../../lib/freeMenus";
+import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../lib/freeMenus";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -94,7 +94,7 @@ export const PERKS: Record<"chat" | "venue" | "order" | "groups", Perk> = {
     icon: "menucard.fill",
     title: "Every venue's full page",
     // During the free month the list says so: a perk everybody has is not one to sell.
-    body: menusFree()
+    body: SAY_MENUS_FREE_UNTIL && menusFree()
       ? `The whole menu with prices, the week's hours, and booking. Free for everyone until ${MENUS_FREE_LABEL}, then with Pro.`
       : "The whole menu with prices, the week's hours, and Call, Book or WhatsApp in a tap.",
   },
@@ -119,7 +119,7 @@ const COPY: Record<Reason, { title: string; line: string; perks: (keyof typeof P
   },
   browse: {
     title: "Never spend 30 minutes figuring out where to go again",
-    line: menusFree() ? "Duro Pro plans with you, and keeps every place open after the free month." : "Duro Pro plans with you, and opens every place up.",
+    line: SAY_MENUS_FREE_UNTIL && menusFree() ? "Duro Pro plans with you, and keeps every place open after the free month." : "Duro Pro plans with you, and opens every place up.",
     perks: ["chat", "venue", "order"],
   },
   venue: {

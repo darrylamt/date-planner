@@ -13,6 +13,13 @@
  */
 export const MENUS_FREE_UNTIL = "2026-11-30";
 
+/**
+ * Whether the end date is said anywhere. Off since 23 Oct 2026, at the
+ * owner's word: menus stay free, the date stays here, and no screen counts
+ * down to it until it is decided whether the free months are extended.
+ */
+export const SAY_MENUS_FREE_UNTIL = false;
+
 /** How the date is said: "30 November". */
 export const MENUS_FREE_LABEL = new Date(`${MENUS_FREE_UNTIL}T12:00:00Z`).toLocaleDateString("en-GB", {
   day: "numeric",
