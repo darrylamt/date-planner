@@ -243,7 +243,9 @@ export function ItineraryView({
     if (groupCode) return;
     const result = swapStopLocally(itinerary, index, inputs.budget);
     if (!result) {
-      setToast("Nothing else fits here.");
+      // Usually the hour, not the catalogue: at 6 am on a Saturday one cafe in Accra is open.
+      const at = itinerary.stops[index]?.arrival_time;
+      setToast(at ? `Nothing else open nearby fits at ${at}.` : "Nothing else fits here.");
       return;
     }
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

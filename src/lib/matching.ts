@@ -167,6 +167,7 @@ export async function fetchCandidates(
     // An event with no area recorded cannot be placed, and is kept, as before.
     events = events.filter((e) => !e.area_id || scope!.has(e.area_id));
   }
+  events = await markRecurring(supabase, events, inputs.date);
   /*
    * Not a night that has already started.
    *
@@ -779,4 +780,40 @@ function missingColumnOf(error: { code?: string; message?: string } | null): str
   if (!error || error.code !== "42703") return null;
   const found = /column\s+(?:\w+\.)?"?([a-z0-9_]+)"?\s+does not exist/i.exec(error.message ?? "");
   return found?.[1] ?? null;
+}
+
+/**
+ * Which of a day's events happen once, and which are the same thing again.
+ *
+ * Gaderin lists DRC's bouncy castle, go-karting and horse riding as an event
+ * every single day, eleven of them at noon, and a venue's weekly quiz is a
+ * row per week. Those are worth doing, but they are not news, and a one-off
+ * night on the same date is what somebody would want to hear about first
+ * (the planner gives it a head start, planner.ts). Recurring is the same
+ * title at the same venue on three or more dates within a fortnight either
+ * side. One read for the whole day's titles; on failure nothing is marked.
+ */
+async function markRecurring(supabase: SupabaseClient, events: EventRow[], date: string): Promise<EventRow[]> {
+  const titled = events.filter((e) => e.venue_id && e.title);
+  if (!titled.length) return events;
+  const day = Date.parse(`${date}T00:00:00Z`);
+  const iso = (d: number) => new Date(d).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("events")
+    .select("venue_id, title, event_date")
+    .eq("is_active", true)
+    .gte("event_date", iso(day - 14 * 864e5))
+    .lte("event_date", iso(day + 14 * 864e5))
+    .in("venue_id", [...new Set(titled.map((e) => e.venue_id!))])
+    .in("title", [...new Set(titled.map((e) => e.title))])
+    .limit(5000);
+  if (error || !data) return events;
+  const dates = new Map<string, Set<string>>();
+  for (const r of data as { venue_id: string; title: string; event_date: string }[]) {
+    const k = `${r.venue_id}|${r.title.toLowerCase()}`;
+    (dates.get(k) ?? dates.set(k, new Set()).get(k)!).add(r.event_date);
+  }
+  return events.map((e) =>
+    e.venue_id && (dates.get(`${e.venue_id}|${e.title.toLowerCase()}`)?.size ?? 0) >= 3 ? { ...e, recurring: true } : e
+  );
 }

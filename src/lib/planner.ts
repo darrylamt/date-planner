@@ -1523,7 +1523,14 @@ function planWith(
           // The venue as it is when the event starts, not as it is at night.
           ...vibeTagsAt(x.venue, x.at ?? startMinutes),
         ]);
-        return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length };
+        /*
+         * A night that happens once, ahead of one that happens every day
+         * (matching.ts, markRecurring): worth two matched vibes, so DRC's
+         * daily go-karting only beats a one-off when it fits what was asked
+         * for clearly better. The owner's rule, 23 Oct 2026.
+         */
+        const once = x.event.recurring ? 0 : 2;
+        return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length + once };
       })
       .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
 
@@ -2570,10 +2577,23 @@ function planWith(
            */
           alternates: (() => {
             const pool = swapPools[i].filter((o) => o.venue.id !== p.venue.id && !taken.has(brandOf(o.venue)));
-            const strict = pool.filter((o) => o.cost <= p.cost + headroom + 1 && kmBetween(o.venue, p.venue) <= SWAP_RADIUS_KM);
-            const loose = pool.filter(
-              (o) => o.cost <= p.cost + headroom + swapStretch(inputs.budget) && kmBetween(o.venue, p.venue) <= SWAP_FAR_KM
-            );
+            /*
+             * Near the stop it replaces, or no further from where they are
+             * coming from than this stop already is.
+             *
+             * Near the stop alone failed whenever the stop itself was far:
+             * a 6 am Saturday sent somebody 25 km out to We-Ape's zipline,
+             * and every other place open that early was more than 8 km from
+             * the zipline, so Swap said "Nothing else fits here" on a plan
+             * that was already making the trip. The neighbour is the stop
+             * before, or after for the first one.
+             */
+            const from = picks[i - 1]?.venue ?? picks[i + 1]?.venue ?? null;
+            const reach = from ? kmBetween(from, p.venue) : 0;
+            const near = (o: Option, km: number) =>
+              kmBetween(o.venue, p.venue) <= km || (from != null && kmBetween(o.venue, from) <= Math.max(km, reach));
+            const strict = pool.filter((o) => o.cost <= p.cost + headroom + 1 && near(o, SWAP_RADIUS_KM));
+            const loose = pool.filter((o) => o.cost <= p.cost + headroom + swapStretch(inputs.budget) && near(o, SWAP_FAR_KM));
             return [...strict, ...loose].filter((o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx);
           })()
             .slice(0, SWAP_OPTIONS)

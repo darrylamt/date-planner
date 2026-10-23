@@ -327,6 +327,12 @@ export interface EventRow {
   kind?: "movie";
   /** A film's running time, so its stop lasts as long as the film. */
   runtime_mins?: number | null;
+  /**
+   * The same thing at the same place on three or more dates within a fortnight
+   * either side (matching.ts): a daily Gaderin listing or a weekly regular,
+   * rather than a night that happens once. Set by the server per request.
+   */
+  recurring?: boolean;
   is_active: boolean;
 }
 
