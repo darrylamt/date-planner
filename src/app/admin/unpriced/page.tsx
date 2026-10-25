@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * price" links.
  */
 export default async function AdminUnpricedPage({ searchParams }: { searchParams: { area?: string } }) {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["menus"]);
 
   const { data: venues } = await supabase
     .from("venues")

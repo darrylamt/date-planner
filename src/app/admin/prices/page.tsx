@@ -10,7 +10,7 @@ export default async function BulkPricesPage({
 }: {
   searchParams: { venue?: string };
 }) {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["menus"]);
 
   const { data: venues } = await supabase
     .from("venues")

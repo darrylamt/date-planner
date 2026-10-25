@@ -184,7 +184,7 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                         <span className="badge b-stale mt-1 normal-case">Switched off, saving turns it on</span>
                       ) : null}
                       {row.note ? (
-                        <a href={`/admin/venues/${row.id}`} className="mt-1 block text-[12px] font-semibold normal-case text-flame underline">
+                        <a href={`/admin/menu/${row.id}`} className="mt-1 block text-[12px] font-semibold normal-case text-flame underline">
                           {row.note}
                         </a>
                       ) : null}
@@ -205,7 +205,7 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                           <a href="/admin/import" className="text-flame underline">
                             Upload a menu
                           </a>
-                          <a href={`/admin/venues/${row.id}`} className="text-flame underline">
+                          <a href={`/admin/menu/${row.id}`} className="text-flame underline">
                             Open the venue
                           </a>
                         </div>

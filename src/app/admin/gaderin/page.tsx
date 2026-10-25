@@ -30,7 +30,7 @@ function whenOf(a: { is_recurring: boolean; recurrence: { day: string }[] | null
  * still need a Duro venue, and the ones that have one.
  */
 export default async function AdminGaderinPage() {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["events"]);
 
   const [activities, venues] = await Promise.all([
     fetchAllRows<any>((from, to) =>

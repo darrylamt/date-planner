@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminCounts } from "@/lib/adminCounts";
 import { AdminIcon, type IconName } from "./AdminIcon";
-import { ADMIN_GROUPS, badgeCount } from "./adminNavModel";
+import { badgeCount, groupsFor } from "./adminNavModel";
+import type { StaffRole } from "@/lib/staffRoles";
 
 export interface PaletteVenue {
   id: string;
@@ -25,10 +26,12 @@ export function CommandPalette({
   counts,
   venues,
   onClose,
+  access,
 }: {
   counts: AdminCounts | null;
   venues: PaletteVenue[] | null;
   onClose: () => void;
+  access: { isAdmin: boolean; roles: StaffRole[] };
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -36,7 +39,16 @@ export function CommandPalette({
   const listRef = useRef<HTMLDivElement>(null);
 
   const all = useMemo<Item[]>(() => {
-    const pages: Item[] = ADMIN_GROUPS.flatMap((g) =>
+    // A venue opens where this login works on it: the full form for an admin,
+    // the menu or the photos for staff, nowhere for events staff.
+    const venuePage = access.isAdmin
+      ? (id: string) => `/admin/venues/${id}`
+      : access.roles.includes("menus")
+        ? (id: string) => `/admin/menu/${id}`
+        : access.roles.includes("photos")
+          ? (id: string) => `/admin/photos/${id}`
+          : null;
+    const pages: Item[] = groupsFor(access).flatMap((g) =>
       g.links.map((l) => {
         const n = badgeCount(l, counts);
         return {
@@ -50,17 +62,17 @@ export function CommandPalette({
         };
       })
     );
-    const places: Item[] = (venues ?? []).map((v) => ({
+    const places: Item[] = (venuePage ? venues ?? [] : []).map((v) => ({
       key: v.id,
       section: "Venues",
       label: v.name,
       sub: [v.area, v.active ? null : "switched off"].filter(Boolean).join(" · "),
       icon: "store",
-      href: `/admin/venues/${v.id}`,
+      href: venuePage!(v.id),
       haystack: `${v.name} ${v.area ?? ""}`.toLowerCase(),
     }));
     return [...pages, ...places];
-  }, [counts, venues]);
+  }, [counts, venues, access]);
 
   const shown = useMemo(() => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);

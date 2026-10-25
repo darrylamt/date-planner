@@ -19,6 +19,8 @@ export type AiCaller = {
   venueIds: string[];
   planner: boolean;
   vendor: boolean;
+  /** Staff roles (0095): menus staff read menus, events staff read posters. */
+  staff: string[];
 };
 
 export async function aiCaller(): Promise<AiCaller | null> {
@@ -27,11 +29,12 @@ export async function aiCaller(): Promise<AiCaller | null> {
   } = await createClient().auth.getUser();
   if (!user) return null;
   const db = createServiceClient();
-  const [{ data: profile }, { data: runs }, { data: planner }, { data: vendor }] = await Promise.all([
+  const [{ data: profile }, { data: runs }, { data: planner }, { data: vendor }, { data: staff }] = await Promise.all([
     db.from("profiles").select("is_admin").eq("id", user.id).maybeSingle(),
     db.from("venue_users").select("venue_id").eq("user_id", user.id),
     db.from("event_planners").select("is_active").eq("user_id", user.id).maybeSingle(),
     db.from("vendor_users").select("vendor_id").eq("user_id", user.id).maybeSingle(),
+    db.from("staff_roles").select("role").eq("user_id", user.id),
   ]);
   const caller: AiCaller = {
     userId: user.id,
@@ -39,13 +42,17 @@ export async function aiCaller(): Promise<AiCaller | null> {
     venueIds: ((runs ?? []) as { venue_id: string }[]).map((r) => r.venue_id),
     planner: Boolean((planner as { is_active?: boolean } | null)?.is_active),
     vendor: Boolean(vendor),
+    staff: ((staff ?? []) as { role: string }[]).map((r) => r.role),
   };
-  return caller.admin || caller.venueIds.length || caller.planner || caller.vendor ? caller : null;
+  return caller.admin || caller.venueIds.length || caller.planner || caller.vendor || caller.staff.length ? caller : null;
 }
 
 /** Take one read from today's share, or say there are none left. */
 export async function takeRead(caller: AiCaller, kind: "menu" | "flyer" | "venue"): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (caller.admin) return { ok: true };
+  // Admins, and staff doing the job their role is for: catalogue work all day, not a share.
+  if (caller.admin || (kind === "menu" && caller.staff.includes("menus")) || (kind === "flyer" && caller.staff.includes("events"))) {
+    return { ok: true };
+  }
   const db = createServiceClient();
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count, error } = await db

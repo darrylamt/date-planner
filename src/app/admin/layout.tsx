@@ -6,11 +6,13 @@ import { AdminChrome } from "@/components/admin/AdminChrome";
 import { AdminActivity } from "@/components/admin/AdminActivity";
 import type { PaletteVenue } from "@/components/admin/CommandPalette";
 import { adminCounts } from "@/lib/adminCounts";
+import { adminAccess, type StaffRole } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
 
 /**
- * /admin, gated by profiles.is_admin.
+ * /admin, for admins (profiles.is_admin) and staff logins (staff_roles, 0095),
+ * who see only their own pages.
  *
  * The frame draws at once and the sidebar's counts stream in after it: they
  * used to be awaited here, so every admin page sat blank for the five seconds
@@ -22,11 +24,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?next=/admin");
+  // Staff sign in with a username (staff.ts); the page also offers the owner's own sign-in.
+  if (!user) redirect("/staff/login");
 
-  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+  // An admin, or a staff login with at least one role (0095).
+  const access = await adminAccess();
 
-  if (!profile?.is_admin) {
+  if (!access) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-[560px] flex-col items-center justify-center px-9 text-center">
         <div className="vic h-14 w-14 rounded-bar text-[24px]">🔒</div>
@@ -43,10 +47,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const email = user.email ?? "";
+  const who = { isAdmin: access.isAdmin, roles: access.roles };
   return (
     <div className="admin adm-root">
-      <Suspense fallback={<AdminChrome counts={null} venues={null} email={email} />}>
-        <ChromeWithCounts email={email} />
+      <Suspense fallback={<AdminChrome counts={null} venues={null} email={email} access={who} />}>
+        <ChromeWithCounts email={email} access={who} />
       </Suspense>
       <main className="adm-main">
         <div className="adm-content">{children}</div>
@@ -63,7 +68,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
  * (0014 revoked the venue columns from `authenticated`, and an admin is
  * `authenticated` too). Elevated only after the is_admin check above.
  */
-async function ChromeWithCounts({ email }: { email: string }) {
+async function ChromeWithCounts({ email, access }: { email: string; access: { isAdmin: boolean; roles: StaffRole[] } }) {
   const [counts, { data }] = await Promise.all([
     adminCounts(),
     createServiceClient().from("venues").select("id, name, is_active, areas(name)").order("name"),
@@ -74,5 +79,5 @@ async function ChromeWithCounts({ email }: { email: string }) {
     area: v.areas?.name ?? null,
     active: v.is_active !== false,
   }));
-  return <AdminChrome counts={counts} venues={venues} email={email} />;
+  return <AdminChrome counts={counts} venues={venues} email={email} access={access} />;
 }

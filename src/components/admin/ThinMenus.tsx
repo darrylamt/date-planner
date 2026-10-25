@@ -150,7 +150,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                     */}
                     {r.sharedFrom ? (
                       <Link
-                        href={`/admin/venues/${r.id}`}
+                        href={`/admin/menu/${r.id}`}
                         className="font-semibold text-cocoa hover:text-ink"
                       >
                         Open branch
@@ -158,7 +158,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                     ) : (
                       <>
                         <Link
-                          href={`/admin/venues/${r.id}`}
+                          href={`/admin/menu/${r.id}`}
                           className="font-semibold text-flame hover:text-flame-dark"
                         >
                           Add dishes

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireStaff } from "@/lib/adminAuth";
 
 /**
  * Put an image file in the catalogue and hand back its URL.
@@ -37,7 +37,8 @@ const ALLOWED = new Map<string, string>([
 ]);
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  // Admins, and the staff roles that put pictures on things (0095).
+  const gate = await requireStaff(["photos", "events", "menus"]);
   if (!gate.ok) return gate.response;
   const { supabase } = gate;
 

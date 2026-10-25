@@ -18,7 +18,7 @@ const MAX_BYTES = 4_000_000;
 
 export async function POST(req: Request) {
   const caller = await aiCaller();
-  if (!caller || (!caller.admin && !caller.venueIds.length)) {
+  if (!caller || (!caller.admin && !caller.venueIds.length && !caller.staff.includes("menus"))) {
     return NextResponse.json({ error: "Menu reading is for venue accounts and admins." }, { status: 403 });
   }
 

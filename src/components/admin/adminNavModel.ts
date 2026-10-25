@@ -1,5 +1,6 @@
 import type { AdminCounts } from "@/lib/adminCounts";
 import type { IconName } from "./AdminIcon";
+import type { StaffRole } from "@/lib/staffRoles";
 
 /**
  * Every place in the admin, once: the sidebar draws it, the search (Ctrl K)
@@ -15,6 +16,8 @@ export interface AdminLink {
   urgent?: boolean;
   /** Other words someone might type to find it. */
   keywords?: string;
+  /** Staff roles that may open it (0095). Absent: full admins only. */
+  roles?: StaffRole[];
 }
 
 export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
@@ -23,15 +26,23 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [{ href: "/admin", label: "Today", icon: "home", keywords: "dashboard home overview queues" }],
   },
   {
+    // A staff login's own desk: the first thing they see.
+    label: "Your work",
+    links: [
+      { href: "/admin/photos", label: "Photos", icon: "camera", keywords: "pictures images gallery cover", roles: ["photos"] },
+      { href: "/admin/menu", label: "Menus", icon: "list", keywords: "dishes prices edit menu", roles: ["menus"] },
+    ],
+  },
+  {
     label: "Needs work",
     links: [
       { href: "/admin/reports", label: "Venue reports", icon: "flag", badge: "openReports", urgent: true, keywords: "closed wrong" },
       { href: "/admin/issues", label: "Problem reports", icon: "bug", badge: "openIssues", urgent: true, keywords: "bugs app issues" },
       { href: "/admin/phones", label: "Phone review", icon: "phone", badge: "phonesPending", urgent: true, keywords: "numbers approve" },
-      { href: "/admin/unpriced", label: "Unpriced venues", icon: "tag", badge: "unpriced", keywords: "price missing" },
-      { href: "/admin/menus", label: "Thin menus", icon: "list", badge: "thinMenus", keywords: "few dishes" },
-      { href: "/admin/prices", label: "Bulk price edit", icon: "pencil", badge: "staleMenus", keywords: "stale prices" },
-      { href: "/admin/kitchens", label: "Kitchens", icon: "chef", keywords: "shared menu branches" },
+      { href: "/admin/unpriced", label: "Unpriced venues", icon: "tag", badge: "unpriced", keywords: "price missing", roles: ["menus"] },
+      { href: "/admin/menus", label: "Thin menus", icon: "list", badge: "thinMenus", keywords: "few dishes", roles: ["menus"] },
+      { href: "/admin/prices", label: "Bulk price edit", icon: "pencil", badge: "staleMenus", keywords: "stale prices", roles: ["menus"] },
+      { href: "/admin/kitchens", label: "Kitchens", icon: "chef", keywords: "shared menu branches", roles: ["menus"] },
     ],
   },
   {
@@ -39,7 +50,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [
       { href: "/admin/venues", label: "Venues", icon: "store", badge: "venues", keywords: "restaurants places bars" },
       { href: "/admin/areas", label: "Areas", icon: "map", keywords: "neighbourhoods towns" },
-      { href: "/admin/events", label: "Events", icon: "calendar", keywords: "shows concerts" },
+      { href: "/admin/events", label: "Events", icon: "calendar", keywords: "shows concerts", roles: ["events"] },
       { href: "/admin/getting-around", label: "Getting around", icon: "bus", keywords: "trotro transit routes" },
       { href: "/admin/gifts", label: "Flowers and cakes", icon: "gift", keywords: "add-ons gifts" },
       { href: "/admin/vendors", label: "Cake and flower shops", icon: "bag", badge: "vendorApplications", urgent: true, keywords: "vendor applications" },
@@ -51,8 +62,8 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [
       { href: "/admin/venues/new", label: "Add a venue", icon: "plus", keywords: "new create" },
       { href: "/admin/discover", label: "Discover venues", icon: "compass", keywords: "google find search" },
-      { href: "/admin/import", label: "Import", icon: "upload", keywords: "csv menu photo reader gemini" },
-      { href: "/admin/gaderin", label: "Gaderin", icon: "sparkles", badge: "gaderinWaiting", keywords: "activities" },
+      { href: "/admin/import", label: "Import", icon: "upload", keywords: "csv menu photo reader gemini", roles: ["menus"] },
+      { href: "/admin/gaderin", label: "Gaderin", icon: "sparkles", badge: "gaderinWaiting", keywords: "activities", roles: ["events"] },
     ],
   },
   {
@@ -71,6 +82,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
       { href: "/admin/venue-logins", label: "Venue logins", icon: "key", keywords: "portal owners" },
       { href: "/admin/planners", label: "Event planners", icon: "users", keywords: "planner accounts" },
       { href: "/admin/planners/activity", label: "Planner activity", icon: "pulse", keywords: "log" },
+      { href: "/admin/team", label: "Team", icon: "users", keywords: "staff logins roles activity edits" },
     ],
   },
 ];
@@ -100,4 +112,12 @@ export function badgeUrgent(l: AdminLink, counts: AdminCounts | null): boolean {
   if (!l.urgent || !counts) return false;
   if (l.badge === "phonesPending") return (counts.phonesReported ?? 0) > 0;
   return true;
+}
+
+/** The groups this access may see: everything for an admin, only role pages for staff. */
+export function groupsFor(access: { isAdmin: boolean; roles: StaffRole[] }) {
+  if (access.isAdmin) return ADMIN_GROUPS;
+  return ADMIN_GROUPS.map((g) => ({ ...g, links: g.links.filter((l) => l.roles?.some((r) => access.roles.includes(r))) })).filter(
+    (g) => g.links.length
+  );
 }

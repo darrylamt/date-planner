@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * to everybody who is ever sent there.
  */
 export default async function AdminMenusPage() {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["menus"]);
 
   const [{ data: venues }, stats] = await Promise.all([
     supabase

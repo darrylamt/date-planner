@@ -5,7 +5,7 @@ import type { Area } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function AdminImportPage() {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["menus"]);
   const [{ data: areas }, { data: venues }] = await Promise.all([
     supabase.from("areas").select("*").order("name"),
     supabase.from("venues").select("id, name, lat, lng, phone, phone_pending").order("name"),

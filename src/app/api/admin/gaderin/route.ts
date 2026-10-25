@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireStaff } from "@/lib/adminAuth";
 
 /**
  * Place a Gaderin activity at a Duro venue, take it off one, or set it aside.
@@ -17,13 +17,27 @@ const bodySchema = z.discriminatedUnion("action", [
 ]);
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
-  if (!gate.ok) return gate.response;
-  const { supabase } = gate;
-
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Bad request." }, { status: 400 });
   const body = parsed.data;
+
+  // Events staff too (0095). These writes run as the service role, so the
+  // database cannot see who made them: each one is logged here instead.
+  const gate = await requireStaff(["events"]);
+  if (!gate.ok) return gate.response;
+  const { supabase } = gate;
+  const log = async (venueId: string | null, changes: Record<string, unknown>) => {
+    if (gate.isAdmin) return;
+    await supabase.from("staff_edits").insert({
+      user_id: gate.userId,
+      table_name: "gaderin_activities",
+      row_id: body.slug,
+      venue_id: venueId,
+      action: "update",
+      changes,
+    });
+  };
+
 
   if (body.action === "link") {
     const { data: venue } = await supabase
@@ -50,6 +64,7 @@ export async function POST(req: Request) {
       .update({ venue_id: venue.id, area_id: venue.area_id, dismissed: false })
       .eq("slug", body.slug);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await log(venue.id, { linked_to: venue.id, ...(venue.is_active ? {} : { switched_venue_on: true }) });
     return NextResponse.json({ ok: true });
   }
 
@@ -62,10 +77,12 @@ export async function POST(req: Request) {
       .update({ is_active: false })
       .like("external_key", `gaderin:${body.slug}:%`)
       .gte("event_date", new Date().toISOString().slice(0, 10));
+    await log(null, { unlinked: true });
     return NextResponse.json({ ok: true });
   }
 
   const { error } = await supabase.from("gaderin_activities").update({ dismissed: body.dismissed }).eq("slug", body.slug);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await log(null, { dismissed: body.dismissed });
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,5 @@
-import { cache } from "react";
+import { redirect } from "next/navigation";
+import { adminAccess, allows, homeFor, type StaffRole } from "./staff";
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
@@ -81,16 +82,36 @@ export async function requireAdmin(): Promise<
  * reading is elevated, and only after the caller has been shown to be an
  * admin, so this is not a way around the gate.
  */
-/** Once per request: a page that reads through several helpers checks the session once. */
-const pageGate = cache(() => requireAdmin());
+/**
+ * The gate for an API route a staff role may use as well as an admin
+ * (staff.ts, 0095): uploads for photos and events, Gaderin for events.
+ * Everything else keeps requireAdmin.
+ */
+export async function requireStaff(roles: readonly StaffRole[]): Promise<
+  | { ok: true; supabase: ReturnType<typeof createServiceClient>; userId: string; isAdmin: boolean }
+  | { ok: false; response: NextResponse }
+> {
+  const access = await adminAccess();
+  if (!access) return { ok: false, response: NextResponse.json({ error: "Sign in required." }, { status: 401 }) };
+  if (!allows(access, roles)) return { ok: false, response: NextResponse.json({ error: "Not part of your role." }, { status: 403 }) };
+  return { ok: true, supabase: createServiceClient(), userId: access.userId, isAdmin: access.isAdmin };
+}
 
-export async function adminDataClient() {
-  const gate = await pageGate();
-  if (!gate.ok) {
-    // Pages sit behind the admin layout, which redirects first. Reaching here
-    // means that guarantee has broken, and refusing loudly beats handing back
-    // a service-role client on an unverified request.
+/**
+ * The service client for an admin page, after checking who may see it.
+ *
+ * With no roles the page is for full admins; with roles, staff holding one of
+ * them may see it too. Anybody else is sent to their own start page rather
+ * than shown an error: a staff login that follows an old link lands somewhere
+ * useful. (The layout has already turned away anybody with no access at all.)
+ */
+export async function adminDataClient(roles: readonly StaffRole[] = []) {
+  const access = await adminAccess();
+  if (!access) {
+    // The layout redirects first; reaching here means that broke, and refusing
+    // loudly beats handing back a service-role client on an unverified request.
     throw new Error("adminDataClient called without an admin session");
   }
+  if (!allows(access, roles)) redirect(homeFor(access));
   return createServiceClient();
 }

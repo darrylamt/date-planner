@@ -17,7 +17,7 @@ const bodySchema = z.object({ imageUrl: z.string().url().max(500) });
 
 export async function POST(req: Request) {
   const caller = await aiCaller();
-  if (!caller || (!caller.admin && !caller.planner && !caller.venueIds.length)) {
+  if (!caller || (!caller.admin && !caller.planner && !caller.venueIds.length && !caller.staff.includes("events"))) {
     return NextResponse.json({ error: "Poster reading is for planner and venue accounts." }, { status: 403 });
   }
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

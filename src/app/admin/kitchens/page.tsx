@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * putting it on this list would be a hundred rows of noise around the work.
  */
 export default async function KitchensPage() {
-  const supabase = await adminDataClient();
+  const supabase = await adminDataClient(["menus"]);
 
   const { data } = await supabase
     .from("venues")

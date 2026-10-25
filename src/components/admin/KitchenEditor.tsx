@@ -128,7 +128,7 @@ export function KitchenEditor({ rows }: { rows: Row[] }) {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
                     <Link
-                      href={`/admin/venues/${row.id}`}
+                      href={`/admin/menu/${row.id}`}
                       className="text-[15px] font-bold text-ink hover:text-flame"
                     >
                       {row.name}

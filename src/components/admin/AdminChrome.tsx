@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { AdminCounts } from "@/lib/adminCounts";
 import { Logo } from "@/components/Logo";
 import { AdminIcon } from "./AdminIcon";
-import { ADMIN_GROUPS, activeLink, badgeCount, badgeUrgent } from "./adminNavModel";
+import { activeLink, badgeCount, badgeUrgent, groupsFor } from "./adminNavModel";
+import type { StaffRole } from "@/lib/staffRoles";
 import { CommandPalette, type PaletteVenue } from "./CommandPalette";
 
 /**
@@ -22,16 +23,20 @@ export function AdminChrome({
   counts,
   venues,
   email,
+  access,
 }: {
   counts: AdminCounts | null;
   venues: PaletteVenue[] | null;
   email: string;
+  /** Staff see only their role's pages (0095). */
+  access: { isAdmin: boolean; roles: StaffRole[] };
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
   const current = activeLink(pathname);
+  const groups = groupsFor(access);
 
   // Navigating closes the drawer, or the next page opens under it.
   useEffect(() => setDrawer(false), [pathname]);
@@ -79,7 +84,7 @@ export function AdminChrome({
       <aside className="adm-sidebar" data-open={drawer} aria-label="Admin">
         <div className="adm-brand">
           <Logo size={20} href="/admin" />
-          <span className="adm-brand-tag">Admin</span>
+          <span className="adm-brand-tag">{access.isAdmin ? "Admin" : "Team"}</span>
           <button
             type="button"
             className="adm-icon-btn adm-drawer-close ml-auto"
@@ -97,7 +102,7 @@ export function AdminChrome({
         </button>
 
         <nav className="adm-nav">
-          {ADMIN_GROUPS.map((g) => (
+          {groups.map((g) => (
             <div key={g.label} className="adm-group">
               <div className="adm-group-label">{g.label}</div>
               {g.links.map((l) => {
@@ -141,7 +146,7 @@ export function AdminChrome({
         </div>
       </aside>
 
-      {palette ? <CommandPalette counts={counts} venues={venues} onClose={() => setPalette(false)} /> : null}
+      {palette ? <CommandPalette counts={counts} venues={venues} access={access} onClose={() => setPalette(false)} /> : null}
     </>
   );
 }
