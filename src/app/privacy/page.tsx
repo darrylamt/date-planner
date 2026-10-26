@@ -166,8 +166,9 @@ export default function PrivacyPage() {
         </p>
         <p>
           Deleting your account does not cancel a Duro Pro subscription, because
-          Apple holds it rather than us. Cancel it first in your iPhone&apos;s
-          Settings, under your name, then Subscriptions.
+          Apple or Google holds it rather than us. Cancel it first: on an iPhone,
+          in Settings, under your name, then Subscriptions; on Android, in the
+          Play Store app, under your profile, then Payments &amp; subscriptions.
         </p>
         <p>
           If you cannot get into the app, email{" "}
