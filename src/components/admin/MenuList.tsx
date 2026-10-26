@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { PagedTable } from "./PagedTable";
 
 export interface MenuListRow {
   id: string;
@@ -30,44 +31,40 @@ export function MenuList({ rows }: { rows: MenuListRow[] }) {
   return (
     <div className="mt-4">
       <input className="inp max-w-[320px]" placeholder="Search by name, area or type" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <div className="card mt-4 overflow-x-auto p-0">
-        <table className="tbl w-full">
-          <thead>
-            <tr>
-              <th>Venue</th>
-              <th>Dishes</th>
-              <th>Last changed</th>
-              <th />
+      <PagedTable
+        empty="No venue matches that."
+        minWidth={480}
+        head={
+          <>
+            <th>Venue</th>
+            <th>Dishes</th>
+            <th>Last changed</th>
+            <th />
+          </>
+        }
+        rows={shown.map((r) => {
+          const d = days(r.updated);
+          return (
+            <tr key={r.id}>
+              <td>
+                <div className="font-semibold">{r.name}</div>
+                <div className="text-[12px] text-mutedbrown">
+                  {r.area} · {r.type}
+                  {r.shared ? " · shares another branch's menu" : ""}
+                  {r.free ? " · free to visit" : ""}
+                </div>
+              </td>
+              <td className="tabular-nums">{r.items === 0 ? <span className="badge b-stale">None</span> : r.items}</td>
+              <td className="whitespace-nowrap text-mutedbrown">{d == null ? "never" : d === 0 ? "today" : `${d} days ago`}</td>
+              <td className="text-right">
+                <Link href={`/admin/menu/${r.id}`} className="btn2 btnsm whitespace-nowrap">
+                  Edit menu
+                </Link>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {shown.slice(0, 300).map((r) => {
-              const d = days(r.updated);
-              return (
-                <tr key={r.id}>
-                  <td>
-                    <div className="font-semibold">{r.name}</div>
-                    <div className="text-[12px] text-mutedbrown">
-                      {r.area} · {r.type}
-                      {r.shared ? " · shares another branch's menu" : ""}
-                      {r.free ? " · free to visit" : ""}
-                    </div>
-                  </td>
-                  <td className="tabular-nums">
-                    {r.items === 0 ? <span className="badge b-stale">None</span> : r.items}
-                  </td>
-                  <td className="text-mutedbrown">{d == null ? "never" : d === 0 ? "today" : `${d} days ago`}</td>
-                  <td className="text-right">
-                    <Link href={`/admin/menu/${r.id}`} className="btn2 btnsm">
-                      Edit menu
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          );
+        })}
+      />
     </div>
   );
 }

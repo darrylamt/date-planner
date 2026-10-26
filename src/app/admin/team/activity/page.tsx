@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
+import { PagedTable } from "@/components/admin/PagedTable";
 
 export const dynamic = "force-dynamic";
 
@@ -78,18 +79,19 @@ export default async function TeamActivityPage({ searchParams }: { searchParams:
       {edits.length === 0 ? (
         <div className="why mt-4">Nothing yet.</div>
       ) : (
-        <div className="card mt-4 overflow-x-auto p-0">
-          <table className="tbl w-full">
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Who</th>
-                <th>Where</th>
-                <th>What changed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {edits.map((e) => {
+        <div className="mt-1">
+        <PagedTable
+          minWidth={640}
+          pageSize={20}
+          head={
+            <>
+              <th>When</th>
+              <th>Who</th>
+              <th>Where</th>
+              <th>What changed</th>
+            </>
+          }
+          rows={edits.map((e) => {
                 const title = TITLE_KEYS.map((k) => e.changes?.[k]).find((x) => typeof x === "string") as string | undefined;
                 return (
                   <tr key={e.id}>
@@ -126,7 +128,7 @@ export default async function TeamActivityPage({ searchParams }: { searchParams:
                           {Object.entries(e.changes ?? {}).map(([k, pair]) => {
                             const [before, after] = Array.isArray(pair) && pair.length === 2 ? pair : [undefined, pair];
                             return (
-                              <li key={k} className="text-[13px]">
+                              <li key={k} className="max-w-[420px] break-words text-[13px]">
                                 <span className="font-semibold">{k.replace(/_/g, " ")}</span>{" "}
                                 <span className="text-mutedbrown">{show(before)}</span> → <span>{show(after)}</span>
                               </li>
@@ -144,8 +146,7 @@ export default async function TeamActivityPage({ searchParams }: { searchParams:
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
+        />
         </div>
       )}
     </div>

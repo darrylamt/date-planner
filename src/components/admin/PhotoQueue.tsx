@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ImageField } from "./ImageField";
+import { PagedTable } from "./PagedTable";
 
 export interface PhotoRow {
   id: string;
@@ -52,52 +53,44 @@ export function PhotoQueue({ tab, venues, events }: { tab: "venues" | "events"; 
       </div>
 
       {tab === "venues" ? (
-        <div className="card mt-4 overflow-x-auto p-0">
-          <table className="tbl w-full">
-            <thead>
-              <tr>
-                <th>Venue</th>
-                <th>Cover</th>
-                <th>More pictures</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {shownVenues.slice(0, 200).map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <div className="font-semibold">{v.name}</div>
-                    <div className="text-[12px] text-mutedbrown">
-                      {v.area} · {v.type}
-                    </div>
-                  </td>
-                  <td>
-                    {v.cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={v.cover} alt="" className="h-10 w-14 rounded-md object-cover" />
-                    ) : (
-                      <span className="badge b-stale">None</span>
-                    )}
-                  </td>
-                  <td className="tabular-nums">{v.gallery}</td>
-                  <td className="text-right">
-                    <Link href={`/admin/photos/${v.id}`} className="btn2 btnsm">
-                      Edit photos
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {shownVenues.length === 0 ? <div className="p-6 text-center text-mutedbrown">Nothing here. Every venue has its pictures.</div> : null}
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {shownEvents.slice(0, 100).map((e) => (
-            <PosterCard key={e.id} event={e} />
+        <PagedTable
+          empty="Nothing here. Every venue has its pictures."
+          minWidth={480}
+          head={
+            <>
+              <th>Venue</th>
+              <th>Cover</th>
+              <th>More</th>
+              <th />
+            </>
+          }
+          rows={shownVenues.map((v) => (
+            <tr key={v.id}>
+              <td>
+                <div className="font-semibold">{v.name}</div>
+                <div className="text-[12px] text-mutedbrown">
+                  {v.area} · {v.type}
+                </div>
+              </td>
+              <td>
+                {v.cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={v.cover} alt="" className="h-10 w-14 rounded-md object-cover" />
+                ) : (
+                  <span className="badge b-stale">None</span>
+                )}
+              </td>
+              <td className="tabular-nums">{v.gallery}</td>
+              <td className="text-right">
+                <Link href={`/admin/photos/${v.id}`} className="btn2 btnsm whitespace-nowrap">
+                  Edit photos
+                </Link>
+              </td>
+            </tr>
           ))}
-          {shownEvents.length === 0 ? <div className="why">Every upcoming event has an image.</div> : null}
-        </div>
+        />
+      ) : (
+        <PagedCards items={shownEvents} />
       )}
     </div>
   );
@@ -130,6 +123,37 @@ function PosterCard({ event }: { event: PosterRow }) {
         </span>
       </div>
       <ImageField label="Event image" value={url} onChange={save} folder="events" hint="The poster, or a real photo of the night" />
+    </div>
+  );
+}
+
+/** Event cards, twelve at a time. */
+function PagedCards({ items }: { items: PosterRow[] }) {
+  const [page, setPage] = useState(0);
+  const size = 12;
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const at = Math.min(page, pages - 1);
+  if (!items.length) return <div className="why mt-4">Every upcoming event has an image.</div>;
+  return (
+    <div className="mt-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        {items.slice(at * size, at * size + size).map((e) => (
+          <PosterCard key={e.id} event={e} />
+        ))}
+      </div>
+      {pages > 1 ? (
+        <div className="mt-3 flex items-center justify-end gap-2 text-[13px] text-mutedbrown">
+          <button type="button" className="btn2 btnsm" disabled={at === 0} onClick={() => setPage(at - 1)}>
+            Back
+          </button>
+          <span className="tabular-nums">
+            {at + 1} / {pages}
+          </span>
+          <button type="button" className="btn2 btnsm" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}>
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

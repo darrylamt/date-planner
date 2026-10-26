@@ -3,6 +3,7 @@ import { adminDataClient } from "@/lib/adminAuth";
 import { PULL } from "@/lib/pull";
 import { RecomputePull } from "@/components/admin/RecomputePull";
 import { PeriodPicker, periodFrom } from "@/components/admin/Period";
+import { PagedTable } from "@/components/admin/PagedTable";
 
 export const dynamic = "force-dynamic";
 
@@ -28,73 +29,67 @@ type Recent = {
   device_id: string;
   venue_id: string;
   value: number | null;
+  item: string | null;
   venues: { name: string } | null;
 };
 
 const SAID: Record<string, string> = {
-  shown: "Shown in a plan",
+  shown: "Put in a plan",
   swapped_away: "Swapped out",
   swapped_in: "Swapped in",
-  saved: "Saved in a plan",
-  shared: "Shared in a plan",
-  details_opened: "Details opened",
-  menu_opened: "Menu opened",
-  book_tapped: "Book tapped",
-  directions_tapped: "Get there tapped",
+  saved: "Plan saved",
+  shared: "Plan shared",
+  details_opened: "Opened its details",
+  menu_opened: "Opened its menu",
+  book_tapped: "Tapped Book",
+  directions_tapped: "Tapped Get there",
   maps_opened: "Opened in Maps",
-  instagram_opened: "Instagram opened",
-  venue_viewed: "Venue page visited",
+  instagram_opened: "Opened Instagram",
+  venue_viewed: "Visited its page",
+  dish_added: "Added a dish",
+  dish_removed: "Took a dish off",
 };
 
 const KINDS: [string, string][] = [
-  ["shown", "Shown in a plan"],
+  ["shown", "Put in a plan"],
+  ["saved", "Plans saved"],
   ["swapped_away", "Swapped out"],
-  ["saved", "Saved"],
-  ["shared", "Shared"],
-  ["details_opened", "Details opened"],
-  ["menu_opened", "Menu opened"],
+  ["menu_opened", "Menus opened"],
   ["book_tapped", "Book tapped"],
   ["directions_tapped", "Get there tapped"],
   ["venue_viewed", "Venue page visits"],
+  ["dish_added", "Dishes added"],
 ];
 
 /**
- * Pull: which places people keep once a plan shows them, and which they swap
- * out (pull.ts). Worked out nightly from plan_signals; the planner adds each
- * venue's points to its score.
- *
- * Shows the raw activity as well as the judgement, because the judgement
- * stays empty until there is enough to judge by, and an empty page read as
- * "nothing is being recorded" when plenty was.
+ * Pull, explained for the person reading it: which places people keep once
+ * Duro puts them in a plan, and which they swap out, and what that does to
+ * the next plans (pull.ts).
  */
 export default async function PullPage({ searchParams }: { searchParams: { period?: string } }) {
   const supabase = await adminDataClient();
   const period = periodFrom(searchParams.period);
+  const count = (k: string) => {
+    let q = supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k);
+    if (period.since) q = q.gte("created_at", period.since);
+    return q;
+  };
 
   const [{ data, error }, { data: recentRaw }, ...kindCounts] = await Promise.all([
     supabase.from("venue_pull").select("*, venues(name, areas(name))").order("effect", { ascending: false }),
     supabase
       .from("plan_signals")
-      .select("id, created_at, kind, device_id, venue_id, value, venues(name)")
+      .select("id, created_at, kind, device_id, venue_id, value, item, venues(name)")
       .order("id", { ascending: false })
-      .limit(60),
-    ...KINDS.map(([k]) =>
-      period.since
-        ? supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k).gte("created_at", period.since)
-        : supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k)
-    ),
+      .limit(300),
+    ...KINDS.map(([k]) => count(k)),
   ]);
 
   if (error) {
     return (
       <div>
         <h1>Pull</h1>
-        <div className="why mt-4">
-          venue_pull isn&apos;t there yet. Run migration 0091 in the Supabase SQL editor, then press Recompute now.
-        </div>
-        <div className="mt-4">
-          <RecomputePull />
-        </div>
+        <div className="why mt-4">Pull needs migration 0091. Run it in the Supabase SQL editor, then press Recompute now.</div>
       </div>
     );
   }
@@ -102,256 +97,168 @@ export default async function PullPage({ searchParams }: { searchParams: { perio
   const rows = (data ?? []) as unknown as Row[];
   const recent = (recentRaw ?? []) as unknown as Recent[];
   const computed = rows[0]?.computed_at;
-  // The points without the new-venue nudge: what people's choices alone say.
+  // What people's choices alone do to a place, without the small nudge every rarely-shown place gets.
   const lean = (r: Row) => Number(r.effect) - PULL.exploreMax * Math.max(0, 1 - Number(r.shown) / PULL.exploreBelow);
-  const judged = rows.filter((r) => r.confidence >= 0.25);
-  const ahead = [...judged].sort((a, b) => lean(b) - lean(a)).filter((r) => lean(r) > 0.05).slice(0, 20);
-  const behind = [...judged].sort((a, b) => lean(a) - lean(b)).filter((r) => lean(r) < -0.05).slice(0, 20);
-  const unseen = rows.filter((r) => r.shown < 1).length;
   const totalKept = rows.reduce((s, r) => s + Number(r.kept), 0);
   const totalSwapped = rows.reduce((s, r) => s + Number(r.swapped), 0);
   const total = totalKept + totalSwapped;
   const live = total >= PULL.minTotal;
-  // Every venue anyone has done anything with, judged or not.
   const active = rows
     .filter((r) => r.shown > 0 || r.kept > 0 || r.swapped > 0 || r.engaged > 0 || r.views > 0)
-    .sort(
-      (a, b) => Number(b.kept) + Number(b.swapped) - (Number(a.kept) + Number(a.swapped)) || b.views - a.views
-    );
+    .sort((a, b) => Math.abs(lean(b)) - Math.abs(lean(a)) || Number(b.kept) + Number(b.swapped) - (Number(a.kept) + Number(a.swapped)));
   const when = computed
     ? new Date(computed).toLocaleString("en-GB", { timeZone: "Africa/Accra", dateStyle: "medium", timeStyle: "short" })
     : null;
+  /** Whole numbers as they are, part-keeps to one place: 0.5, not a rounded 0. */
+  const num = (n: number) => {
+    const v = Math.round(Number(n) * 10) / 10;
+    return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  };
+  const effectText = (r: Row) => {
+    const l = lean(r);
+    if (Math.abs(l) < 0.05) return <span className="text-mutedbrown">No change yet</span>;
+    return l > 0 ? (
+      <span className="font-semibold text-[#0f766e]">Moves up (+{l.toFixed(1)})</span>
+    ) : (
+      <span className="font-semibold text-[#b42318]">Moves down ({l.toFixed(1)})</span>
+    );
+  };
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1>Pull</h1>
-          <p className="max-w-[680px] text-[14px] text-mutedbrown">
-            Which places people keep once a plan shows them, and which they swap out. Saves and shares count most, Book and
-            Get there half, a look at the menu a quarter; a swap counts against. Worth at most {PULL.cap} points in a plan,
-            less than one vibe tag. {when ? `Last worked out ${when}.` : "Not worked out yet."}
+          <p className="max-w-[640px] text-[14px] text-mutedbrown">
+            Which places people keep once Duro puts them in a plan, and which they swap for somewhere else.
+            {when ? ` Worked out ${when}.` : ""}
           </p>
         </div>
         <RecomputePull />
       </div>
 
-      {/* Whether pull is moving plans yet, and how far off it is. */}
-      <div className="adm-tile mt-6 block" data-tone={live ? undefined : "clear"}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="text-[14px] font-semibold text-ink">
-            {live ? "Pull is moving plans" : "Pull is listening, not moving plans yet"}
+      {/* How it works, in three lines. */}
+      <section className="card mt-5 p-5">
+        <h2 className="adm-section-title">How it works</h2>
+        <ol className="mt-3 grid gap-3 text-[14px] md:grid-cols-3">
+          {[
+            ["1", "Every time Duro puts a place in someone's plan, the app notes what they do with it."],
+            ["2", "Saving or sharing the plan, or tapping Book or Get there, counts for the place. Swapping it out counts against."],
+            [
+              "3",
+              `Every night, places people keep more than most move up a little in future plans, and places they swap out move down. Never by more than ${PULL.cap} points: less than one matching vibe.`,
+            ],
+          ].map(([n, t]) => (
+            <li key={n} className="flex gap-3">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#fde8ef] text-[13px] font-bold text-[#a8214a]">{n}</span>
+              <span className="text-cocoa">{t}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-4 rounded-[10px] bg-[#f1efec] p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13.5px]">
+            <span className="font-semibold text-ink">{live ? "Pull is changing plans now" : "Pull is only watching for now"}</span>
+            <span className="tabular-nums text-mutedbrown">
+              {Math.min(Math.round(total), PULL.minTotal)} of {PULL.minTotal} keeps or swaps needed
+            </span>
           </div>
-          <div className="text-[13px] tabular-nums text-mutedbrown">
-            {Math.min(total, PULL.minTotal).toFixed(0)} of {PULL.minTotal} keeps or swaps
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#e5e1dc]">
+            <div className="h-full rounded-full bg-[#c92c58]" style={{ width: `${Math.min(100, (total / PULL.minTotal) * 100)}%` }} />
           </div>
+          {!live ? (
+            <p className="mt-2 text-[12.5px] text-mutedbrown">
+              No place moves until people have kept or swapped places {PULL.minTotal} times between them. Before that, one
+              person&apos;s swaps would decide too much.
+            </p>
+          ) : null}
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#e5e1dc]">
-          <div
-            className="h-full rounded-full bg-[#c92c58]"
-            style={{ width: `${Math.min(100, (total / PULL.minTotal) * 100)}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[12.5px] text-mutedbrown">
-          {live
-            ? "Each venue gains or loses up to two points in plans by how often it is kept rather than swapped out."
-            : `Until the whole catalogue has ${PULL.minTotal} between them, no venue gains or loses points: too little to tell a good place from an unlucky one. Everything people do is still recorded below.`}
-        </p>
-      </div>
+      </section>
 
-      <section className="mt-6">
+      <section className="mt-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="adm-section-title">{period.heading}</h2>
+          <h2 className="adm-section-title">What people did · {period.heading.toLowerCase()}</h2>
           <PeriodPicker path="/admin/pull" current={period.key} />
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           {KINDS.map(([k, label], i) => (
             <div key={k} className="adm-tile block">
               <div className="text-[12.5px] font-semibold text-mutedbrown">{label}</div>
-              <div className="adm-num mt-1.5 !text-[24px] text-ink">{(kindCounts[i].count ?? 0).toLocaleString("en-GB")}</div>
+              <div className="adm-num mt-1 !text-[24px] text-ink">{(kindCounts[i].count ?? 0).toLocaleString("en-GB")}</div>
             </div>
           ))}
         </div>
       </section>
 
       <section className="mt-8">
-        <h2 className="adm-section-title">Every venue with activity</h2>
-        <p className="mt-1 text-[13px] text-mutedbrown">
-          Raw, before any judging, as of the last time pull was worked out. Weighted: a month-old action counts half, and
-          one phone adds at most two kept or two swapped out to any venue.
+        <h2 className="adm-section-title">Places</h2>
+        <p className="mt-1 max-w-[640px] text-[13px] text-mutedbrown">
+          Every place anyone has done something with, the ones moving most first. A saved or shared plan is one keep;
+          tapping Book or Get there is half a keep, and opening the menu or details a quarter, which is why some places
+          have halves. Over the last 90 days, older days counting for less.
         </p>
-        {active.length === 0 ? (
-          <div className="adm-tile mt-3 text-[14px] text-mutedbrown" data-tone="clear">
-            Nothing yet. Press Recompute now once people have used the app.
-          </div>
-        ) : (
-          <div className="card mt-3 overflow-x-auto p-0">
-            <table className="tbl w-full">
-              <thead>
-                <tr>
-                  <th>Venue</th>
-                  <th>Shown</th>
-                  <th>Kept</th>
-                  <th>Swapped out</th>
-                  <th>Looked at</th>
-                  <th>Page visits</th>
-                  <th>Points now</th>
-                </tr>
-              </thead>
-              <tbody>
-                {active.slice(0, 100).map((r) => (
-                  <tr key={r.venue_id}>
-                    <td>
-                      <Link href={`/admin/venues/${r.venue_id}`} className="font-semibold hover:underline">
-                        {r.venues?.name ?? "?"}
-                      </Link>
-                      <div className="text-[12px] text-mutedbrown">{r.venues?.areas?.name ?? ""}</div>
-                    </td>
-                    <td className="tabular-nums">{Number(r.shown).toFixed(1)}</td>
-                    <td className="tabular-nums">{Number(r.kept).toFixed(1)}</td>
-                    <td className="tabular-nums">{Number(r.swapped).toFixed(1)}</td>
-                    <td className="tabular-nums">{Number(r.engaged).toFixed(1)}</td>
-                    <td className="tabular-nums">
-                      {r.views}
-                      {r.dwell_ms != null ? <span className="text-mutedbrown"> · {Math.round(r.dwell_ms / 1000)}s</span> : null}
-                    </td>
-                    <td className="tabular-nums">
-                      {Math.abs(lean(r)) < 0.005 ? "0" : `${lean(r) > 0 ? "+" : ""}${lean(r).toFixed(2)}`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <PagedTable
+          empty="Nothing yet. Press Recompute now once people have used the app."
+          minWidth={560}
+          head={
+            <>
+              <th>Place</th>
+              <th>In plans</th>
+              <th>Kept</th>
+              <th>Swapped out</th>
+              <th>In future plans</th>
+            </>
+          }
+          rows={active.map((r) => (
+            <tr key={r.venue_id}>
+              <td>
+                <Link href={`/admin/venues/${r.venue_id}`} className="font-semibold hover:underline">
+                  {r.venues?.name ?? "?"}
+                </Link>
+                <div className="text-[12px] text-mutedbrown">{r.venues?.areas?.name ?? ""}</div>
+              </td>
+              <td className="tabular-nums">{Math.round(Number(r.shown))}</td>
+              <td className="tabular-nums">{num(r.kept)}</td>
+              <td className="tabular-nums">{num(r.swapped)}</td>
+              <td>{effectText(r)}</td>
+            </tr>
+          ))}
+        />
       </section>
 
       <section className="mt-8">
         <h2 className="adm-section-title">Latest activity</h2>
-        <p className="mt-1 text-[13px] text-mutedbrown">
-          As it arrives from the app. The table above catches up when pull is worked out: nightly, or Recompute now.
-        </p>
-        {recent.length === 0 ? (
-          <div className="adm-tile mt-3 text-[14px] text-mutedbrown" data-tone="clear">
-            Nothing recorded yet.
-          </div>
-        ) : (
-          <div className="card mt-3 overflow-x-auto p-0">
-            <table className="tbl w-full">
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>What</th>
-                  <th>Venue</th>
-                  <th>Phone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((r) => (
-                  <tr key={r.id}>
-                    <td className="whitespace-nowrap tabular-nums text-mutedbrown">
-                      {new Date(r.created_at).toLocaleString("en-GB", {
-                        timeZone: "Africa/Accra",
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td
-                      className={
-                        r.kind === "swapped_away"
-                          ? "font-semibold text-[#b42318]"
-                          : r.kind === "saved" || r.kind === "shared"
-                            ? "font-semibold text-[#0f766e]"
-                            : ""
-                      }
-                    >
-                      {SAID[r.kind] ?? r.kind}
-                      {r.kind === "venue_viewed" && r.value != null ? (
-                        <span className="font-normal text-mutedbrown"> · {Math.round(r.value / 1000)}s</span>
-                      ) : null}
-                    </td>
-                    <td>
-                      <Link href={`/admin/venues/${r.venue_id}`} className="hover:underline">
-                        {r.venues?.name ?? "?"}
-                      </Link>
-                    </td>
-                    {/* The start of a random id: tells phones apart, says nothing about who. */}
-                    <td className="font-mono text-[12px] text-mutedbrown">{r.device_id.slice(0, 6)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="mt-1 text-[13px] text-mutedbrown">Straight from the app, newest first. The phone column tells phones apart without saying whose.</p>
+        <PagedTable
+          empty="Nothing recorded yet."
+          minWidth={520}
+          head={
+            <>
+              <th>When</th>
+              <th>What</th>
+              <th>Place</th>
+              <th>Phone</th>
+            </>
+          }
+          rows={recent.map((r) => (
+            <tr key={r.id}>
+              <td className="whitespace-nowrap tabular-nums text-mutedbrown">
+                {new Date(r.created_at).toLocaleString("en-GB", { timeZone: "Africa/Accra", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </td>
+              <td className={r.kind === "swapped_away" ? "font-semibold text-[#b42318]" : r.kind === "saved" || r.kind === "shared" ? "font-semibold text-[#0f766e]" : ""}>
+                {SAID[r.kind] ?? r.kind}
+                {r.item ? <span className="font-normal text-mutedbrown"> · {r.item}</span> : null}
+                {r.kind === "venue_viewed" && r.value != null ? <span className="font-normal text-mutedbrown"> · {Math.round(r.value / 1000)}s</span> : null}
+              </td>
+              <td>
+                <Link href={`/admin/venues/${r.venue_id}`} className="hover:underline">
+                  {r.venues?.name ?? "?"}
+                </Link>
+              </td>
+              <td className="font-mono text-[12px] text-mutedbrown">{r.device_id.slice(0, 6)}</td>
+            </tr>
+          ))}
+        />
       </section>
-
-      <section className="mt-8 grid gap-3 sm:grid-cols-2">
-        <div className="adm-tile block">
-          <div className="text-[12.5px] font-semibold text-mutedbrown">Venues with enough to judge</div>
-          <div className="adm-num mt-1.5 text-ink">{judged.length}</div>
-          <div className="mt-1 text-[12px] text-mutedbrown">of {rows.length} live venues</div>
-        </div>
-        <div className="adm-tile block">
-          <div className="text-[12.5px] font-semibold text-mutedbrown">Not shown in a plan yet</div>
-          <div className="adm-num mt-1.5 text-ink">{unseen}</div>
-          <div className="mt-1 text-[12px] text-mutedbrown">each gets a small nudge until it has been</div>
-        </div>
-      </section>
-
-      <PullTable title="Pulling ahead" empty="Nobody has pulled ahead yet." rows={ahead} lean={lean} />
-      <PullTable title="Being swapped out more than most" empty="Nobody is being swapped out more than most yet." rows={behind} lean={lean} />
     </div>
-  );
-}
-
-function PullTable({ title, empty, rows, lean }: { title: string; empty: string; rows: Row[]; lean: (r: Row) => number }) {
-  return (
-    <section className="mt-8">
-      <h2 className="adm-section-title">{title}</h2>
-      {rows.length === 0 ? (
-        <div className="adm-tile mt-3 text-[14px] text-mutedbrown" data-tone="clear">
-          {empty}
-        </div>
-      ) : (
-        <div className="card mt-3 overflow-x-auto p-0">
-          <table className="tbl w-full">
-            <thead>
-              <tr>
-                <th>Venue</th>
-                <th>Shown</th>
-                <th>Kept</th>
-                <th>Swapped</th>
-                <th>Keep rate</th>
-                <th>Evidence</th>
-                <th>Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.venue_id}>
-                  <td>
-                    <Link href={`/admin/venues/${r.venue_id}`} className="font-semibold hover:underline">
-                      {r.venues?.name ?? "?"}
-                    </Link>
-                    <div className="text-[12px] text-mutedbrown">{r.venues?.areas?.name ?? ""}</div>
-                  </td>
-                  <td className="tabular-nums">{Number(r.shown).toFixed(1)}</td>
-                  <td className="tabular-nums">{Number(r.kept).toFixed(1)}</td>
-                  <td className="tabular-nums">{Number(r.swapped).toFixed(1)}</td>
-                  <td className="tabular-nums">{r.rate == null ? "–" : `${Math.round(Number(r.rate) * 100)}%`}</td>
-                  <td className="tabular-nums">{Math.round(Number(r.confidence) * 100)}%</td>
-                  <td className={`font-semibold tabular-nums ${lean(r) >= 0 ? "text-[#0f766e]" : "text-[#b42318]"}`}>
-                    {lean(r) >= 0 ? "+" : ""}
-                    {lean(r).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
 }
