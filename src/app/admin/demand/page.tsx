@@ -50,7 +50,9 @@ const tally = <T extends string>(items: (T | null)[]) => {
  * rough square, so they count alongside people who chose that area by name.
  */
 export default async function AdminDemandPage({ searchParams }: { searchParams: { days?: string } }) {
-  const days = Math.min(365, Math.max(1, Number(searchParams.days) || 30));
+  // "all" reaches back before anything was recorded.
+  const all = searchParams.days === "all";
+  const days = all ? 36500 : Math.min(365, Math.max(1, Number(searchParams.days) || 30));
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const supabase = await adminDataClient();
 
@@ -193,6 +195,9 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
               {d} days
             </a>
           ))}
+          <a href="/admin/demand?days=all" className={`rounded-full px-3 py-1 font-semibold ${all ? "bg-ink text-white" : "bg-white ring-1 ring-black/10"}`}>
+            All time
+          </a>
         </div>
       </div>
       <p className="mt-1 text-[14px] text-mutedbrown">

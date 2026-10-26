@@ -2,6 +2,7 @@ import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
 import { PULL } from "@/lib/pull";
 import { RecomputePull } from "@/components/admin/RecomputePull";
+import { PeriodPicker, periodFrom } from "@/components/admin/Period";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +67,9 @@ const KINDS: [string, string][] = [
  * stays empty until there is enough to judge by, and an empty page read as
  * "nothing is being recorded" when plenty was.
  */
-export default async function PullPage() {
+export default async function PullPage({ searchParams }: { searchParams: { period?: string } }) {
   const supabase = await adminDataClient();
-  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const period = periodFrom(searchParams.period);
 
   const [{ data, error }, { data: recentRaw }, ...kindCounts] = await Promise.all([
     supabase.from("venue_pull").select("*, venues(name, areas(name))").order("effect", { ascending: false }),
@@ -78,7 +79,9 @@ export default async function PullPage() {
       .order("id", { ascending: false })
       .limit(60),
     ...KINDS.map(([k]) =>
-      supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k).gte("created_at", since)
+      period.since
+        ? supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k).gte("created_at", period.since)
+        : supabase.from("plan_signals").select("id", { count: "exact", head: true }).eq("kind", k)
     ),
   ]);
 
@@ -157,7 +160,10 @@ export default async function PullPage() {
       </div>
 
       <section className="mt-6">
-        <h2 className="adm-section-title">The last 7 days</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="adm-section-title">{period.heading}</h2>
+          <PeriodPicker path="/admin/pull" current={period.key} />
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           {KINDS.map(([k, label], i) => (
             <div key={k} className="adm-tile block">

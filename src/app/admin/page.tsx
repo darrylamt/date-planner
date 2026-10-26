@@ -2,6 +2,7 @@ import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
 import { adminCounts, type AdminCounts } from "@/lib/adminCounts";
 import { AdminIcon, type IconName } from "@/components/admin/AdminIcon";
+import { PeriodPicker, periodFrom } from "@/components/admin/Period";
 
 export const dynamic = "force-dynamic";
 
@@ -16,21 +17,31 @@ type Queue = { href: string; label: string; blurb: string; icon: IconName; n: nu
  * that only grow, and a queue with nothing in it is drawn quietly rather than
  * left out, so "all clear" is something you can see.
  */
-export default async function AdminTodayPage() {
+export default async function AdminTodayPage({ searchParams }: { searchParams: { period?: string } }) {
   const supabase = await adminDataClient();
-  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const period = periodFrom(searchParams.period);
+  /** A count over the chosen window (all time when there is no start). */
+  const counted = (table: string, filter?: (q: any) => any) => {
+    let q: any = supabase.from(table).select("*", { count: "exact", head: true });
+    if (period.since) q = q.gte("created_at", period.since);
+    return filter ? filter(q) : q;
+  };
 
-  const [counts, { data: demand }, { count: saved }, { count: active }, { count: signals }] = await Promise.all([
-    adminCounts(),
-    supabase.from("plan_demand").select("outcome").gte("created_at", since),
-    supabase.from("plans").select("id", { count: "exact", head: true }).gte("created_at", since),
-    supabase.from("venues").select("id", { count: "exact", head: true }).eq("is_active", true),
-    // Null before 0089 has run: the tile just says so.
-    supabase.from("plan_signals").select("id", { count: "exact", head: true }).gte("created_at", since),
-  ]);
+  const [counts, { count: madeCount }, { count: fullCount }, { count: saved }, { count: active }, { count: signals }, { count: joined }] =
+    await Promise.all([
+      adminCounts(),
+      // Counted, not fetched: all time is hundreds of rows and growing.
+      counted("plan_demand"),
+      counted("plan_demand", (q) => q.eq("outcome", "ok")),
+      counted("plans"),
+      supabase.from("venues").select("id", { count: "exact", head: true }).eq("is_active", true),
+      // Null before 0089 has run: the tile just says so.
+      counted("plan_signals"),
+      counted("profiles"),
+    ]);
 
-  const made = demand?.length ?? 0;
-  const full = (demand ?? []).filter((d: { outcome: string }) => d.outcome === "ok").length;
+  const made = madeCount ?? 0;
+  const full = fullCount ?? 0;
   const { waiting, backlog } = queues(counts);
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: "Africa/Accra" }).format(new Date()));
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -65,10 +76,13 @@ export default async function AdminTodayPage() {
         )}
       </section>
 
-      {/* The week, in four numbers. */}
+      {/* The chosen window, in five numbers. */}
       <section className="mt-8">
-        <h2 className="adm-section-title">The last 7 days</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="adm-section-title">{period.heading}</h2>
+          <PeriodPicker path="/admin" current={period.key} />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Plans made" value={made} href="/admin/demand" />
           <Stat
             label="Came back full"
@@ -77,12 +91,18 @@ export default async function AdminTodayPage() {
             href="/admin/demand"
           />
           <Stat label="Plans saved" value={saved ?? 0} />
+          <Stat label="New accounts" value={joined ?? 0} />
           <Stat
             label="Signals recorded"
             value={signals ?? "–"}
             note={signals === null ? "Run migration 0089" : "Keeps, swaps, taps"}
           />
         </div>
+        {period.key === "all" ? (
+          <p className="mt-2 text-[12.5px] text-mutedbrown">
+            Plans made are counted from 30 September 2026, when counting began; saved plans and accounts from the start.
+          </p>
+        ) : null}
       </section>
 
       {/* Backlogs: nobody is waiting, but each one makes plans worse. */}
