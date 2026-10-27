@@ -33,6 +33,7 @@ import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import {
   OCCASION_IDS,
   clampParty,
+  defaultBudgetFor,
   defaultStopsFor,
   defaultInputs,
   isOptionalStep,
@@ -48,6 +49,7 @@ import { registerForPush } from "../../src/lib/push";
 import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
 import { AiConsentSheet } from "../../src/components/AiConsentSheet";
 import { supabase } from "../../src/lib/supabase";
+import { record } from "../../src/lib/usage";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 import { SkeletonRows, SkeletonSteps } from "../../src/components/Skeleton";
 
@@ -271,6 +273,8 @@ export default function PlanNew() {
                 partySize: clampParty(seeded, base.partySize),
                 // And at a sensible shape: a meeting is one place.
                 stops: defaultStopsFor(seeded),
+                // And a budget that suits it (defaultBudgetFor).
+                budget: defaultBudgetFor(seeded, clampParty(seeded, base.partySize)),
               }
             : base;
         if (active) {
@@ -321,6 +325,17 @@ export default function PlanNew() {
   const update = useCallback((patch: Partial<PlanInputs>) => {
     setInputs((cur) => {
       const next = { ...cur, ...patch };
+      /*
+       * The budget follows the occasion and the party until the person sets
+       * it (owner, 27 Oct 2026): a first date starts at GHS 1,500, a birthday
+       * for six at 2,400. A budget that is not the starting one for where they
+       * are has been set, by them or by a plan they repeated, and is theirs.
+       */
+      if (patch.budget !== undefined) next.budgetChosen = true;
+      else if (patch.partySize !== undefined && patch.occasion === undefined) {
+        const chosen = cur.budgetChosen || cur.budget !== defaultBudgetFor(cur.occasion, cur.partySize);
+        if (!chosen) next.budget = defaultBudgetFor(next.occasion, next.partySize ?? cur.partySize);
+      }
       if (patch.occasion && patch.occasion !== cur.occasion) {
         next.partySize = clampParty(patch.occasion, cur.partySize);
         next.companions = next.companions.slice(0, Math.max(0, next.partySize - 1));
@@ -336,6 +351,9 @@ export default function PlanNew() {
          * that started as a meeting does not quietly stay one stop long.
          */
         next.stops = defaultStopsFor(patch.occasion);
+        // The party was clamped to the new occasion: the starting budget follows it.
+        const chosen = cur.budgetChosen || cur.budget !== defaultBudgetFor(cur.occasion, cur.partySize);
+        if (!chosen && patch.budget === undefined) next.budget = defaultBudgetFor(next.occasion, next.partySize);
       }
       /*
        * A spa belongs to one or two people. Growing the party, or moving to a
@@ -365,7 +383,10 @@ export default function PlanNew() {
       }
 
       // Answers to questions this pathway never asked are dropped first.
-      const finalInputs = tidyForPathway({ ...inputs, ...overrides, ai: consent === "granted" });
+      const merged = { ...inputs, ...overrides, ai: consent === "granted" };
+      // Always said, so the plan log can tell a kept starting budget from a chosen one (0097).
+      merged.budgetChosen = Boolean(merged.budgetChosen || overrides?.budget !== undefined || merged.budget !== defaultBudgetFor(merged.occasion, merged.partySize));
+      const finalInputs = tidyForPathway(merged);
       if (overrides) update(overrides);
 
       setPhase({ name: "loading" });
@@ -442,6 +463,19 @@ export default function PlanNew() {
    * someone on a step that no longer applies.
    */
   const steps = stepsFor(inputs.occasion, occasionPreset);
+
+  /*
+   * Each question reached, for where people stop (usage_events, 0097): the
+   * step, its place in the pathway and the occasion. Not the answers.
+   */
+  const shownStep = phase.name === "steps" ? steps[Math.min(phase.step, steps.length - 1)] : null;
+  const shownIndex = phase.name === "steps" ? Math.min(phase.step, steps.length - 1) : -1;
+  useEffect(() => {
+    if (!hydrated || !shownStep) return;
+    record("step_viewed", { name: shownStep, value: shownIndex, data: { occasion: inputs.occasion, of: steps.length, entry: inputs.entry ?? "none" } });
+    // Once per step reached, not on every answer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, shownStep, shownIndex]);
   const totalSteps = steps.length;
 
   /* Saving was blocked on sign-in, finish it once a session appears. */

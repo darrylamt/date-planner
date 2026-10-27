@@ -32,7 +32,12 @@ export function StopCard({
   swapping,
   reserving,
   locked = false,
+  planKey,
+  occasion,
 }: {
+  /** The plan and its occasion, carried on dish signals so a meal's changes can be read in context (0097). */
+  planKey?: string;
+  occasion?: string;
   stop: ItineraryStop;
   /** The stop before this one, which is where they will be setting off from. */
   previous?: ItineraryStop | null;
@@ -109,8 +114,8 @@ export function StopCard({
   function changeQty(at: number, delta: number) {
     // One more of a dish says they want it; taking it off says the opposite (taste, on the server).
     const line = stop.orders[at];
-    if (line && delta > 0) track("dish_added", stop.venue_id, { item: line.item });
-    if (line && delta < 0 && line.qty <= 1) track("dish_removed", stop.venue_id, { item: line.item });
+    if (line && delta > 0) track("dish_added", stop.venue_id, { item: line.item, planKey, occasion });
+    if (line && delta < 0 && line.qty <= 1) track("dish_removed", stop.venue_id, { item: line.item, planKey, occasion });
     const next: ItineraryOrder[] = [];
     stop.orders.forEach((o, i) => {
       if (i !== at) {
@@ -502,6 +507,8 @@ export function StopCard({
         venueName={stop.name}
         orders={stop.orders}
         onOrdersChange={onOrdersChange}
+        planKey={planKey}
+        occasion={occasion}
       />
 
       <MenuSheet

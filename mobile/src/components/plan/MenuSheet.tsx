@@ -45,7 +45,11 @@ export function MenuSheet({
   orders,
   onOrdersChange,
   only,
+  planKey,
+  occasion,
 }: {
+  planKey?: string;
+  occasion?: string;
   visible: boolean;
   onClose: () => void;
   venueId: string;
@@ -107,7 +111,7 @@ export function MenuSheet({
   function addItem(item: MenuItem) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // What they choose to eat, for their own plans' taste (on the server).
-    track("dish_added", venueId, { item: item.name });
+    track("dish_added", venueId, { item: item.name, planKey, occasion });
     const unit = Number(item.price_ghs);
     const at = orders.findIndex((o) => o.item === item.name);
     setAdded({ name: item.name, qty: (at >= 0 ? orders[at].qty : 0) + 1, at: Date.now() });

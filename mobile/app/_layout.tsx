@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import { AppState, Text } from "react-native";
 import { refreshWidgets } from "../src/lib/widgets";
+import { recordOpen } from "../src/lib/usage";
 import { refreshLiveActivity, unfollow } from "../src/lib/liveActivity";
 import { supabase } from "../src/lib/supabase";
 import { StatusBar } from "expo-status-bar";
@@ -90,6 +91,8 @@ function RootShell() {
    */
   useEffect(() => {
     void refreshWidgets();
+    // The day's first open, for how many come back (usage.ts records later ones on return to the front).
+    void recordOpen();
     // Tonight's Live Activity moves along only when the app runs, so every opening moves it.
     void refreshLiveActivity();
     const sub = AppState.addEventListener("change", (s) => {

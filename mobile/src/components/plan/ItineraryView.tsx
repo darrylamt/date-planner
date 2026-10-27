@@ -88,7 +88,10 @@ export function ItineraryView({
   saving,
   initialNote = null,
   askVibe = false,
+  top = null,
 }: {
+  /** Shown above the title: a saved plan's "Did you go?" (WentCard). */
+  top?: React.ReactNode;
   inputs: PlanInputs;
   itinerary: Itinerary;
   onItineraryChange: (it: Itinerary) => void;
@@ -684,6 +687,7 @@ export function ItineraryView({
         contentContainerStyle={{ paddingBottom: space.xxxl }}
         contentInsetAdjustmentBehavior="automatic"
       >
+        {top}
         {/* Title block */}
         <View style={{ paddingHorizontal: GUTTER, paddingTop: space.sm, marginBottom: space.lg }}>
           <Text variant="footnote" tone="secondary">
@@ -781,6 +785,8 @@ export function ItineraryView({
                 onReserve={() => void handleReserve(i)}
                 onReported={setToast}
                 onOrdersChange={(orders) => handleOrdersChange(i, orders)}
+                planKey={itinerary.plan_key}
+                occasion={inputs.occasion}
               />
               {itinerary.hops[i] && i < itinerary.stops.length - 1 ? (
                 <Hop

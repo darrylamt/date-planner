@@ -31,7 +31,8 @@ export type SignalKind =
   | "instagram_opened"
   | "venue_viewed"
   | "dish_added"
-  | "dish_removed";
+  | "dish_removed"
+  | "dish_kept";
 
 type Pending = { kind: SignalKind; venueId: string; planKey?: string; occasion?: string; value?: number; item?: string; at: string };
 
@@ -57,6 +58,14 @@ export function track(
 /** The same thing for every stop of a plan: shown, saved, shared. */
 export function trackStops(kind: "shown" | "saved" | "shared", itinerary: Itinerary | null | undefined, occasion?: string) {
   for (const s of itinerary?.stops ?? []) track(kind, s.venue_id, { planKey: itinerary?.plan_key, occasion });
+  /*
+   * And on saving, every dish and drink still on it: what people actually
+   * kept, after their swaps and changes (0097). Not the door.
+   */
+  if (kind === "saved")
+    for (const s of itinerary?.stops ?? [])
+      for (const o of s.orders ?? [])
+        if (!o.door) track("dish_kept", s.venue_id, { planKey: itinerary?.plan_key, occasion, item: o.item.slice(0, 120), value: o.qty });
 }
 
 /** Forget everything this phone (and the signed-in account) has told Duro. */

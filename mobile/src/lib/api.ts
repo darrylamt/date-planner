@@ -41,7 +41,14 @@ async function whoIsAsking(): Promise<Record<string, string>> {
     const [{ getDeviceId }, { supabase }] = await Promise.all([import("./deviceId"), import("./supabase")]);
     const [deviceId, { data }] = await Promise.all([getDeviceId(), supabase.auth.getSession()]);
     const token = data.session?.access_token;
-    return { "x-duro-device": deviceId, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    // And which app it is, for counting (0097): the plan log keeps ios, android or web, and the build.
+    const [{ Platform }, Constants] = await Promise.all([import("react-native"), import("expo-constants")]);
+    return {
+      "x-duro-device": deviceId,
+      "x-duro-platform": Platform.OS,
+      "x-duro-version": Constants.default.expoConfig?.version ?? "",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
   } catch {
     return {};
   }

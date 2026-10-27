@@ -11,6 +11,7 @@ import { draftFromPlan } from "../../src/lib/repeatPlan";
 import { GUTTER, space } from "../../src/theme";
 import type { Itinerary, SavedPlan } from "../../src/lib/types";
 import { SkeletonPlan } from "../../src/components/Skeleton";
+import { WentCard } from "../../src/components/plan/WentCard";
 
 /**
  * A saved plan, opened.
@@ -101,6 +102,7 @@ export default function SavedPlanScreen() {
     <OccasionThemeProvider occasion={plan.inputs.occasion}>
       <ItineraryView
         inputs={plan.inputs}
+        top={<WentCard slug={plan.share_slug} date={plan.inputs.date} firstStop={itinerary.stops[0]?.name} occasion={plan.inputs.occasion} />}
         initialNote={plan.planner_note}
         itinerary={itinerary}
         onItineraryChange={handleChange}

@@ -28,6 +28,7 @@ import { supabase } from "../../src/lib/supabase";
 import { myGroups } from "../../src/lib/groupApi";
 import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
+import { HeardFromCard } from "../../src/components/HeardFromCard";
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -283,6 +284,9 @@ export default function Home() {
       </View>
 
       <FeaturedRow />
+
+      {/* Asked once, and not on a first visit. */}
+      {newcomer ? null : <HeardFromCard />}
 
       {/* Only for somebody who has not planned yet. */}
       {newcomer ? (

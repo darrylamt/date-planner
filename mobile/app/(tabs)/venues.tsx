@@ -12,6 +12,7 @@ import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { listVenues, type VenueListing } from "../../src/lib/data";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
 import { SkeletonRows } from "../../src/components/Skeleton";
+import { record } from "../../src/lib/usage";
 
 /*
  * Kinds as people browse them, which is not quite how they are stored:
@@ -74,6 +75,30 @@ export default function Venues() {
       );
     });
   }, [venues, query, filter]);
+
+  /*
+   * What people look for, once they stop typing (usage_events, 0097): the
+   * words, the kind chip, and how many places we hold that match. A search
+   * that finds nothing is a venue to sign.
+   */
+  const needle = query.trim();
+  useEffect(() => {
+    if (!venues || needle.length < 2) return;
+    const t = setTimeout(
+      () => record("search", { name: needle, value: shown.length, data: { where: "venues_tab", kind: FILTERS[filter].label } }),
+      1500
+    );
+    return () => clearTimeout(t);
+  }, [needle, filter, venues, shown.length]);
+
+  const open = (id: string, index: number) => {
+    record("venue_opened", {
+      name: id,
+      value: index,
+      data: { from: needle ? "search" : "browse", kind: FILTERS[filter].label, ...(needle ? { query: needle } : {}) },
+    });
+    router.push(`/venue/${id}`);
+  };
 
   const header = (
     <View style={{ paddingTop: insets.top + space.lg, gap: space.md, paddingBottom: space.md }}>
@@ -164,9 +189,9 @@ export default function Venues() {
           </Text>
         )
       }
-      renderItem={({ item: v }) => (
+      renderItem={({ item: v, index }) => (
         <Pressable
-          onPress={() => router.push(`/venue/${v.id}`)}
+          onPress={() => open(v.id, index)}
           style={({ pressed }) => ({
             flexDirection: "row",
             alignItems: "center",
