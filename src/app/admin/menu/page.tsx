@@ -22,6 +22,7 @@ export default async function MenusDeskPage() {
       area: v.areas?.name ?? "",
       type: v.type,
       items: s?.items ?? 0,
+      drinks: s?.byCategory.drink ?? 0,
       shared: Boolean(v.menu_shared_from),
       updated: s?.latest ?? null,
       free: v.is_free === true,

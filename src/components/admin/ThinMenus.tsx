@@ -65,6 +65,12 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
    * would serve someone a glass of wine.
    */
   const drinksOnly = rows.filter((r) => r.total > 0 && r.foodItems === 0).length;
+  /*
+   * And the other way round: Kangei and Le Pavillon hold their kitchens and
+   * no drinks, so a dinner there goes out with nothing to drink priced and a
+   * note telling the table to allow for it (27 Oct 2026).
+   */
+  const foodOnly = rows.filter((r) => r.foodItems > 0 && r.drinks === 0).length;
   const branches = rows.filter((r) => r.sharedFrom).length;
   const noCuisine = rows.filter((r) => !r.cuisine).length;
 
@@ -81,6 +87,7 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
           {noCuisine ? `, ${noCuisine} have no cuisine recorded` : ""}
           {branches ? `, ${branches} are branches sharing another's` : ""}
           {drinksOnly ? `, ${drinksOnly} hold drinks and no food` : ""}
+          {foodOnly ? `, ${foodOnly} hold food and no drinks` : ""}
         </span>
       </div>
 
@@ -139,6 +146,11 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
                     {r.total > 0 && r.foodItems === 0 ? (
                       <div className="mt-1 text-[12px] text-staletext">
                         drinks only, no food on file
+                      </div>
+                    ) : null}
+                    {r.foodItems > 0 && r.drinks === 0 ? (
+                      <div className="mt-1 text-[12px] text-staletext">
+                        food only, no drinks on file
                       </div>
                     ) : null}
                   </td>
