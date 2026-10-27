@@ -447,8 +447,8 @@ const breakfastEnds = (weekday: number | null) => (weekday === 0 || weekday === 
  */
 const isBreakfastDish = (m: MenuItem) =>
   m.meal_time ? m.meal_time !== "anytime" : BREAKFAST.test(`${m.name} ${m.notes ?? ""}`);
-const isWater = (m: MenuItem) =>
-  m.drink_kind ? m.drink_kind === "still_water" || m.drink_kind === "sparkling_water" : PLAIN_WATER.test(m.name);
+// The name too: Gemini files "Soda Water" under soda, and it is still a glass of water.
+const isWater = (m: MenuItem) => m.drink_kind === "still_water" || m.drink_kind === "sparkling_water" || PLAIN_WATER.test(m.name);
 const isShot = (m: MenuItem) => (m.drink_kind ? m.drink_kind === "shot" : SHOT.test(`${m.name} ${m.notes ?? ""}`));
 const isHotDrink = (m: MenuItem) =>
   m.drink_kind ? ["coffee", "hot_tea", "hot_chocolate"].includes(m.drink_kind) : HOT_DRINK.test(m.name);

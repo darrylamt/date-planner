@@ -48,7 +48,7 @@ For each line give:
 - role: what it is on a table.
   "main" = a full plate somebody makes a meal of (jollof with chicken, banku and tilapia, a burger, pasta, a steak, fufu with soup, a pizza).
   "light" = a light plate, not a full meal (a salad, a sandwich, a wrap, a small bowl, soup on its own).
-  "side" = only eaten with something else (plain rice, chips, fries, plantain, kenkey, banku on its own, bread).
+  "side" = only eaten with something else (plain rice, chips, fries, plantain, kenkey, bread, and fufu, banku, eba or omo tuo listed on their own without a soup or stew).
   "starter" = a first course or a sharing plate (wings, spring rolls, samosas, calamari).
   "dessert" = something sweet after a meal.
   "pastry" = baked goods with coffee (croissant, muffin, cake slice, cookie, doughnut).
@@ -135,7 +135,8 @@ export async function understandMenus(
       .map((a) => ({
         id: a.id,
         dish_role: a.role,
-        meal_time: a.time,
+        // Drinks are drunk any time; only food has a breakfast (audit, 27 Oct 2026).
+        meal_time: a.role === "drink" ? "anytime" : a.time,
         dish_type: a.role !== "drink" && a.type && (DISH_TYPES as readonly string[]).includes(a.type) ? a.type : null,
         drink_kind: a.role === "drink" && a.drink && (DRINK_KINDS as readonly string[]).includes(a.drink) ? a.drink : null,
         dish_tags: [...new Set((a.tags ?? []).filter((t) => (DISH_TAGS as readonly string[]).includes(t)))].slice(0, 6),
