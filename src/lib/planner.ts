@@ -72,7 +72,8 @@ const FALLBACK_TYPES: Record<Role, VenueType[]> = {
   meal: ["cafe", "lounge"],
   cafe: ["dessert", "restaurant", "lounge"],
   dessert: ["cafe", "restaurant", "lounge"],
-  activity: ["cafe", "dessert", "restaurant", "lounge"],
+  // After dinner a stand-in is dessert or a drink, not a second restaurant (27 Oct 2026).
+  activity: ["dessert", "lounge", "cafe", "restaurant"],
   lounge: ["restaurant", "cafe", "dessert"],
   wellness: [],
 };
@@ -455,6 +456,67 @@ const isHotDrink = (m: MenuItem) =>
 /** Not a plate anyone eats as their order: a side, an extra. */
 const notAPlate = (m: MenuItem) => m.dish_role === "side" || m.dish_role === "addon" || m.dish_type === "side_starch";
 
+/*
+ * What fits in the glass, by where and when (owner, 27 Oct 2026: meals must
+ * make sense and be intentional). Gemini's drink kinds (0096) in four groups;
+ * a drink it has not read fits anywhere, as before.
+ */
+const SOFT_DRINKS = new Set(["soda", "malt", "fresh_juice", "bottled_juice", "smoothie", "milkshake", "iced_tea", "local_drink", "mocktail", "iced_coffee"]);
+const HOT_DRINKS = new Set(["coffee", "hot_tea", "hot_chocolate"]);
+const WINE_AND_BEER = new Set(["local_beer", "imported_beer", "craft_beer", "cider", "palm_wine", "red_wine", "white_wine", "rose_wine", "sparkling_wine", "champagne"]);
+const SPIRITS = new Set(["whisky", "vodka", "gin", "rum", "tequila", "brandy_cognac", "liqueur"]);
+const PROTEINS = new Set(["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood", "egg", "vegetarian", "vegan"]);
+const MORNING_DRINKS = new Set(["coffee", "hot_tea", "hot_chocolate", "iced_coffee", "iced_tea", "fresh_juice", "bottled_juice", "smoothie"]);
+// A plate that is a pudding already, whatever course the menu filed it under (0096 dish types).
+const SWEET_TYPES = new Set(["pastry", "cake", "ice_cream", "dessert_other", "pancakes_waffles"]);
+
+/**
+ * 2 is what people order here, 1 will do, 0 nobody orders it this way.
+ *   in the morning: coffee, tea, a juice or a smoothie; a soda will do.
+ *   with a meal: lunch is juice, a smoothie, sobolo, a malt or a mocktail;
+ *     dinner is a cocktail, wine, a beer or a mocktail. Never a neat spirit,
+ *     a shot, an energy drink or a glass of water with the food, and no
+ *     alcohol at a family day's or a business meeting's table.
+ *   at a cafe (or a restaurant for dessert): coffee, tea, juice, a shake.
+ *   at a bar: a cocktail, wine or a beer first, a spirit after.
+ */
+export function drinkFit(m: MenuItem, where: "meal" | "cafe" | "bar", minute: number, occasion?: string): 0 | 1 | 2 {
+  const k = m.drink_kind;
+  if (!k) return 1;
+  if (k === "still_water" || k === "sparkling_water" || k === "shot" || k === "energy_drink") return 0;
+  const evening = minute >= 17 * 60;
+  const sober = occasion === "family_day" || occasion === "business_meeting";
+  if (where === "bar") return k === "cocktail" || WINE_AND_BEER.has(k) ? 2 : SPIRITS.has(k) || SOFT_DRINKS.has(k) ? 1 : 0;
+  // A croissant at ten came with a mint lemonade at a coffee house (27 Oct 2026).
+  if (minute < 12 * 60) return MORNING_DRINKS.has(k) ? 2 : SOFT_DRINKS.has(k) ? 1 : 0;
+  if (where === "cafe") return HOT_DRINKS.has(k) || SOFT_DRINKS.has(k) ? 2 : evening && !sober && (k === "cocktail" || WINE_AND_BEER.has(k)) ? 1 : 0;
+  if (HOT_DRINKS.has(k)) return evening ? 0 : 1;
+  if (SOFT_DRINKS.has(k)) return k === "mocktail" || !evening || sober ? 2 : 1;
+  if (sober || SPIRITS.has(k)) return 0;
+  if (k === "cocktail" || WINE_AND_BEER.has(k)) return evening ? 2 : 1;
+  return 1;
+}
+
+/** What makes two mains the same order: the meat or fish first, else the kind of dish (0096). */
+const plateSignature = (m: MenuItem) => (m.dish_tags ?? []).find((t) => PROTEINS.has(t)) ?? m.dish_type ?? m.name;
+
+/**
+ * Dealt so neighbours differ: a couple's two mains were Spicy Chicken Crispy
+ * and Spicy Chicken Breast. Keeps the given order otherwise (recommendations
+ * first), only moving a repeat behind something different.
+ */
+function varied(list: MenuItem[]): MenuItem[] {
+  if (list.length < 2 || !list.some((m) => m.dish_tags?.length || m.dish_type)) return list;
+  const out: MenuItem[] = [];
+  const rest = [...list];
+  while (rest.length) {
+    const used = new Set(out.map(plateSignature));
+    const i = rest.findIndex((m) => !used.has(plateSignature(m)));
+    out.push(...rest.splice(i < 0 ? 0 : i, 1));
+  }
+  return out;
+}
+
 function drinkLean(m: MenuItem): number {
   if (m.category !== "drink") return 0;
   const text = `${m.name} ${m.notes ?? ""}`;
@@ -590,7 +652,48 @@ function standIn(role: Role, type: VenueType): "dessert" | "light" | "drinks" | 
   if (role === "dessert") return "dessert";
   if (role === "lounge") return "drinks";
   if (role === "cafe" && type === "restaurant") return "light";
+  if (role === "activity") return "light";
   return undefined;
+}
+
+/** Whether a line on a bill is a dessert: what Gemini says it is (0096), else the menu's own section. */
+function isDessertLine(menu: MenuItem[], item: string): boolean {
+  const m = menu.find((x) => x.name === item);
+  return m ? (m.dish_role ? m.dish_role === "dessert" : m.category === "dessert") : false;
+}
+
+/**
+ * How stop i of a finished plan is ordered for, so a group's own orders
+ * (groupPlan.ts) keep the plan's rules: what the place stands in for, the
+ * occasion's drinks, food at the meal, and one dessert an evening.
+ */
+export function orderRulesFor(
+  stops: Pick<PlannedStop, "role" | "venue" | "event" | "orders">[],
+  i: number,
+  occasion: string,
+  menuOf: (venueId: string) => MenuItem[]
+): { course?: "dessert" | "light" | "drinks"; occasion: string; noDessert: boolean; meal: boolean } {
+  const st = stops[i];
+  const sweet = (x: (typeof stops)[number]) =>
+    x.venue.type === "dessert" || x.orders.some((o) => isDessertLine(menuOf(x.venue.id), o.item));
+  return {
+    course: standIn(st.role, st.venue.type),
+    occasion,
+    noDessert: st.role === "meal" && stops.slice(i + 1).some(sweet),
+    meal: st.role === "meal" && !st.event,
+  };
+}
+
+/**
+ * What a stop is called: a meal is breakfast, brunch, lunch or dinner by the
+ * hour it starts. After midnight is still the night before: food at ten past
+ * twelve is a late dinner, not breakfast.
+ */
+function roleLabel(role: Role, minute: number): string {
+  if (role !== "meal") return ROLE_LABEL[role];
+  const m = ((minute % 1440) + 1440) % 1440;
+  if (m < 4 * 60 || m >= 16 * 60 + 30) return "DINNER";
+  return m < 11 * 60 ? "BREAKFAST" : m < 12 * 60 + 30 ? "BRUNCH" : "LUNCH";
 }
 
 /**
@@ -679,6 +782,8 @@ export interface OrderPlan {
    * to pay. Absent means "menu", the common case.
    */
   basis?: "menu" | "unit" | "fallback" | "typical" | "free";
+  /** Food with no drink on it, because none on our copy of the menu suits: cheaper on paper than at the table. */
+  dry?: boolean;
 }
 
 /** One line of a bill: a dish, how many of it, and what that comes to. */
@@ -846,6 +951,16 @@ export function planOrders(
      * the first was the plan nobody wanted (owner, 27 Oct 2026).
      */
     course?: "dessert" | "light" | "drinks";
+    /** A dessert stop comes later in the plan, so this meal leaves dessert to it. */
+    noDessert?: boolean;
+    /** The occasion, for what fits in the glass (drinkFit). */
+    occasion?: string;
+    /**
+     * This stop is the meal: whatever kind of place it is, it orders food,
+     * and a place with none on our copy of its menu cannot be the meal. A
+     * lounge in the meal slot was ordered drinks and nothing else.
+     */
+    meal?: boolean;
   } = {}
 ): OrderPlan | null {
   const seat = Math.max(0, Math.floor(opts.seat ?? 0));
@@ -999,12 +1114,42 @@ export function planOrders(
    * round-robin so the variety appears at two people as well as at seven.
    * With only one dish on the list, this is exactly the old behaviour.
    */
-  const dining = venue.type === "restaurant" || venue.type === "cafe";
+  const dining = venue.type === "restaurant" || venue.type === "cafe" || Boolean(opts.meal);
   /** What this menu sells to eat a stew with. */
   const bases = dining ? menu.filter((m) => isBase(m) && fitsParty(m) && Number(m.price_ghs) > 0) : [];
 
+  /*
+   * Which dishes belong to a course: what Gemini says each one is, on a menu
+   * it has read (0096), and the menu's own category otherwise. Menus file
+   * croissants, egg plates and add-on portions under "main"; the course is
+   * built from what a dish is, not from where the menu put it.
+   */
+  const labelled = menu.filter((m) => m.dish_role).length >= Math.max(3, menu.length * 0.6);
+  const inCourse = (m: MenuItem, category: string): boolean => {
+    if (!labelled || !m.dish_role || category === "activity" || category === "other" || m.category === "activity") {
+      return m.category === category;
+    }
+    if (category === "drink") return m.dish_role === "drink";
+    if (category === "main") return m.dish_role === "main" || (venue.type === "cafe" && m.dish_role === "light");
+    if (category === "starter") return m.dish_role === "starter";
+    if (category === "dessert") return m.dish_role === "dessert" || (venue.type === "cafe" && m.dish_role === "pastry");
+    return m.category === category;
+  };
+  // Where a drink is being ordered, for drinkFit.
+  const drinkWhere: "meal" | "cafe" | "bar" = opts.meal
+    ? "meal"
+    : venue.type === "lounge" || opts.course === "drinks"
+      ? "bar"
+      : venue.type === "cafe" || opts.course === "dessert" || opts.course === "light"
+        ? "cafe"
+        : "meal";
+
   const orderFrom = (category: string, people: number): OrderLine[] => {
-    let all = menu.filter((m) => m.category === category && fitsParty(m)).sort(byPrice);
+    let all = menu.filter((m) => inCourse(m, category) && fitsParty(m)).sort(byPrice);
+    // A restaurant whose menu holds no full plate at all still feeds people from its light ones.
+    if (!all.length && category === "main" && labelled) {
+      all = menu.filter((m) => m.dish_role === "light" && m.category !== "drink" && fitsParty(m)).sort(byPrice);
+    }
     // A drink each means a glass each, never a bottle per head. See bottles.ts.
     if (category === "drink") all = byTheGlass(all);
     /*
@@ -1019,6 +1164,16 @@ export function planOrders(
       // Plain water is ordered only where there is nothing else to drink.
       const notWater = all.filter((m) => !isWater(m));
       if (notWater.length) all = notWater;
+      // What fits here and now (drinkFit): the best where there is a choice of it, else what will do.
+      const best = all.filter((m) => drinkFit(m, drinkWhere, slotStartMinute, opts.occasion) >= 2);
+      const fine = all.filter((m) => drinkFit(m, drinkWhere, slotStartMinute, opts.occasion) >= 1);
+      /*
+       * And nothing where nothing fits, with the table told to allow for a
+       * drink (below). Our copy of 805's menu has only its coffee and tea,
+       * and a birthday dinner for six at half seven was ordered hot
+       * chocolates and lattes with its fufu (27 Oct 2026).
+       */
+      all = best.length >= 2 ? best : fine;
     }
     /*
      * And what suits the hour. The plan check kept finding scrambled eggs and
@@ -1029,7 +1184,16 @@ export function planOrders(
      * where three or more other things remain, so a breakfast place still
      * serves breakfast.
      */
-    if (slotStartMinute >= breakfastEnds(planWeekday) && (category === "main" || category === "starter" || category === "other")) {
+    if (slotStartMinute >= breakfastEnds(planWeekday) && category !== "drink" && category !== "activity") {
+      /*
+       * What Gemini has marked breakfast is never ordered after it, even if
+       * nothing is left: the course then falls through to the next one (a
+       * pastry, a dessert, just a drink), which is what a cafe at seven in the
+       * evening is for. Croissants at seven and an English breakfast at a
+       * quarter past eight were the alternative (meal:smoke, 27 Oct 2026).
+       * Dishes not yet read keep the old rule: only where three others remain.
+       */
+      all = all.filter((m) => m.meal_time == null || m.meal_time === "anytime");
       const notBreakfast = all.filter((m) => !isBreakfastDish(m));
       if (notBreakfast.length >= 3) all = notBreakfast;
     }
@@ -1051,13 +1215,45 @@ export function planOrders(
      * remain, so a light menu still feeds people.
      */
     if (category === "main" && dining) {
-      const full = all.filter((m) => m.dish_role === "main");
+      const full = all.filter((m) => m.dish_role === "main" || (venue.type === "cafe" && m.dish_role === "light"));
       if (full.length >= 2) all = full;
+      /*
+       * Nor a piece of a plate. "Meat GHS 20", "Fufu GHS 15" and "Okro stew
+       * only" are what a chop bar adds to a plate, filed as mains: anything
+       * under 40% of this menu's middle main is not somebody's meal.
+       */
+      if (labelled && all.length >= 3) {
+        const prices = all.map((m) => Number(m.price_ghs)).sort((a, b) => a - b);
+        const middle = prices[Math.floor(prices.length / 2)];
+        const real = all.filter((m) => Number(m.price_ghs) >= middle * 0.4);
+        if (real.length >= 2) all = real;
+      }
+    }
+    /*
+     * And breakfast is for the morning: before eleven (half past twelve at the
+     * weekend) a meal is ordered from the breakfast and brunch plates, where
+     * the kitchen has two or more, not jollof at eight.
+     */
+    if ((category === "main" || category === "other") && slotStartMinute < breakfastEnds(planWeekday) - 60) {
+      const morning = all.filter((m) => m.meal_time === "breakfast" || m.meal_time === "brunch");
+      if (morning.length >= 2) all = morning;
+    }
+    // A starter for a table is something to share, where the kitchen marks some that way (0096).
+    if (category === "starter" && partySize > 1) {
+      const sharing = all.filter((m) => m.dish_tags?.includes("sharing"));
+      if (sharing.length >= 2) all = sharing;
     }
     if (dining && category !== "drink" && category !== "dessert") {
       const meals = all.filter((m) => !isBase(m) && !notAPlate(m));
       const fed = bases.length ? meals : meals.filter((m) => !needsBase(m));
-      all = fed.length ? fed : meals.length ? meals : all;
+      /*
+       * On a menu Gemini has read, never a side or an extra even when nothing
+       * else is left: before its salads are served, L'Accrasien's "other" is
+       * its build-your-own breakfast, and a GHS 50 portion of fried eggs was
+       * somebody's order (27 Oct 2026). The course is left empty instead, and
+       * the next one, or just a coffee, is the order.
+       */
+      all = fed.length ? fed : meals.length ? meals : labelled ? [] : all;
     }
     if (!all.length || people < 1) return [];
 
@@ -1153,6 +1349,25 @@ export function planOrders(
       });
     }
 
+    // Two people, two different plates: chicken and fish, not two chickens.
+    if (category === "main" || category === "starter") {
+      /*
+       * From just outside the window where it is all one kind, as a
+       * recommendation may: Polo Club's four mains at GHS 240 were all
+       * vegetarian pasta, with a bolognese at the same price beside them
+       * (meal:smoke, 27 Oct 2026).
+       */
+      const kinds = new Set(candidates.map(plateSignature));
+      if (people > 1 && candidates.length > 1 && kinds.size === 1) {
+        const mid = Number(candidates[Math.floor(candidates.length / 2)].price_ghs);
+        const other = near
+          .filter((m) => !candidates.includes(m) && !kinds.has(plateSignature(m)))
+          .sort((a, b) => Math.abs(Number(a.price_ghs) - mid) - Math.abs(Number(b.price_ghs) - mid))[0];
+        if (other) candidates = [...candidates.slice(0, -1), other];
+      }
+      candidates = varied(candidates);
+    }
+
     const counts = new Map<string, { item: MenuItem; qty: number }>();
     let covered = 0;
     for (let i = 0; covered < people && i < people * 2 + WIDTH; i++) {
@@ -1173,6 +1388,8 @@ export function planOrders(
   };
 
   const lines: OrderLine[] = [];
+  // Set where food goes out with no drink we could price beside it (the note below says so).
+  let dry = false;
 
   /*
    * The rice, yam, banku or fufu each stew is eaten with, one per portion,
@@ -1204,18 +1421,47 @@ export function planOrders(
     }));
   };
 
+  /*
+   * Food and nothing to drink, because the menu we hold lists no drinks
+   * (Bella Dolce Vita, Le Pavillon) or none that go with this (805 has only
+   * its coffee and tea): said on the plate, not left for the table to find
+   * out. No price, because we have none.
+   */
+  const allowForDrinks = () => {
+    const held = menu.filter((m) => m.category === "drink" || m.dish_role === "drink");
+    const food = lines.filter((l) => !held.some((m) => m.name === l.item));
+    if (!food.length || food.length !== lines.length) return;
+    const only = (kinds: Set<string>) => held.every((m) => m.drink_kind != null && kinds.has(m.drink_kind));
+    const why = !held.length
+      ? "Drinks aren't on our copy of their menu yet"
+      : only(HOT_DRINKS)
+        ? "Our copy of their menu only has coffee and tea to drink"
+        : only(new Set(["still_water", "sparkling_water"]))
+          ? "Our copy of their menu only has water to drink"
+          : "None of the drinks on our copy of their menu suit this";
+    const last = food[food.length - 1];
+    last.note = [last.note, `${why}: allow extra for drinks.`].filter(Boolean).join(" ");
+    dry = true;
+  };
+
+  // The meal is had at a table: never a dessert shop's waffles, nor a gallery's door.
+  if (opts.meal && venue.type !== "restaurant" && venue.type !== "cafe" && venue.type !== "lounge") return null;
+
   if ((venue.type === "restaurant" || venue.type === "cafe") && opts.course) {
     const small = (cats: string[]) => cats.map((c) => () => orderFrom(c, partySize)).reduce<OrderLine[]>((f, n) => (f.length ? f : n()), []);
     if (opts.course === "dessert") lines.push(...small(["dessert", "starter"]));
     if (opts.course === "light") lines.push(...small(["dessert", "starter", "other"]));
     lines.push(...orderFrom("drink", partySize));
+    allowForDrinks();
     // A stand-in with nothing light to offer falls through to the empty-menu handling below.
-  } else if (venue.type === "restaurant" || venue.type === "cafe") {
-    const mains = [
-      () => orderFrom("main", partySize),
-      () => orderFrom("other", partySize),
-      () => orderFrom("starter", partySize),
-    ].reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+  } else if (venue.type === "restaurant" || venue.type === "cafe" || (opts.meal && venue.type === "lounge")) {
+    // A meal's plate is a main or a starter: "other" is where a lounge keeps its shisha.
+    const mains = (
+      opts.meal
+        ? [() => orderFrom("main", partySize), () => orderFrom("starter", partySize)]
+        : [() => orderFrom("main", partySize), () => orderFrom("other", partySize), () => orderFrom("starter", partySize)]
+    ).reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
+    if (opts.meal && !mains.length) return null;
 
     /*
      * Courses around the mains, only at the fullest tier and only when there
@@ -1224,7 +1470,16 @@ export function planOrders(
      * would then be served the same starters again as a first course.
      */
     const hasMains = menu.some((m) => m.category === "main");
-    if (tier === 2 && hasMains) lines.push(...orderFrom("starter", partySize));
+    /*
+     * A starter to share, one for every two or three people, not one each:
+     * a couple orders one plate of wings between them.
+     */
+    if (tier === 2 && hasMains) {
+      const shared = partySize > 1 ? Math.ceil(partySize / 3) : 1;
+      lines.push(
+        ...orderFrom("starter", shared).map((o) => (partySize > 1 ? { ...o, note: [o.note, "To share"].filter(Boolean).join(" · ") } : o))
+      );
+    }
 
     /*
      * A café with nothing on the plate is still somewhere to eat: a pastry or
@@ -1242,7 +1497,20 @@ export function planOrders(
      * seven does not order seven of the same thing to drink either.
      */
     lines.push(...orderFrom("drink", partySize));
-    if (tier === 2 && hasMains) lines.push(...orderFrom("dessert", partySize));
+    /*
+     * Dessert at the fullest tier, but not when a dessert stop comes next
+     * (one dessert an evening, at the place for it), not in the morning, and
+     * not after a plate that was sweet already: a croissant and then a
+     * tiramisu at ten is two puddings (Kosta, 27 Oct 2026).
+     */
+    const sweetPlate = mains.some((l) => {
+      const m = menu.find((x) => x.name === l.item);
+      return m != null && (m.dish_role === "pastry" || m.dish_role === "dessert" || SWEET_TYPES.has(m.dish_type ?? ""));
+    });
+    const morning = slotStartMinute < breakfastEnds(planWeekday) - 60;
+    if (tier === 2 && hasMains && !opts.noDessert && !morning && !sweetPlate) lines.push(...orderFrom("dessert", partySize));
+
+    allowForDrinks();
   } else if (venue.type === "dessert") {
     const sweet = orderFrom("dessert", partySize);
     lines.push(...(sweet.length ? sweet : orderFrom("other", partySize)));
@@ -1280,6 +1548,8 @@ export function planOrders(
   }
 
   if (!lines.length) {
+    // Where Gemini has read the menu, nothing sensible to order is a refusal: the cheapest line there is bread or an extra.
+    if (dining && labelled) return null;
     /*
      * The category we wanted is not on this menu, a restaurant listing only
      * drinks, say. Fall back to the cheapest thing it does sell before
@@ -1357,7 +1627,7 @@ export function planOrders(
     }
   }
 
-  return { orders, cost, basis: "menu" };
+  return { orders, cost, basis: "menu", ...(dry ? { dry } : {}) };
 }
 
 /* ── planning ─────────────────────────────────────────────────────────── */
@@ -1564,6 +1834,7 @@ function planWith(
     list.push(m);
     menuByVenue.set(m.venue_id, list);
   });
+  const isDessertAt = (venue: Venue, item: string) => isDessertLine(menuByVenue.get(venue.id) ?? [], item);
 
   /*
    * What each venue does weekly, indexed by the venue's own id.
@@ -1765,6 +2036,8 @@ function planWith(
       doorLabel?: string;
       /** A later bar on a club-hopping night: priced by its door alone (see below). */
       doorOnly?: boolean;
+      /** A dessert stop comes later in the plan: this one orders no dessert of its own. */
+      dessertAfter?: boolean;
     } = {}
   ): Option[] => {
     const roleTypes = ROLE_TYPES[role];
@@ -1954,7 +2227,13 @@ function planWith(
         wellnessKindsOf(inputs),
         weekdayOf(inputs.date),
         inputs.occasion === "family_day",
-        { course: standIn(role, venue.type) }
+        {
+          course: standIn(role, venue.type),
+          occasion: inputs.occasion,
+          noDessert: opts.dessertAfter,
+          // An event in the meal's stop is priced as the event, as before.
+          meal: role === "meal" && !opts.event,
+        }
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and
@@ -1980,7 +2259,8 @@ function planWith(
         // Within a focus every venue is allowed, so nudge the slot towards
         // its own role to keep the evening varied rather than three of the
         // same thing.
-        score: score + (roleTypes.includes(venue.type) ? 2 : 0),
+        // A meal whose drinks we cannot price only looks cheaper, so it waits behind a whole one, all else equal.
+        score: score + (roleTypes.includes(venue.type) ? 2 : 0) - (planned.dry ? 1 : 0),
       });
     }
 
@@ -1996,8 +2276,9 @@ function planWith(
      * Emitted at the lowest tier on purpose. It is a real stop with a real
      * price, and it is also the plainest version of one, so the walk-down
      * should reach for it before it starts stripping courses off a dinner.
+     * Never for the meal, though: the price of getting in is not dinner.
      */
-    if (!priced.length && doorKnown) {
+    if (!priced.length && doorKnown && (role !== "meal" || opts.event)) {
       priced.push({
         venue,
         tier: 0,
@@ -2047,7 +2328,7 @@ function planWith(
     return a.area_id === b.area_id ? 0 : 6;
   };
 
-  const optionsFor = (role: Role, slotStart: number, doorOnly = false): Option[] => {
+  const optionsFor = (role: Role, slotStart: number, doorOnly = false, dessertAfter = false): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
     /*
@@ -2081,14 +2362,26 @@ function planWith(
      */
     const build = (from: Venue[]): Option[] =>
       from
-        .flatMap((venue) => optionsForVenue(venue, role, slotStart, { doorOnly }))
+        .flatMap((venue) => optionsForVenue(venue, role, slotStart, { doorOnly, dessertAfter }))
         .sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
 
     const preferred = build(pool);
 
+    /*
+     * Lunch and dinner are at a restaurant while one can be had. A cafe is
+     * cheap and close, and the budget walk and the route pass choose from
+     * anywhere in a slot's list (see the bars below), so a birthday dinner
+     * for six went to a resto-cafe and a date's lunch was two meat pies at a
+     * coffee shop (27 Oct 2026). Breakfast and brunch are a cafe's own meal,
+     * and with no restaurant open and priced, or on the second pass, a cafe
+     * or a bar with a kitchen still feeds them.
+     */
+    const tableOnly = role === "meal" && slotStart >= breakfastEnds(weekday) - 60 && !barsMayStandIn;
+    const tables = preferred.filter((o) => o.venue.type === "restaurant");
+
     // Inside a narrowed focus there is no wider pool to fall back to: reaching
     // outside it would answer a different question from the one asked.
-    if (focusTypes.length) return preferred;
+    if (focusTypes.length) return tableOnly && tables.length ? tables : preferred;
 
     /*
      * Nor for a stop somebody named.
@@ -2102,6 +2395,7 @@ function planWith(
      * empty slot here is honest; the route says why.
      */
     if (role === "wellness" || meetingRole(inputs)) return preferred;
+    if (tableOnly && tables.length) return tables;
 
     /*
      * Everything else, behind everything of the right type.
@@ -2131,7 +2425,14 @@ function planWith(
      * that way. Nearest kind first now: something sweet falls back to a cafe,
      * then a restaurant's dessert list, and a bar only after those.
      */
-    const others = venuesHere.filter((v) => !roleTypes.includes(v.type));
+    /*
+     * A meal is only ever had where there is food. "Kinds not listed come
+     * after" let a gallery stand in for lunch when the budget was tight, and
+     * a date at one o'clock went to two galleries and ate nothing.
+     */
+    const others = venuesHere.filter(
+      (v) => !roleTypes.includes(v.type) && (role !== "meal" || FALLBACK_TYPES.meal.includes(v.type))
+    );
     const order = FALLBACK_TYPES[role];
     const rank = (t: VenueType) => {
       const i = order.indexOf(t);
@@ -2165,11 +2466,39 @@ function planWith(
       inputs
     );
     /*
+     * When the event's time is the meal's, the meal moves to the next stop:
+     * the night out, then dinner, rather than the night out instead of
+     * dinner. Only with another stop to trade with, and never for a film,
+     * which has its own placing.
+     */
+    // Not for a meeting or a narrowed focus, where the event is only placed in a stop of its own kind.
+    if (pin && pin.event.kind !== "movie" && roles.length > 1 && !meetingRole(inputs) && !focusTypes.length) {
+      const at = pin.at ?? startMinutes;
+      const byTime = roles
+        .map((role, i) => ({ role, i, gap: Math.abs(nominalStart(roles, i) - at) }))
+        .sort((a, b) => a.gap - b.gap);
+      if (byTime[0].role === "meal") {
+        // Never dessert in front of dinner.
+        const swap = byTime.find((x) => x.role !== "meal" && x.role !== "wellness" && x.role !== "dessert");
+        if (swap) {
+          roles[byTime[0].i] = swap.role;
+          roles[swap.i] = "meal";
+        }
+      }
+    }
+
+    /*
      * Club hopping: the first bar is the pregame, priced with drinks, and
      * every bar after it is priced at the door (see optionsForVenue).
      */
     const slots = roles.map((role, i) =>
-      optionsFor(role, nominalStart(roles, i), clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"))
+      optionsFor(
+        role,
+        nominalStart(roles, i),
+        clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"),
+        // One dessert an evening: a meal followed by a dessert stop leaves it to that stop.
+        roles.slice(i + 1).includes("dessert")
+      )
     );
     /*
      * What each slot could swap to, kept before an event takes its slot over.
@@ -2227,8 +2556,16 @@ function planWith(
       };
       // A film asked for goes in whatever stop is nearest its time, focus or not.
       const strict = pin.event.kind !== "movie" && (Boolean(meetingRole(inputs)) || focusTypes.length > 0);
-      pinnedIndex = nearest((role) => ROLE_TYPES[role].includes(pin.venue.type));
-      if (pinnedIndex < 0 && !strict) pinnedIndex = nearest((role) => role !== "wellness");
+      /*
+       * Never the meal's stop while there is another. A cocktail class at a
+       * restaurant and a Twi cafe night each took the dinner slot, priced by
+       * the door alone, and the evening had no food in it (27 Oct 2026). The
+       * roles were already turned round above so the slot nearest the event
+       * is not the meal.
+       */
+      const notMeal = (role: Role) => role !== "meal" || roles.every((r) => r === "meal");
+      pinnedIndex = nearest((role) => ROLE_TYPES[role].includes(pin.venue.type) && notMeal(role));
+      if (pinnedIndex < 0 && !strict) pinnedIndex = nearest((role) => role !== "wellness" && notMeal(role));
     }
     if (pin && pinnedIndex >= 0) {
       const built = optionsForVenue(
@@ -2608,6 +2945,42 @@ function planWith(
         return null;
     }
 
+    /*
+     * Once the times are known, two things only the whole plan can see.
+     *
+     * One dessert course an evening. A meal followed by any stop that orders
+     * dessert (a dessert stop, or a restaurant standing in for something to
+     * do) gives its own dessert up: an anniversary had creme brulee at
+     * dinner and brownies at the next stop (27 Oct 2026). Its swaps do too,
+     * and the service charge and VAT come down with the bill.
+     *
+     * And a meal is named for when they sit down: lunch at two was headed
+     * DINNER. The slot's nominal time named it first; the arrival is exact.
+     */
+    {
+      const noDessert = <T extends { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[] }>(x: T): T => {
+        const keep = x.orders.filter((o) => !isDessertAt(x.venue, o.item));
+        if (!keep.length || keep.length === x.orders.length) return x;
+        const cut = x.orders.reduce((n, o) => n + (keep.includes(o) ? 0 : o.price_ghs), 0);
+        const door = x.orders.reduce((n, o) => n + (o.door ? o.price_ghs : 0), 0);
+        const subtotal = x.cost - chargesTotal(x.charges) - door - cut;
+        const charges = chargesOn(subtotal, { service_pct: x.venue.service_charge_pct, tax_pct: x.venue.tax_added_pct });
+        return { ...x, orders: keep, charges, cost: subtotal + chargesTotal(charges) + door };
+      };
+      const MEALTIMES = new Set(["BREAKFAST", "BRUNCH", "LUNCH", "DINNER"]);
+      const named = (label: string, at: number) => (MEALTIMES.has(label) ? roleLabel("meal", at) : label);
+      const sweet = stops.map((st) => st.venue.type === "dessert" || st.orders.some((o) => isDessertAt(st.venue, o.item)));
+      stops = stops.map((st, i) => {
+        const after = st.role === "meal" && sweet.slice(i + 1).some(Boolean);
+        const own = after ? noDessert(st) : st;
+        return {
+          ...own,
+          label: named(st.label, st.arrivalMinutes),
+          alternates: st.alternates.map((a) => ({ ...(after ? noDessert(a) : a), label: named(a.label, st.arrivalMinutes) })),
+        };
+      });
+    }
+
     const foodTotal = stops.reduce((s, x) => s + x.cost, 0);
     const transportTotal = hops.reduce((s, h) => s + h.cost_ghs, 0);
 
@@ -2640,6 +3013,26 @@ function planWith(
       trimmed: chosen.some((c) => c.tier === 0) || stopCount < stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops),
     };
 
+    /*
+     * Calling a restaurant "SOMETHING TO DO" because the activity slot had
+     * nothing to fill it reads as a mistake, so the venue's own type wins
+     * whenever the slot fell back. A place standing in for something to do is
+     * named for what it is there for: dessert when that is what was ordered.
+     * A meal is named for the hour wherever it is had, since a meal stop
+     * always has food on it (planOrders, opts.meal).
+     */
+    // A declaration, like toStops: both sit after attempt's return and are only reached by hoisting.
+    function headingFor(role: Role, i: number, venue: Venue, orders: ItineraryOrder[]): string {
+      if (
+        ROLE_TYPES[role].includes(venue.type) ||
+        (role === "meal" && FALLBACK_TYPES.meal.includes(venue.type)) ||
+        (role !== "activity" && standIn(role, venue.type))
+      )
+        return roleLabel(role, nominalStart(roles, i));
+      if (role === "activity" && orders.some((o) => isDessertAt(venue, o.item))) return "DESSERT";
+      return TYPE_LABEL[venue.type] ?? ROLE_LABEL[role];
+    }
+
     function toStops(picks: Option[], headroom = 0): PlannedStop[] {
       return picks.map((p, i) => {
         const role = roles[i];
@@ -2664,16 +3057,8 @@ function planWith(
                 organiser_logo_url: onTonight.organiser_logo_url ?? null,
               }
             : null,
-          // Calling a restaurant "SOMETHING TO DO" because the activity slot
-          // had nothing to fill it reads as a mistake, so the venue's own type
-          // wins whenever the slot fell back. An event outranks both: it is
-          // the name of what is happening, not a guess at what sort of stop
-          // this is.
-          label: onTonight
-            ? onTonight.title
-            : ROLE_TYPES[role].includes(p.venue.type) || standIn(role, p.venue.type)
-              ? ROLE_LABEL[role]
-              : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
+          // An event is named for itself: it is what is happening, not a guess at what sort of stop this is.
+          label: onTonight ? onTonight.title : headingFor(role, i, p.venue, p.orders),
           durationMins:
             onTonight?.kind === "movie" && onTonight.runtime_mins
               ? Math.round(onTonight.runtime_mins) + 20
@@ -2724,10 +3109,8 @@ function planWith(
               orders: o.orders,
               cost: o.cost,
               charges: o.charges,
-              // The heading this venue would have had in this slot, by the rule above, so a swap changes it too.
-              label: ROLE_TYPES[role].includes(o.venue.type) || standIn(role, o.venue.type)
-                ? ROLE_LABEL[role]
-                : (TYPE_LABEL[o.venue.type] ?? ROLE_LABEL[role]),
+              // The heading this venue would have had in this slot, so a swap changes it too.
+              label: headingFor(role, i, o.venue, o.orders),
             })),
         };
       });

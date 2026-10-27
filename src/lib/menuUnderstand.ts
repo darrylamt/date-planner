@@ -119,7 +119,8 @@ export async function understandMenus(
   const venueOf = new Map(
     ((venues ?? []) as { id: string; type: string; cuisine: string | null; cuisines: string[] | null }[]).map((v) => [v.id, v])
   );
-  const todo = rows.filter((r) => r.understood_hash !== hashOf(r));
+  // Dishes and drinks only: a game of pool or a manicure is not on a menu to be read (audit, 27 Oct 2026).
+  const todo = rows.filter((r) => r.category !== "activity" && r.understood_hash !== hashOf(r));
   if (fromEnd) todo.reverse();
   let read = 0;
 

@@ -28,7 +28,7 @@ The itinerary is already fixed: venues, orders, prices and times are decided and
 
 Rules:
 - Never mention a venue, dish or price that is not in the data given to you.
-- Each stop carries a generic fallback label. Beat it: name what this particular place is or what they actually do there ("GAMES & MUSIC", "GRILLS", "ROOFTOP DRINKS") rather than repeating the generic one. The only hard rule is that the label must not contradict the venue's type, a grill house is never "DRINKS", a bar is never "DINNER".
+- Each stop carries a generic fallback label. Beat it: name what this particular place is or what they actually do there ("GAMES & MUSIC", "GRILLS", "ROOFTOP DRINKS") rather than repeating the generic one. The only hard rule is that the label must not contradict the venue's type, a grill house is never "DRINKS", a bar is never "DINNER", nor the hour it is arriving: a meal before half past four is never "DINNER", and one after noon never "BREAKFAST".
 - Never state or imply a total, a saving, or that something is cheap or expensive. The budget is shown to the user separately and your guess would contradict it.
 - Warm and specific, never salesy. No exclamation marks, no "nestled", no "hidden gem".
 - Use the personal details you are given. A line that would fit any couple in any city has failed.

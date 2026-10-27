@@ -1,6 +1,7 @@
 import {
   avoidHit,
   drinkable,
+  orderRulesFor,
   planItinerary,
   planOrders,
   type OrderTier,
@@ -177,7 +178,14 @@ const tierValue = (t: OrderTier) => (t === 0 ? 0 : t === 1 ? 1000 : 1025);
  * own place in the menu and from wherever is cheapest, so a person whose turn
  * lands on the dearest dish still has a way to fit.
  */
-function optionsFor(stop: PlannedStop, menu: MenuItem[], seat: number, inputs: PlanInputs): PersonalOption[] {
+function optionsFor(
+  stop: PlannedStop,
+  menu: MenuItem[],
+  seat: number,
+  inputs: PlanInputs,
+  // The plan's own rules for this stop (orderRulesFor), so a person's order is the course the plan meant.
+  rules: Omit<NonNullable<Parameters<typeof planOrders>[10]>, "seat"> = {}
+): PersonalOption[] {
   const out: PersonalOption[] = [];
   const seen = new Set<string>();
   const weekday = weekdayOf(inputs.date);
@@ -194,7 +202,7 @@ function optionsFor(stop: PlannedStop, menu: MenuItem[], seat: number, inputs: P
     for (const s of [seat, 0, 1, 2, 3]) {
       const planned = planOrders(
         stop.venue, menu, 1, tier, stop.durationMins, stop.arrivalMinutes,
-        inputs.cuisines ?? [], [], weekday, false, { seat: s }
+        inputs.cuisines ?? [], [], weekday, false, { ...rules, seat: s }
       );
       // Only a real order from the menu is personal; a fallback is a guess.
       if (!planned || (planned.basis ?? "menu") !== "menu") continue;
@@ -276,7 +284,8 @@ export function planGroup(
       const mine = new Map<number, PersonalOption[]>();
       skeleton.stops.forEach((stop, i) => {
         if (!personal[i]) return;
-        const opts_ = optionsFor(stop, menuFor(menus.get(stop.venue.id) ?? [], p.nos, inputs.alcohol), idx, inputs);
+        const rules = orderRulesFor(skeleton.stops, i, inputs.occasion, (id) => menus.get(id) ?? []);
+        const opts_ = optionsFor(stop, menuFor(menus.get(stop.venue.id) ?? [], p.nos, inputs.alcohol), idx, inputs, rules);
         if (opts_.length) mine.set(i, opts_);
         else personal[i] = false;
       });
