@@ -1,4 +1,4 @@
-import { BUDGET_DEFAULT } from "./budget";
+import { BUDGET_DEFAULT, BUDGET_MAX, BUDGET_STEP } from "./budget";
 import type { AlcoholChoice, Audience, Crew, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
@@ -298,6 +298,34 @@ export function defaultDate(): string {
   return d.toISOString().slice(0, 10);
 }
 
+/*
+ * Where the budget starts, by occasion (owner, 27 Oct 2026). Everybody started
+ * at GHS 800 and most people keep what they start with, so a first date and an
+ * anniversary began where a casual dinner does. Now they start high enough to
+ * reach the special places, a date night where the easy ones are, and a group
+ * by the head. Moving the budget, or changing the occasion or the party after
+ * moving it, leaves their own figure alone (plan/new.tsx).
+ */
+const BUDGET_START: Partial<Record<Occasion, { total?: number; each?: number }>> = {
+  first_date: { total: 1500 },
+  anniversary: { total: 1500 },
+  date_night: { total: 800 },
+  birthday: { each: 400 },
+  graduation: { each: 400 },
+  celebration: { each: 400 },
+  friend_outing: { each: 400 },
+  solo_day: { total: 400 },
+  family_day: { each: 250 },
+  business_meeting: { each: 150 },
+};
+
+export function defaultBudgetFor(occasion: Occasion, partySize: number): number {
+  const start = BUDGET_START[occasion];
+  if (!start) return BUDGET_DEFAULT;
+  const ghs = start.total ?? (start.each ?? 0) * Math.max(1, partySize);
+  return Math.min(BUDGET_MAX, Math.max(BUDGET_STEP, Math.round(ghs / BUDGET_STEP) * BUDGET_STEP));
+}
+
 export function defaultInputs(): PlanInputs {
   return {
     areaIds: [],
@@ -306,7 +334,7 @@ export function defaultInputs(): PlanInputs {
     surpriseMe: false,
     partySize: 2,
     companions: [],
-    budget: BUDGET_DEFAULT,
+    budget: defaultBudgetFor("date_night", 2),
     date: defaultDate(),
     startTime: "17:30",
     hours: 4,

@@ -10,7 +10,7 @@ import {
 } from "@/lib/planner";
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
-import { recordDemand } from "@/lib/demand";
+import { recordDemand, type DemandMeta } from "@/lib/demand";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkPlan } from "@/lib/planCheck";
 import { tasteFor, type Taste } from "@/lib/taste";
@@ -122,11 +122,35 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   const res = await generate(req);
   try {
     const parsed = planInputsSchema.safeParse(await copy.json());
-    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse);
+    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse, await demandMeta(req));
   } catch {
     /* never a failed plan over statistics */
   }
   return res;
+}
+
+/**
+ * Who asked and on what, for the plan log (0097): the account or the phone,
+ * whether it is a team login, and the platform and build the app says.
+ * The website sends no headers, so it is the web.
+ */
+async function demandMeta(req: Request): Promise<DemandMeta> {
+  const device = req.headers.get("x-duro-device");
+  const said = req.headers.get("x-duro-platform");
+  const platform = said === "ios" || said === "android" ? said : device ? null : "web";
+  const appVersion = req.headers.get("x-duro-version")?.slice(0, 32) || null;
+  const caller = await getCaller(req).catch(() => null);
+  let team = false;
+  if (caller && !caller.anonymous) {
+    const db = createServiceClient();
+    const [{ data: me }, { count }] = await Promise.all([
+      db.from("profiles").select("is_admin").eq("id", caller.id).maybeSingle(),
+      db.from("staff_roles").select("user_id", { count: "exact", head: true }).eq("user_id", caller.id),
+    ]);
+    team = Boolean((me as { is_admin?: boolean } | null)?.is_admin) || (count ?? 0) > 0;
+  }
+  const who = caller && !caller.anonymous ? `u:${caller.id}` : device && /^[A-Za-z0-9_-]{6,64}$/.test(device) ? `d:${device}` : null;
+  return { who, team, platform, appVersion };
 }
 
 async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {

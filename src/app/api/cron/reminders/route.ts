@@ -112,6 +112,37 @@ export async function GET(req: Request) {
     }
   }
 
+  /*
+   * "Did you go?", the evening after (0097). The one question that turns a
+   * plan into a visit we can count: for venues, what Duro! sends them; for
+   * us, whether the plan was any good. Once per plan, claimed like "eve",
+   * and opened on the plan, where the answer is two taps.
+   */
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const { data: lastNight } = await supabase
+    .from("plans")
+    .select("id, user_id, share_slug, itinerary")
+    .eq("inputs->>date", yesterday.toISOString().slice(0, 10))
+    .is("group_id", null);
+  const after = ((lastNight ?? []) as { id: string; user_id: string | null; share_slug: string; itinerary: SavedPlan["itinerary"] }[]).filter((p) => p.user_id);
+  const afterTokens = await tokensForUsers(supabase, after.map((p) => p.user_id!));
+  for (const plan of after) {
+    const tokens = afterTokens.get(plan.user_id!) ?? [];
+    if (!tokens.length) continue;
+    const { error: claimError } = await supabase.from("plan_notifications").insert({ plan_id: plan.id, kind: "after", delivered: tokens.length });
+    if (claimError) continue;
+    const first = plan.itinerary?.stops?.[0]?.name;
+    for (const token of tokens) {
+      messages.push({
+        to: token,
+        title: "How did it go?",
+        body: first ? `Did you make it to ${first}? Two taps tell us.` : "Did you make it out? Two taps tell us.",
+        data: { url: `/plan/${plan.share_slug}?ask=went`, slug: plan.share_slug },
+      });
+    }
+  }
+
   if (!plans.length && !messages.length) return NextResponse.json({ date, plans: 0, sent: 0 });
 
   const tokensFor = await tokensForUsers(supabase, plans.map((p) => p.user_id).filter(Boolean) as string[]);

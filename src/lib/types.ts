@@ -531,6 +531,11 @@ export interface PlanInputs {
   /** Which entry point started the plan, for counting only (0085). */
   entry?: PlanEntry;
   /**
+   * The person moved the budget themselves. Absent or false: they kept the
+   * one the occasion starts at (defaultBudgetFor). Counting only (0097).
+   */
+  budgetChosen?: boolean;
+  /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
    * make a plan specific rather than generically correct.

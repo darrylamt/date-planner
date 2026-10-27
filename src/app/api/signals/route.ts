@@ -32,6 +32,8 @@ const KINDS = [
   "venue_viewed",
   "dish_added",
   "dish_removed",
+  // The dishes on a plan that was saved (0097): what people actually kept.
+  "dish_kept",
 ] as const;
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{6,64}$/);
@@ -98,13 +100,17 @@ export async function POST(req: Request) {
         kind: e.kind,
         plan_key: e.planKey ?? null,
         occasion: e.occasion ?? null,
-        value: e.kind === "venue_viewed" ? (e.value ?? null) : null,
-        ...(e.kind === "dish_added" || e.kind === "dish_removed" ? { item: e.item ?? null } : {}),
+        value: e.kind === "venue_viewed" || e.kind === "dish_kept" ? (e.value ?? null) : null,
+        ...(e.kind === "dish_added" || e.kind === "dish_removed" || e.kind === "dish_kept" ? { item: e.item ?? null } : {}),
       };
     });
   if (!rows.length) return NextResponse.json({ ok: true, saved: 0 });
 
-  const { error } = await db.from("plan_signals").insert(rows);
+  let { error } = await db.from("plan_signals").insert(rows);
+  // Before 0097 the table refuses dish_kept: keep the rest of the batch.
+  if (error && rows.some((r) => r.kind === "dish_kept")) {
+    ({ error } = await db.from("plan_signals").insert(rows.filter((r) => r.kind !== "dish_kept")));
+  }
   if (error) {
     console.error("plan_signals insert failed", error.message);
     return NextResponse.json({ ok: false }, { status: 500 });

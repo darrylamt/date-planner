@@ -1,5 +1,6 @@
+import { createHmac } from "node:crypto";
 import { createServiceClient } from "./supabase/server";
-import { focusesOf } from "./planConstants";
+import { defaultDate, focusesOf } from "./planConstants";
 import { weekdayOf } from "./hours";
 import type { GenerateResponse, PlanInputs } from "./types";
 
@@ -18,6 +19,35 @@ const minutesOf = (hhmm: string) => {
   return Number.isFinite(h) ? h * 60 + (m || 0) : null;
 };
 
+/** Who asked and on what, as the route can tell from the request (0097). */
+export interface DemandMeta {
+  /** The account when signed in, else the phone's random id (x-duro-device). */
+  who: string | null;
+  /** An admin or staff login: the team testing. */
+  team: boolean;
+  platform: "ios" | "android" | "web" | null;
+  appVersion: string | null;
+}
+
+/**
+ * A one-way key for whoever asked, so repeat planners can be counted without
+ * knowing who they are: an HMAC of the account or phone id that cannot be
+ * turned back into either.
+ */
+export function plannerKey(who: string | null): string | null {
+  if (!who) return null;
+  const secret = process.env.PLANNER_HASH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  return secret ? createHmac("sha256", secret).update(who).digest("hex").slice(0, 32) : null;
+}
+
+/** The planner's own starting answers that came through unchanged. */
+function keptDefaults(inputs: PlanInputs): string[] {
+  const kept: string[] = [];
+  if (inputs.date === defaultDate()) kept.push("date");
+  if (inputs.startTime === "17:30") kept.push("time");
+  return kept;
+}
+
 /**
  * One anonymous row about a plan request. See migration 0065.
  *
@@ -25,7 +55,7 @@ const minutesOf = (hhmm: string) => {
  * square about 1.1 km on a side before it is written. Failures are swallowed,
  * because a plan must never fail over its own statistics.
  */
-export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse): Promise<void> {
+export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse, meta?: DemandMeta): Promise<void> {
   if (answer.status === "error") return;
   try {
     const db = createServiceClient();
@@ -62,7 +92,28 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse)
       // Which entry point started it (0085).
       ...(inputs.entry ? { entry: inputs.entry } : {}),
     };
-    const { error } = await db.from("plan_demand").insert(row);
+    /*
+     * What 0097 adds. Every dish and drink on the plan, by venue, so the
+     * meals people are sent to are counted for every plan, not only saved ones.
+     */
+    const extra = {
+      planner: plannerKey(meta?.who ?? null),
+      team: meta?.team ?? false,
+      est_total_ghs: answer.status === "ok" ? Math.round(Number(answer.itinerary.est_total_ghs) || 0) : null,
+      platform: meta?.platform ?? null,
+      app_version: meta?.appVersion ?? null,
+      budget_chosen: inputs.budgetChosen ?? null,
+      kept_defaults: keptDefaults(inputs),
+      orders:
+        answer.status === "ok"
+          ? answer.itinerary.stops
+              .filter((s) => s.venue_id && s.orders?.length)
+              .map((s) => ({ venue_id: s.venue_id, items: s.orders.map((o) => ({ item: o.item, qty: o.qty, ghs: o.price_ghs })) }))
+          : null,
+    };
+    const first = await db.from("plan_demand").insert({ ...row, ...extra });
+    // Before 0097 has run: the row as it was.
+    const error = first.error ? (await db.from("plan_demand").insert(row)).error : null;
     if (error) {
       // Before 0069 the table knows only ok and no_match; before 0085 it has no entry.
       const { entry: _entry, ...withoutEntry } = row as typeof row & { entry?: string };
