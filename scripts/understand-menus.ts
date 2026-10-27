@@ -9,7 +9,8 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
   auth: { persistSession: false },
 });
 const limit = Number(process.argv[2] ?? 25000);
-understandMenus(db, { limit })
+// "from-end" runs a second reader backwards from the end of the list, meeting the first.
+understandMenus(db, { limit, fromEnd: process.argv.includes("from-end") })
   .then((r) => console.log(r))
   .catch((e) => {
     console.error(e);

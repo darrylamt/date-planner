@@ -93,7 +93,18 @@ type Answer = { id: string; role: string; time: string; type?: string; drink?: s
  */
 export async function understandMenus(
   db: SupabaseClient,
-  { limit = 2000, batch = 120, deadlineMs = Infinity }: { limit?: number; batch?: number; deadlineMs?: number } = {}
+  {
+    limit = 2000,
+    batch = 120,
+    deadlineMs = Infinity,
+    fromEnd = false,
+  }: {
+    limit?: number;
+    batch?: number;
+    deadlineMs?: number;
+    /** Work from the end of the list: a second reader meeting the first in the middle. */
+    fromEnd?: boolean;
+  } = {}
 ): Promise<{ read: number; left: number; stopped?: string }> {
   const started = Date.now();
   const [rows, { data: venues }] = await Promise.all([
@@ -109,6 +120,7 @@ export async function understandMenus(
     ((venues ?? []) as { id: string; type: string; cuisine: string | null; cuisines: string[] | null }[]).map((v) => [v.id, v])
   );
   const todo = rows.filter((r) => r.understood_hash !== hashOf(r));
+  if (fromEnd) todo.reverse();
   let read = 0;
 
   for (let i = 0; i < Math.min(todo.length, limit); i += batch) {
