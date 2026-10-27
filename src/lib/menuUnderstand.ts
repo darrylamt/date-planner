@@ -119,14 +119,28 @@ export async function understandMenus(
       const where = v ? `${v.type}${v.cuisines?.length ? `, ${v.cuisines.join("/")}` : v.cuisine ? `, ${v.cuisine}` : ""}` : "venue";
       return `${r.id} | ${r.name}${r.notes ? ` (${r.notes.slice(0, 120)})` : ""} | menu says: ${r.category} | GHS ${r.price_ghs} | at a ${where}`;
     });
-    const res = await geminiJSON<{ items: Answer[] }>({
-      parts: [{ text: lines.join("\n") }],
-      prompt: PROMPT,
-      schema: SCHEMA,
-      models: GEMINI_LIGHT_MODELS,
-      timeoutMs: 90_000,
-    });
-    if (!res.ok) return { read, left: todo.length - read, stopped: res.message };
+    /*
+     * A batch that gets no answer is tried again, smaller, after a pause: one
+     * timeout stopped the first full run at 1,800 of 20,000. Only the daily
+     * limit ends the run.
+     */
+    const ask = (part: string[]) =>
+      geminiJSON<{ items: Answer[] }>({
+        parts: [{ text: part.join("\n") }],
+        prompt: PROMPT,
+        schema: SCHEMA,
+        models: GEMINI_LIGHT_MODELS,
+        timeoutMs: 90_000,
+      });
+    let res = await ask(lines);
+    for (let attempt = 1; !res.ok && res.reason === "failed" && attempt <= 3; attempt++) {
+      await new Promise((r) => setTimeout(r, 15_000 * attempt));
+      res = await ask(lines.slice(0, Math.ceil(lines.length / (attempt + 1))));
+    }
+    if (!res.ok) {
+      if (res.reason === "limit") return { read, left: todo.length - read, stopped: res.message };
+      continue; // This batch waits for the next run; the rest carry on.
+    }
 
     const byId = new Map(chunk.map((r) => [r.id, r]));
     const now = new Date().toISOString();
