@@ -144,6 +144,28 @@ export async function signInWithApple(): Promise<SocialResult> {
   }
 }
 
+/**
+ * Which app shows Google's sign-in page on Android.
+ *
+ * Left to itself, Android hands the page to any app that offers an in-app
+ * browser tab, and Outlook offers one: on a phone without a default browser
+ * set, signing in with Google opened Outlook. So: the phone's default browser,
+ * then Chrome, then any real browser that is not a mail app.
+ */
+async function signInBrowser(): Promise<string | undefined> {
+  try {
+    const b = await WebBrowser!.getCustomTabsSupportingBrowsersAsync();
+    const all = b.browserPackages ?? [];
+    const notMail = (p?: string | null) => Boolean(p) && !/outlook|office|gmail|mail/i.test(p!);
+    if (notMail(b.defaultBrowserPackage) && all.includes(b.defaultBrowserPackage!)) return b.defaultBrowserPackage!;
+    if (all.includes("com.android.chrome")) return "com.android.chrome";
+    if (notMail(b.preferredBrowserPackage)) return b.preferredBrowserPackage!;
+    return all.find((p) => notMail(p));
+  } catch {
+    return undefined;
+  }
+}
+
 export async function signInWithGoogle(): Promise<SocialResult> {
   if (!AuthSession || !WebBrowser) {
     return { ok: false, error: "Update the app to sign in with Google." };
@@ -165,7 +187,11 @@ export async function signInWithGoogle(): Promise<SocialResult> {
       return { ok: false, error: GOOGLE_FAILED };
     }
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    const result = await WebBrowser.openAuthSessionAsync(
+      data.url,
+      redirectTo,
+      Platform.OS === "android" ? { browserPackage: await signInBrowser() } : undefined
+    );
     if (result.type === "cancel" || result.type === "dismiss") {
       return { ok: false, cancelled: true };
     }

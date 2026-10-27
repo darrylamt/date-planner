@@ -4,6 +4,10 @@ import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
 import { avgIsNotAPrice, freeToVisit } from "./budget";
 import { haversineKm } from "./transport";
+import { CITY_CENTRES } from "./neighbourhoods";
+
+/** How far from the city's centre "anywhere" reaches: Accra's core, not Aburi (about 27 km out). */
+const ANYWHERE_KM = 16;
 import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
 import { schedulesDuring } from "./schedules";
@@ -387,6 +391,24 @@ export async function fetchCandidates(
     // Events follow the venues: only nights in an area the plan can reach.
     const reached = new Set([...pickedAreas, ...venues.map((v) => v.area_id)]);
     events = events.filter((e) => !e.area_id || reached.has(e.area_id));
+  }
+
+  /*
+   * "Anywhere" means anywhere people actually go, not the edge of the map.
+   *
+   * With no area and no "near me" there was no reach at all, so a plan from
+   * nowhere in particular could send someone 30 km up to Aburi for a stop.
+   * Most people live nowhere near it (owner, 27 Oct 2026). So "anywhere"
+   * keeps to the city's core; Aburi and the like still come up for anybody
+   * who picks them, or plans from near them.
+   */
+  if (inputs.surpriseMe && !inputs.near) {
+    const want = (inputs.city || DEFAULT_CITY).toLowerCase();
+    const centre = Object.entries(CITY_CENTRES).find(([name]) => name.toLowerCase() === want)?.[1];
+    if (centre) {
+      const core = Math.min(centre.radiusKm, ANYWHERE_KM);
+      venues = venues.filter((v) => v.lat == null || v.lng == null || haversineKm(centre, { lat: Number(v.lat), lng: Number(v.lng) }) <= core);
+    }
   }
 
   /*

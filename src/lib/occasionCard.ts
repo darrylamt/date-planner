@@ -60,7 +60,7 @@ export function occasionCard(inputs: PlanInputs): OccasionCard {
       motif: "❤",
     },
     anniversary: {
-      eyebrow: detail.years ? `${detail.years} YEARS` : "AN ANNIVERSARY",
+      eyebrow: detail.years ? `${detail.years} YEAR${Number(detail.years) === 1 ? "" : "S"}` : "AN ANNIVERSARY",
       invitation: detail.tradition
         ? `Built around ${detail.tradition.trim()}.`
         : "The same evening you would have chosen, without having to choose it.",

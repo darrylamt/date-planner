@@ -29,6 +29,8 @@ const LOUD_VIBES = ["lively", "dancing", "club hopping"];
 const LATE = 22 * 60;
 
 const CONFIDENCE = { low: 0.5, medium: 0.8, high: 1 } as const;
+/** The occasions where the wrong room spoils the night. */
+const SPECIAL = new Set(["anniversary", "date_night", "first_date"]);
 
 const QUIET_WINS = { quiet: 1.5, conversational: 1, buzzy: -1, loud: -4 } as const;
 const LOUD_WINS = { quiet: -1, conversational: 0, buzzy: 1.5, loud: 1.5 } as const;
@@ -63,7 +65,9 @@ export function fitScore(v: Venue, occasion: string): number {
 export function insightScore(v: Venue, inputs: Pick<PlanInputs, "occasion" | "vibes">, atMinute?: number): number {
   if (!v.insights) return 0;
   const weight = CONFIDENCE[v.insights.confidence] ?? 0.5;
-  return (noiseScore(v, inputs, atMinute) + fitScore(v, inputs.occasion)) * weight;
+  // Special nights lean twice as hard on whether the place suits them (owner, 27 Oct 2026).
+  const fitWeight = SPECIAL.has(inputs.occasion) ? 2 : 1;
+  return (noiseScore(v, inputs, atMinute) + fitScore(v, inputs.occasion) * fitWeight) * weight;
 }
 
 /**

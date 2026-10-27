@@ -68,7 +68,8 @@ const ROLE_TYPES: Record<Role, VenueType[]> = {
  * a bar, because a bar is the one substitute that changes what the stop is.
  */
 const FALLBACK_TYPES: Record<Role, VenueType[]> = {
-  meal: ["cafe", "dessert", "lounge"],
+  // Never a dessert shop: fitting a budget made waffles the "dinner" of a date night (27 Oct 2026).
+  meal: ["cafe", "lounge"],
   cafe: ["dessert", "restaurant", "lounge"],
   dessert: ["cafe", "restaurant", "lounge"],
   activity: ["cafe", "dessert", "restaurant", "lounge"],
@@ -196,13 +197,13 @@ function roleSequence(
      * behaviour exactly.
      */
     const n = narrowed.length;
-    return withLoungeFloor(
+    return oneMealUnlessFood(narrowed, withLoungeFloor(
       Array.from({ length: stopCount }, (_, i) => {
         const roles = FOCUS_ROLES[narrowed[i % n]];
         return roles[Math.floor(i / n) % roles.length];
       }),
       loungeFloor(vibes)
-    );
+    ));
   }
 
   let base: Role[];
@@ -219,10 +220,38 @@ function roleSequence(
   else if (startHour < 17) base = ["activity", "meal", "lounge", "dessert", "lounge", "activity"];
   else base = ["meal", "activity", "lounge", "dessert", "lounge", "activity"];
 
-  return withLoungeFloor(
-    Array.from({ length: stopCount }, (_, i) => base[i % base.length]),
-    loungeFloor(vibes)
+  return oneMeal(
+    withLoungeFloor(
+      Array.from({ length: stopCount }, (_, i) => base[i % base.length]),
+      loungeFloor(vibes)
+    )
   );
+}
+
+/** Inside a food-only plan the second meal becomes a cafe, so it stays food. */
+function oneMealUnlessFood(focus: NarrowFocus[], seq: Role[]): Role[] {
+  const out = oneMeal(seq);
+  return focus.length === 1 && focus[0] === "food" ? out.map((r, i) => (seq[i] === "meal" && r !== "meal" ? "cafe" : r)) : out;
+}
+
+/**
+ * One full meal per outing, unless it is a long day of five stops or more.
+ *
+ * A food plan cycled meal, dessert, cafe, meal, and an afternoon put eggs at
+ * half past three and dinner an hour later. A second meal becomes the next
+ * thing after a meal instead: dessert, or a drink.
+ */
+function oneMeal(seq: Role[]): Role[] {
+  if (seq.length >= 5) return seq;
+  let seen = false;
+  return seq.map((r, i) => {
+    if (r !== "meal") return r;
+    if (!seen) {
+      seen = true;
+      return r;
+    }
+    return seq[i - 1] === "dessert" ? "lounge" : "dessert";
+  });
 }
 
 /**
@@ -300,10 +329,19 @@ export function stopCountFor(
   const crawl =
     (narrowed.length > 0 && narrowed.every((f) => f === "drinks" || f === "activities")) || loungeFloor(vibes) >= 2;
 
-  if (hours <= 2) return 2;
-  if (hours <= 4) return crawl ? 4 : 3;
-  if (hours <= 6) return crawl ? 5 : 4;
-  return crawl ? 6 : 5;
+  /*
+   * Fewer places, each better. Five stops split the budget five ways, and
+   * the owner's verdict on such a plan (27 Oct 2026) was that two or three
+   * good ones beat five thin ones: a proper meal somewhere special, then
+   * one more place, not a crawl of snacks. Crawls keep their length.
+   */
+  if (crawl) {
+    if (hours <= 2) return 2;
+    if (hours <= 4) return 4;
+    return hours <= 6 ? 5 : 6;
+  }
+  if (hours <= 4) return 2;
+  return hours <= 7 ? 3 : 4;
 }
 
 /*
@@ -392,10 +430,22 @@ const COCKTAIL = /cocktail|mojito|margarita|martini|daiquiri|spritz|negroni|old 
 const SHOT = /\bshots?\b|\bshooters?\b|single shot|\btots?\b|jager ?bomb|j[aä]germeister/i;
 /** Breakfast on a menu, left off a meal from EVENING (see orderFrom). */
 const BREAKFAST = /\b(omelet(te)?s?|scrambled?|scramble|eggs? benedict|benedict|pancakes?|french toast|porridge|granola|croissants?|breakfast|full english|bagels?|oats|oatmeal|cereal|waffles?|crepes?|egg (and|&) |eggs on toast|avocado toast)\b/i;
+/**
+ * Plain water, the one drink nobody goes out for. Coconut water and
+ * watermelon juice are drinks; "Sparkling Water (small)" as the whole order
+ * at a tea room was not (owner, 27 Oct 2026).
+ */
+const PLAIN_WATER = /^(?!.*(coconut|melon|juice|tonic|lemonade)).*(water|club soda|soda water)/i;
 /** Coffee and tea, left off the drinks from LATE_NIGHT. */
 const HOT_DRINK = /\b(coffee|cappuc+ino|latte|espresso|americano|macchiato|mocha|flat white|cortado|hot choc(olate)?|tea|chai)\b/i;
 const EVENING = 17 * 60;
 const LATE_NIGHT = 21 * 60;
+/**
+ * When breakfast is over: noon on a weekday, half past one at the weekend
+ * for brunch. It was five, and a Sunday anniversary was served an omelette
+ * at half past three and scrambled eggs again an hour later (27 Oct 2026).
+ */
+const breakfastEnds = (weekday: number | null) => (weekday === 0 || weekday === 6 ? 13 * 60 + 30 : 12 * 60);
 function drinkLean(m: MenuItem): number {
   if (m.category !== "drink") return 0;
   const text = `${m.name} ${m.notes ?? ""}`;
@@ -501,7 +551,8 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute
     // How often people keep it once they are shown it, at most two points either way (pull.ts).
     pullScore(v) +
     // How much like the places this person keeps, at most 1.5 either way (taste.ts).
-    (v.taste ?? 0)
+    (v.taste ?? 0) -
+    anniversaryCafe(v, inputs)
   );
 }
 
@@ -521,6 +572,27 @@ export function premiumLean(v: Venue, inputs: Pick<PlanInputs, "occasion" | "bud
   if (v.price_band !== "premium") return 0;
   if (inputs.occasion !== "date_night" && inputs.occasion !== "anniversary") return 0;
   return inputs.budget / Math.max(1, inputs.partySize) >= PREMIUM_FLOOR_PER_HEAD ? 5 : 0;
+}
+
+/** What a venue of this kind is ordered for when it fills this slot (planOrders, opts.course). */
+function standIn(role: Role, type: VenueType): "dessert" | "light" | "drinks" | undefined {
+  if (type !== "restaurant" && type !== "cafe") return undefined;
+  if (role === "dessert") return "dessert";
+  if (role === "lounge") return "drinks";
+  if (role === "cafe" && type === "restaurant") return "light";
+  return undefined;
+}
+
+/**
+ * Three points off a plain cafe on an anniversary.
+ *
+ * Kosta Coffee for croissants is a fine Tuesday and the wrong way to mark a
+ * year together (owner, 27 Oct 2026). A cafe somebody rated beautiful (4 or
+ * 5) keeps its place: the point is the room, not the coffee.
+ */
+export function anniversaryCafe(v: Venue, inputs: Pick<PlanInputs, "occasion">): number {
+  if (inputs.occasion !== "anniversary" || v.type !== "cafe") return 0;
+  return v.aesthetics != null && Number(v.aesthetics) >= 4 ? 0 : 3;
 }
 
 /** Six points on a family day for somewhere children are welcome. */
@@ -755,7 +827,16 @@ export function planOrders(
    * person's order alone (partySize 1), and starting everyone at the same
    * dish gave twelve people the same jollof. 0 is today's behaviour exactly.
    */
-  opts: { seat?: number } = {}
+  opts: {
+    seat?: number;
+    /**
+     * What this stop is for when the venue is standing in for another kind:
+     * a restaurant in the dessert slot is there for dessert, in a cafe or bar
+     * slot for a drink and something small. A second full meal an hour after
+     * the first was the plan nobody wanted (owner, 27 Oct 2026).
+     */
+    course?: "dessert" | "light" | "drinks";
+  } = {}
 ): OrderPlan | null {
   const seat = Math.max(0, Math.floor(opts.seat ?? 0));
   // Which treatment an order is being dealt for, while the spa branch runs.
@@ -925,6 +1006,9 @@ export function planOrders(
     if (category === "drink") {
       const noShots = all.filter((m) => !SHOT.test(`${m.name} ${m.notes ?? ""}`));
       if (noShots.length >= 3) all = noShots;
+      // Plain water is ordered only where there is nothing else to drink.
+      const notWater = all.filter((m) => !PLAIN_WATER.test(m.name));
+      if (notWater.length) all = notWater;
     }
     /*
      * And what suits the hour. The plan check kept finding scrambled eggs and
@@ -935,7 +1019,7 @@ export function planOrders(
      * where three or more other things remain, so a breakfast place still
      * serves breakfast.
      */
-    if (slotStartMinute >= EVENING && (category === "main" || category === "starter")) {
+    if (slotStartMinute >= breakfastEnds(planWeekday) && (category === "main" || category === "starter" || category === "other")) {
       const notBreakfast = all.filter((m) => !BREAKFAST.test(`${m.name} ${m.notes ?? ""}`));
       if (notBreakfast.length >= 3) all = notBreakfast;
     }
@@ -1097,7 +1181,13 @@ export function planOrders(
     }));
   };
 
-  if (venue.type === "restaurant" || venue.type === "cafe") {
+  if ((venue.type === "restaurant" || venue.type === "cafe") && opts.course) {
+    const small = (cats: string[]) => cats.map((c) => () => orderFrom(c, partySize)).reduce<OrderLine[]>((f, n) => (f.length ? f : n()), []);
+    if (opts.course === "dessert") lines.push(...small(["dessert", "starter"]));
+    if (opts.course === "light") lines.push(...small(["dessert", "starter", "other"]));
+    lines.push(...orderFrom("drink", partySize));
+    // A stand-in with nothing light to offer falls through to the empty-menu handling below.
+  } else if (venue.type === "restaurant" || venue.type === "cafe") {
     const mains = [
       () => orderFrom("main", partySize),
       () => orderFrom("other", partySize),
@@ -1113,14 +1203,22 @@ export function planOrders(
     const hasMains = menu.some((m) => m.category === "main");
     if (tier === 2 && hasMains) lines.push(...orderFrom("starter", partySize));
 
+    /*
+     * A café with nothing on the plate is still somewhere to eat: a pastry or
+     * a dessert rather than a glass of water and nothing else.
+     */
+    if (!mains.length) mains.push(...orderFrom("dessert", partySize));
+
     lines.push(...mains);
     lines.push(...withBases(mains));
 
     /*
-     * A drink each at a typical order. Spread too, because a table of seven
-     * does not order seven of the same thing to drink either.
+     * A drink each, at every tier. It was only from the middle tier, so a
+     * modest order was two croissants with nothing to drink; nobody sits down
+     * to eat without one (owner, 27 Oct 2026). Spread too, because a table of
+     * seven does not order seven of the same thing to drink either.
      */
-    if (tier >= 1) lines.push(...orderFrom("drink", partySize));
+    lines.push(...orderFrom("drink", partySize));
     if (tier === 2 && hasMains) lines.push(...orderFrom("dessert", partySize));
   } else if (venue.type === "dessert") {
     const sweet = orderFrom("dessert", partySize);
@@ -1832,7 +1930,8 @@ function planWith(
         inputs.cuisines ?? [],
         wellnessKindsOf(inputs),
         weekdayOf(inputs.date),
-        inputs.occasion === "family_day"
+        inputs.occasion === "family_day",
+        { course: standIn(role, venue.type) }
       );
       if (!planned) continue;
       // Nothing to order and nothing to pay at the door is a free stop, and
@@ -2549,7 +2648,7 @@ function planWith(
           // this is.
           label: onTonight
             ? onTonight.title
-            : ROLE_TYPES[role].includes(p.venue.type)
+            : ROLE_TYPES[role].includes(p.venue.type) || standIn(role, p.venue.type)
               ? ROLE_LABEL[role]
               : (TYPE_LABEL[p.venue.type] ?? ROLE_LABEL[role]),
           durationMins:
@@ -2603,7 +2702,7 @@ function planWith(
               cost: o.cost,
               charges: o.charges,
               // The heading this venue would have had in this slot, by the rule above, so a swap changes it too.
-              label: ROLE_TYPES[role].includes(o.venue.type)
+              label: ROLE_TYPES[role].includes(o.venue.type) || standIn(role, o.venue.type)
                 ? ROLE_LABEL[role]
                 : (TYPE_LABEL[o.venue.type] ?? ROLE_LABEL[role]),
             })),
