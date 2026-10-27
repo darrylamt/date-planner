@@ -446,10 +446,25 @@ const LATE_NIGHT = 21 * 60;
  * at half past three and scrambled eggs again an hour later (27 Oct 2026).
  */
 const breakfastEnds = (weekday: number | null) => (weekday === 0 || weekday === 6 ? 13 * 60 + 30 : 12 * 60);
+/*
+ * What a dish is: Gemini's reading where there is one (0096,
+ * menuUnderstand.ts), the old name rules where there is not yet.
+ */
+const isBreakfastDish = (m: MenuItem) =>
+  m.meal_time ? m.meal_time !== "anytime" : BREAKFAST.test(`${m.name} ${m.notes ?? ""}`);
+const isWater = (m: MenuItem) =>
+  m.drink_kind ? m.drink_kind === "still_water" || m.drink_kind === "sparkling_water" : PLAIN_WATER.test(m.name);
+const isShot = (m: MenuItem) => (m.drink_kind ? m.drink_kind === "shot" : SHOT.test(`${m.name} ${m.notes ?? ""}`));
+const isHotDrink = (m: MenuItem) =>
+  m.drink_kind ? ["coffee", "hot_tea", "hot_chocolate"].includes(m.drink_kind) : HOT_DRINK.test(m.name);
+/** Not a plate anyone eats as their order: a side, an extra. */
+const notAPlate = (m: MenuItem) => m.dish_role === "side" || m.dish_role === "addon" || m.dish_type === "side_starch";
+
 function drinkLean(m: MenuItem): number {
   if (m.category !== "drink") return 0;
   const text = `${m.name} ${m.notes ?? ""}`;
-  if (SHOT.test(text)) return -3;
+  if (isShot(m)) return -3;
+  if (m.drink_kind === "cocktail") return 1.5;
   if (COCKTAIL.test(text) && m.is_alcoholic !== false && !/mocktail|non-alcoholic|\bvirgin\b/i.test(text)) return 1.5;
   return 0;
 }
@@ -1004,10 +1019,10 @@ export function planOrders(
      * off the order. A bar that is mostly shots still gets them.
      */
     if (category === "drink") {
-      const noShots = all.filter((m) => !SHOT.test(`${m.name} ${m.notes ?? ""}`));
+      const noShots = all.filter((m) => !isShot(m));
       if (noShots.length >= 3) all = noShots;
       // Plain water is ordered only where there is nothing else to drink.
-      const notWater = all.filter((m) => !PLAIN_WATER.test(m.name));
+      const notWater = all.filter((m) => !isWater(m));
       if (notWater.length) all = notWater;
     }
     /*
@@ -1020,11 +1035,11 @@ export function planOrders(
      * serves breakfast.
      */
     if (slotStartMinute >= breakfastEnds(planWeekday) && (category === "main" || category === "starter" || category === "other")) {
-      const notBreakfast = all.filter((m) => !BREAKFAST.test(`${m.name} ${m.notes ?? ""}`));
+      const notBreakfast = all.filter((m) => !isBreakfastDish(m));
       if (notBreakfast.length >= 3) all = notBreakfast;
     }
     if (slotStartMinute >= LATE_NIGHT && category === "drink") {
-      const notCoffee = all.filter((m) => !HOT_DRINK.test(m.name));
+      const notCoffee = all.filter((m) => !isHotDrink(m));
       if (notCoffee.length >= 3) all = notCoffee;
     }
     /*
@@ -1033,8 +1048,19 @@ export function planOrders(
      * starter was a dinner on a tight budget, and an egg stew with nothing to
      * eat it with was a date. Each step only narrows when something is left.
      */
+    /*
+     * A meal is a full plate. Where Gemini has read the menu, the mains are
+     * the dishes it calls a main, not the light plates, sides and pastries a
+     * menu files under "main": croissants and an egg plate were somebody's
+     * anniversary lunch (27 Oct 2026). Only where two or more full plates
+     * remain, so a light menu still feeds people.
+     */
+    if (category === "main" && dining) {
+      const full = all.filter((m) => m.dish_role === "main");
+      if (full.length >= 2) all = full;
+    }
     if (dining && category !== "drink" && category !== "dessert") {
-      const meals = all.filter((m) => !isBase(m));
+      const meals = all.filter((m) => !isBase(m) && !notAPlate(m));
       const fed = bases.length ? meals : meals.filter((m) => !needsBase(m));
       all = fed.length ? fed : meals.length ? meals : all;
     }
@@ -1095,7 +1121,9 @@ export function planOrders(
      */
     // And what this person adds and takes off at other stops (taste.ts), up to two either way.
     const rec = (m: MenuItem) =>
-      (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0) + drinkLean(m) + dishTaste(venue.tasteWords, m.name);
+      (m.recommend_count ?? 0) + (isSignature(venue, m.name) ? 2 : 0) + drinkLean(m) +
+      // Its tags and type too (0096), so a taste for grilled fish reaches dishes not named that way.
+      dishTaste(venue.tasteWords, `${m.name} ${(m.dish_tags ?? []).join(" ")} ${m.dish_type ?? ""}`.replace(/_/g, " "));
     const near = items.slice(Math.max(0, from - 2), from + WIDTH + 2);
     const outsiders = near.filter((m) => rec(m) > 0 && !candidates.includes(m)).sort((a, b) => rec(b) - rec(a));
     for (const m of outsiders) {

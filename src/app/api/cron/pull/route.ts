@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { refreshPull } from "@/lib/pull";
 import { embedChangedVenues } from "@/lib/embeddings";
+import { understandMenus } from "@/lib/menuUnderstand";
 
 /**
  * Nightly: every active venue's pull, from the last ninety days of what
@@ -25,7 +26,9 @@ export async function GET(req: Request) {
     const pull = await refreshPull(db);
     // Embeddings failing (the free quota) must not lose the pull that worked.
     const embedded = await embedChangedVenues(db).catch((e) => ({ error: (e as Error).message }));
-    return NextResponse.json({ ok: true, ...pull, embedded });
+    // And dishes added or edited since (menuUnderstand.ts, 0096), in whatever time is left.
+    const dishes = await understandMenus(db, { limit: 480, deadlineMs: 20_000 }).catch((e) => ({ error: (e as Error).message }));
+    return NextResponse.json({ ok: true, ...pull, embedded, dishes });
   } catch (e) {
     console.error("pull refresh failed", e);
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });

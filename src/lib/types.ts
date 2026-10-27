@@ -240,6 +240,20 @@ export interface MenuItem {
   image_url?: string | null;
   /** How many accounts recommend it (0063). Kept by a trigger; never written directly. */
   recommend_count?: number;
+  /**
+   * What the dish is, as Gemini read it (0096, menuUnderstand.ts): a full
+   * plate, a light one, a side, a pastry, a drink. Null until read, and then
+   * the planner falls back to the menu's own category and its name rules.
+   */
+  dish_role?: "main" | "light" | "side" | "starter" | "dessert" | "pastry" | "snack" | "drink" | "addon" | null;
+  /** When people eat it: breakfast and brunch plates end at noon (planner.ts). */
+  meal_time?: "breakfast" | "brunch" | "anytime" | null;
+  /** Food only, finer: soup, burger, rice_dish, swallow, grill, steak, pastry... (0096). */
+  dish_type?: string | null;
+  /** Drinks only: still_water, fresh_juice, iced_tea, cocktail, local_beer, red_wine, whisky, shot... */
+  drink_kind?: string | null;
+  /** A few words from a fixed list: chicken, grilled, ghanaian, sharing... (0096). */
+  dish_tags?: string[] | null;
 }
 
 /**

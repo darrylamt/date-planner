@@ -20,6 +20,7 @@
     "embed:venues": "tsx --env-file=.env.local scripts/embed-venues.ts",
     "taste:smoke": "tsx --env-file=.env.local scripts/taste-smoke.ts",
     "staff:smoke": "tsx --env-file=.env.local scripts/staff-smoke.ts",
+    "menu:understand": "tsx --env-file=.env.local scripts/understand-menus.ts",
     "chat:ask": "tsx scripts/chat-smoke.ts",
     "chat:first": "tsx scripts/chat-first-questions.mts",
     "grant": "tsx scripts/grant-pro.ts",
