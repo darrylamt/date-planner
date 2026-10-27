@@ -197,7 +197,8 @@ function roleSequence(
      * behaviour exactly.
      */
     const n = narrowed.length;
-    return oneMealUnlessFood(narrowed, withLoungeFloor(
+    // Asked for mostly food or mostly drinks: several of them is the point, so no one-meal rule (owner, 27 Oct 2026).
+    return (withLoungeFloor(
       Array.from({ length: stopCount }, (_, i) => {
         const roles = FOCUS_ROLES[narrowed[i % n]];
         return roles[Math.floor(i / n) % roles.length];
@@ -226,12 +227,6 @@ function roleSequence(
       loungeFloor(vibes)
     )
   );
-}
-
-/** Inside a food-only plan the second meal becomes a cafe, so it stays food. */
-function oneMealUnlessFood(focus: NarrowFocus[], seq: Role[]): Role[] {
-  const out = oneMeal(seq);
-  return focus.length === 1 && focus[0] === "food" ? out.map((r, i) => (seq[i] === "meal" && r !== "meal" ? "cafe" : r)) : out;
 }
 
 /**
