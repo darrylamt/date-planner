@@ -431,6 +431,8 @@ export async function fetchCandidates(
   if (opts.excludeVenueIds?.length) {
     venues = venues.filter((v) => !opts.excludeVenueIds!.includes(v.id));
   }
+  // A place to sleep is for Trips (0099): an outing never plans one as a stop.
+  venues = venues.filter((v) => v.type !== "stay");
 
   /*
    * A venue with no menu rows AND no average cost is unpriced, not free, the

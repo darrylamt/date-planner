@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { adminDataClient } from "@/lib/adminAuth";
 import { VenueForm } from "@/components/admin/VenueForm";
 import { areaCentroids } from "@/lib/areaCentroids";
@@ -23,6 +23,8 @@ export default async function EditVenuePage({ params }: { params: { id: string }
     ]);
 
   if (!venue) notFound();
+  // A place to stay has its own form (0099), which knows its rooms and region.
+  if ((venue as { type?: string }).type === "stay") redirect(`/admin/stays/${params.id}`);
 
 
   /*

@@ -38,7 +38,7 @@ const ALLOWED = new Map<string, string>([
 
 export async function POST(req: Request) {
   // Admins, and the staff roles that put pictures on things (0095).
-  const gate = await requireStaff(["photos", "events", "menus"]);
+  const gate = await requireStaff(["photos", "events", "menus", "stays"]);
   if (!gate.ok) return gate.response;
   const { supabase } = gate;
 

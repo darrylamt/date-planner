@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/adminAuth";
+import { requireStaff } from "@/lib/adminAuth";
 import {
   PlacesNotConfigured,
   placeDetails,
@@ -23,7 +23,8 @@ const bodySchema = z.discriminatedUnion("action", [
 ]);
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  // Events and stays staff find places too: an event at a new venue, a new stay (0099).
+  const gate = await requireStaff(["events", "stays"]);
   if (!gate.ok) return gate.response;
 
   if (!placesConfigured()) {

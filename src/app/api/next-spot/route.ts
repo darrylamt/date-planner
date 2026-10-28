@@ -78,6 +78,8 @@ const VISIT: Record<VenueType, [MenuItem["category"], string][]> = {
   outdoor: [["activity", "Entry"], ["other", "Entry"]],
   wellness: [["activity", "Treatments"], ["other", "Treatments"]],
   restaurant: [["main", "Mains"], ["starter", "Small plates"]],
+  // A place to sleep is never "one more place" (0099).
+  stay: [],
 };
 
 function visitPrice(type: VenueType, menu: MenuItem[]): { what: string; ghs: number } | null {

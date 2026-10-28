@@ -9,6 +9,7 @@ import type { Area, EventRow } from "@/lib/types";
 import { ImageField } from "./ImageField";
 import { PosterStart } from "@/components/planner/PosterStart";
 import { guessVenue } from "@/lib/menuRead";
+import { PlaceAdder } from "./PlaceAdder";
 
 const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "workshop", "film_night", "other"];
 
@@ -37,9 +38,14 @@ export function EventsManager({
 }: {
   events: EventRow[];
   areas: Area[];
-  venues: { id: string; name: string }[];
+  venues: { id: string; name: string; area_id: string }[];
 }) {
   const router = useRouter();
+  // Venues added from Google here join the list at once, without a reload.
+  const [venueList, setVenueList] = useState(venues);
+  // And a new area Google's address created, so the area below can show it.
+  const [areaList, setAreaList] = useState(areas);
+  const areaOfVenue = (id: string) => venueList.find((v) => v.id === id)?.area_id;
   const supabase = createClient();
   const [form, setForm] = useState({ ...EMPTY, area_id: areas[0]?.id ?? "" });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -182,12 +188,14 @@ export function EventsManager({
           compact
           uploadUrl="/api/admin/upload"
           onDraft={(p, imageUrl) => {
-            const venue = p.venueName ? guessVenue(p.venueName, venues) : null;
+            const venue = p.venueName ? guessVenue(p.venueName, venueList) : null;
             setForm({
               ...form,
               title: p.title || form.title,
               description: p.description || form.description,
               venue_id: venue?.id ?? form.venue_id,
+              // The venue's own area, as choosing it by hand does.
+              area_id: (venue && areaOfVenue(venue.id)) || form.area_id,
               event_date: p.dates[0] ?? form.event_date,
               start_time: p.time || form.start_time,
               cost_ghs: p.costMode === "free" ? "0" : p.costMode === "paid" && p.cost ? String(p.cost) : form.cost_ghs,
@@ -234,26 +242,50 @@ export function EventsManager({
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
         </div>
-        <div>
-          <span className="flbl">Area</span>
-          <select className="inp h-[42px]" value={form.area_id} onChange={(e) => setForm({ ...form, area_id: e.target.value })}>
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
+        {/*
+          The venue first, and its area follows: an event at Skybar is in
+          Skybar's area, and choosing both by hand was two chances to get it
+          wrong. A place we do not hold yet is added from Google right here.
+          The area stays editable for an event with no venue.
+        */}
+        <div className="md:col-span-2">
           <span className="flbl">Venue (optional)</span>
-          <select className="inp h-[42px]" value={form.venue_id} onChange={(e) => setForm({ ...form, venue_id: e.target.value })}>
+          <select
+            className="inp h-[42px]"
+            value={form.venue_id}
+            onChange={(e) => {
+              const id = e.target.value;
+              setForm({ ...form, venue_id: id, area_id: (id && areaOfVenue(id)) || form.area_id });
+            }}
+          >
             <option value="">No venue</option>
-            {venues.map((v) => (
+            {venueList.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
               </option>
             ))}
           </select>
+          <PlaceAdder
+            onAdded={(v) => {
+              setVenueList((cur) => (cur.some((x) => x.id === v.id) ? cur : [...cur, { id: v.id, name: v.name, area_id: v.area_id }].sort((a, b) => a.name.localeCompare(b.name))));
+              if (!areaList.some((a) => a.id === v.area_id)) {
+                setAreaList((cur) => [...cur, { id: v.area_id, name: v.area_name } as Area].sort((a, b) => a.name.localeCompare(b.name)));
+              }
+              setForm((cur) => ({ ...cur, venue_id: v.id, area_id: v.area_id }));
+              setToast(v.created ? `Added ${v.name} (${v.area_name}) from Google.` : `${v.name} was already one of ours, so it is chosen.`);
+            }}
+          />
+        </div>
+        <div>
+          <span className="flbl">Area</span>
+          <select className="inp h-[42px]" value={form.area_id} onChange={(e) => setForm({ ...form, area_id: e.target.value })}>
+            {areaList.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          {form.venue_id ? <div className="mt-1 text-[12px] text-mutedbrown">Filled from the venue.</div> : null}
         </div>
         <div>
           <span className="flbl">Date</span>

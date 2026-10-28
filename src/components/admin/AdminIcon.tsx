@@ -38,6 +38,7 @@ const PATHS = {
   check: "M5 12.5l4.5 4.5L19 7.5",
   alert: "M12 8.5v5M12 16.5h.01M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
   camera: "M4 8h3l1.5-2.5h7L17 8h3v11H4zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z",
+  bed: "M3 18v-9M3 14h18v4M21 18v-6a2 2 0 0 0-2-2h-8v4M7 12.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

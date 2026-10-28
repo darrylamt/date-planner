@@ -59,6 +59,8 @@ const KIND_LABEL: Record<VenueType, string> = {
   activity: "SOMETHING TO DO",
   outdoor: "OUTDOORS",
   wellness: "SPA",
+  // Never an outing stop (0099); here only so every kind has a heading.
+  stay: "A PLACE TO STAY",
 };
 
 /**

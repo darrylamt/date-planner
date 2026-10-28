@@ -7,7 +7,12 @@
  * friends could be sent to either. A wellness venue is only ever planned when
  * somebody asks for it.
  */
-export type VenueType = "restaurant" | "activity" | "lounge" | "outdoor" | "cafe" | "dessert" | "wellness";
+/**
+ * "stay" is a place to sleep (0099), held for Trips: entered in the admin now,
+ * never planned as an outing stop, and hidden from the app and the website
+ * until Trips is built.
+ */
+export type VenueType = "restaurant" | "activity" | "lounge" | "outdoor" | "cafe" | "dessert" | "wellness" | "stay";
 export type PriceBand = "budget" | "mid" | "premium";
 /**
  * "activity" is a line on a price list rather than a course: a go-kart, a game
@@ -401,6 +406,14 @@ export type Formality = "either" | "casual" | "fancy";
 export type AlcoholChoice = "either" | "none";
 
 /**
+ * What somebody does not eat (28 Oct 2026). Food only: drinking is AlcoholChoice.
+ * A filter on every menu, read from Gemini's dish tags where it has them
+ * (planner.ts, dietMenu), strict about plates: a vegetarian main is a dish
+ * marked vegetarian, never one that merely names no meat.
+ */
+export type Diet = "vegetarian" | "vegan" | "no_pork" | "no_beef" | "no_seafood";
+
+/**
  * Where a plan was started from. Recorded with each generate request so the
  * Home and onboarding redesign can be judged by what people actually tap.
  */
@@ -535,6 +548,8 @@ export interface PlanInputs {
    * one the occasion starts at (defaultBudgetFor). Counting only (0097).
    */
   budgetChosen?: boolean;
+  /** What they do not eat. Absent or empty: anything. */
+  diet?: Diet[];
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
@@ -586,6 +601,12 @@ export interface ItineraryOrder {
    * empty mean the same thing here: nobody wrote one down.
    */
   note?: string | null;
+  /**
+   * Why this dish, where there is a reason worth a line (28 Oct 2026): what
+   * the place is known for, what people recommend, what this person tends to
+   * pick. Absent on most lines, and on every plan saved before it existed.
+   */
+  why?: string | null;
 }
 
 export type Occasion =

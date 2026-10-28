@@ -9,14 +9,14 @@ export default async function AdminEventsPage() {
   const [{ data: events }, { data: areas }, { data: venues }] = await Promise.all([
     supabase.from("events").select("*").order("event_date"),
     supabase.from("areas").select("*").order("name"),
-    supabase.from("venues").select("id, name").order("name"),
+    supabase.from("venues").select("id, name, area_id").order("name"),
   ]);
 
   return (
     <EventsManager
       events={(events ?? []) as EventRow[]}
       areas={(areas ?? []) as Area[]}
-      venues={(venues ?? []) as { id: string; name: string }[]}
+      venues={(venues ?? []) as { id: string; name: string; area_id: string }[]}
     />
   );
 }
