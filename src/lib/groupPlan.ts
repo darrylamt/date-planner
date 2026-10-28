@@ -67,8 +67,10 @@ const PORK = /\b(pork|bacon|ham|pepperoni|salami|prosciutto|chorizo|pancetta)\b/
 
 function dishOk(m: MenuItem, nos: Set<HardNo>): boolean {
   const text = `${m.name} ${m.notes ?? ""}`;
-  if (nos.has("no_seafood") && SEAFOOD.test(text)) return false;
-  if (nos.has("no_pork") && PORK.test(text)) return false;
+  // Gemini's tags too (0096), for the dishes whose names do not say.
+  const tags = m.dish_tags ?? [];
+  if (nos.has("no_seafood") && (SEAFOOD.test(text) || tags.includes("fish") || tags.includes("seafood"))) return false;
+  if (nos.has("no_pork") && (PORK.test(text) || tags.includes("pork"))) return false;
   return true;
 }
 

@@ -4,7 +4,7 @@
  * Run `npm run mirror` after changing the web copy.
  */
 import { BUDGET_DEFAULT, BUDGET_MAX, BUDGET_STEP } from "./budget";
-import type { AlcoholChoice, Audience, Crew, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
+import type { AlcoholChoice, Audience, Crew, Diet, Formality, Occasion, PlanCuisine, PlanFocus, PlanInputs, NarrowFocus } from "./types";
 
 /**
  * The questionnaire's vocabulary. Shared by both clients and the prompt, so a
@@ -109,6 +109,15 @@ export const CUISINE_OPTIONS: { id: PlanCuisine; title: string; sub: string }[] 
  * striking every lounge off would cost somebody the evening over a preference
  * about one glass.
  */
+/** What somebody does not eat, as the questionnaire offers it (Diet). */
+export const DIET_OPTIONS: { id: Diet; label: string }[] = [
+  { id: "vegetarian", label: "Vegetarian" },
+  { id: "vegan", label: "Vegan" },
+  { id: "no_pork", label: "No pork" },
+  { id: "no_beef", label: "No beef" },
+  { id: "no_seafood", label: "No fish or seafood" },
+];
+
 export const ALCOHOL_OPTIONS: { id: AlcoholChoice; title: string; sub: string }[] = [
   { id: "either", title: "No preference", sub: "Order whatever suits the place" },
   { id: "none", title: "Nothing alcoholic", sub: "We order only drinks we can confirm are alcohol-free" },

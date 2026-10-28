@@ -19,6 +19,7 @@ import {
   DEFAULT_START_TIME,
   wantsDaylight,
   ALCOHOL_OPTIONS,
+  DIET_OPTIONS,
   DURATIONS,
   CUISINE_OPTIONS,
   FOCUS_OPTIONS,
@@ -653,6 +654,32 @@ export function PlanSteps({
                 </ChipRow>
               </>
             ) : null}
+          </>
+        ) : null}
+
+        {/*
+          What they do not eat, whenever the plan has food in it: a filter on
+          every menu, so a vegetarian is never handed a chicken plate.
+        */}
+        {!(focusesOf(inputs).length === 1 && focusesOf(inputs)[0] === "activities") ? (
+          <>
+            <GroupLabel>Anything you don't eat?</GroupLabel>
+            <ChipRow>
+              {DIET_OPTIONS.map((d) => {
+                const on = (inputs.diet ?? []).includes(d.id);
+                return (
+                  <Chip
+                    key={d.id}
+                    label={d.label}
+                    selected={on}
+                    onPress={() => {
+                      const cur = inputs.diet ?? [];
+                      update({ diet: on ? cur.filter((x) => x !== d.id) : [...cur, d.id] });
+                    }}
+                  />
+                );
+              })}
+            </ChipRow>
           </>
         ) : null}
 

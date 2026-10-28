@@ -33,7 +33,7 @@ import type {
   PriceBand,
   Venue,
   VenueSchedule,
-  VenueType, NarrowFocus, StopCharge } from "./types";
+  VenueType, NarrowFocus, StopCharge, Diet } from "./types";
 
 /**
  * Deterministic itinerary planning.
@@ -497,8 +497,13 @@ export function drinkFit(m: MenuItem, where: "meal" | "cafe" | "bar", minute: nu
   return 1;
 }
 
-/** What makes two mains the same order: the meat or fish first, else the kind of dish (0096). */
-const plateSignature = (m: MenuItem) => (m.dish_tags ?? []).find((t) => PROTEINS.has(t)) ?? m.dish_type ?? m.name;
+/*
+ * What makes two mains the same order: the meat, fish or egg first, else the
+ * kind of dish (0096). Not "vegetarian": at a vegetarian table every main is,
+ * and a pizza and a pasta are still two different plates.
+ */
+const SAME_PLATE = new Set([...PROTEINS].filter((t) => t !== "vegetarian" && t !== "vegan"));
+const plateSignature = (m: MenuItem) => (m.dish_tags ?? []).find((t) => SAME_PLATE.has(t)) ?? m.dish_type ?? m.name;
 
 /**
  * Dealt so neighbours differ: a couple's two mains were Spicy Chicken Crispy
@@ -654,6 +659,48 @@ function standIn(role: Role, type: VenueType): "dessert" | "light" | "drinks" | 
   if (role === "cafe" && type === "restaurant") return "light";
   if (role === "activity") return "light";
   return undefined;
+}
+
+/*
+ * What somebody does not eat (Diet, 28 Oct 2026), read from Gemini's dish
+ * tags (0096) and, for dishes it has not read or tags it missed, the dish's
+ * own words. Strict about plates: a vegetarian main is one marked vegetarian,
+ * never one that merely names no meat, because "Jollof" alone comes with
+ * chicken more often than not. Sides, desserts and drinks pass unless they
+ * name the thing.
+ */
+const MEAT_TAGS = ["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood"];
+const MEAT_WORDS =
+  /\b(chicken|beef|goat|lamb|mutton|pork|bacon|ham|sausages?|pepperoni|salami|turkey|duck|fish|tilapia|salmon|tuna|prawns?|shrimps?|crab|lobster|calamari|squid|octopus|seafood|wings?|suya|kebabs?|steaks?|burgers?|shawarma|meat|gizzards?|kofta|khebab|chichinga)\b/i;
+const PORK_WORDS = /\b(pork|bacon|ham|pepperoni|salami|prosciutto|chorizo|pancetta)\b/i;
+const BEEF_WORDS = /\b(beef|steaks?|brisket|oxtail|wagyu|bolognese|corned)\b/i;
+const SEA_WORDS =
+  /\b(fish|tilapia|salmon|tuna|snapper|grouper|sea ?bass|prawns?|shrimps?|crab|lobster|calamari|squid|octopus|oysters?|mussels?|seafood|sushi|sashimi|anchov(y|ies)|kpanla|redfish)\b/i;
+const DAIRY_WORDS = /\b(milk|cream|cheese|butter|yogh?urt|latte|cappuccino|milkshake|ice cream|gelato|paneer|ghee|honey|mayo(nnaise)?)\b/i;
+
+export function dietMenu(menu: MenuItem[], diet: Diet[] | undefined): MenuItem[] {
+  if (!diet?.length) return menu;
+  const no = new Set(diet);
+  return menu.filter((m) => {
+    if (m.category === "activity") return true;
+    const text = `${m.name} ${m.notes ?? ""}`;
+    const tags = new Set(m.dish_tags ?? []);
+    if (no.has("no_pork") && (tags.has("pork") || PORK_WORDS.test(text))) return false;
+    if (no.has("no_beef") && (tags.has("beef") || BEEF_WORDS.test(text))) return false;
+    if (no.has("no_seafood") && (tags.has("fish") || tags.has("seafood") || SEA_WORDS.test(text))) return false;
+    if (m.category === "drink" || m.dish_role === "drink") {
+      return !(no.has("vegan") && (m.drink_kind === "milkshake" || DAIRY_WORDS.test(text)));
+    }
+    if (!no.has("vegan") && !no.has("vegetarian")) return true;
+    const meaty = MEAT_TAGS.some((t) => tags.has(t)) || MEAT_WORDS.test(text);
+    const plate = m.dish_role ? ["main", "light", "starter"].includes(m.dish_role) : m.category === "main" || m.category === "starter";
+    if (no.has("vegan")) {
+      if (tags.has("vegan")) return !meaty;
+      return !plate && !meaty && !tags.has("egg") && !DAIRY_WORDS.test(text) && m.dish_role !== "dessert" && m.dish_role !== "pastry";
+    }
+    if (tags.has("vegetarian") || tags.has("vegan")) return !MEAT_TAGS.some((t) => tags.has(t));
+    return !plate && !meaty;
+  });
 }
 
 /** Whether a line on a bill is a dessert: what Gemini says it is (0096), else the menu's own section. */
@@ -961,6 +1008,12 @@ export function planOrders(
      * lounge in the meal slot was ordered drinks and nothing else.
      */
     meal?: boolean;
+    /**
+     * Kinds of dish an earlier stop of the same outing already served
+     * (0096 dish types): steered clear of where the menu has something else,
+     * so it is not eggs at the café and eggs again at lunch.
+     */
+    avoidTypes?: string[];
   } = {}
 ): OrderPlan | null {
   const seat = Math.max(0, Math.floor(opts.seat ?? 0));
@@ -1144,6 +1197,21 @@ export function planOrders(
         ? "cafe"
         : "meal";
 
+  /*
+   * Why this dish, when there is a reason worth a line (28 Oct 2026): what
+   * this person tends to pick, what the place is known for, or what people
+   * have recommended. Most dishes have none, and say nothing.
+   */
+  const reasonFor = (m: MenuItem): string | null => {
+    if (m.category === "activity") return null;
+    if (dishTaste(venue.tasteWords, `${m.name} ${(m.dish_tags ?? []).join(" ")} ${m.dish_type ?? ""}`.replace(/_/g, " ")) > 0) {
+      return "Like what you usually pick";
+    }
+    if (isSignature(venue, m.name)) return "What they're known for";
+    const n = m.recommend_count ?? 0;
+    return n >= 2 ? `Recommended by ${n} people` : null;
+  };
+
   const orderFrom = (category: string, people: number): OrderLine[] => {
     let all = menu.filter((m) => inCourse(m, category) && fitsParty(m)).sort(byPrice);
     // A restaurant whose menu holds no full plate at all still feeds people from its light ones.
@@ -1254,6 +1322,11 @@ export function planOrders(
        * the next one, or just a coffee, is the order.
        */
       all = fed.length ? fed : meals.length ? meals : labelled ? [] : all;
+    }
+    // Not what an earlier stop already served, where there is something else (the variety pass).
+    if (opts.avoidTypes?.length && category !== "drink" && category !== "activity") {
+      const fresh = all.filter((m) => !m.dish_type || !opts.avoidTypes!.includes(m.dish_type));
+      if (fresh.length) all = fresh;
     }
     if (!all.length || people < 1) return [];
 
@@ -1384,6 +1457,7 @@ export function planOrders(
       price_ghs: Math.round(Number(item.price_ghs) * qty),
       // The menu's own words, for the names that need them.
       note: item.notes ?? null,
+      why: reasonFor(item),
     }));
   };
 
@@ -1835,6 +1909,8 @@ function planWith(
     menuByVenue.set(m.venue_id, list);
   });
   const isDessertAt = (venue: Venue, item: string) => isDessertLine(menuByVenue.get(venue.id) ?? [], item);
+  // A venue's menu as this plan may order from it: their drinking and what they do not eat.
+  const venueMenu = (venue: Venue) => dietMenu(drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol), inputs.diet);
 
   /*
    * What each venue does weekly, indexed by the venue's own id.
@@ -2063,7 +2139,7 @@ function planWith(
       if (open === false) return out;
     }
 
-    const menu = drinkable(menuByVenue.get(venue.id) ?? [], inputs.alcohol);
+    const menu = venueMenu(venue);
 
     /*
      * On while they are here, not merely on that day.
@@ -2978,6 +3054,78 @@ function planWith(
           label: named(st.label, st.arrivalMinutes),
           alternates: st.alternates.map((a) => ({ ...(after ? noDessert(a) : a), label: named(a.label, st.arrivalMinutes) })),
         };
+      });
+
+      /*
+       * And no kind of dish twice in one outing. Eggs at the café and eggs
+       * again at lunch read as a mistake (owner, 27 Oct 2026). A later stop
+       * that orders a kind an earlier one served is ordered again steering
+       * clear of it, at the same tier, when the new bill fits what is left
+       * of the budget and the repeat actually goes. Not a stop standing in
+       * for another kind, whose heading follows what it ordered, nor the
+       * event's.
+       */
+      const PLAIN = new Set(["other", "side_starch", "bread", "vegetables"]);
+      const kindsOf = (st: PlannedStop) => {
+        const menu = menuByVenue.get(st.venue.id) ?? [];
+        const kinds = new Set<string>();
+        for (const o of st.orders) {
+          if (o.door) continue;
+          const m = menu.find((x) => x.name === o.item);
+          if (m?.dish_type && !PLAIN.has(m.dish_type) && m.category !== "drink" && m.dish_role !== "drink") kinds.add(m.dish_type);
+        }
+        return kinds;
+      };
+      let spare = inputs.budget - stops.reduce((n, x) => n + x.cost, 0) - hops.reduce((n, h) => n + h.cost_ghs, 0);
+      const served = new Set<string>();
+      stops = stops.map((st, i) => {
+        const role = roles[i];
+        const mine = kindsOf(st);
+        let out = st;
+        if (
+          [...mine].some((k) => served.has(k)) &&
+          i !== pinnedIndex &&
+          !st.event &&
+          !standIn(role, st.venue.type) &&
+          (st.basis ?? "menu") === "menu" &&
+          st.tier != null
+        ) {
+          const planned = planOrders(
+            st.venue,
+            venueMenu(st.venue),
+            inputs.partySize,
+            st.tier,
+            st.durationMins,
+            st.arrivalMinutes,
+            inputs.cuisines ?? [],
+            wellnessKindsOf(inputs),
+            weekdayOf(inputs.date),
+            inputs.occasion === "family_day",
+            {
+              occasion: inputs.occasion,
+              noDessert: roles.slice(i + 1).includes("dessert") || sweet.slice(i + 1).some(Boolean),
+              meal: role === "meal",
+              avoidTypes: [...served],
+            }
+          );
+          if (planned && (planned.basis ?? "menu") === "menu") {
+            const doors = st.orders.filter((o) => o.door);
+            const charges = chargesOn(planned.cost, { service_pct: st.venue.service_charge_pct, tax_pct: st.venue.tax_added_pct });
+            const next: PlannedStop = {
+              ...st,
+              orders: [...planned.orders, ...doors],
+              charges,
+              cost: planned.cost + chargesTotal(charges) + doors.reduce((n, o) => n + o.price_ghs, 0),
+            };
+            const repeats = [...kindsOf(next)].some((k) => served.has(k));
+            if (!repeats && next.cost - st.cost <= Math.max(0, spare)) {
+              spare -= next.cost - st.cost;
+              out = next;
+            }
+          }
+        }
+        kindsOf(out).forEach((k) => served.add(k));
+        return out;
       });
     }
 

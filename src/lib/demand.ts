@@ -104,15 +104,37 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse,
       app_version: meta?.appVersion ?? null,
       budget_chosen: inputs.budgetChosen ?? null,
       kept_defaults: keptDefaults(inputs),
+      /*
+       * Each stop's heading, arrival and kind of place go with its dishes, so
+       * the meal report (/admin/meals, mealChecks.ts) can judge a plan as it
+       * was served: lunch or dinner, a base eaten with a stew, a plate that
+       * said to allow extra for drinks.
+       */
       orders:
         answer.status === "ok"
           ? answer.itinerary.stops
               .filter((s) => s.venue_id && s.orders?.length)
-              .map((s) => ({ venue_id: s.venue_id, items: s.orders.map((o) => ({ item: o.item, qty: o.qty, ghs: o.price_ghs })) }))
+              .map((s) => ({
+                venue_id: s.venue_id,
+                type: s.venue_type ?? null,
+                label: s.label,
+                at: s.arrival_time,
+                dry: s.orders.some((o) => /allow extra for drinks/i.test(o.note ?? "")),
+                items: s.orders.map((o) => ({
+                  item: o.item,
+                  qty: o.qty,
+                  ghs: o.price_ghs,
+                  ...(o.door ? { door: true } : {}),
+                  ...(/^To eat with/.test(o.note ?? "") ? { base: true } : {}),
+                })),
+              }))
           : null,
     };
-    const first = await db.from("plan_demand").insert({ ...row, ...extra });
-    // Before 0097 has run: the row as it was.
+    // What they do not eat (0099); kept apart so a database before 0099 still takes the rest.
+    const withDiet = inputs.diet?.length ? { ...extra, diet: inputs.diet } : extra;
+    let first = await db.from("plan_demand").insert({ ...row, ...withDiet });
+    // Before 0099 has run: without the diet. Before 0097: the row as it was.
+    if (first.error && withDiet !== extra) first = await db.from("plan_demand").insert({ ...row, ...extra });
     const error = first.error ? (await db.from("plan_demand").insert(row)).error : null;
     if (error) {
       // Before 0069 the table knows only ok and no_match; before 0085 it has no entry.

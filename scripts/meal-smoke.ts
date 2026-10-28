@@ -19,7 +19,7 @@ const ALCOHOL = new Set([...SPIRITS, "cocktail", "local_beer", "imported_beer", 
 const WATER = new Set(["still_water", "sparkling_water"]);
 const MEALTIMES = ["BREAKFAST", "BRUNCH", "LUNCH", "DINNER"];
 
-type Case = { occasion: string; time: string; party: number; budget: number; date: string };
+type Case = { occasion: string; time: string; party: number; budget: number; date: string; diet?: string[] };
 const cases: Case[] = [];
 const days = ["2026-11-03", "2026-11-07"]; // a Tuesday and a Saturday
 for (const occasion of ["date_night", "anniversary", "first_date", "birthday", "friend_outing", "family_day", "business_meeting", "solo_day"])
@@ -39,6 +39,15 @@ const seeded = (seed: string) => (id: string) => {
   for (const ch of seed + id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   return (((h >>> 0) % 1000) / 1000) * 2;
 };
+
+// And what people do not eat (dietMenu): every dish on these must respect it.
+cases.push(
+  { occasion: "date_night", time: "19:00", party: 2, budget: 900, date: "2026-11-07", diet: ["vegetarian"] },
+  { occasion: "friend_outing", time: "13:00", party: 4, budget: 1800, date: "2026-11-03", diet: ["vegan"] },
+  { occasion: "birthday", time: "19:00", party: 4, budget: 2000, date: "2026-11-07", diet: ["no_pork"] },
+  { occasion: "anniversary", time: "19:00", party: 2, budget: 1500, date: "2026-11-03", diet: ["no_seafood", "no_beef"] }
+);
+const MEATS = ["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood"];
 
 const menuCache = new Map<string, MenuItem[]>();
 async function menuOf(venueId: string, sharedFrom: string | null): Promise<MenuItem[]> {
@@ -77,11 +86,12 @@ const none: string[] = [];
       surpriseMe: true,
       budget: c.budget,
       partySize: c.party,
+      ...(c.diet ? { diet: c.diet } : {}),
       // As the app sends it: a meeting is one place (defaultStopsFor).
       stops: defaultStopsFor(c.occasion as PlanInputs["occasion"]) || undefined,
     }) as PlanInputs;
     const cands = await fetchCandidates(db as never, inputs);
-    const label = `${c.occasion} ${c.time} x${c.party}`;
+    const label = `${c.occasion} ${c.time} x${c.party}${c.diet ? ` ${c.diet.join("+")}` : ""}`;
     const plan = planItinerary(inputs, cands, { variety: seeded(label) }) as any;
     if (!plan?.stops?.length) {
       none.push(label);
@@ -148,14 +158,15 @@ const none: string[] = [];
       const mains = food.filter((f) => f.m!.dish_role === "main");
       if (isMeal && c.party >= 2 && mains.length >= 2) {
         checks++;
-        const sig = (m: MenuItem) => (m.dish_tags ?? []).find((t) => ["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood", "egg", "vegetarian", "vegan"].includes(t)) ?? m.dish_type ?? m.name;
+        const sig = (m: MenuItem) => (m.dish_tags ?? []).find((t) => ["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood", "egg"].includes(t)) ?? m.dish_type ?? m.name;
         const sigs = mains.map((f) => sig(f.m!));
         const menuSigs = new Set(menu.filter((m) => m.dish_role === "main").map(sig));
         if (new Set(sigs).size === 1 && menuSigs.size > 1) fail(where, `same main twice (${mains.map((f) => f.o.item).join(", ")})`);
       }
       // 6. A starter is shared: no more than one for every three people.
       const starters = food.filter((f) => f.m!.dish_role === "starter");
-      if (isMeal && starters.length) {
+      // Only beside mains: where a menu has no main for them (a vegan table), starters are the plates.
+      if (isMeal && starters.length && mains.length) {
         checks++;
         const n = starters.reduce((s, f) => s + f.o.qty, 0);
         if (c.party > 1 && n > Math.ceil(c.party / 3)) fail(where, `${n} starters for ${c.party}`);
@@ -165,6 +176,20 @@ const none: string[] = [];
         checks++;
         const desserts = food.filter((f) => f.m!.dish_role === "dessert");
         if (desserts.length) fail(where, `dessert at the meal and again later (${desserts.map((f) => f.o.item).join(", ")})`);
+      }
+      // 9. What they do not eat: no plate that has it, by Gemini's tags.
+      if (c.diet) {
+        for (const f of food) {
+          checks++;
+          const tags = f.m!.dish_tags ?? [];
+          const bad =
+            ((c.diet.includes("vegetarian") || c.diet.includes("vegan")) && MEATS.some((t) => tags.includes(t))) ||
+            (c.diet.includes("vegan") && tags.includes("egg")) ||
+            (c.diet.includes("no_pork") && tags.includes("pork")) ||
+            (c.diet.includes("no_beef") && tags.includes("beef")) ||
+            (c.diet.includes("no_seafood") && (tags.includes("fish") || tags.includes("seafood")));
+          if (bad) fail(where, `${c.diet.join("+")} but ordered ${f.o.item} (${tags.join(",")})`);
+        }
       }
       // 8. A meal is named for when they sit down: no lunch called dinner.
       if (isMeal && MEALTIMES.includes(st.label)) {

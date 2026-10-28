@@ -403,6 +403,15 @@ export function StopCard({
                     {ghs(o.price_ghs)}
                   </Text>
                 </View>
+                {/* Why this dish, where there is a reason worth a line (planner.ts, reasonFor). */}
+                {o.why ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: -2, paddingBottom: 4 }}>
+                    <Symbol name="sparkles" size={11} color={c.accent} />
+                    <Text variant="footnote" tone="tint">
+                      {o.why}
+                    </Text>
+                  </View>
+                ) : null}
                 {openNote === i && o.note ? (
                   <Text variant="footnote" tone="secondary" style={{ paddingBottom: 8, paddingRight: 90 }}>
                     {o.note}

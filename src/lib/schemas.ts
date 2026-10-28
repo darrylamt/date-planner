@@ -90,6 +90,8 @@ export const planInputsSchema = z.object({
   entry: z.string().regex(/^[a-z_]{1,32}$/).optional().catch(undefined),
   // Whether the budget was moved off its starting figure (0097); counting only.
   budgetChosen: z.boolean().optional().catch(undefined),
+  // What they do not eat (Diet); an unknown word drops the list rather than the plan.
+  diet: z.array(z.enum(["vegetarian", "vegan", "no_pork", "no_beef", "no_seafood"])).max(5).optional().catch(undefined),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

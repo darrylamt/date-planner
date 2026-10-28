@@ -31,6 +31,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [
       { href: "/admin/photos", label: "Photos", icon: "camera", keywords: "pictures images gallery cover", roles: ["photos"] },
       { href: "/admin/menu", label: "Menus", icon: "list", keywords: "dishes prices edit menu", roles: ["menus"] },
+      { href: "/admin/stays", label: "Stays", icon: "bed", keywords: "hotels guesthouses lodges rooms rates trips sleep", roles: ["stays"] },
     ],
   },
   {
@@ -71,6 +72,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [
       { href: "/admin/demand", label: "Demand", icon: "chart", keywords: "plans searches requests" },
       { href: "/admin/pull", label: "Pull", icon: "pulse", keywords: "kept swapped signals ranking popular" },
+      { href: "/admin/meals", label: "Meal quality", icon: "chef", keywords: "food dishes drinks dessert breakfast check report", roles: ["menus"] },
       { href: "/admin/sharing", label: "Sharing", icon: "share", keywords: "shares links" },
       { href: "/admin/poll", label: "Name poll", icon: "vote", keywords: "votes" },
     ],
