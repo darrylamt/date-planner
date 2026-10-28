@@ -11,6 +11,7 @@ import {
 import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand, type DemandMeta } from "@/lib/demand";
+import { allow, clientIp, rateKey } from "@/lib/rateLimit";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkPlan } from "@/lib/planCheck";
 import { tasteFor, type Taste } from "@/lib/taste";
@@ -71,7 +72,7 @@ async function reachFurther(
     ),
   ];
 
-  const written = inputs.ai === false ? null : await writePlanCopy(wider, plan);
+  const written = inputs.ai === false || !(await copyBudget()) ? null : await writePlanCopy(wider, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(wider, plan);
   const itinerary = assembleItinerary(wider, plan, copy);
   if (outside.length) {
@@ -119,15 +120,40 @@ const FOCUS_SHORTFALL: Record<string, string> = {
  */
 export async function POST(req: Request): Promise<NextResponse<GenerateResponse>> {
   const copy = req.clone();
+  const meta = await demandMeta(req).catch(() => null);
+  /*
+   * A ceiling, not a meter (0098): thirty plans an hour for one person or
+   * phone and two hundred for one network address, which many people share
+   * on Ghana's mobile networks. The team is not counted.
+   */
+  if (meta && !meta.team) {
+    const ip = clientIp(req);
+    const ok =
+      (!meta.who || (await allow(rateKey("gen:who", meta.who), 3600, 30))) &&
+      (!ip || (await allow(rateKey("gen:ip", ip), 3600, 200)));
+    if (!ok) {
+      return NextResponse.json(
+        { status: "error", message: "That's a lot of plans in a short time. Give it a few minutes, then try again." },
+        { status: 429 }
+      );
+    }
+  }
   const res = await generate(req);
   try {
     const parsed = planInputsSchema.safeParse(await copy.json());
-    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse, await demandMeta(req));
+    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse, meta ?? undefined);
   } catch {
     /* never a failed plan over statistics */
   }
   return res;
 }
+
+/**
+ * Six hundred written descriptions an hour across everybody (0098). Past it
+ * the plan is the same and its words come from the plan itself (fallbackCopy),
+ * so a flood costs nothing at Anthropic and nobody goes without a plan.
+ */
+const copyBudget = () => allow("gen:copy:all", 3600, 600);
 
 /**
  * Who asked and on what, for the plan log (0097): the account or the phone,
@@ -414,7 +440,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   // A second look before it is shown (planCheck.ts): names never leave.
   plan = await checkPlan(candidates, inputs, plan, createServiceClient(), requestStart);
 
-  const written = inputs.ai === false ? null : await writePlanCopy(inputs, plan);
+  const written = inputs.ai === false || !(await copyBudget()) ? null : await writePlanCopy(inputs, plan);
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);
 
   const itinerary = assembleItinerary(inputs, plan, copy);

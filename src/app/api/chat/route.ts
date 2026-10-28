@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { allow, clientIp, rateKey } from "@/lib/rateLimit";
 import { recordUsage } from "@/lib/aiUsage";
 import { createServiceClient } from "@/lib/supabase/server";
 import { consumeMessage } from "@/lib/entitlements";
@@ -51,6 +52,18 @@ export async function POST(req: Request) {
   const { data: auth, error: authError } = await admin.auth.getUser(token);
   const userId = authError ? null : auth.user?.id;
   if (!userId) return json({ error: "sign_in_required" }, 401);
+
+  /*
+   * Anonymous accounts can be made by a script, five free messages each
+   * (security audit, Oct 2026). A ceiling per network address and one across
+   * all of them (0098); past either, the answer is to sign in properly,
+   * which the app already knows how to ask for.
+   */
+  if (auth.user?.is_anonymous) {
+    const ip = clientIp(req);
+    const ok = (!ip || (await allow(rateKey("chat:anon:ip", ip), 3600, 30))) && (await allow("chat:anon:all", 3600, 300));
+    if (!ok) return json({ error: "sign_in_required" }, 401);
+  }
 
   let body: z.infer<typeof bodySchema>;
   try {

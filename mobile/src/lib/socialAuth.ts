@@ -166,6 +166,50 @@ async function signInBrowser(): Promise<string | undefined> {
   }
 }
 
+/*
+ * Android signs in with PKCE (security audit, Oct 2026). A custom scheme like
+ * aduro:// can be claimed by another app on Android, and the old flow put the
+ * session itself in the address it came back on. Now the address carries only
+ * a one-time code, worth nothing without the secret this phone kept, which is
+ * swapped for the session directly with Supabase. iOS hands the address back
+ * to the app that asked (ASWebAuthenticationSession) and keeps the old flow.
+ */
+const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
+const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+async function pkcePair(): Promise<{ verifier: string; challenge: string } | null> {
+  if (!Crypto || !SUPABASE_URL || !ANON_KEY) return null;
+  try {
+    const verifier = Array.from(Crypto.getRandomBytes(32), (b) => b.toString(16).padStart(2, "0")).join("");
+    const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier, {
+      encoding: Crypto.CryptoEncoding.BASE64,
+    });
+    return { verifier, challenge: digest.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") };
+  } catch {
+    return null;
+  }
+}
+
+/** The one-time code and this phone's secret, for the session. */
+async function sessionFromCode(code: string, verifier: string): Promise<{ access_token: string; refresh_token: string } | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
+      method: "POST",
+      headers: { apikey: ANON_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+    });
+    const body = (await res.json()) as { access_token?: string; refresh_token?: string; error_description?: string };
+    if (!res.ok || !body.access_token || !body.refresh_token) {
+      console.warn("google sign-in: code", res.status, body.error_description);
+      return null;
+    }
+    return { access_token: body.access_token, refresh_token: body.refresh_token };
+  } catch (e) {
+    console.warn("google sign-in: code", (e as Error).message);
+    return null;
+  }
+}
+
 export async function signInWithGoogle(): Promise<SocialResult> {
   if (!AuthSession || !WebBrowser) {
     return { ok: false, error: "Update the app to sign in with Google." };
@@ -173,22 +217,32 @@ export async function signInWithGoogle(): Promise<SocialResult> {
   const redirectTo = AuthSession.makeRedirectUri({ scheme: "aduro", path: "auth" });
 
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo,
-        // Without this the SDK tries to navigate the page itself, which does
-        // nothing in a native app and leaves the caller waiting forever.
-        skipBrowserRedirect: true,
-      },
-    });
-    if (error || !data?.url) {
-      console.warn("google sign-in: start", error?.message);
-      return { ok: false, error: GOOGLE_FAILED };
+    const pkce = Platform.OS === "android" ? await pkcePair() : null;
+    let start: string | undefined;
+    if (pkce) {
+      start =
+        `${SUPABASE_URL}/auth/v1/authorize?provider=google` +
+        `&redirect_to=${encodeURIComponent(redirectTo)}` +
+        `&code_challenge=${pkce.challenge}&code_challenge_method=s256`;
+    } else {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          // Without this the SDK tries to navigate the page itself, which does
+          // nothing in a native app and leaves the caller waiting forever.
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error || !data?.url) {
+        console.warn("google sign-in: start", error?.message);
+        return { ok: false, error: GOOGLE_FAILED };
+      }
+      start = data.url;
     }
 
     const result = await WebBrowser.openAuthSessionAsync(
-      data.url,
+      start,
       redirectTo,
       Platform.OS === "android" ? { browserPackage: await signInBrowser() } : undefined
     );
@@ -200,12 +254,17 @@ export async function signInWithGoogle(): Promise<SocialResult> {
     }
 
     /*
-     * Supabase returns the session in the URL fragment. It has to be parsed
-     * out and set by hand because there is no browser here to do it.
+     * With PKCE the address brings a code to swap; otherwise Supabase returns
+     * the session in the URL fragment. Either is set by hand because there is
+     * no browser here to do it.
      */
+    const query = new URLSearchParams(result.url.split("#")[0].split("?")[1] ?? "");
+    const code = query.get("code");
+    const swapped = pkce && code ? await sessionFromCode(code, pkce.verifier) : null;
+    if (pkce && code && !swapped) return { ok: false, error: GOOGLE_FAILED };
     const params = new URLSearchParams(result.url.split("#")[1] ?? "");
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
+    const access_token = swapped?.access_token ?? params.get("access_token");
+    const refresh_token = swapped?.refresh_token ?? params.get("refresh_token");
 
     if (!access_token || !refresh_token) {
       console.warn("google sign-in: no session", params.get("error_description"));
