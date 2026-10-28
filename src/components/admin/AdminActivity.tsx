@@ -101,7 +101,16 @@ export function AdminActivity() {
     };
 
     // ── Requests ───────────────────────────────────────────────────────
-    const owned = new Map<HTMLElement, { n: number; wrote: boolean; failed: string | null }>();
+    /*
+     * One click, one answer. A form that saves in steps (the venue form: the
+     * venue, its dishes, its weekly nights) sends one request after another,
+     * each inside the click's window, and the button said "Done" after every
+     * step: three of them for one Save. So a button that has gone quiet waits
+     * a moment before it answers, and a request that follows in that moment
+     * joins the same answer.
+     */
+    const SETTLE_MS = 450;
+    const owned = new Map<HTMLElement, { n: number; wrote: boolean; failed: string | null; settle?: ReturnType<typeof setTimeout> }>();
     const realFetch = window.fetch;
 
     function headerOf(input: RequestInfo | URL, init: RequestInit | undefined, name: string): string | null {
@@ -123,6 +132,8 @@ export function AdminActivity() {
       setInflight((n) => n + 1);
       if (owner) {
         const s = owned.get(owner) ?? { n: 0, wrote: false, failed: null };
+        if (s.settle) clearTimeout(s.settle);
+        s.settle = undefined;
         s.n += 1;
         s.wrote ||= write;
         owned.set(owner, s);
@@ -145,16 +156,19 @@ export function AdminActivity() {
           s.n -= 1;
           s.failed ||= failure;
           if (s.n <= 0) {
-            owned.delete(owner);
-            owner.removeAttribute("data-busy");
-            owner.removeAttribute("aria-busy");
-            if (s.failed) {
-              flash(owner, "error");
-              toast("error", s.failed);
-            } else if (s.wrote) {
-              flash(owner, "done");
-              toast("ok", "Done");
-            }
+            s.settle = setTimeout(() => {
+              if (s.n > 0) return;
+              owned.delete(owner);
+              owner.removeAttribute("data-busy");
+              owner.removeAttribute("aria-busy");
+              if (s.failed) {
+                flash(owner, "error");
+                toast("error", s.failed);
+              } else if (s.wrote) {
+                flash(owner, "done");
+                toast("ok", "Done");
+              }
+            }, SETTLE_MS);
           }
         } else if (failure && write) {
           toast("error", failure);

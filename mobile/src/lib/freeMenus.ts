@@ -1,5 +1,11 @@
 /**
- * Every venue's full page, free for everyone, for a while.
+ * Every venue's full page, free for everyone, for good.
+ *
+ * Free for good since 28 Oct 2026, at the owner's word: "real menus, real
+ * prices" is the promise Duro! is downloaded for, and a menu behind a paywall
+ * breaks it. Durobot is what Pro sells. The history below is kept for why the
+ * pieces are shaped as they are.
+ *
  *
  * Menus, hours and the ways to book are Pro. For the first weeks after the
  * Duro! launch they are open to everybody: more people reading menus means
@@ -27,6 +33,9 @@ export const MENUS_FREE_LABEL = new Date(`${MENUS_FREE_UNTIL}T12:00:00Z`).toLoca
   timeZone: "UTC",
 });
 
+/** Free for good: the end date above no longer applies. */
+export const MENUS_FREE_FOREVER = true;
+
 export function menusFree(now = new Date()): boolean {
-  return now.getTime() <= Date.parse(`${MENUS_FREE_UNTIL}T23:59:59Z`);
+  return MENUS_FREE_FOREVER || now.getTime() <= Date.parse(`${MENUS_FREE_UNTIL}T23:59:59Z`);
 }

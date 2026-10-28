@@ -16,7 +16,7 @@
 
 export const MENU_READ_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
 
-import { geminiJSON } from "./gemini";
+import { GEMINI_LIGHT_MODELS, geminiJSON } from "./gemini";
 
 export type MenuPart = { mime: string; data: Buffer } | { text: string; name: string };
 
@@ -118,29 +118,63 @@ const SCHEMA = {
   required: ["deliveryApp", "items"],
 };
 
-export async function readMenu(parts: MenuPart[]): Promise<MenuReadResult> {
-  const r = await geminiJSON<{ items?: ReadItem[]; chargesNotes?: string[]; skipped?: string[]; deliveryApp?: boolean; venueName?: string }>({
-    parts: parts.map((p) => ("text" in p ? { text: `File "${p.name}":
-${p.text.slice(0, 200_000)}` } : { inline: { mime: p.mime, data: p.data } })),
+type ReadOut = { items?: ReadItem[]; chargesNotes?: string[]; skipped?: string[]; deliveryApp?: boolean; venueName?: string };
+
+/**
+ * One file, read on its own. Several photos in one request made one long
+ * answer that often ran out of the route's minute (owner, 28 Oct 2026: "takes
+ * very long"); one request each runs side by side and each answer is short.
+ * The fast models first: Flash Lite reads a menu page in seconds and allows
+ * 500 a day, the full Flash models think first and allow 20.
+ */
+async function readOne(p: MenuPart) {
+  return geminiJSON<ReadOut>({
+    parts: ["text" in p ? { text: `File "${p.name}":
+${p.text.slice(0, 200_000)}` } : { inline: { mime: p.mime, data: p.data } }],
     prompt: PROMPT,
     schema: SCHEMA,
+    models: GEMINI_LIGHT_MODELS,
+    timeoutMs: 30_000,
+    deadlineMs: 52_000,
   });
-  if (!r.ok) return { ok: false, reason: r.reason === "no_key" ? "no_key" : r.reason, message: r.message };
-  const out = r.data;
-  const items = (out.items ?? [])
+}
+
+export async function readMenu(parts: MenuPart[]): Promise<MenuReadResult> {
+  const reads = await Promise.all(parts.map(readOne));
+  const good = reads.filter((r): r is Extract<typeof r, { ok: true }> => r.ok);
+  if (!good.length) {
+    const first = reads.find((r) => !r.ok) as Extract<(typeof reads)[number], { ok: false }> | undefined;
+    const reason = first?.reason ?? "failed";
+    return { ok: false, reason: reason === "no_key" ? "no_key" : reason, message: first?.message ?? "Gemini didn't answer. Try again in a minute." };
+  }
+
+  // Each page's dishes once: the same name at the same price on two pages is one dish.
+  const seen = new Set<string>();
+  const items = good
+    .flatMap((r) => r.data.items ?? [])
     .filter((i) => i && typeof i.name === "string" && i.name.trim() && Number.isFinite(Number(i.price_ghs)) && Number(i.price_ghs) > 0)
-    .slice(0, 600)
-    .map((i) => ({ ...i, name: i.name.trim().slice(0, 160), price_ghs: Math.round(Number(i.price_ghs) * 100) / 100 }));
+    .map((i) => ({ ...i, name: i.name.trim().slice(0, 160), price_ghs: Math.round(Number(i.price_ghs) * 100) / 100 }))
+    .filter((i) => {
+      const key = `${i.name.toLowerCase()}|${i.price_ghs}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 600);
   if (!items.length) {
     return { ok: false, reason: "unreadable", message: "No priced items could be read from that. Try a sharper, straighter photo." };
   }
+  const missed = reads.length - good.length;
   return {
     ok: true,
     items,
-    chargesNotes: (out.chargesNotes ?? []).slice(0, 10),
-    skipped: (out.skipped ?? []).slice(0, 50),
-    deliveryApp: Boolean(out.deliveryApp),
-    venueName: (out.venueName ?? "").trim().slice(0, 120),
-    model: r.model,
+    chargesNotes: [...new Set(good.flatMap((r) => r.data.chargesNotes ?? []))].slice(0, 10),
+    skipped: [
+      ...(missed ? [`${missed} of ${reads.length} files could not be read this time: read them again on their own.`] : []),
+      ...new Set(good.flatMap((r) => r.data.skipped ?? [])),
+    ].slice(0, 50),
+    deliveryApp: good.some((r) => r.data.deliveryApp),
+    venueName: (good.map((r) => (r.data.venueName ?? "").trim()).find(Boolean) ?? "").slice(0, 120),
+    model: [...new Set(good.map((r) => r.model))].join(", "),
   };
 }

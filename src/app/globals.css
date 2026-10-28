@@ -664,6 +664,19 @@ a.adm-tile:active { transform: scale(0.985); }
 .admin .inp { height: 38px; font-size: 14px; border-radius: 9px; padding: 0 12px; }
 .admin .ta { font-size: 14px; border-radius: 9px; padding: 9px 12px; }
 .admin .pinp { border-radius: 7px; }
+/*
+ * A phone zooms the page into any field smaller than 16px when it takes the
+ * keyboard (iOS Safari), and the admin stayed zoomed in after (owner, 28 Oct
+ * 2026). 16px on touch screens stops it; pinch-zoom still works, and desktop
+ * keeps the smaller size.
+ */
+@media (hover: none) and (pointer: coarse) {
+  .admin input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .admin select,
+  .admin textarea {
+    font-size: 16px !important;
+  }
+}
 .admin .inp:hover,
 .admin .ta:hover,
 .admin select:hover { border-color: #c9c2bb !important; }

@@ -115,12 +115,13 @@ const COPY: Record<Reason, { title: string; line: string; perks: (keyof typeof P
   limit: {
     title: "That was your last free message",
     line: "Never spend 30 minutes figuring out where to go again.",
-    perks: ["chat", "order", "venue"],
+    // Not "every venue's full page": that is free for everyone now (freeMenus.ts).
+    perks: menusFree() ? ["chat", "order"] : ["chat", "order", "venue"],
   },
   browse: {
     title: "Never spend 30 minutes figuring out where to go again",
-    line: SAY_MENUS_FREE_UNTIL && menusFree() ? "Duro Pro plans with you, and keeps every place open after the free month." : "Duro Pro plans with you, and opens every place up.",
-    perks: ["chat", "venue", "order"],
+    line: menusFree() ? "Duro Pro plans with you, whenever you ask." : "Duro Pro plans with you, and opens every place up.",
+    perks: menusFree() ? ["chat", "order"] : ["chat", "venue", "order"],
   },
   venue: {
     title: "See the whole page",

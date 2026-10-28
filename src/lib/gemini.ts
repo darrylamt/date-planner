@@ -43,12 +43,19 @@ export async function geminiJSON<T>({
   schema,
   models = GEMINI_MODELS,
   timeoutMs = 45_000,
+  deadlineMs,
 }: {
   parts: GeminiPart[];
   prompt: string;
   schema: object;
   models?: string[];
   timeoutMs?: number;
+  /**
+   * All the models together get this long. A route that stops at 60 seconds
+   * gave a slow first model 45 of them and the next one almost nothing, so a
+   * read that failed took a minute to say so.
+   */
+  deadlineMs?: number;
 }): Promise<GeminiResult<T>> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return { ok: false, reason: "no_key", message: "GEMINI_API_KEY is not set on the server." };
@@ -59,7 +66,10 @@ export async function geminiJSON<T>({
   ];
 
   let limited = false;
+  const end = deadlineMs ? Date.now() + deadlineMs : Infinity;
   for (const model of models) {
+    const left = end - Date.now();
+    if (left < 4000) break;
     // Gemma takes no response schema: the JSON is asked for in words and read the same way.
     const gemma = model.startsWith("gemma");
     const request = gemma
@@ -71,7 +81,7 @@ export async function geminiJSON<T>({
         method: "POST",
         headers: { "x-goog-api-key": key, "content-type": "application/json" },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(Math.min(timeoutMs, left)),
       });
     } catch {
       continue;

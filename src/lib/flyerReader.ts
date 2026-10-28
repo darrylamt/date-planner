@@ -1,6 +1,6 @@
 import { KINDS } from "@/components/planner/nights";
 import { VENUE_VIBE_TAGS } from "@/lib/catalog";
-import { geminiJSON, type GeminiResult } from "@/lib/gemini";
+import { GEMINI_LIGHT_MODELS, geminiJSON, type GeminiResult } from "@/lib/gemini";
 
 /**
  * An event poster read into the event form: what, when, where, how much.
@@ -76,7 +76,20 @@ function prompt(today: string): string {
 
 export async function readFlyer(image: { mime: string; data: Buffer }): Promise<GeminiResult<FlyerDraft>> {
   const today = new Date().toISOString().slice(0, 10); // Accra is UTC all year
-  const r = await geminiJSON<FlyerDraft>({ parts: [{ inline: image }], prompt: prompt(today), schema: SCHEMA });
+  /*
+   * The fast models first (owner, 28 Oct 2026: the read "takes very long").
+   * Flash Lite reads a poster in a few seconds and allows 500 a day; the
+   * full Flash models think first and allow 20, so they are the fallback.
+   * Inside the route's minute, whatever happens.
+   */
+  const r = await geminiJSON<FlyerDraft>({
+    parts: [{ inline: image }],
+    prompt: prompt(today),
+    schema: SCHEMA,
+    models: GEMINI_LIGHT_MODELS,
+    timeoutMs: 25_000,
+    deadlineMs: 50_000,
+  });
   if (!r.ok) return r;
   const d = r.data;
   const iso = /^\d{4}-\d{2}-\d{2}$/;
