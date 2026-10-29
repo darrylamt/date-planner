@@ -41,6 +41,15 @@ const listOf = (names: string[]) =>
  * Null when the wider search cannot fill it either, and the caller then
  * explains the original failure as before.
  */
+/*
+ * Places with no menu, at an estimate (PlanInputs.estimates), offered when a
+ * plan finds nothing: half the catalogue has no menu yet, so a thin area or a
+ * narrow ask is often only short of priced places. Only to a build that
+ * offers the switch, which sends false; an older one has no way to say yes.
+ */
+const withoutMenus = (inputs: PlanInputs): Extract<GenerateResponse, { status: "no_match" }>["suggestions"] =>
+  inputs.estimates === false ? [{ label: "Include places without menus", action: "include_estimates" }] : [];
+
 async function reachFurther(
   supabase: ReturnType<typeof createClient>,
   inputs: PlanInputs,
@@ -283,7 +292,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
         status: "no_match",
         headline: `We're still adding places in ${city}.`,
         message: `There aren't enough priced places in ${city} yet to build an evening, and we won't invent one. We're adding more every week.`,
-        suggestions: [],
+        suggestions: withoutMenus(inputs),
       });
     }
     const suggestions: Extract<GenerateResponse, { status: "no_match" }>["suggestions"] = [];
@@ -293,10 +302,11 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
     if (nudge > inputs.budget) {
       suggestions.push({ label: `Nudge budget to GHS ${nudge}`, action: "raise_budget", value: nudge });
     }
+    suggestions.push(...withoutMenus(inputs));
     return NextResponse.json({
       status: "no_match",
       headline: `We couldn't fill the whole evening in ${areaLabel} at GHS ${inputs.budget}.`,
-      message: "Honestly? The spots there run pricier. Two easy fixes:",
+      message: "Honestly? The spots there run pricier. Try one of these:",
       suggestions,
     });
   }
@@ -392,7 +402,10 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
         status: "no_match",
         headline: `No ${kind} we hold fits GHS ${inputs.budget} for ${inputs.partySize}.`,
         message: `Either none is open then or the order for everyone runs over. We would rather say so than put the meeting somewhere that is not a ${kind}.`,
-        suggestions: suggestions.filter((sug) => sug.action === "raise_budget" || sug.action === "widen_area"),
+        suggestions: [
+          ...suggestions.filter((sug) => sug.action === "raise_budget" || sug.action === "widen_area"),
+          ...withoutMenus(inputs),
+        ],
       });
     }
 
@@ -417,6 +430,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
             "That is a gap in our catalog, not in your budget, we would rather say so than send you somewhere that does not fit.",
           suggestions: [
             { label: "Plan a bit of everything instead", action: "clear_focus" }, ...suggestions.filter((sug) => sug.action === "widen_area"),
+            ...withoutMenus(inputs),
           ],
         });
       }
@@ -425,8 +439,8 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
     return NextResponse.json({
       status: "no_match",
       headline: `We couldn't fill the whole evening in ${areaLabel} at GHS ${inputs.budget}.`,
-      message: "Honestly? The spots there run pricier. Two easy fixes:",
-      suggestions,
+      message: "Honestly? The spots there run pricier. Try one of these:",
+      suggestions: [...suggestions, ...withoutMenus(inputs)],
     });
   }
 

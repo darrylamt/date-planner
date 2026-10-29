@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { GEMINI_LIGHT_MODELS, geminiJSON } from "./gemini";
 import { fetchAllRows } from "./fetchAll";
+import { DISH_ROLES, DISH_TAGS, DISH_TYPES, DRINK_KINDS, MEAL_TIMES, dishLabels, understoodKey } from "./catalog";
 
 /**
  * What each dish is, read by Gemini (menu_items.dish_role, meal_time and
@@ -14,20 +15,8 @@ import { fetchAllRows } from "./fetchAll";
  * on the light free models (500 requests a day). A dish is read again only
  * when what Gemini was shown changes (understood_hash).
  */
-export const DISH_ROLES = ["main", "light", "side", "starter", "dessert", "pastry", "snack", "drink", "addon"] as const;
-export const MEAL_TIMES = ["breakfast", "brunch", "anytime"] as const;
-export const DISH_TAGS = [
-  "chicken", "beef", "goat", "lamb", "pork", "fish", "seafood", "egg", "vegetarian", "vegan",
-  "grilled", "fried", "baked", "stewed", "raw", "spicy",
-  "ghanaian", "west_african", "continental", "italian", "chinese", "japanese", "indian", "lebanese", "american", "french", "mexican", "fusion",
-  "sharing", "kids", "healthy", "heavy", "sweet", "alcoholic", "non_alcoholic", "hot", "cold", "premium",
-] as const;
-export const DISH_TYPES = [
-  "soup", "salad", "sandwich", "burger", "wrap_shawarma", "pizza", "pasta", "rice_dish", "noodles", "swallow", "stew_curry", "grill", "steak", "seafood_plate", "fried_plate", "sushi", "platter", "wings", "finger_food", "bread", "eggs", "breakfast_plate", "pancakes_waffles", "pastry", "cake", "ice_cream", "dessert_other", "kids_meal", "side_starch", "vegetables", "other",
-] as const;
-export const DRINK_KINDS = [
-  "still_water", "sparkling_water", "soda", "malt", "energy_drink", "fresh_juice", "bottled_juice", "smoothie", "milkshake", "coffee", "iced_coffee", "hot_tea", "iced_tea", "hot_chocolate", "local_drink", "mocktail", "cocktail", "local_beer", "imported_beer", "craft_beer", "cider", "palm_wine", "red_wine", "white_wine", "rose_wine", "sparkling_wine", "champagne", "whisky", "vodka", "gin", "rum", "tequila", "brandy_cognac", "liqueur", "shot", "other",
-] as const;
+// The lists live in catalog.ts, which the browser can import: the menu CSV may carry them too.
+export { DISH_ROLES, DISH_TAGS, DISH_TYPES, DRINK_KINDS, MEAL_TIMES };
 
 type Row = {
   id: string;
@@ -40,7 +29,7 @@ type Row = {
 };
 
 const hashOf = (r: Pick<Row, "name" | "notes" | "category">) =>
-  createHash("sha1").update(`v3|${r.name}|${r.notes ?? ""}|${r.category}`).digest("hex").slice(0, 16);
+  createHash("sha1").update(understoodKey(r)).digest("hex").slice(0, 16);
 
 const PROMPT = `You label dishes on menus from restaurants, cafes and bars in Ghana, for a planner that orders a meal for people going out.
 
@@ -157,19 +146,10 @@ export async function understandMenus(
 
     const byId = new Map(chunk.map((r) => [r.id, r]));
     const now = new Date().toISOString();
-    const updates = (res.data.items ?? [])
-      .filter((a) => byId.has(a.id) && (DISH_ROLES as readonly string[]).includes(a.role) && (MEAL_TIMES as readonly string[]).includes(a.time))
-      .map((a) => ({
-        id: a.id,
-        dish_role: a.role,
-        // Drinks are drunk any time; only food has a breakfast (audit, 27 Oct 2026).
-        meal_time: a.role === "drink" ? "anytime" : a.time,
-        dish_type: a.role !== "drink" && a.type && (DISH_TYPES as readonly string[]).includes(a.type) ? a.type : null,
-        drink_kind: a.role === "drink" && a.drink && (DRINK_KINDS as readonly string[]).includes(a.drink) ? a.drink : null,
-        dish_tags: [...new Set((a.tags ?? []).filter((t) => (DISH_TAGS as readonly string[]).includes(t)))].slice(0, 6),
-        understood_hash: hashOf(byId.get(a.id)!),
-        understood_at: now,
-      }));
+    const updates = (res.data.items ?? []).flatMap((a) => {
+      const labels = byId.has(a.id) ? dishLabels(a) : null;
+      return labels ? [{ id: a.id, ...labels, understood_hash: hashOf(byId.get(a.id)!), understood_at: now }] : [];
+    });
     // One at a time in parallel groups: an upsert would need every not-null column.
     for (let j = 0; j < updates.length; j += 25) {
       await Promise.all(

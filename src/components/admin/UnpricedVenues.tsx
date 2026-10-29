@@ -15,6 +15,8 @@ interface Row {
   inactive?: boolean;
   /** Why it is here when that is not simply "no price": what to fix instead. */
   note?: string;
+  /** Plans in the last 30 days that used it at an estimate, with no menu (PlanInputs.estimates). */
+  wanted?: number;
 }
 
 /**
@@ -142,10 +144,12 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
       <div className="card px-5 py-5">
         <div className="text-[15px] font-bold">{rows.length} venues with no price</div>
         <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
-          These never appear in a plan. A venue with no menu and no average cost is
-          unpriced, not free, left in, it would be the cheapest option in every
-          search and land in itineraries at GHS 0. Give each one what a single
-          person pays and it re-enters planning immediately.
+          These are left out of plans, except for people who switch on places
+          without menus, who get them at an estimate and only where they suit
+          better. A venue with no menu and no average cost is unpriced, not
+          free. Give each one what a single person pays, or its menu, and it
+          re-enters planning immediately. Those used most in plans without a
+          menu are listed first.
         </p>
 
         {rows.length > ADMIN_PAGE_SIZE ? (
@@ -182,6 +186,11 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
                       </div>
                       {row.inactive ? (
                         <span className="badge b-stale mt-1 normal-case">Switched off, saving turns it on</span>
+                      ) : null}
+                      {row.wanted ? (
+                        <span className="badge b-ok mt-1 normal-case">
+                          In {row.wanted} {row.wanted === 1 ? "plan" : "plans"} without a menu, last 30 days
+                        </span>
                       ) : null}
                       {row.note ? (
                         <a href={`/admin/menu/${row.id}`} className="mt-1 block text-[12px] font-semibold normal-case text-flame underline">

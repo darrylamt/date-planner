@@ -661,9 +661,23 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute
     pullScore(v) +
     // How much like the places this person keeps, at most 1.5 either way (taste.ts).
     (v.taste ?? 0) -
-    anniversaryCafe(v, inputs)
+    anniversaryCafe(v, inputs) -
+    (v.estimate && !v.estimate.needed ? ESTIMATE_PENALTY : 0)
   );
 }
+
+/*
+ * What a place with no menu gives up against one with (PlanInputs.estimates):
+ * two points, most of a vibe tag. Asked for "less, unless they need to be
+ * shown" (owner, 29 Oct 2026), so it wins where it fits clearly better,
+ * serves the cuisine named or is the only thing open and near, and otherwise
+ * waits. The meal gives up two more, since it is the stop whose dishes matter
+ * most (optionsForVenue). Nothing in an area they named that has few priced
+ * places (estimate.needed). They are thinner on record as well, so even
+ * without this they won no slot in 100 sample plans in well-covered areas:
+ * the swap list keeps one place for them (toStops).
+ */
+export const ESTIMATE_PENALTY = 2;
 
 /**
  * Date nights and anniversaries lean to the best places the money reaches.
@@ -885,10 +899,11 @@ export interface OrderPlan {
    * How the stop was priced, which decides whether a group can split it into
    * personal orders (groupPlan.ts): "menu" is dishes a person chooses; "unit"
    * is a court or a booking charged per group or per hour; "fallback" is the
-   * cheapest single line; "typical" is the venue's average; "free" is nothing
-   * to pay. Absent means "menu", the common case.
+   * cheapest single line; "typical" is the venue's average; "estimate" is a
+   * guess where we hold no menu (Venue.estimate); "free" is nothing to pay.
+   * Absent means "menu", the common case.
    */
-  basis?: "menu" | "unit" | "fallback" | "typical" | "free";
+  basis?: "menu" | "unit" | "fallback" | "typical" | "estimate" | "free";
   /** Food with no drink on it, because none on our copy of the menu suits: cheaper on paper than at the table. */
   dry?: boolean;
 }
@@ -1710,6 +1725,32 @@ export function planOrders(
       };
     }
 
+    /*
+     * No menu we hold, in a plan that asked for such places (matching.ts):
+     * what similar places charge a head, budgeted at the top, and the line
+     * says it is a guess. The one exception to the rule below, opted into.
+     * A head's guess is a whole visit, so it is no use for a restaurant
+     * standing in for pudding or a drink (opts.course), and a bar's or a
+     * dessert shop's is no meal.
+     */
+    if (venue.estimate) {
+      if (opts.course || (opts.meal && venue.type !== "restaurant" && venue.type !== "cafe")) return null;
+      const { low, high } = venue.estimate;
+      return {
+        orders: [
+          {
+            item: `No menu yet, about GHS ${low} to ${high} a head`,
+            qty: partySize,
+            price_ghs: high * partySize,
+            note: "We don't have their menu yet, so this is what similar places charge. We've budgeted for the top of it.",
+            estimate: { low, high },
+          },
+        ],
+        cost: high * partySize,
+        basis: "estimate",
+      };
+    }
+
     const each = Math.round(Number(venue.avg_cost_per_person_ghs));
 
     // A place to eat is priced from its menu or not at all (MENU_ONLY_TYPES): never "Typical spend".
@@ -2406,7 +2447,12 @@ function planWith(
         // its own role to keep the evening varied rather than three of the
         // same thing.
         // A meal whose drinks we cannot price only looks cheaper, so it waits behind a whole one, all else equal.
-        score: score + (roleTypes.includes(venue.type) ? 2 : 0) - (planned.dry ? 1 : 0),
+        // And a meal with no menu behind one with dishes to choose (ESTIMATE_PENALTY).
+        score:
+          score +
+          (roleTypes.includes(venue.type) ? 2 : 0) -
+          (planned.dry ? 1 : 0) -
+          (planned.basis === "estimate" && role === "meal" && !venue.estimate?.needed ? 2 : 0),
       });
     }
 
@@ -3267,15 +3313,19 @@ function planWith(
      * it does not have. Transport was always an estimate and is not counted
      * here, because it is described as an estimate on the card already.
      */
-    const estimatedStops = stops.filter((x) => x.venue.price_source === "estimated");
-    const spread = estimatedStops.reduce(
-      (sum, x) => sum + x.cost * Number(x.venue.price_spread ?? 0.3),
-      0
-    );
+    const estimatedStops = stops.filter((x) => x.venue.price_source === "estimated" || x.venue.estimate);
+    /*
+     * A place with no menu (Venue.estimate) is budgeted at the top of its
+     * range, so it can only come in under: the range reaches down by the
+     * difference and not up.
+     */
+    const under = (x: PlannedStop) =>
+      x.venue.estimate ? x.cost * (1 - x.venue.estimate.low / x.venue.estimate.high) : x.cost * Number(x.venue.price_spread ?? 0.3);
+    const over = (x: PlannedStop) => (x.venue.estimate ? 0 : x.cost * Number(x.venue.price_spread ?? 0.3));
     const confidence: PriceConfidence = {
       exact: estimatedStops.length === 0,
-      low: Math.round(foodTotal + transportTotal - spread),
-      high: Math.round(foodTotal + transportTotal + spread),
+      low: Math.round(foodTotal + transportTotal - estimatedStops.reduce((sum, x) => sum + under(x), 0)),
+      high: Math.round(foodTotal + transportTotal + estimatedStops.reduce((sum, x) => sum + over(x), 0)),
       estimatedStops: estimatedStops.map((x) => x.venue.name),
     };
 
@@ -3425,7 +3475,16 @@ function planWith(
               kmBetween(o.venue, p.venue) <= km || (from != null && kmBetween(o.venue, from) <= Math.max(km, reach));
             const strict = pool.filter((o) => o.cost <= p.cost + headroom + 1 && near(o, SWAP_RADIUS_KM));
             const loose = pool.filter((o) => o.cost <= p.cost + headroom + swapStretch(inputs.budget) && near(o, SWAP_FAR_KM));
-            return [...strict, ...loose].filter((o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx);
+            const list = [...strict, ...loose].filter((o, idx, arr) => arr.findIndex((x) => x.venue.id === o.venue.id) === idx);
+            /*
+             * The last of the four is kept for the best place with no menu,
+             * when they asked for those (PlanInputs.estimates). In the plan
+             * itself they seldom win a slot, being thinner on record, so the
+             * swap is where somebody who switched them on finds them.
+             */
+            const guess = list.findIndex((o) => o.venue.estimate);
+            if (guess >= SWAP_OPTIONS) list.splice(SWAP_OPTIONS - 1, 0, ...list.splice(guess, 1));
+            return list;
           })()
             .slice(0, SWAP_OPTIONS)
             .map((o) => ({

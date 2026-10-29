@@ -382,6 +382,24 @@ export function PlanSteps({
             onPress={() => update({ driving: true })}
           />
         </Group>
+
+        {/*
+          Places we hold no menu for, at an estimate (PlanInputs.estimates).
+          Off unless ticked, and said to be a guess on the plan itself; even
+          ticked, the planner reaches for them only where they suit better.
+          Not at zero, where only free places can come.
+        */}
+        {!forced ? (
+          <Group footer="We price them from what similar places charge, and only pick them when they suit you better.">
+            <Row
+              icon="fork.knife"
+              title="Include places without menus"
+              subtitle="Prices are estimated"
+              selected={Boolean(inputs.estimates)}
+              onPress={() => update({ estimates: !inputs.estimates })}
+            />
+          </Group>
+        ) : null}
       </>
     );
   }

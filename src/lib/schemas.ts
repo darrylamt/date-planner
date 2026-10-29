@@ -92,6 +92,8 @@ export const planInputsSchema = z.object({
   budgetChosen: z.boolean().optional().catch(undefined),
   // What they do not eat (Diet); an unknown word drops the list rather than the plan.
   diet: z.array(z.enum(["vegetarian", "vegan", "no_pork", "no_beef", "no_seafood"])).max(5).optional().catch(undefined),
+  // Places with no menu, at an estimate (29 Oct 2026). Absent from older builds.
+  estimates: z.boolean().optional().catch(undefined),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

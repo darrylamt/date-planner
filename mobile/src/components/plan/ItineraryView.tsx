@@ -37,7 +37,7 @@ import { StopCard } from "./StopCard";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { ghs, instagramUrl, longDate } from "../../lib/format";
-import { chargeableSubtotal, chargesOn, chargesTotal, isDriving } from "../../lib/budget";
+import { chargeableSubtotal, chargesOn, chargesTotal, isDriving, liveConfidence } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
 import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
@@ -720,7 +720,12 @@ export function ItineraryView({
             budget={inputs.budget}
             food={itinerary.food_total_ghs + (pickup ? pickupTotal(pickup) : 0)}
             transport={itinerary.transport_total_ghs}
-            confidence={itinerary.price_confidence}
+            // As the plan stands now: a swap onto or off a place with no menu moves the range (budget.ts).
+            confidence={liveConfidence(
+              itinerary.stops,
+              itinerary.est_total_ghs + (pickup ? pickupTotal(pickup) : 0),
+              itinerary.price_confidence
+            )}
             driving={driving}
             note={itinerary.budget_note ?? null}
           />

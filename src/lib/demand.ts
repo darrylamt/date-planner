@@ -126,6 +126,8 @@ export async function recordDemand(inputs: PlanInputs, answer: GenerateResponse,
                   ghs: o.price_ghs,
                   ...(o.door ? { door: true } : {}),
                   ...(/^To eat with/.test(o.note ?? "") ? { base: true } : {}),
+                  // No menu yet, so a guess: /admin/unpriced ranks whose menu to get first by these.
+                  ...(o.estimate ? { estimate: true } : {}),
                 })),
               }))
           : null,

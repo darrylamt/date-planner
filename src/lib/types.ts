@@ -173,6 +173,17 @@ export interface Venue {
   taste?: number | null;
   tasteWords?: Record<string, number>;
   /**
+   * What a head probably costs here, for a place with no menu in a plan that
+   * asked for such places (PlanInputs.estimates; budget.ts, estimateFor).
+   * Set per request on the server only; absent everywhere else.
+   */
+  estimate?: {
+    low: number;
+    high: number;
+    /** In an area they named with few priced places: no penalty for being a guess (matching.ts). */
+    needed?: boolean;
+  };
+  /**
    * Where the price came from. An estimate is shown as a range rather than a
    * figure, because presenting a guess to the cedi is the same lie as an
    * invented price, only better dressed.
@@ -551,6 +562,14 @@ export interface PlanInputs {
   /** What they do not eat. Absent or empty: anything. */
   diet?: Diet[];
   /**
+   * Include places we hold no menu for, priced from what similar places
+   * charge and said to be an estimate (29 Oct 2026). Chosen only where they
+   * suit better than a place with a menu. Absent: an older build, which never
+   * offered it; false: offered and left off, so a plan that finds nothing may
+   * suggest it.
+   */
+  estimates?: boolean;
+  /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
    * make a plan specific rather than generically correct.
@@ -607,6 +626,11 @@ export interface ItineraryOrder {
    * pick. Absent on most lines, and on every plan saved before it existed.
    */
   why?: string | null;
+  /**
+   * A guess at the bill where we hold no menu, not something on one: the
+   * range a head (Venue.estimate), so the total's range follows a swap.
+   */
+  estimate?: { low: number; high: number };
 }
 
 export type Occasion =
@@ -846,7 +870,7 @@ export type GenerateResponse =
       message: string;
       suggestions: {
         label: string;
-        action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness";
+        action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness" | "include_estimates";
         value?: number;
       }[];
     }

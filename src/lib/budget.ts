@@ -57,6 +57,87 @@ export function isPlaceholderAvg(
 export const MENU_ONLY_TYPES: ReadonlySet<string> = new Set(["restaurant", "cafe", "dessert"]);
 
 /**
+ * What a place with no menu probably costs a head, by kind and band, for a
+ * plan that asks to include such places (PlanInputs.estimates; owner, 29 Oct
+ * 2026: "let those ones show up less unless they need to be shown").
+ *
+ * The middle half of what places of the same kind and band with a menu cost:
+ * the middle main and the middle drink (a café's middle food, a bar's two
+ * middle drinks), across the catalogue on 29 Oct 2026. 73 mid restaurants,
+ * 25 premium, 22 cafés, 12 bars. Remeasure with npm run estimates:bands.
+ * Dessert shops with menus were four, too few to measure, so a café's range
+ * stands in; premium bars measured GHS 540 to 2,200 from four, which is
+ * bottle service and not an evening's drinks, so they stay out.
+ */
+export const BAND_ESTIMATE_GHS: Readonly<Record<string, readonly [number, number]>> = {
+  "restaurant|mid": [190, 320],
+  "restaurant|premium": [280, 530],
+  "cafe|mid": [140, 230],
+  "dessert|mid": [140, 230],
+  "lounge|mid": [120, 240],
+};
+
+/**
+ * A head's cost at a place we would otherwise withhold for want of a price,
+ * as a range, or null where we cannot say. Its own figure where somebody
+ * gave one (a delivery-app estimate, a per-head average on a place to eat),
+ * otherwise its band's (BAND_ESTIMATE_GHS). Never for a place priced already,
+ * nor one marked "unknown", nor an activity: one with no figure can cost
+ * anything from nothing to GHS 300.
+ */
+export function estimateFor(
+  v: {
+    type?: string | null;
+    price_band?: string | null;
+    avg_cost_per_person_ghs?: number | null;
+    price_source?: string | null;
+    price_spread?: number | null;
+  },
+  hasMenu: boolean
+): { low: number; high: number } | null {
+  if (hasMenu || v.price_source === "unknown") return null;
+  const type = String(v.type ?? "");
+  if (!MENU_ONLY_TYPES.has(type) && type !== "lounge") return null;
+  const avg = Number(v.avg_cost_per_person_ghs);
+  if (avg > 0 && !isPlaceholderAvg(v, hasMenu)) {
+    const spread = Number(v.price_spread) || 0.2;
+    const to5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
+    return { low: to5(avg * (1 - spread)), high: to5(avg * (1 + spread)) };
+  }
+  const band = BAND_ESTIMATE_GHS[`${type}|${v.price_band}`];
+  return band ? { low: band[0], high: band[1] } : null;
+}
+
+/**
+ * The total's range as the plan stands now, for the budget meter.
+ *
+ * The planner's figure (PriceConfidence) is worked out once, so a swap onto
+ * a place with no menu, or off the only one, left the meter saying what the
+ * plan used to be. Lines carrying an estimate are counted again here: each
+ * is budgeted at the top, so the range only reaches down. A plan with none
+ * keeps the planner's own figure while the places it named are still in it.
+ */
+export function liveConfidence(
+  stops: { name: string; orders: { price_ghs: number; estimate?: { low: number; high: number } }[] }[],
+  total: number,
+  planned?: { exact: boolean; low: number; high: number; estimatedStops: string[] }
+): { exact: boolean; low: number; high: number; estimatedStops: string[] } | undefined {
+  const guessed = stops.filter((s) => s.orders.some((o) => o.estimate));
+  if (!guessed.length) {
+    const still = (planned?.estimatedStops ?? []).filter((n) => stops.some((s) => s.name === n));
+    if (!planned || planned.exact || still.length) return planned;
+    return { exact: true, low: total, high: total, estimatedStops: [] };
+  }
+  const under = guessed.reduce(
+    (sum, s) =>
+      sum +
+      s.orders.reduce((t, o) => t + (o.estimate && o.estimate.high > 0 ? o.price_ghs * (1 - o.estimate.low / o.estimate.high) : 0), 0),
+    0
+  );
+  return { exact: false, low: Math.round(total - under), high: Math.round(total), estimatedStops: guessed.map((s) => s.name) };
+}
+
+/**
  * The kinds of place that can honestly be free to be at: a gallery, a
  * library, a beach, a park. Never a bar or a restaurant, whatever the flag
  * says. Beehive was ticked free and went into plans at GHS 0 with nothing to

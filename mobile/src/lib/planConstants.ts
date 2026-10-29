@@ -359,6 +359,8 @@ export function defaultInputs(): PlanInputs {
     occasion: "date_night",
     occasionDetail: {},
     partner: { name: "", gender: "unspecified", food: "", place: "", interests: "", avoid: "" },
+    // Offered and off: places with no menu come only when asked for (PlanInputs.estimates).
+    estimates: false,
   };
 }
 

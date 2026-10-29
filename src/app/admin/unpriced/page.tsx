@@ -1,6 +1,8 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { UnpricedVenues } from "@/components/admin/UnpricedVenues";
 import { avgIsNotAPrice } from "@/lib/budget";
+import { fetchAllRows } from "@/lib/fetchAll";
+import type { LoggedStop } from "@/lib/mealChecks";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,28 @@ export default async function AdminUnpricedPage({ searchParams }: { searchParams
       "id, name, type, is_free, is_active, business_status, menu_shared_from, avg_cost_per_person_ghs, price_source, areas(name), menu_items(id)"
     )
     .order("name");
+
+  /*
+   * Whose menu to get first: the places plans used at an estimate over the
+   * last 30 days, for people who switched on places without menus
+   * (PlanInputs.estimates; demand.ts marks those lines). The team's own
+   * plans are left out.
+   */
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  const logged = await fetchAllRows<{ orders: LoggedStop[] | null }>((a, b) =>
+    supabase
+      .from("plan_demand")
+      .select("orders")
+      .not("orders", "is", null)
+      .eq("team", false)
+      .gte("created_at", since)
+      .order("created_at")
+      .range(a, b)
+  ).catch(() => [] as { orders: LoggedStop[] | null }[]);
+  const wanted = new Map<string, number>();
+  for (const p of logged)
+    for (const st of p.orders ?? [])
+      if (st.items?.some((i) => i.estimate)) wanted.set(st.venue_id, (wanted.get(st.venue_id) ?? 0) + 1);
 
   /*
    * A branch is not unpriced because its menu lives on another row, and a
@@ -60,13 +84,16 @@ export default async function AdminUnpricedPage({ searchParams }: { searchParams
       type: v.type,
       area: v.areas?.name ?? "no area",
       inactive: !v.is_active,
+      wanted: wanted.get(v.id) ?? 0,
       // A menu marked "unknown" needs its price source fixing, not a new price.
       note:
         v.price_source === "unknown" && ownIds.has((v.menu_shared_from as string | null) || v.id)
           ? "Has a menu but its price is marked unknown: set How sure is the price to menu"
           : undefined,
     }))
-    .filter((r) => !searchParams.area || r.area === searchParams.area);
+    .filter((r) => !searchParams.area || r.area === searchParams.area)
+    // Most wanted first; the rest stay by name.
+    .sort((a, b) => b.wanted - a.wanted);
 
   return (
     <div>

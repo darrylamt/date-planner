@@ -23,6 +23,7 @@
     "menu:understand": "tsx --env-file=.env.local scripts/understand-menus.ts",
     "menu:audit": "tsx --env-file=.env.local scripts/menu-audit.ts",
     "meal:smoke": "tsx --env-file=.env.local scripts/meal-smoke.ts",
+    "estimates:bands": "tsx --env-file=.env.local scripts/estimate-bands.ts",
     "chat:ask": "tsx scripts/chat-smoke.ts",
     "chat:first": "tsx scripts/chat-first-questions.mts",
     "grant": "tsx scripts/grant-pro.ts",

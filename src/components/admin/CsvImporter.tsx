@@ -8,7 +8,7 @@ import { ensureAreaId } from "@/lib/areas";
 import { csvToObjects } from "@/lib/csv";
 import { Toast } from "@/components/Toast";
 import { MenuReaderPanel } from "@/components/admin/MenuReaderPanel";
-import { MENU_CATEGORIES, normaliseCategory } from "@/lib/catalog";
+import { MENU_CATEGORIES, dishLabels, normaliseCategory, understoodKey } from "@/lib/catalog";
 import type { Area } from "@/lib/types";
 
 /**
@@ -18,6 +18,7 @@ import type { Area } from "@/lib/types";
  *   reservation_required,dress_code,instagram_handle,phone,google_maps_url,image_url,lat,lng
  * Menu items CSV headers:
  *   venue,name,category,price_ghs,notes   (venue = exact venue name)
+ *   optional: days,from,to,alcoholic,dietary,role,time,type,drink,tags
  */
 export function CsvImporter({
   areas,
@@ -413,6 +414,33 @@ export function CsvImporter({
             ...(r.to?.trim() ? { available_to_minute: parseClock(r.to) } : {}),
           },
         });
+        /*
+         * What the dish is (0096), when the file says: role, time, type,
+         * drink and tags, as the menu prompt asks for them. Kept to the same
+         * lists Gemini answers from and marked as read, so the nightly pass
+         * (menuUnderstand.ts) leaves them; without a role and a time we
+         * know, the dish is left for Gemini to read.
+         */
+        const asked = [r.role, r.time, r.type, r.drink, r.tags].some((x) => x?.trim());
+        const labels = asked
+          ? dishLabels({
+              role: r.role?.trim().toLowerCase(),
+              time: r.time?.trim().toLowerCase(),
+              type: r.type?.trim().toLowerCase(),
+              drink: r.drink?.trim().toLowerCase(),
+              tags: (r.tags ?? "").split(/[;|]/).map((t) => t.trim().toLowerCase()).filter(Boolean),
+            })
+          : null;
+        if (labels) {
+          Object.assign(pending[pending.length - 1].values, {
+            ...labels,
+            understood_hash: await understoodHash({ name: r.name, notes: r.notes || null, category }),
+            understood_at: new Date().toISOString(),
+          });
+        } else if (asked) {
+          log.push(`Row ${i + 2} (${r.name}): role "${r.role ?? ""}" or time "${r.time ?? ""}" is not one we know, so Gemini will read this dish instead.`);
+        }
+
         const last = pending[pending.length - 1].values;
         if (last.available_days === null || last.available_from_minute === null || last.available_to_minute === null) {
           log.push(
@@ -596,6 +624,11 @@ export function CsvImporter({
                 A wine or spirit priced for the whole bottle needs (Bottle) in its name,
                 or plans treat it as one person&apos;s drink.
                 <br />
+                <b>role, time, type, drink, tags</b> are optional: what the dish is, from the
+                menu prompt. role is main, light, side, starter, dessert, pastry, snack, drink
+                or addon; time is breakfast, brunch or anytime; tags are ;-separated. A row
+                without a role and a time we know is read by Gemini overnight instead.
+                <br />
                 <b>days, from, to</b> are optional: when a price applies. days is Mon-Thu,
                 Fri;Sat, weekdays or weekends; from and to are times like 16:00. List the same
                 item once per price, e.g. a pool pass at 85 for weekdays and 130 for weekends.
@@ -774,6 +807,12 @@ export function CsvImporter({
 }
 
 /** "yes", "y", "true", "1" → true; "no", "n", "false", "0" → false; anything else, unknown. */
+/** The hash menuUnderstand.ts keeps of what it read, worked out the same way in the browser. */
+async function understoodHash(r: { name: string; notes: string | null; category: string }): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(understoodKey(r)));
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
 function yesNo(raw: string | undefined): boolean | null {
   const v = (raw ?? "").trim().toLowerCase();
   if (["yes", "y", "true", "1", "alcoholic"].includes(v)) return true;

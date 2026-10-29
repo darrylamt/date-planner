@@ -24,6 +24,54 @@ export const MENU_CATEGORIES = [
   "other",
 ] as const;
 
+/*
+ * What each dish is (0096): read by Gemini (menuUnderstand.ts), or given in
+ * the menu CSV's role, time, type, drink and tags columns. See 0096 for what
+ * each answer means. Here rather than beside the Gemini call so the browser
+ * importer can check a file against them.
+ */
+export const DISH_ROLES = ["main", "light", "side", "starter", "dessert", "pastry", "snack", "drink", "addon"] as const;
+export const MEAL_TIMES = ["breakfast", "brunch", "anytime"] as const;
+export const DISH_TAGS = [
+  "chicken", "beef", "goat", "lamb", "pork", "fish", "seafood", "egg", "vegetarian", "vegan",
+  "grilled", "fried", "baked", "stewed", "raw", "spicy",
+  "ghanaian", "west_african", "continental", "italian", "chinese", "japanese", "indian", "lebanese", "american", "french", "mexican", "fusion",
+  "sharing", "kids", "healthy", "heavy", "sweet", "alcoholic", "non_alcoholic", "hot", "cold", "premium",
+] as const;
+export const DISH_TYPES = [
+  "soup", "salad", "sandwich", "burger", "wrap_shawarma", "pizza", "pasta", "rice_dish", "noodles", "swallow", "stew_curry", "grill", "steak", "seafood_plate", "fried_plate", "sushi", "platter", "wings", "finger_food", "bread", "eggs", "breakfast_plate", "pancakes_waffles", "pastry", "cake", "ice_cream", "dessert_other", "kids_meal", "side_starch", "vegetables", "other",
+] as const;
+export const DRINK_KINDS = [
+  "still_water", "sparkling_water", "soda", "malt", "energy_drink", "fresh_juice", "bottled_juice", "smoothie", "milkshake", "coffee", "iced_coffee", "hot_tea", "iced_tea", "hot_chocolate", "local_drink", "mocktail", "cocktail", "local_beer", "imported_beer", "craft_beer", "cider", "palm_wine", "red_wine", "white_wine", "rose_wine", "sparkling_wine", "champagne", "whisky", "vodka", "gin", "rum", "tequila", "brandy_cognac", "liqueur", "shot", "other",
+] as const;
+
+/** What Gemini is shown of a dish (understood_hash): an edit to any of it has the dish read again. */
+export const understoodKey = (r: { name: string; notes: string | null; category: string }) =>
+  `v3|${r.name}|${r.notes ?? ""}|${r.category}`;
+
+/** A dish's labels, kept to the lists; null without a role and a time we know. */
+export function dishLabels(a: { role?: string; time?: string; type?: string; drink?: string; tags?: string[] }): {
+  dish_role: (typeof DISH_ROLES)[number];
+  meal_time: (typeof MEAL_TIMES)[number];
+  dish_type: (typeof DISH_TYPES)[number] | null;
+  drink_kind: (typeof DRINK_KINDS)[number] | null;
+  dish_tags: (typeof DISH_TAGS)[number][];
+} | null {
+  const one = <T extends readonly string[]>(list: T, v?: string) =>
+    v && (list as readonly string[]).includes(v) ? (v as T[number]) : null;
+  const role = one(DISH_ROLES, a.role);
+  const time = one(MEAL_TIMES, a.time);
+  if (!role || !time) return null;
+  return {
+    dish_role: role,
+    // Drinks are drunk any time; only food has a breakfast (audit, 27 Oct 2026).
+    meal_time: role === "drink" ? "anytime" : time,
+    dish_type: role !== "drink" ? one(DISH_TYPES, a.type) : null,
+    drink_kind: role === "drink" ? one(DRINK_KINDS, a.drink) : null,
+    dish_tags: [...new Set((a.tags ?? []).map((t) => one(DISH_TAGS, t)).filter((t): t is (typeof DISH_TAGS)[number] => t !== null))].slice(0, 6),
+  };
+}
+
 export const VENUE_TYPES = [
   "restaurant",
   "activity",

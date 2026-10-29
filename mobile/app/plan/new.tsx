@@ -569,6 +569,8 @@ export default function PlanNew() {
             void generate({ focus: "everything", focuses: [] });
           } else if (s.action === "clear_wellness") {
             void generate({ wellness: false });
+          } else if (s.action === "include_estimates") {
+            void generate({ estimates: true });
           } else {
             void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
           }

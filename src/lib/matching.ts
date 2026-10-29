@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Taste } from "./taste";
 import { expandVibes, loungeFloor } from "./catalog";
 import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, inferredTags, interestFit, meetingVenueTypes, placeFit, premiumLean, suitsOccasion } from "./planner";
-import { avgIsNotAPrice, freeToVisit } from "./budget";
+import { avgIsNotAPrice, estimateFor, freeToVisit } from "./budget";
 import { haversineKm } from "./transport";
 import { CITY_CENTRES } from "./neighbourhoods";
 
@@ -518,6 +518,7 @@ export async function fetchCandidates(
       menuFits(v)
   );
 
+  const guessed = new Map<string, { low: number; high: number }>();
   venues = venues.filter(
     (v) => {
       // A venue free to visit has a known price of nothing, which is the
@@ -540,10 +541,37 @@ export async function fetchCandidates(
       const hasMenu = pricedVenueIds.has(menuOwnerOf(v)) || pricedVenueIds.has(v.id);
       // An import default, not a price: see PLACEHOLDER_AVG_GHS.
       // The GHS 100 import default, or a place to eat with no menu.
-      if (avgIsNotAPrice(v, hasMenu)) return false;
-      return Number(v.avg_cost_per_person_ghs) > 0 || hasMenu;
+      if (!avgIsNotAPrice(v, hasMenu) && (Number(v.avg_cost_per_person_ghs) > 0 || hasMenu)) return true;
+      /*
+       * Unless they asked for places with no menu (PlanInputs.estimates):
+       * then at what similar places charge, where that can be said and the
+       * guess cannot break what they told us. Nothing alcoholic is a promise
+       * we keep only with a drinks list in hand, and a meat-free table only
+       * where somebody rang and asked (has_vegetarian_options).
+       */
+      if (!inputs.estimates) return false;
+      const guess = estimateFor(v, hasMenu);
+      if (!guess) return false;
+      if (v.type === "lounge" && inputs.alcohol === "none") return false;
+      const diet = inputs.diet ?? [];
+      if (v.type !== "lounge" && (diet.includes("vegan") || (diet.includes("vegetarian") && v.has_vegetarian_options !== true))) return false;
+      guessed.set(v.id, guess);
+      return true;
     }
   );
+  /*
+   * Needed rather than merely allowed in an area they named where we hold
+   * fewer than four priced places: Madina had none, so a Madina plan went to
+   * Spintex past two Madina restaurants with no menu on file. There a place
+   * without a menu gives up nothing for being one.
+   */
+  const pricedIn = new Map<string, number>();
+  for (const v of venues) if (!guessed.has(v.id)) pricedIn.set(v.area_id, (pricedIn.get(v.area_id) ?? 0) + 1);
+  const thin = (area: string) => pickedAreas.includes(area) && (pricedIn.get(area) ?? 0) < 4;
+  if (guessed.size)
+    venues = venues.map((v) =>
+      guessed.has(v.id) ? { ...v, estimate: { ...guessed.get(v.id)!, ...(thin(v.area_id) ? { needed: true } : {}) } } : v
+    );
 
   /*
    * Drop anything this group is the wrong size for.
@@ -570,7 +598,7 @@ export async function fetchCandidates(
 
   // Score: vibe overlap (heavily weighted) + occasion fit; keep a fallback
   // pool so a low-overlap request still gets real options rather than none.
-  const scored = venues
+  const scoredAll = venues
     .map((v) => {
       /*
        * Any tag the venue carries during the plan, so a place that is calm at
@@ -621,6 +649,13 @@ export async function fetchCandidates(
       return { v, score: overlap * 2 + occasion + prefs + named + Math.random() * 0.9 - shut };
     })
     .sort((a, b) => b.score - a.score);
+  /*
+   * Places with no menu (PlanInputs.estimates) are kept apart, so switching
+   * them on only ever adds to the shortlist. Mixed in, they pushed the count
+   * of places that fit past four and a priced café that fitted nothing was
+   * dropped, and Adenta, which plans from two priced places, planned nothing.
+   */
+  const scored = scoredAll.filter((sc) => !sc.v.estimate);
 
   const withOverlap = scored.filter((s) => s.score > 0).map((s) => s.v);
   const pool = withOverlap.length >= 4 ? withOverlap : scored.map((s) => s.v);
@@ -696,6 +731,15 @@ export async function fetchCandidates(
       .slice(0, 2 - have);
     picked = [...picked, ...extra];
   }
+
+  /*
+   * And, when they asked for places without menus, the best few of those,
+   * on top. They are thinner on record (1.8 vibe tags against 2.75, and a
+   * third of the occasions), so on score alone the best of them came 104th
+   * of 289. In the plan they still have to win their slot against a place
+   * with a menu, by two points, four at the meal (planner.ts, ESTIMATE_PENALTY).
+   */
+  picked = [...picked, ...scoredAll.filter((sc) => sc.v.estimate).slice(0, 8).map((sc) => sc.v)];
 
   /*
    * A venue with something on that night joins the shortlist outright.

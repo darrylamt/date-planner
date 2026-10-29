@@ -19,7 +19,7 @@ const ALCOHOL = new Set([...SPIRITS, "cocktail", "local_beer", "imported_beer", 
 const WATER = new Set(["still_water", "sparkling_water"]);
 const MEALTIMES = ["BREAKFAST", "BRUNCH", "LUNCH", "DINNER"];
 
-type Case = { occasion: string; time: string; party: number; budget: number; date: string; diet?: string[] };
+type Case = { occasion: string; time: string; party: number; budget: number; date: string; diet?: string[]; estimates?: boolean; alcohol?: "none" };
 const cases: Case[] = [];
 const days = ["2026-11-03", "2026-11-07"]; // a Tuesday and a Saturday
 for (const occasion of ["date_night", "anniversary", "first_date", "birthday", "friend_outing", "family_day", "business_meeting", "solo_day"])
@@ -46,6 +46,13 @@ cases.push(
   { occasion: "friend_outing", time: "13:00", party: 4, budget: 1800, date: "2026-11-03", diet: ["vegan"] },
   { occasion: "birthday", time: "19:00", party: 4, budget: 2000, date: "2026-11-07", diet: ["no_pork"] },
   { occasion: "anniversary", time: "19:00", party: 2, budget: 1500, date: "2026-11-03", diet: ["no_seafood", "no_beef"] }
+);
+// And with places that have no menu (PlanInputs.estimates): a guess only where it cannot break what they said.
+cases.push(
+  { occasion: "date_night", time: "19:00", party: 2, budget: 900, date: "2026-11-07", estimates: true },
+  { occasion: "friend_outing", time: "21:30", party: 4, budget: 1800, date: "2026-11-03", estimates: true },
+  { occasion: "first_date", time: "13:00", party: 2, budget: 1500, date: "2026-11-07", estimates: true, diet: ["vegetarian"] },
+  { occasion: "birthday", time: "19:00", party: 4, budget: 2000, date: "2026-11-07", estimates: true, alcohol: "none" }
 );
 const MEATS = ["chicken", "beef", "goat", "lamb", "pork", "fish", "seafood"];
 
@@ -87,11 +94,13 @@ const none: string[] = [];
       budget: c.budget,
       partySize: c.party,
       ...(c.diet ? { diet: c.diet } : {}),
+      ...(c.estimates ? { estimates: true } : {}),
+      ...(c.alcohol ? { alcohol: c.alcohol } : {}),
       // As the app sends it: a meeting is one place (defaultStopsFor).
       stops: defaultStopsFor(c.occasion as PlanInputs["occasion"]) || undefined,
     }) as PlanInputs;
     const cands = await fetchCandidates(db as never, inputs);
-    const label = `${c.occasion} ${c.time} x${c.party}${c.diet ? ` ${c.diet.join("+")}` : ""}`;
+    const label = `${c.occasion} ${c.time} x${c.party}${c.diet ? ` ${c.diet.join("+")}` : ""}${c.estimates ? " estimates" : ""}${c.alcohol ? " dry" : ""}`;
     const plan = planItinerary(inputs, cands, { variety: seeded(label) }) as any;
     if (!plan?.stops?.length) {
       none.push(label);
@@ -124,11 +133,32 @@ const none: string[] = [];
     for (let i = 0; i < plan.stops.length; i++) {
       const st = plan.stops[i];
       const v = st.venue;
+      /*
+       * 12. A guess, where we hold no menu (PlanInputs.estimates): only when
+       * asked for, only at a place with no menu, budgeted at the top of its
+       * range, never a bar's for somebody not drinking, never a place to eat
+       * for a vegetarian unless somebody checked it has options.
+       */
+      const guesses = (st.orders as { item: string; qty: number; price_ghs: number; estimate?: { low: number; high: number } }[]).filter((o) => o.estimate);
+      if (guesses.length || v.estimate) {
+        checks++;
+        const where = `${label} · ${st.label} @ ${v.name} (${v.type})`;
+        const menu = await menuOf(v.id, v.menu_shared_from ?? null);
+        if (!c.estimates) fail(where, "an estimate in a plan that did not ask for places without menus");
+        if (menu.length) fail(where, "an estimate at a place with a menu");
+        for (const o of guesses)
+          if (o.price_ghs !== o.estimate!.high * o.qty || !/^No menu yet/.test(o.item)) fail(where, `estimate line wrong: ${o.item} x${o.qty} = ${o.price_ghs}`);
+        if (v.type === "lounge" && c.alcohol === "none") fail(where, "a bar's drinks guessed for somebody not drinking");
+        if (c.diet?.includes("vegetarian") && v.type !== "lounge" && v.has_vegetarian_options !== true) fail(where, "a place to eat guessed for a vegetarian, unchecked");
+        if (plan.confidence.exact) fail(where, "an estimate in a total said to be exact");
+      }
       // 0. A meal has something to eat in it, wherever it is had: not a lounge's drinks or a club's door.
       if (st.role === "meal" && !st.event) {
         checks++;
         const menu = await menuOf(v.id, v.menu_shared_from ?? null);
-        const eats = (st.orders as { item: string; door?: boolean }[]).some((o) => {
+        const eats = (st.orders as { item: string; door?: boolean; estimate?: unknown }[]).some((o) => {
+          // No menu yet, at an estimate (PlanInputs.estimates): a meal only at a restaurant or a café.
+          if (o.estimate) return v.type === "restaurant" || v.type === "cafe";
           const m = menu.find((x) => x.name === o.item);
           return !o.door && m != null && m.dish_role !== "drink" && m.category !== "drink";
         });

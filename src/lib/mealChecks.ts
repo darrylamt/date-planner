@@ -30,7 +30,7 @@ export interface LoggedStop {
   label?: string;
   at?: string;
   dry?: boolean;
-  items: { item: string; qty: number; ghs: number; door?: boolean; base?: boolean }[];
+  items: { item: string; qty: number; ghs: number; door?: boolean; base?: boolean; estimate?: boolean }[];
 }
 
 export interface MealProblem {
