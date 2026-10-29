@@ -615,17 +615,17 @@ export function wantsDaylight(vibes: string[]): boolean {
  * belongs to the occasions that are two people, and to a birthday or a
  * celebration only when it is two of you.
  */
-const PAIR_VIBES = ["Romantic", "Calm", "Lively", "Fun", "Adventurous", "Chill", "Beach", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"];
+const PAIR_VIBES = ["Romantic", "Calm", "Lively", "Fun", "Adventurous", "Chill", "Beach", "Scenic", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"];
 const PARTY_VIBES = ["Lively", "Fun", "Adventurous", "Chill", "Beach", "Dancing", "Club hopping", "Sporty", "Outdoorsy", "Artsy", "Foodie", "Calm"];
 const VIBES_BY_OCCASION: Record<Occasion, string[]> = {
-  first_date: ["Romantic", "Calm", "Fun", "Chill", "Adventurous", "Beach", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
+  first_date: ["Romantic", "Calm", "Fun", "Chill", "Adventurous", "Beach", "Scenic", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
   date_night: PAIR_VIBES,
-  anniversary: ["Romantic", "Calm", "Chill", "Lively", "Beach", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
+  anniversary: ["Romantic", "Calm", "Chill", "Lively", "Beach", "Scenic", "Dancing", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
   birthday: PARTY_VIBES,
   graduation: PARTY_VIBES,
   celebration: PARTY_VIBES,
   friend_outing: [...PARTY_VIBES, "Picnic"],
-  solo_day: ["Calm", "Chill", "Fun", "Adventurous", "Beach", "Sporty", "Outdoorsy", "Artsy", "Foodie"],
+  solo_day: ["Calm", "Chill", "Fun", "Adventurous", "Beach", "Scenic", "Sporty", "Outdoorsy", "Artsy", "Foodie"],
   family_day: ["Fun", "Calm", "Adventurous", "Beach", "Sporty", "Outdoorsy", "Picnic", "Artsy", "Foodie"],
   // The meeting's own question has already said what kind of place it is.
   business_meeting: [],
@@ -642,7 +642,7 @@ export function vibesFor(occasion: Occasion, partySize: number): string[] {
  * "Quiet and calm" were also vibes, so the same thing was asked twice on two
  * screens; only the settings no vibe says are kept.
  */
-export const PLACE_SETTINGS = ["Rooftops", "Gardens", "Cosy corners"];
+export const PLACE_SETTINGS = ["Rooftops", "Gardens", "Cosy corners", "Sea views", "Outdoor seating", "Air-conditioned", "Live music"];
 
 /*
  * The questions about the person, by pathway. "Food they love" is gone: the
@@ -651,7 +651,8 @@ export const PLACE_SETTINGS = ["Rooftops", "Gardens", "Cosy corners"];
  * has no "them" to describe, and a family day only needs what to avoid.
  */
 export type AboutQuestion = "interests" | "avoid";
-export const INTEREST_OPTIONS = ["Music", "Films", "Games", "Books", "Fashion"];
+// Each one the planner can act on (planner.ts, INTEREST_MATCH): photos, karaoke and nature added 28 Oct 2026.
+export const INTEREST_OPTIONS = ["Music", "Films", "Games", "Books", "Fashion", "Photos", "Karaoke", "Nature"];
 export function aboutQuestionsFor(occasion: Occasion): AboutQuestion[] {
   if (occasion === "business_meeting") return [];
   if (occasion === "family_day") return ["avoid"];

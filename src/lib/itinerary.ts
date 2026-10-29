@@ -231,6 +231,8 @@ export function assembleItinerary(
       charge_rates: ratesOf(a.venue),
       est_cost_ghs: a.cost,
       why_this_fits: aboutVenue(a.venue),
+      // Another film, for a film stop: its own showing comes with it (planner.ts, filmSwaps).
+      ...(a.event ? { event: a.event as ItineraryStop["event"] } : {}),
     }));
 
     return {

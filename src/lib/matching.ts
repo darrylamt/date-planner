@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Taste } from "./taste";
 import { expandVibes, loungeFloor } from "./catalog";
-import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, meetingVenueTypes, placeFit, premiumLean } from "./planner";
+import { avoidPenalty, familyBonus, focusesOf, focusVenueTypes, inferredTags, interestFit, meetingVenueTypes, placeFit, premiumLean, suitsOccasion } from "./planner";
 import { avgIsNotAPrice, freeToVisit } from "./budget";
 import { haversineKm } from "./transport";
 import { CITY_CENTRES } from "./neighbourhoods";
@@ -12,7 +12,7 @@ import { DEFAULT_NEAR_KM, DEFAULT_RADIUS_KM } from "./planConstants";
 import { DEFAULT_CITY, audienceAllows, wellnessAllowed } from "./planConstants";
 import { schedulesDuring } from "./schedules";
 import { venueAt, vibeTagsDuring } from "./dayEnergy";
-import { weekdayOf } from "./hours";
+import { isOpenAt, parsePeriods, weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueInsight, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
@@ -402,7 +402,8 @@ export async function fetchCandidates(
    * keeps to the city's core; Aburi and the like still come up for anybody
    * who picks them, or plans from near them.
    */
-  if (inputs.surpriseMe && !inputs.near) {
+  // Any plan from nowhere in particular: "Surprise me", or no area chosen at all (Build my plan now).
+  if ((inputs.surpriseMe || !inputs.areaIds?.length) && !inputs.near) {
     const want = (inputs.city || DEFAULT_CITY).toLowerCase();
     const centre = Object.entries(CITY_CENTRES).find(([name]) => name.toLowerCase() === want)?.[1];
     if (centre) {
@@ -557,6 +558,16 @@ export async function fetchCandidates(
     return inputs.partySize >= min && inputs.partySize <= max;
   });
 
+  const planWeekday = weekdayOf(inputs.date);
+  const shutThroughout = (v: Venue) => {
+    const periods = planWeekday === null ? null : parsePeriods(v.opening_periods);
+    if (!periods) return false;
+    for (let m = planStart; m < planStart + Math.max(planLength, 60); m += 30) {
+      if (isOpenAt(periods, (planWeekday! + Math.floor(m / 1440)) % 7, m % 1440) !== false) return false;
+    }
+    return true;
+  };
+
   // Score: vibe overlap (heavily weighted) + occasion fit; keep a fallback
   // pool so a low-overlap request still gets real options rather than none.
   const scored = venues
@@ -566,8 +577,11 @@ export async function fetchCandidates(
        * four and lively at nine reaches the shortlist for either; the planner
        * then scores each stop at its own time.
        */
-      const overlap = vibeTagsDuring(v, planStart, planLength).filter((t) => wantedTags.includes(t)).length;
-      const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
+      const overlap =
+        vibeTagsDuring(v, planStart, planLength).filter((t) => wantedTags.includes(t)).length +
+        // What the study says, for a place entered with few tags (planner.ts, inferredTags).
+        inferredTags(v).filter((t) => wantedTags.includes(t)).length * 0.67;
+      const occasion = suitsOccasion(v, inputs.occasion) ? 1 : 0;
       const atStart = venueAt(v, planStart);
       /*
        * The same preferences the planner scores, so a beachside place can
@@ -575,7 +589,8 @@ export async function fetchCandidates(
        * planner scoring can choose.
        */
       const prefs =
-        placeFit(atStart, inputs.partner?.place ?? "") -
+        placeFit(atStart, inputs.partner?.place ?? "") +
+        interestFit(atStart, inputs.partner?.interests ?? "") -
         avoidPenalty(atStart, inputs.partner?.avoid ?? "") +
         familyBonus(v, inputs) +
         // Here too, or a premium restaurant never reaches the planner to be chosen.
@@ -595,7 +610,15 @@ export async function fetchCandidates(
        * fourteen places on the shortlist instead of the same fourteen winning
        * every tie. The planner adds its own, larger, among the shortlist.
        */
-      return { v, score: overlap * 2 + occasion + prefs + named + Math.random() * 0.9 };
+      /*
+       * Behind everything open, a place known to be shut for the whole of the
+       * plan: it can never be used, and took a shortlist place from one that
+       * can. A 21:30 date found no open restaurant among the fourteen once
+       * the venue study's fit let more daytime places in (28 Oct 2026).
+       * Unknown hours count as open, as everywhere else.
+       */
+      const shut = shutThroughout(v) ? 100 : 0;
+      return { v, score: overlap * 2 + occasion + prefs + named + Math.random() * 0.9 - shut };
     })
     .sort((a, b) => b.score - a.score);
 

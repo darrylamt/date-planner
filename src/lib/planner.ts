@@ -579,9 +579,39 @@ function cuisineFit(v: Venue, want: PlanCuisine): boolean | null {
   return v.cuisine === "both" || v.cuisine === want;
 }
 
+/*
+ * What the venue study (0088) says a place is like, for places entered with
+ * few tags of their own (28 Oct 2026). Plans kept going to the same tag-rich
+ * venues: those picked often carried 3.5 vibe tags, those never picked 1.9,
+ * whatever they were like, because every tag is three points. Inferred tags
+ * count two, and only where a venue has fewer than three of its own; calm and
+ * lively are left to the noise reading, which insightScore already scores.
+ */
+export function inferredTags(v: Venue): string[] {
+  if (v.vibe_tags.length >= 3 || !v.insights) return [];
+  const ins = v.insights;
+  const out = new Set<string>();
+  if ((ins.occasion_fit.anniversary ?? 0) >= 8 || (ins.occasion_fit.date_night ?? 0) >= 8) out.add("romantic");
+  if ((v.type === "restaurant" || v.type === "cafe") && ins.signature_dishes.length >= 2) out.add("foodie");
+  if (v.type === "activity") out.add("fun");
+  if (ins.features.includes("outdoor_seating")) out.add("outdoorsy");
+  if (ins.features.includes("sea_view")) {
+    out.add("beach");
+    out.add("scenic");
+  }
+  if (ins.features.includes("rooftop")) out.add("scenic");
+  return [...out].filter((t) => !v.vibe_tags.includes(t));
+}
+
+/** Whether the occasion suits a venue: its own best_for, or the study's fit where best_for says little. */
+export function suitsOccasion(v: Venue, occasion: string): boolean {
+  return v.best_for.includes(occasion) || (v.best_for.length < 2 && (v.insights?.occasion_fit[occasion] ?? 0) >= 8);
+}
+
 function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute?: number): number {
   const overlap = v.vibe_tags.filter((t) => wantedTags.includes(t)).length;
-  const occasion = v.best_for.includes(inputs.occasion) ? 1 : 0;
+  const inferred = inferredTags(v).filter((t) => wantedTags.includes(t)).length;
+  const occasion = suitsOccasion(v, inputs.occasion) ? 1 : 0;
   const inArea = inputs.areaIds.includes(v.area_id) ? 1 : 0;
   /*
    * Weighted above a vibe tag. Someone who picks local has asked for a kind of
@@ -613,13 +643,15 @@ function scoreVenue(v: Venue, inputs: PlanInputs, wantedTags: string[], atMinute
   const family = familyBonus(v, inputs);
   return (
     overlap * 3 +
+    inferred * 2 +
     occasion * 2 +
     inArea +
     cuisine +
     specific +
     family +
     premiumLean(v, inputs) +
-    placeFit(v, inputs.partner?.place ?? "") -
+    placeFit(v, inputs.partner?.place ?? "") +
+    interestFit(v, inputs.partner?.interests ?? "") -
     avoidPenalty(v, inputs.partner?.avoid ?? "") +
     formalityScore(v, inputs.formality) +
     looksScore(v, inputs.occasion) +
@@ -771,8 +803,14 @@ const venueWords = (v: Venue) => `${v.name} ${v.description ?? ""}`.toLowerCase(
  * own words where it does not, because there is no rooftop tag and a rooftop
  * bar says "rooftop".
  */
+const feature = (v: Venue, f: string) => Boolean(v.insights?.features.includes(f));
 const PLACE_MATCH: Record<string, (v: Venue) => boolean> = {
-  rooftops: (v) => /rooftop|roof top|sky ?(bar|lounge)|skyline/.test(venueWords(v)),
+  rooftops: (v) => feature(v, "rooftop") || /rooftop|roof top|sky ?(bar|lounge)|skyline/.test(venueWords(v)),
+  // From the venue study's features (0088), which no setting used to ask for (28 Oct 2026).
+  "sea views": (v) => feature(v, "sea_view") || v.vibe_tags.includes("beach") || /sea ?view|ocean ?view|beachfront|seaside/.test(venueWords(v)),
+  "outdoor seating": (v) => feature(v, "outdoor_seating") || /outdoor seating|terrace|courtyard|garden|open[- ]air/.test(venueWords(v)),
+  "air-conditioned": (v) => feature(v, "air_conditioned"),
+  "live music": (v) => feature(v, "live_music") || /live (music|band)|jazz night|live performance/.test(venueWords(v)),
   gardens: (v) => v.vibe_tags.includes("outdoorsy") || /garden|courtyard|open[- ]air/.test(venueWords(v)),
   beachside: (v) => v.vibe_tags.includes("beach") || /beach|seaside|oceanfront/.test(venueWords(v)),
   "cosy corners": (v) => v.vibe_tags.includes("calm") || v.vibe_tags.includes("chill"),
@@ -786,6 +824,28 @@ const PLACE_MATCH: Record<string, (v: Venue) => boolean> = {
  * nobody could see: across eighteen plans for somebody whose kind of place is
  * "beachside", not one stop was on a beach. Still a score, never a filter.
  */
+/*
+ * What they are into, which reached the description and nothing else: a
+ * plan for somebody into films never leaned towards a cinema (28 Oct 2026).
+ * Three points a match, at most six: a nudge the size of a vibe tag, read
+ * from what the catalogue can actually tell.
+ */
+const INTEREST_MATCH: Record<string, (v: Venue) => boolean> = {
+  music: (v) => feature(v, "live_music") || v.vibe_tags.includes("dancing") || /live (music|band)|jazz|karaoke|\bdj\b|concert|highlife|afrobeats/.test(venueWords(v)),
+  films: (v) => /cinema|\bfilms?\b|movies?|silverbird|imax|screening/.test(venueWords(v)),
+  games: (v) => /\bgames?\b|arcade|bowling|kart|paintball|laser tag|escape room|snooker|pool table|playstation|ps5|board games?|trampoline/.test(venueWords(v)),
+  books: (v) => /\bbooks?\b|library|reading|literary|bookshop/.test(venueWords(v)),
+  fashion: (v) => feature(v, "instagrammable") || /boutique|fashion|style/.test(venueWords(v)),
+  photos: (v) => feature(v, "instagrammable") || feature(v, "rooftop") || feature(v, "sea_view") || v.vibe_tags.includes("scenic"),
+  karaoke: (v) => /karaoke/.test(venueWords(v)),
+  nature: (v) => v.type === "outdoor" || v.vibe_tags.includes("outdoorsy") || /garden|nature|forest|lake|waterfall|hike|botanical/.test(venueWords(v)),
+};
+
+export function interestFit(v: Venue, interests: string): number {
+  const wants = interests.toLowerCase().split(",").map((p) => p.trim()).filter((p) => INTEREST_MATCH[p]);
+  return Math.min(6, wants.filter((p) => INTEREST_MATCH[p](v)).length * 3);
+}
+
 export function placeFit(v: Venue, place: string): number {
   const wants = place.toLowerCase().split(",").map((p) => p.trim()).filter((p) => PLACE_MATCH[p]);
   const hits = wants.filter((p) => PLACE_MATCH[p](v)).length;
@@ -1728,7 +1788,15 @@ export interface PlannedStop {
    * orders and cost the planner computed for it, re-deriving a price at the
    * point of swap is how a venue with no menu ends up shown as free.
    */
-  alternates: { venue: Venue; orders: ItineraryOrder[]; cost: number; charges: StopCharge[]; label: string }[];
+  alternates: {
+    venue: Venue;
+    orders: ItineraryOrder[];
+    cost: number;
+    charges: StopCharge[];
+    label: string;
+    /** A film stop's swaps are other films (filmSwaps): each carries its own showing. */
+    event?: PlannedStop["event"];
+  }[];
   /** What the venue adds to the bill, already counted in cost. */
   charges: StopCharge[];
   /** The order tier this stop was planned at (0 modest, 2 full). */
@@ -2943,7 +3011,17 @@ function planWith(
            * bar to save a ride, but it lets a near-equal venue in the right
            * area beat a marginally better one on the wrong side of town.
            */
-          if (option.score < current.score - (back < backNow ? 2 : 1)) continue;
+          /*
+           * And more again when this stop's ride is long: an evening across
+           * town was the usual shape of a plan from nowhere in particular,
+           * with 29 of the 31 rides over 10 km in a fortnight (28 Oct 2026).
+           * A stop more than 8 km from a neighbour may give up three points
+           * for one within 6 km of both.
+           */
+          const legs = (o: Option) =>
+            Math.max(i > 0 ? kmBetween(chosen[i - 1].venue, o.venue) : 0, i < chosen.length - 1 ? kmBetween(o.venue, chosen[i + 1].venue) : 0);
+          const nearer = legs(current) > 8 && legs(option) <= 6;
+          if (option.score < current.score - (nearer ? 3 : back < backNow ? 2 : 1)) continue;
           const km = routeKm(trial);
           // Fewer returns always wins; otherwise it has to be a real saving.
           if (back === backNow && km > kmNow - 2) continue;
@@ -3231,6 +3309,54 @@ function planWith(
       return TYPE_LABEL[venue.type] ?? ROLE_LABEL[role];
     }
 
+    /*
+     * Swapping a film is choosing another film (owner, 28 Oct 2026: "I keep
+     * getting the same movie"). The stop's runners-up were the slot's other
+     * venues, a dessert place or a café, so a swap left the cinema and the
+     * next one came back to the same title. Now they are the other films
+     * showing from half an hour before this one to two hours after, one
+     * showing each, nearest first and this cinema first: the same ticket
+     * estimate, each with its own start time on the card.
+     */
+    function filmSwaps(p: Option, film: EventRow): PlannedStop["alternates"] {
+      const at = film.start_time ? minutesOf(film.start_time) : null;
+      const byId = new Map(candidates.venues.map((v) => [v.id, v]));
+      const seen = new Set([film.title.toLowerCase()]);
+      return candidates.events
+        .filter((e) => e.kind === "movie" && e.id !== film.id && e.venue_id && byId.has(e.venue_id) && e.start_time)
+        .map((e) => ({ e, off: at == null ? 0 : minutesOf(e.start_time!) - at }))
+        .filter((x) => x.off >= -30 && x.off <= 120)
+        .map((x) => ({ e: x.e, gap: Math.abs(x.off) }))
+        .sort((a, b) => Number(b.e.venue_id === p.venue.id) - Number(a.e.venue_id === p.venue.id) || a.gap - b.gap)
+        .filter((x) => {
+          const t = x.e.title.toLowerCase();
+          if (seen.has(t)) return false;
+          seen.add(t);
+          return true;
+        })
+        .slice(0, SWAP_OPTIONS)
+        .map(({ e }) => ({
+          venue: byId.get(e.venue_id!)!,
+          orders: p.orders,
+          cost: p.cost,
+          charges: p.charges,
+          label: e.title,
+          event: {
+            id: e.id,
+            title: e.title,
+            start_time: e.start_time,
+            image_url: e.image_url ?? null,
+            contact_phone: e.contact_phone ?? null,
+            booking_url: e.booking_url ?? null,
+            description: e.description ?? null,
+            reservation_required: e.reservation_required ?? false,
+            audience: e.audience ?? "everyone",
+            organiser_name: e.organiser_name ?? null,
+            organiser_logo_url: e.organiser_logo_url ?? null,
+          },
+        }));
+    }
+
     function toStops(picks: Option[], headroom = 0): PlannedStop[] {
       return picks.map((p, i) => {
         const role = roles[i];
@@ -3280,7 +3406,7 @@ function planWith(
            * (swapStretch, SWAP_FAR_KM). Measured on replayed real plans with
            * scripts/swap-check.ts.
            */
-          alternates: (() => {
+          alternates: onTonight?.kind === "movie" ? filmSwaps(p, onTonight) : (() => {
             const pool = swapPools[i].filter((o) => o.venue.id !== p.venue.id && !taken.has(brandOf(o.venue)));
             /*
              * Near the stop it replaces, or no further from where they are
