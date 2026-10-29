@@ -23,7 +23,7 @@ type Case = { occasion: string; time: string; party: number; budget: number; dat
 const cases: Case[] = [];
 const days = ["2026-11-03", "2026-11-07"]; // a Tuesday and a Saturday
 for (const occasion of ["date_night", "anniversary", "first_date", "birthday", "friend_outing", "family_day", "business_meeting", "solo_day"])
-  for (const time of ["09:00", "13:00", "19:00", "21:30"]) {
+  for (const time of ["09:00", "13:00", "16:00", "19:00", "21:30"]) {
     const party = occasion === "solo_day" ? 1 : occasion === "birthday" || occasion === "friend_outing" ? 4 : occasion === "family_day" ? 5 : 2;
     cases.push({ occasion, time, party, budget: 450 * party, date: days[cases.length % 2] });
   }
@@ -105,6 +105,20 @@ const none: string[] = [];
       const menu = await menuOf(st.venue.id, st.venue.menu_shared_from ?? null);
       const sweets = new Set(menu.filter((m) => (m.dish_role ? m.dish_role === "dessert" : m.category === "dessert")).map((m) => m.name));
       sweetAt.push(st.venue.type === "dessert" || st.orders.some((o: { item: string }) => sweets.has(o.item)));
+    }
+
+    // 10. No dessert before the meal; 11. no dessert stop after half eleven at night.
+    const mealAt = plan.stops.findIndex((s: any) => s.role === "meal");
+    for (let i = 0; i < plan.stops.length; i++) {
+      const st = plan.stops[i];
+      if (mealAt > i && sweetAt[i]) {
+        checks++;
+        fail(`${label} · ${st.label} @ ${st.venue.name}`, "dessert before the meal");
+      }
+      if (st.venue.type === "dessert" && (st.arrivalMinutes ?? 0) >= 23 * 60 + 30) {
+        checks++;
+        fail(`${label} · ${st.label} @ ${st.venue.name}`, `dessert at ${Math.floor(st.arrivalMinutes / 60) % 24}:${String(st.arrivalMinutes % 60).padStart(2, "0")}`);
+      }
     }
 
     for (let i = 0; i < plan.stops.length; i++) {

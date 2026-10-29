@@ -1524,7 +1524,7 @@ export function planOrders(
   if ((venue.type === "restaurant" || venue.type === "cafe") && opts.course) {
     const small = (cats: string[]) => cats.map((c) => () => orderFrom(c, partySize)).reduce<OrderLine[]>((f, n) => (f.length ? f : n()), []);
     if (opts.course === "dessert") lines.push(...small(["dessert", "starter"]));
-    if (opts.course === "light") lines.push(...small(["dessert", "starter", "other"]));
+    if (opts.course === "light") lines.push(...small(opts.noDessert ? ["starter", "other"] : ["dessert", "starter", "other"]));
     lines.push(...orderFrom("drink", partySize));
     allowForDrinks();
     // A stand-in with nothing light to offer falls through to the empty-menu handling below.
@@ -2114,6 +2114,8 @@ function planWith(
       doorOnly?: boolean;
       /** A dessert stop comes later in the plan: this one orders no dessert of its own. */
       dessertAfter?: boolean;
+      /** The meal is still to come: no dessert before dinner, here or as a stand-in's course. */
+      beforeMeal?: boolean;
     } = {}
   ): Option[] => {
     const roleTypes = ROLE_TYPES[role];
@@ -2306,7 +2308,7 @@ function planWith(
         {
           course: standIn(role, venue.type),
           occasion: inputs.occasion,
-          noDessert: opts.dessertAfter,
+          noDessert: opts.dessertAfter || opts.beforeMeal,
           // An event in the meal's stop is priced as the event, as before.
           meal: role === "meal" && !opts.event,
         }
@@ -2404,7 +2406,7 @@ function planWith(
     return a.area_id === b.area_id ? 0 : 6;
   };
 
-  const optionsFor = (role: Role, slotStart: number, doorOnly = false, dessertAfter = false): Option[] => {
+  const optionsFor = (role: Role, slotStart: number, doorOnly = false, dessertAfter = false, beforeMeal = false): Option[] => {
     const roleTypes = ROLE_TYPES[role];
 
     /*
@@ -2438,7 +2440,7 @@ function planWith(
      */
     const build = (from: Venue[]): Option[] =>
       from
-        .flatMap((venue) => optionsForVenue(venue, role, slotStart, { doorOnly, dessertAfter }))
+        .flatMap((venue) => optionsForVenue(venue, role, slotStart, { doorOnly, dessertAfter, beforeMeal }))
         .sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost);
 
     const preferred = build(pool);
@@ -2507,7 +2509,16 @@ function planWith(
      * a date at one o'clock went to two galleries and ate nothing.
      */
     const others = venuesHere.filter(
-      (v) => !roleTypes.includes(v.type) && (role !== "meal" || FALLBACK_TYPES.meal.includes(v.type))
+      (v) =>
+        !roleTypes.includes(v.type) &&
+        (role !== "meal" || FALLBACK_TYPES.meal.includes(v.type)) &&
+        /*
+         * Nor a dessert place before the meal: the plan check kept finding
+         * evenings that opened on ice cream, because something to do falls
+         * back to dessert first (27 Oct 2026) and in the afternoon it comes
+         * before dinner.
+         */
+        !(beforeMeal && v.type === "dessert")
     );
     const order = FALLBACK_TYPES[role];
     const rank = (t: VenueType) => {
@@ -2542,6 +2553,17 @@ function planWith(
       inputs
     );
     /*
+     * Dessert is not a one-in-the-morning stop: the plan check kept finding
+     * them, at places mostly shut by then. Past half eleven the slot is a
+     * last drink instead, or, on a family day or a meeting, it goes.
+     */
+    for (let i = roles.length - 1; i >= 0; i--) {
+      if (roles[i] !== "dessert" || nominalStart(roles, i) < 23 * 60 + 30) continue;
+      if (inputs.occasion === "family_day" || inputs.occasion === "business_meeting" || inputs.alcohol === "none") roles.splice(i, 1);
+      else roles[i] = "lounge";
+    }
+
+    /*
      * When the event's time is the meal's, the meal moves to the next stop:
      * the night out, then dinner, rather than the night out instead of
      * dinner. Only with another stop to trade with, and never for a film,
@@ -2573,7 +2595,8 @@ function planWith(
         nominalStart(roles, i),
         clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"),
         // One dessert an evening: a meal followed by a dessert stop leaves it to that stop.
-        roles.slice(i + 1).includes("dessert")
+        roles.slice(i + 1).includes("dessert"),
+        role !== "meal" && roles.slice(i + 1).includes("meal")
       )
     );
     /*
@@ -3019,6 +3042,33 @@ function planWith(
         )
       )
         return null;
+    }
+
+    /*
+     * And no long ride across town for the last stop late at night (the plan
+     * check's other repeat). After ten, a last stop more than 5 km from the
+     * one before is swapped for the slot's best option within 5 km that is
+     * open then and still fits, if there is one. Not the event's stop, which
+     * is the reason for the night.
+     */
+    {
+      const last = stops.length - 1;
+      if (last > 0 && last !== pinnedIndex && stops[last].arrivalMinutes >= 22 * 60 && kmBetween(stops[last - 1].venue, stops[last].venue) > 5) {
+        const prev = stops[last - 1].venue;
+        const at = stops[last].arrivalMinutes;
+        const others = new Set(chosen.filter((_, j) => j !== last).map((o) => brandOf(o.venue)));
+        const nearer = slots[last].find(
+          (o) =>
+            !others.has(brandOf(o.venue)) &&
+            kmBetween(prev, o.venue) <= 5 &&
+            (weekday === null || isOpenThroughout(parsePeriods(o.venue.opening_periods), weekday, at, stops[last].durationMins) !== false) &&
+            totalOf(chosen.map((x, j) => (j === last ? o : x))) <= inputs.budget
+        );
+        if (nearer) {
+          chosen[last] = nearer;
+          ({ stops, hops } = lay());
+        }
+      }
     }
 
     /*
