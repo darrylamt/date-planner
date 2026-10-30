@@ -27,6 +27,7 @@ import { AppIconPicker, appIconsAvailable } from "../src/components/AppIconPicke
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
+import { nudgesOn, setNudges } from "../src/lib/nudges";
 import { ProSheet } from "../src/components/profile/ProSheet";
 import { fetchAllowance } from "../src/lib/chat";
 import { clearDraft, loadDraft } from "../src/lib/draft";
@@ -95,6 +96,8 @@ export default function Profile() {
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   const [aiAllowed, setAiAllowed] = useState(false);
+  // Weekend ideas (nudges.ts): null when signed out or before the server has them.
+  const [nudges, setNudgesState] = useState<boolean | null>(null);
   const [proOpen, setProOpen] = useState(false);
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
@@ -106,6 +109,7 @@ export default function Profile() {
       let active = true;
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
       void getAiConsent().then((v) => active && setAiAllowed(v === "granted"));
+      void nudgesOn().then((v) => active && setNudgesState(v));
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
@@ -443,6 +447,36 @@ export default function Profile() {
         Off means plans get a plain description and the assistant asks again
         before anything is sent.
       */}
+      {/*
+        The nudges' off switch, and their on switch: promotional, so they go
+        only to people who said yes here or when asked (nudges.ts). Shown with
+        an account, since they are sent to one.
+      */}
+      {hasAccount && nudges !== null ? (
+        <Group header="Notifications" footer="Plan reminders the evening before are sent either way.">
+          <Row
+            icon="bell"
+            title="Weekend ideas"
+            subtitle="What's on, what's new, and a nudge if it's been a while. At most twice a week."
+            trailing={
+              <Toggle
+                value={nudges}
+                onValueChange={(on) => {
+                  setNudgesState(on);
+                  void setNudges(on).then((r) => {
+                    if (!r.ok) {
+                      setNudgesState(!on);
+                      if (r.message) setToast(r.message);
+                    }
+                  });
+                }}
+                accessibilityLabel="Weekend ideas"
+              />
+            }
+          />
+        </Group>
+      ) : null}
+
       <Group header="Privacy">
         <Row
           icon="sparkles"

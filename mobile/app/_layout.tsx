@@ -3,6 +3,9 @@ import { Stack, router, type ErrorBoundaryProps } from "expo-router";
 import { AppState, Pressable, Text, View } from "react-native";
 import { installCrashReporter, reportCrash } from "../src/lib/crashReport";
 import { clearDraft } from "../src/lib/draft";
+import { startNewPlan } from "../src/lib/startPlan";
+import { OCCASION_IDS } from "../src/lib/planConstants";
+import type { Occasion, PlanEntry } from "../src/lib/types";
 import { refreshWidgets } from "../src/lib/widgets";
 import { recordOpen } from "../src/lib/usage";
 import { refreshLiveActivity, unfollow } from "../src/lib/liveActivity";
@@ -133,7 +136,30 @@ function RootShell() {
    */
   useEffect(() => {
     configureNotificationHandler();
-    return subscribeToNotificationTaps((url) => router.push(url as never));
+    return subscribeToNotificationTaps((url) => {
+      /*
+       * A notification that starts a new plan (a nudge, a birthday) goes
+       * through startNewPlan, which asks before replacing a plan in progress;
+       * opening /plan/new?fresh=1 directly wiped it without a word.
+       */
+      const [path, query = ""] = url.split("?");
+      if (path === "/plan/new" && /(^|&)fresh=1(&|$)/.test(query)) {
+        const q = Object.fromEntries(
+          query.split("&").map((kv) => {
+            const [k, v = ""] = kv.split("=");
+            return [k, decodeURIComponent(v)];
+          })
+        );
+        const entry = /^[a-z_]{1,32}$/.test(q.from ?? "") ? (q.from as PlanEntry) : undefined;
+        const occasion = (OCCASION_IDS as readonly string[]).includes(q.occasion ?? "") ? (q.occasion as Occasion) : undefined;
+        void startNewPlan(occasion, entry, {
+          ...(q.date ? { date: q.date } : {}),
+          ...(q.start ? { start: q.start } : {}),
+        });
+        return;
+      }
+      router.push(url as never);
+    });
   }, []);
 
   /*

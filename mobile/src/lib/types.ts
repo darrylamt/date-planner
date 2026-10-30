@@ -442,6 +442,10 @@ export type PlanEntry =
   | "quick_action"
   | "widget"
   | "push_birthday"
+  // The nudges (nudges.ts, 0100): what each one led to.
+  | "push_weekend"
+  | "push_new"
+  | "push_lapsed"
   | "plans_empty"
   | "repeat"
   | "chat"

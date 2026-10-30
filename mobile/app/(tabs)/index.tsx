@@ -29,6 +29,7 @@ import { myGroups } from "../../src/lib/groupApi";
 import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
 import { HeardFromCard } from "../../src/components/HeardFromCard";
+import { askForNudgesOnce } from "../../src/lib/nudges";
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -83,6 +84,8 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      // Weekend ideas, asked once on this phone, after Home has settled (nudges.ts).
+      const ask = setTimeout(() => active && void askForNudgesOnce(), 2500);
       void loadDraft().then((d) => active && setDraft(d));
       // On focus, so a new photo set in Settings is here when they come back.
       void fetchProfile()
@@ -129,6 +132,7 @@ export default function Home() {
         .catch(() => undefined);
       return () => {
         active = false;
+        clearTimeout(ask);
       };
     }, [])
   );
