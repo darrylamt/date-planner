@@ -1,3 +1,7 @@
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+import { getDeviceId } from "./deviceId";
+import { supabase } from "./supabase";
 import type { GenerateResponse, Itinerary, PlanInputs } from "./types";
 
 /**
@@ -37,21 +41,29 @@ async function postJson<T>(path: string, body: unknown, headers: Record<string, 
  * Neither is needed; without them the plan is the same for everybody.
  */
 async function whoIsAsking(): Promise<Record<string, string>> {
+  /*
+   * Imported at the top rather than with import() (30 Oct 2026). From the
+   * 27 Oct update this threw on phones, every time: no device, no sign-in and
+   * no platform reached the plan log, so plans ignored the person's taste.
+   * import("react-native") is the likely reason, since on a phone it copies
+   * every export of the package. Each part now fails on its own.
+   */
+  const headers: Record<string, string> = {
+    "x-duro-platform": Platform.OS,
+    "x-duro-version": Constants.expoConfig?.version ?? "",
+  };
   try {
-    const [{ getDeviceId }, { supabase }] = await Promise.all([import("./deviceId"), import("./supabase")]);
-    const [deviceId, { data }] = await Promise.all([getDeviceId(), supabase.auth.getSession()]);
-    const token = data.session?.access_token;
-    // And which app it is, for counting (0097): the plan log keeps ios, android or web, and the build.
-    const [{ Platform }, Constants] = await Promise.all([import("react-native"), import("expo-constants")]);
-    return {
-      "x-duro-device": deviceId,
-      "x-duro-platform": Platform.OS,
-      "x-duro-version": Constants.default.expoConfig?.version ?? "",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    headers["x-duro-device"] = await getDeviceId();
   } catch {
-    return {};
+    // Without it the plan is the same, only not counted to this phone.
   }
+  try {
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch {
+    // Signed out, as far as this plan knows.
+  }
+  return headers;
 }
 
 export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse> {
@@ -95,7 +107,6 @@ export async function reportVenue(input: {
   note?: string;
 }): Promise<{ ok: boolean; duplicate: boolean }> {
   try {
-    const { getDeviceId } = await import("./deviceId");
     const res = await postJson<{ ok: boolean; duplicate?: boolean }>("/api/reports", {
       ...input,
       deviceId: await getDeviceId(),
@@ -131,7 +142,6 @@ export async function reportIssue(input: {
   };
 }): Promise<{ ok: boolean }> {
   try {
-    const { getDeviceId } = await import("./deviceId");
     const res = await postJson<{ ok: boolean }>("/api/issues", {
       ...input,
       deviceId: await getDeviceId(),
@@ -158,7 +168,6 @@ export async function sendVibeFeedback(input: {
   reason?: string;
 }): Promise<{ ok: boolean }> {
   try {
-    const { getDeviceId } = await import("./deviceId");
     const res = await postJson<{ ok: boolean }>("/api/vibe-feedback", {
       ...input,
       deviceId: await getDeviceId(),

@@ -1,6 +1,8 @@
 import { useEffect } from "react";
-import { Stack, router } from "expo-router";
-import { AppState, Text } from "react-native";
+import { Stack, router, type ErrorBoundaryProps } from "expo-router";
+import { AppState, Pressable, Text, View } from "react-native";
+import { installCrashReporter, reportCrash } from "../src/lib/crashReport";
+import { clearDraft } from "../src/lib/draft";
 import { refreshWidgets } from "../src/lib/widgets";
 import { recordOpen } from "../src/lib/usage";
 import { refreshLiveActivity, unfollow } from "../src/lib/liveActivity";
@@ -30,6 +32,56 @@ import {
 // Hold the splash until the face is ready, so the first frame is not set in a
 // fallback font and then reflowed.
 void SplashScreen.preventAutoHideAsync();
+
+// Every uncaught error goes to the admin's Issues, with its message (crashReport.ts).
+installCrashReporter();
+
+/**
+ * A screen that fails to draw, caught rather than taking the app down
+ * (30 Oct 2026). Plain views and fixed colours, because it may be standing in
+ * for the providers that the themed ones need. "Start over" clears the plan in
+ * progress, which reopens on every launch and could fail the same way again.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    void SplashScreen.hideAsync().catch(() => undefined);
+    void reportCrash(error, "screen");
+  }, [error]);
+  const button = (label: string, onPress: () => void, filled: boolean) => (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={{
+        backgroundColor: filled ? "#0F766E" : "transparent",
+        borderRadius: 14,
+        paddingVertical: 14,
+        alignItems: "center",
+        alignSelf: "stretch",
+      }}
+    >
+      <Text style={{ color: filled ? "#FFFFFF" : "#0F766E", fontSize: 17, fontWeight: "600" }}>{label}</Text>
+    </Pressable>
+  );
+  return (
+    <View style={{ flex: 1, backgroundColor: "#F6F9F8", justifyContent: "center", padding: 24, gap: 12 }}>
+      <Text style={{ fontSize: 24, fontWeight: "700", color: "#0C1413" }}>Something went wrong</Text>
+      <Text style={{ fontSize: 16, color: "#5F6E6C" }}>
+        We have been sent the details. Try again, or start the plan over.
+      </Text>
+      <View style={{ height: 12 }} />
+      {button("Try again", () => void retry(), true)}
+      {button(
+        "Start over",
+        () =>
+          void clearDraft()
+            .catch(() => undefined)
+            .then(() => retry())
+            .then(() => router.replace("/")),
+        false
+      )}
+    </View>
+  );
+}
 
 /**
  * Everything theme-aware lives below AppearanceProvider.
