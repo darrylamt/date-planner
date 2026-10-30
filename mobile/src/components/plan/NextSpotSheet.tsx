@@ -99,7 +99,8 @@ export function NextSpotSheet({
                 </Text>
               ) : null}
               <Text variant="footnote" style={{ color: spot.open === "open" ? c.success ?? c.accent : c.textTertiary }}>
-                {spot.open === "open" ? `Open then · ${spot.hours}` : "Opening hours not recorded"}
+                {/* An event says when it starts, or that it is on now (the server's nextEvents). */}
+                {spot.event ? spot.hours : spot.open === "open" ? `Open then · ${spot.hours}` : "Opening hours not recorded"}
               </Text>
             </View>
             {spot.blurb ? (
@@ -126,7 +127,8 @@ export function NextSpotSheet({
                 <RideButton
                   label="Uber"
                   dark
-                  onPress={() => void Linking.openURL(uberRideLink({ name: spot.name, area: spot.area, lat: spot.lat, lng: spot.lng }))}
+                  // To the venue, by its own name, when the spot is an event held there.
+                  onPress={() => void Linking.openURL(uberRideLink({ name: spot.event?.venue ?? spot.name, area: spot.area, lat: spot.lat, lng: spot.lng }))}
                 />
                 {from && spot.lat != null && spot.lng != null ? (
                   <RideButton

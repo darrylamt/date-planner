@@ -77,7 +77,7 @@ export function NoMatch({
 }: {
   data: Extract<GenerateResponse, { status: "no_match" }>;
   onSuggestion: (s: {
-    action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness" | "include_estimates";
+    action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness" | "include_estimates" | "clear_event_night";
     value?: number;
   }) => void;
   onEditAnswers: () => void;

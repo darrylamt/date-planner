@@ -83,6 +83,8 @@ export const planInputsSchema = z.object({
   near: z.object({ lat: z.number().min(4).max(12), lng: z.number().min(-4).max(2) }).optional(),
   wellnessKinds: z.array(z.enum(["massage", "facial", "nails"])).max(3).optional(),
   movie: z.boolean().optional(),
+  // A night of events only (eventNight.ts). Absent from older builds.
+  eventNight: z.boolean().optional().catch(undefined),
   movieGenres: z.array(z.string().regex(/^[A-Za-z -]{1,24}$/)).max(12).optional().catch(undefined),
   ai: z.boolean().optional(),
   // Which entry point started the plan (0085). Lenient: a value this server

@@ -281,6 +281,8 @@ export interface NextSpot {
   hours: string;
   lat: number | null;
   lng: number | null;
+  /** Set when this is an event rather than a place (the Events mood). */
+  event?: { title: string; venue: string; starts: string; fixed: boolean };
 }
 
 /**

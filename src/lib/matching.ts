@@ -152,7 +152,8 @@ export async function fetchCandidates(
     .eq("is_active", true);
 
   // A film's showings, only when one was asked for (movies.ts).
-  const moviesPromise = movieEvents(inputs);
+  // And for a night of events, where a film is one of the events (eventNight.ts).
+  const moviesPromise = movieEvents(inputs.eventNight ? { ...inputs, movie: true } : inputs);
   // The venue study (0088), alongside: it needs nothing from the venue query.
   // The whole table, not the venues' ids: five hundred ids in a URL is too long a request.
   const insightsPromise = fetchAllRows<VenueInsight & { venue_id: string }>((from, to) =>

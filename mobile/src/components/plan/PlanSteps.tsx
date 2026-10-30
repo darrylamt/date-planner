@@ -497,7 +497,23 @@ export function PlanSteps({
           it. A third pick replaces the oldest, so the row never refuses a tap.
           `focus` is kept as the first choice for anything that reads only one.
         */}
-        {asksFocus(inputs.occasion) ? (
+        {/*
+          A night of events, back to back, and nothing between them
+          (eventNight.ts). Asked here because it is an answer to what the
+          outing is made of; on, the mix below is not asked, since there is
+          no meal or bar slot for it to shape.
+        */}
+        <Group footer={inputs.eventNight ? "Films and classes are planned to their start time. Bands, parties and the like you can drop into while they are on." : undefined}>
+          <Row
+            icon="ticket"
+            title="A night of events"
+            subtitle="Shows, classes, films and parties, back to back. No dinner added."
+            selected={Boolean(inputs.eventNight)}
+            onPress={() => update({ eventNight: !inputs.eventNight })}
+          />
+        </Group>
+
+        {asksFocus(inputs.occasion) && !inputs.eventNight ? (
         <Group>
           {FOCUS_OPTIONS.map((f) => {
             const chosen = focusesOf(inputs);

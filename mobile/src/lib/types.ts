@@ -553,6 +553,12 @@ export interface PlanInputs {
    * See MOVIE_GENRES and MOVIE_PRICE_GHS in planConstants.
    */
   movie?: boolean;
+  /**
+   * A night of events, back to back, and nothing else (eventNight.ts, 30 Oct
+   * 2026): films, classes and workshops arrived at by their start, bands and
+   * parties dropped into while they are on. No meal unless one is an event.
+   */
+  eventNight?: boolean;
   movieGenres?: string[];
   /**
    * False when the person declined sending their answers to Anthropic
@@ -879,7 +885,7 @@ export type GenerateResponse =
       message: string;
       suggestions: {
         label: string;
-        action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness" | "include_estimates";
+        action: "widen_area" | "raise_budget" | "clear_focus" | "clear_wellness" | "include_estimates" | "clear_event_night";
         value?: number;
       }[];
     }

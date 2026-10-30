@@ -7,6 +7,7 @@ import { estimateHop, haversineKm } from "@/lib/transport";
 import { cityAt } from "@/lib/neighbourhoods";
 import { describePrice, hoursOn, isPriced, medianPrice, menusFor, openStateAt, type PriceNote } from "@/lib/chat/tools/shared";
 import type { MenuItem, Venue, VenueType } from "@/lib/types";
+import { clock, eventTiming } from "@/lib/eventNight";
 
 /**
  * Where next: one more place for a night that is already under way.
@@ -29,7 +30,8 @@ const bodySchema = z.object({
   /** No plan and no location: the middle of an area's venues. */
   area_id: z.string().uuid().optional(),
   /** A mood picked on the screen that names its own kinds of place ("something sweet"). */
-  kinds: z.array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert", "wellness"])).max(7).optional(),
+  // "event" asks for what is happening next instead of a place (30 Oct 2026).
+  kinds: z.array(z.enum(["restaurant", "activity", "lounge", "outdoor", "cafe", "dessert", "wellness", "event"])).max(8).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -60,6 +62,8 @@ export type NextSpot = {
   hours: string;
   lat: number | null;
   lng: number | null;
+  /** Set when this is an event rather than a place (kinds: ["event"]). */
+  event?: { title: string; venue: string; starts: string; fixed: boolean };
 };
 
 const ROMANTIC = new Set(["first_date", "anniversary", "date_night"]);
@@ -134,7 +138,9 @@ export async function POST(req: Request) {
   }
   if (!anchor) return NextResponse.json({ spots: [], reason: "no_anchor" });
 
-  const kinds = b.kinds?.length ? b.kinds : kindsFor(b.occasion, b.vibes, b.time);
+  if (b.kinds?.includes("event")) return NextResponse.json({ spots: await nextEvents(supabase, b, anchor), from: anchor });
+
+  const kinds = (b.kinds?.length ? b.kinds : kindsFor(b.occasion, b.vibes, b.time)) as VenueType[];
   let q = supabase.from("venues").select(VENUE_SELECT).eq("is_active", true).in("type", kinds);
   /*
    * The phone's own position says which town it is in. The city the app
@@ -204,6 +210,89 @@ export async function POST(req: Request) {
 
   // Where the ride starts, so the app can offer one without asking for location.
   return NextResponse.json({ spots, from: anchor });
+}
+
+/*
+ * What is happening next, near where the night is: a film or a class
+ * starting soon that can still be reached by its start, or something on now
+ * that can be walked into (eventNight.ts, eventTiming). Three hours ahead at
+ * most, ten kilometres out, priced events only, the soonest and nearest first.
+ */
+async function nextEvents(
+  supabase: ReturnType<typeof createClient>,
+  b: z.infer<typeof bodySchema>,
+  anchor: { lat: number; lng: number }
+): Promise<NextSpot[]> {
+  const now = Number(b.time.split(":")[0]) * 60 + Number(b.time.split(":")[1]);
+  const venueCols = "id, name, type, lat, lng, image_url, description, areas(name)";
+  const [{ data: evRows }, { data: filmRows }] = await Promise.all([
+    supabase
+      .from("events")
+      .select(`id, title, category, start_time, cost_ghs, audience, venue_id, venues(${venueCols})`)
+      .eq("is_active", true)
+      .eq("event_date", b.date),
+    supabase
+      .from("cinema_showtimes")
+      .select(`id, title, show_time, runtime_mins, venue_id, venues(${venueCols})`)
+      .eq("is_active", true)
+      .eq("show_date", b.date)
+      .not("venue_id", "is", null),
+  ]);
+  type V = { id: string; name: string; type: VenueType; lat: number | null; lng: number | null; image_url: string | null; description: string | null; areas: { name: string } | null };
+  const items = [
+    ...((evRows ?? []) as unknown as { title: string; category: string; start_time: string | null; cost_ghs: number | null; audience: string | null; venues: V | null }[])
+      .filter((e) => e.cost_ghs != null && (!e.audience || e.audience === "everyone"))
+      .map((e) => ({ title: e.title, start: e.start_time, ghs: Number(e.cost_ghs), venue: e.venues, ...eventTiming(e), what: "Entry" })),
+    ...((filmRows ?? []) as unknown as { title: string; show_time: string | null; runtime_mins: number | null; venues: V | null }[]).map((f) => ({
+      title: f.title,
+      start: f.show_time,
+      ghs: 130,
+      venue: f.venues,
+      ...eventTiming({ title: f.title, category: "movie", kind: "movie", runtime_mins: f.runtime_mins }),
+      what: "Ticket and snacks",
+    })),
+  ];
+  const excluded = new Set(b.exclude);
+  const seen = new Set<string>();
+  return items
+    .flatMap((x) => {
+      const v = x.venue;
+      const at = x.start ? Number(x.start.slice(0, 2)) * 60 + Number(x.start.slice(3, 5)) : null;
+      if (!v || at == null || v.lat == null || v.lng == null || excluded.has(v.id)) return [];
+      const km = haversineKm(anchor, { lat: Number(v.lat), lng: Number(v.lng) });
+      if (km > 10) return [];
+      const hop = estimateHop(anchor, v as unknown as Venue);
+      const arrive = now + hop.mins;
+      const latest = x.fixed ? at : at < 17 * 60 ? Math.max(at, 20 * 60 - x.stay) : at + 240 - x.stay;
+      if (at > now + 180 || (x.fixed ? arrive > at : arrive > latest)) return [];
+      const wait = Math.max(0, at - arrive);
+      return [{ x, v, at, km, hop, score: -wait / 20 - km * 0.4 + (x.fixed ? 0 : 0.5) + Math.random() }];
+    })
+    .sort((a, c) => c.score - a.score)
+    .filter((r) => (seen.has(r.v.id) ? false : (seen.add(r.v.id), true)))
+    .slice(0, b.count)
+    .map(({ x, v, at, km, hop }) => ({
+      id: v.id,
+      name: x.title,
+      area: [v.name, v.areas?.name].filter(Boolean).join(", "),
+      type: v.type,
+      image_url: v.image_url ?? null,
+      blurb: x.fixed
+        ? `Starts at ${clock(at)}. Be there for the start.`
+        : at <= now
+          ? "On now. Drop in any time while it is on."
+          : `From ${clock(at)}. Drop in any time while it is on.`,
+      km: Math.round(km * 10) / 10,
+      mins: hop.mins,
+      fare_ghs: hop.cost_ghs,
+      price: x.ghs > 0 ? { basis: "menu" as const, typical_per_person_ghs: x.ghs } : { basis: "free" as const },
+      visit: x.ghs > 0 ? { what: x.what, ghs: x.ghs } : null,
+      open: "open" as const,
+      hours: x.fixed ? `Starts ${clock(at)}` : at <= now ? "On now" : `From ${clock(at)}`,
+      lat: Number(v.lat),
+      lng: Number(v.lng),
+      event: { title: x.title, venue: v.name, starts: clock(at), fixed: x.fixed },
+    }));
 }
 
 function firstSentence(text: string | null | undefined): string | null {

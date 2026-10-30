@@ -9,6 +9,7 @@ import { insightScore, isSignature, noiseWanted } from "./insights";
 import { pullScore } from "./pull";
 import { dishTaste } from "./taste";
 import { estimateHop, haversineKm } from "./transport";
+import { planEventNight } from "./eventNight";
 import { isBase, needsBase, pickBase } from "./accompaniments";
 import { byTheGlass } from "./bottles";
 import { schedulesDuring } from "./schedules";
@@ -1992,6 +1993,8 @@ export function planItinerary(
       return draws.get(id)!;
     });
   const cars = Math.max(1, Math.floor(opts.cars ?? 1));
+  // A night of events is strung together from the day's events alone, with no meal slot to fill (eventNight.ts).
+  if (inputs.eventNight) return planEventNight(inputs, candidates, variety, cars);
   return planWith(inputs, candidates, false, variety, cars) ?? planWith(inputs, candidates, true, variety, cars);
 }
 

@@ -571,6 +571,8 @@ export default function PlanNew() {
             void generate({ wellness: false });
           } else if (s.action === "include_estimates") {
             void generate({ estimates: true });
+          } else if (s.action === "clear_event_night") {
+            void generate({ eventNight: false });
           } else {
             void generate({ surpriseMe: true, areaIds: [], areaNames: [] });
           }

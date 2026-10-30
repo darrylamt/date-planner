@@ -9,7 +9,7 @@ export const metadata = {
   description: "What Duro collects, why, and how to get rid of it.",
 };
 
-const UPDATED = "22 October 2026";
+const UPDATED = "30 October 2026";
 const CONTACT = "planbyaduro@gmail.com";
 
 /**
@@ -43,8 +43,9 @@ export default function PrivacyPage() {
       <Section title="What we collect">
         <p>
           <strong>When you plan something:</strong> your answers (the occasion,
-          budget, date, area, how many people, and anything you tell us about the
-          person it is for, such as a name or what they like) are sent to our
+          budget, date, area, how many people, what you do not eat, and anything
+          you tell us about the person it is for, such as a name or what they
+          like) are sent to our
           server to build the plan. If you have allowed it, they are also sent to
           Anthropic to write the plan&apos;s description. See{" "}
           <strong>Who else sees it</strong> below.
@@ -73,6 +74,21 @@ export default function PrivacyPage() {
           from. Notifications need a device token so reminders reach your phone.
         </p>
         <p>
+          <strong>If you turn on Weekend ideas:</strong> to decide whether to
+          send you what is on this weekend, what is new, or a nudge when it has
+          been a while, we look at when you last saved a plan, what kind of plan
+          you usually make, and whether you have one coming up. They are off
+          until you turn them on, and you can turn them off in the app&apos;s
+          profile at any time. Reminders about a plan you saved are sent either
+          way.
+        </p>
+        <p>
+          <strong>When something goes wrong in the app:</strong> the error, the
+          screen it happened on, your app version and phone type, and your
+          device identifier are sent to us, so we can fix it. Nothing you typed
+          is included.
+        </p>
+        <p>
           <strong>When you ask for directions from where you are, or for
           somewhere near you:</strong> the app asks permission, then reads your
           phone&apos;s location once, while the app is open, at the moment you
@@ -91,12 +107,24 @@ export default function PrivacyPage() {
           wherever a typed message would.
         </p>
         <p>
-          <strong>To decide where to add venues:</strong> a rough, anonymous
+          <strong>To decide where to add venues, and to improve plans:</strong> a
           record of each plan request: the area chosen (or, for &ldquo;near
           me&rdquo;, a square about a kilometre across, never your exact
-          position), the occasion, party size, a budget range, the day, and
-          whether we found a plan. It carries no account or device identifier.
-          Venues see only totals from it, never anything about a person.
+          position), the occasion, party size, a budget range, the day, what you
+          do not eat, whether you changed the starting budget, whether we found a
+          plan, its total, and the dishes and drinks it ordered at each stop. It
+          carries your app version and phone type, and a code made one way from
+          your device identifier or account, so we can tell a returning planner
+          from a new one without the record saying who you are. Venues see only
+          totals from it, never anything about a person.
+        </p>
+        <p>
+          <strong>To see how the app is used:</strong> the days you open the app,
+          which questions of a plan you reach, what you search for under Venues
+          and which places you open from there, your answer when the app asks
+          whether you went on a plan, and how you heard about Duro if you tell
+          us. Each carries your device identifier, phone type and app version,
+          and your account when you are signed in.
         </p>
         <p>
           <strong>To suggest better places:</strong> which places in your plans
@@ -161,8 +189,12 @@ export default function PrivacyPage() {
         <p>
           Open the app, go to <strong>You</strong>, and choose{" "}
           <strong>Delete account</strong>. Your account, saved plans,
-          conversations and usage records are removed immediately. Reports you filed about venues stay, with your
-          name detached, because a closed venue is still closed.
+          conversations, message counts and notification settings are removed
+          immediately. Records of how the app was used stay only against your
+          phone&apos;s random device identifier, no longer linked to you, and
+          reinstalling the app gives the phone a new one. Reports you filed
+          about venues stay, with your name detached, because a closed venue is
+          still closed.
         </p>
         <p>
           Deleting your account does not cancel a Duro Pro subscription, because
@@ -198,14 +230,19 @@ export default function PrivacyPage() {
           <strong>You</strong> at any time. The anonymous record of plan
           requests, counts of shared plans, and message and cost counts: our
           legitimate interest in running Duro fairly and deciding where to add
-          venues, using data that does not identify you.
+          venues, using data that does not say who you are. Records of how the
+          app is used and error reports: our legitimate interest in making the
+          app work and better. Weekend ideas: your consent, given and withdrawn
+          with the switch in the app.
         </p>
         <p>
           <strong>How long we keep it.</strong> Account data, plans and
           conversations until you delete your account, when they are removed
-          straight away. Location is not stored at all. The anonymous request
-          records and share counts are kept, because they are about no one.
-          Reports about venues are kept with your name detached.
+          straight away. Location is not stored at all. The request records and
+          share counts are kept, because they do not say who anyone is. Records
+          of how the app is used and error reports are kept against the random
+          device identifier. Reports about venues are kept with your name
+          detached.
         </p>
         <p>
           <strong>Where it goes.</strong> The services named under{" "}

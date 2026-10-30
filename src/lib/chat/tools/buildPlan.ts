@@ -76,6 +76,7 @@ const argsSchema = z.object({
   /** Build the evening round a real Silverbird showing ("Catch a movie" in the app). */
   movie: z.boolean().optional(),
   movie_genres: z.array(z.string().max(24)).max(6).optional(),
+  events_night: z.boolean().optional(),
 });
 
 export type BuildPlanArgs = z.infer<typeof argsSchema>;
@@ -179,6 +180,11 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         type: "array",
         items: { type: "string" },
         description: "With movie: only these genres (Action, Comedy, Horror, Romance, Thriller, Drama, Animation, Adventure, Sci-fi, Nollywood, Ghallywood). Omit for any film.",
+      },
+      events_night: {
+        type: "boolean",
+        description:
+          "True when they want a night of events, one after another: shows, parties, classes, films, live music. The plan is then only events, back to back, with no dinner or bar added between them. Use it whenever they ask for events, an events night or 'things happening', and do not add a meal they did not ask for.",
       },
     },
     // The date alone. Everything else has a default worth more than a question.
@@ -390,6 +396,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas, start: string):
     occasion: args.occasion ?? "date_night",
     occasionDetail: {},
     ...(args.movie ? { movie: true, movieGenres: args.movie_genres ?? [] } : {}),
+    ...(args.events_night ? { eventNight: true } : {}),
     partner: {
       name: "",
       gender: "unspecified",

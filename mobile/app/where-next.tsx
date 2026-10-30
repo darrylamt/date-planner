@@ -48,6 +48,8 @@ const MOODS: Mood[] = [
   { id: "sweet", label: "Something sweet", vibes: [], kinds: ["dessert", "cafe"] },
   { id: "do", label: "Something to do", vibes: ["fun"], kinds: ["activity"] },
   { id: "outside", label: "Outdoors", vibes: ["outdoorsy"], kinds: ["outdoor", "activity"] },
+  // What is happening next: a film or class starting soon, or something on now to drop into.
+  { id: "events", label: "Events", vibes: [], kinds: ["event"] },
 ];
 
 type Who = "1" | "2" | "4";

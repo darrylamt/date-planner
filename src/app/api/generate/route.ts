@@ -313,6 +313,23 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
 
   let plan = planItinerary(inputs, candidates);
 
+  /*
+   * A night of events that the day cannot fill (eventNight.ts). Said as that,
+   * and the ordinary evening offered instead, before the reach and the budget
+   * nudges below, which are about places rather than events.
+   */
+  if (!plan && inputs.eventNight) {
+    return NextResponse.json({
+      status: "no_match",
+      headline: `No events fit ${inputs.startTime} to ${endClock(inputs)} that day.`,
+      message: "Most listings are in the day, and an evening one needs a price on file before we plan it. Try earlier, another day, or a mixed evening.",
+      suggestions: [
+        { label: "Plan a bit of everything instead", action: "clear_event_night" },
+        ...(inputs.budget > 0 ? [] : [{ label: "Nudge budget to GHS 200", action: "raise_budget" as const, value: 200 }]),
+      ],
+    });
+  }
+
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want. First, the next neighbourhood over.
   if (!plan) {
@@ -460,7 +477,19 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   const itinerary = assembleItinerary(inputs, plan, copy);
   const missed = movieNotice(inputs, plan);
   if (missed) itinerary.notice = missed;
+  // Fewer events than the evening has room for: said, not padded with a dinner.
+  const wanted = (plan as { wanted?: number }).wanted;
+  if (inputs.eventNight && wanted && plan.stops.length < wanted) {
+    itinerary.notice = `Only ${plan.stops.length === 1 ? "one event fits" : `${plan.stops.length} events fit`} this evening, so that is the night. We have not filled the gaps with a dinner or a bar.`;
+  }
   return NextResponse.json({ status: "ok", itinerary });
+}
+
+/** When the outing ends, as a clock: "23:00". */
+function endClock(inputs: PlanInputs): string {
+  const [h, m] = inputs.startTime.split(":").map(Number);
+  const end = (h * 60 + m + Math.round(inputs.hours * 60)) % 1440;
+  return `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
 }
 
 /**
