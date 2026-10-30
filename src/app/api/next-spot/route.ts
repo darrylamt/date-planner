@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { VENUE_SELECT } from "@/lib/venueColumns";
 import { expandVibes } from "@/lib/catalog";
 import { estimateHop, haversineKm } from "@/lib/transport";
@@ -231,7 +231,8 @@ async function nextEvents(
       .select(`id, title, category, start_time, cost_ghs, audience, venue_id, venues(${venueCols})`)
       .eq("is_active", true)
       .eq("event_date", b.date),
-    supabase
+    // Showtimes are closed to the public key; read on the server, as the planner does (movies.ts).
+    createServiceClient()
       .from("cinema_showtimes")
       .select(`id, title, show_time, runtime_mins, venue_id, venues(${venueCols})`)
       .eq("is_active", true)
