@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Itinerary, PlanInputs } from "./types";
+import type { ChatCard, Itinerary, PlanInputs } from "./types";
 import { nativeOptional } from "./nativeOptional";
 
 /**
@@ -41,6 +41,8 @@ export type ChatEvent =
   | { type: "tool"; name: string; label: string }
   /** A real itinerary, sent beside the prose so the card is never retyped. */
   | { type: "plan"; itinerary: Itinerary; inputs: PlanInputs }
+  /** The places, events and films the reply named, as cards under it. */
+  | { type: "cards"; cards: ChatCard[] }
   | { type: "text"; text: string }
   | { type: "done" }
   | { type: "error"; message: string };
@@ -153,7 +155,7 @@ function parseEvents(buffer: string): { events: ChatEvent[]; rest: string } {
 export interface StoredMessage {
   id: string;
   role: "user" | "assistant";
-  content: { type: string; text?: string }[];
+  content: { type: string; text?: string; cards?: ChatCard[] }[];
   created_at: string;
 }
 
@@ -166,7 +168,7 @@ export interface StoredMessage {
  * the model needed, not what the person said.
  */
 export async function fetchConversation(conversationId: string): Promise<
-  { role: "user" | "assistant"; text: string; at: string }[]
+  { role: "user" | "assistant"; text: string; at: string; cards?: ChatCard[] }[]
 > {
   const { data } = await supabase
     .from("messages")
@@ -182,6 +184,8 @@ export async function fetchConversation(conversationId: string): Promise<
         .filter((b) => b.type === "text")
         .map((b) => b.text ?? "")
         .join(""),
+      // The cards that went with the reply, kept on it by the server (chat/cards.ts).
+      cards: (m.content ?? []).flatMap((b) => (b.type === "cards" && Array.isArray(b.cards) ? b.cards : [])),
     }))
     .filter((m) => m.text.trim().length > 0);
 }

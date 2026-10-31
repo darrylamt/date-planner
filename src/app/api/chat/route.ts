@@ -268,7 +268,10 @@ async function loadHistory(
   return ((data ?? []) as { role: "user" | "assistant"; content: ChatTurn["content"] }[]).map((m) => ({
     role: m.role,
     // Older builds saved the context line into the message; today's arrives fresh.
-    content: m.content.map((b) => (b.type === "text" ? { ...b, text: b.text.replace(CONTEXT_PREFIX, "") } : b)),
+    // Cards are for the app (cards.ts); the model never sees them.
+    content: m.content
+      .filter((b) => (b as { type: string }).type !== "cards")
+      .map((b) => (b.type === "text" ? { ...b, text: b.text.replace(CONTEXT_PREFIX, "") } : b)),
   }));
 }
 

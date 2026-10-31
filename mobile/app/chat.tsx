@@ -29,6 +29,8 @@ import { saveDraft } from "../src/lib/draft";
 import { linksIn, type ChatLink } from "../src/lib/chatLinks";
 import { Paywall } from "../src/components/chat/Paywall";
 import { ChatText } from "../src/components/chat/ChatText";
+import { ChatCards } from "../src/components/chat/ChatCards";
+import type { ChatCard } from "../src/lib/types";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { Toast } from "../src/components/Toast";
 import { AiConsentSheet } from "../src/components/AiConsentSheet";
@@ -62,6 +64,8 @@ interface Bubble {
   at?: string;
   /** Arrived while the screen was open, so it rises in rather than just appearing. */
   fresh?: boolean;
+  /** The places, events and films this reply named, shown as cards under it. */
+  cards?: ChatCard[];
 }
 
 /** Durobot's face: the mascot on its own (the suited costume is two people). */
@@ -158,7 +162,7 @@ export default function ChatScreen() {
       if (id) {
         setConversationId(id);
         const past = await fetchConversation(id);
-        if (active) setBubbles(past.map((m) => ({ role: m.role, text: m.text, at: m.at })));
+        if (active) setBubbles(past.map((m) => ({ role: m.role, text: m.text, at: m.at, ...(m.cards?.length ? { cards: m.cards } : {}) })));
       }
       if (active) setLoadingHistory(false);
     })();
@@ -295,6 +299,15 @@ export default function ChatScreen() {
             image: ev.itinerary.stops.find((s) => s.image_url)?.image_url ?? null,
             route: ev.itinerary.summary_route,
           });
+        } else if (ev.type === "cards") {
+          // On the reply they belong to, which has just arrived.
+          setBubbles((b) => {
+            const next = [...b];
+            const last = next[next.length - 1];
+            if (last?.role === "assistant") next[next.length - 1] = { ...last, cards: ev.cards };
+            return next;
+          });
+          toBottom();
         } else if (ev.type === "tool") {
           setStatus(ev.label);
         } else if (ev.type === "text") {
@@ -398,6 +411,7 @@ export default function ChatScreen() {
                   first={!prev || prev.role !== b.role || newDay}
                   last={!next || next.role !== b.role || Boolean(dayOf(next.at) && dayOf(next.at) !== day)}
                 />
+                {b.role === "assistant" && b.cards?.length ? <ChatCards cards={b.cards} inset={FACE + space.sm} /> : null}
               </View>
             );
           })

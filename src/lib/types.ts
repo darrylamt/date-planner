@@ -818,6 +818,30 @@ export interface StopAlternate {
  * Carried on the itinerary so the client can decide between an exact total and
  * a range without re-deriving it from every stop.
  */
+/**
+ * A place, event or film Durobot named in a reply, shown as a card under it
+ * (chat/cards.ts, 31 Oct 2026): a picture, a few facts, and what to do next,
+ * instead of the same facts typed out as a list.
+ */
+export interface ChatCard {
+  kind: "venue" | "event" | "film";
+  title: string;
+  /** Where and when, in one line: "Osu · Restaurant", "Bistro 22 · Sat 31 Oct, 7pm". */
+  subtitle: string;
+  /** The price, or the showings, in one line. */
+  detail: string | null;
+  image_url: string | null;
+  /** The venue to open, for a venue or an event held at one. */
+  venue_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  /** For planning around an event or a film: its day and start (YYYY-MM-DD, HH:MM). */
+  date: string | null;
+  start: string | null;
+  /** Tickets or showtimes, where there is a page for them. */
+  link: string | null;
+}
+
 export interface PriceConfidence {
   /** True when every stop was priced from a menu or a stated rate. */
   exact: boolean;

@@ -1,4 +1,6 @@
 import { CHAT_TOOLS, planFrom, runTool, type ToolContext } from "./tools";
+import { buildCards, cardCandidates, namedIn } from "./cards";
+import type { ChatCard } from "../types";
 import {
   MAX_TOKENS,
   MAX_TOOL_CALLS_PER_ROUND,
@@ -36,6 +38,8 @@ export type ChatEvent =
    * assistant only has to say what it is.
    */
   | { type: "plan"; itinerary: unknown; inputs: unknown }
+  /** The places, events and films the reply names, as cards under it (cards.ts). */
+  | { type: "cards"; cards: ChatCard[] }
   | { type: "text"; text: string }
   | { type: "done"; turns: ChatTurn[]; usage: ModelUsage[] }
   | { type: "error"; message: string };
@@ -79,6 +83,8 @@ export async function* runChat(opts: {
   // text planted in a venue's description cannot have it lodge request after
   // request in the user's name.
   let reservationLogged = false;
+  // Everything this message's tools found that could be a card; the reply decides which are.
+  const candidates: ReturnType<typeof cardCandidates> = [];
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     let reply;
     try {
@@ -149,6 +155,18 @@ export async function* runChat(opts: {
 
     const text = calls.length ? "" : textOf(reply.blocks);
     if (text) yield { type: "text", text };
+    /*
+     * The places it named, as cards, sent after the words they belong to and
+     * kept on the reply (a "cards" block, which history strips before the
+     * model reads it back), so they are there when the conversation reopens.
+     */
+    if (text && candidates.length) {
+      const cards = await buildCards(ctx.catalog, namedIn(text, candidates)).catch(() => [] as ChatCard[]);
+      if (cards.length) {
+        yield { type: "cards", cards };
+        assistantTurn.content = [...assistantTurn.content, { type: "cards", cards } as unknown as ChatBlock];
+      }
+    }
     if (!calls.length) {
       if (!text) {
         yield {
@@ -195,6 +213,7 @@ export async function* runChat(opts: {
         // renders the card.
         const plan = planFrom(outcome.content);
         if (plan) plans.push(plan);
+        if (!outcome.isError) candidates.push(...cardCandidates(call.name, outcome.content));
 
         results.push({
           type: "tool_result",
