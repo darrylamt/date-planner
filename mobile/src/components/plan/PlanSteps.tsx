@@ -1190,7 +1190,8 @@ function ChoiceField({
           );
         })}
       </ChipRow>
-      <View style={{ paddingHorizontal: GUTTER }}>
+      {/* Clear of the last row of chips, which it was touching (owner, 2 Nov 2026). */}
+      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three }}>
         <Field
           label=""
           placeholder={otherPlaceholder}
