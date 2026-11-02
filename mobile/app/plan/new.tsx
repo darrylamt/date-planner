@@ -642,7 +642,7 @@ export default function PlanNew() {
     when: { title: "Which day?" },
     timing: { title: "What time?", subtitle: "We fit each stop around it, travel included." },
     details: { title: "Anything we should know?", subtitle: "All optional." },
-    vibe: { title: "Which feels more like it?", subtitle: "Pick one each time, or let it be either." },
+    vibe: { title: "More like this, or that?" },
     shape: { title: "Shape the night", subtitle: "How many places, and what kind. Or leave it to us." },
     stops: { title: "How many places?", subtitle: "We'll fit them to the time you have." },
   };
@@ -733,15 +733,16 @@ export default function PlanNew() {
         subtitle={TITLES[stepId].subtitle}
         scrollEnabled={!dragging}
         footer={
-          <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {optional && !lastStep ? (
+              <LookButton label="Build now" kind="outline" onPress={() => void generate()} disabled={!canContinue} style={{ flex: 1 }} />
+            ) : null}
             <LookButton
               label={lastStep ? `Build ${poss} plan` : optional ? "Next" : "Continue"}
               onPress={goNext}
               disabled={!canContinue}
+              style={{ flex: 1 }}
             />
-            {optional && !lastStep ? (
-              <LookButton label="Build my plan now" kind="outline" onPress={() => void generate()} disabled={!canContinue} />
-            ) : null}
           </View>
         }
       >

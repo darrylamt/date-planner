@@ -67,13 +67,33 @@ export function AreaMap({
   const placed = useMemo(() => {
     const here = areas.filter((a) => (a.city || "Accra") === city && a.lat != null && a.lng != null);
     if (here.length < 3) return [];
+    /*
+     * Framed on the city's core, not its far corners: Aburi up in the hills
+     * would otherwise squeeze every other area into one. The few outside the
+     * frame sit on its edge, still there to tap.
+     */
+    const q = (xs: number[], f: number) => {
+      const s = [...xs].sort((a, b) => a - b);
+      return s[Math.round(f * (s.length - 1))];
+    };
     const lats = here.map((a) => a.lat!);
     const lngs = here.map((a) => a.lng!);
-    const [minLat, maxLat, minLng, maxLng] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
+    const [lo, hi] = [0.06, 0.94];
+    const spanLat0 = q(lats, hi) - q(lats, lo);
+    const spanLng0 = q(lngs, hi) - q(lngs, lo);
+    const minLat = q(lats, lo) - spanLat0 * 0.12;
+    const maxLat = q(lats, hi) + spanLat0 * 0.12;
+    const minLng = q(lngs, lo) - spanLng0 * 0.12;
+    const maxLng = q(lngs, hi) + spanLng0 * 0.12;
     const scale = Math.min((w - pad * 2) / Math.max(maxLng - minLng, 0.01), (h - pad * 2) / Math.max(maxLat - minLat, 0.01));
     const ox = (w - (maxLng - minLng) * scale) / 2;
     const oy = (h - (maxLat - minLat) * scale) / 2;
-    return here.map((a) => ({ area: a, x: ox + (a.lng! - minLng) * scale, y: oy + (maxLat - a.lat!) * scale }));
+    const clamp = (v: number, max: number) => Math.min(max - pad / 2, Math.max(pad / 2, v));
+    return here.map((a) => ({
+      area: a,
+      x: clamp(ox + (a.lng! - minLng) * scale, w),
+      y: clamp(oy + (maxLat - a.lat!) * scale, h),
+    }));
   }, [areas, city, w]);
 
   if (!placed.length) return null;

@@ -536,7 +536,7 @@ export function VibeDuel({
       accessibilityLabel={label}
       onPress={() => pick([label])}
       style={({ pressed }) => ({
-        height: 200,
+        height: 156,
         borderRadius: 30,
         backgroundColor: bg,
         padding: 20,
@@ -554,30 +554,15 @@ export function VibeDuel({
       <Body size={13} weight="600" tone="secondary">{`${round + 1} of ${pairs.length}`}</Body>
       <View>
         {card(a, look.primary, look.onPrimary)}
-        <View style={{ height: 12 }} />
-        {card(b, look.second, look.onSecond)}
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            alignSelf: "center",
-            top: 200 - 20,
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            backgroundColor: look.colors.background,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Display size={16} weight="700">
+        {/* Between the two: both, or neither, either side of "or". */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 10 }}>
+          <LookButton label="Both" kind="outline" onPress={() => pick([a, b])} style={{ flex: 1, minHeight: 46 }} accessibilityLabel={`Both: ${a} and ${b}`} />
+          <Display size={16} weight="700" color={look.colors.textSecondary}>
             or
           </Display>
+          <LookButton label="Neither" kind="outline" onPress={() => pick([])} style={{ flex: 1, minHeight: 46 }} accessibilityLabel={`Neither ${a} nor ${b}`} />
         </View>
-      </View>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <LookButton label="Both" kind="outline" onPress={() => pick([a, b])} style={{ flex: 1 }} accessibilityLabel={`Both: ${a} and ${b}`} />
-        <LookButton label="Neither" kind="outline" onPress={() => pick([])} style={{ flex: 1 }} accessibilityLabel={`Neither ${a} nor ${b}`} />
+        {card(b, look.second, look.onSecond)}
       </View>
     </View>
   );
