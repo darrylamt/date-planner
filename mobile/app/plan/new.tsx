@@ -16,7 +16,7 @@ import { Symbol } from "../../src/components/Symbol";
 import { Button, ActionBar } from "../../src/components/Button";
 import { BareSteps, PlanSteps } from "../../src/components/plan/PlanSteps";
 import { StepTip } from "../../src/components/plan/StepTip";
-import { ErrorState, LoadingPlan, NoMatch } from "../../src/components/plan/StatusScreens";
+import { ErrorState, NoMatch } from "../../src/components/plan/StatusScreens";
 import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
 import { OccasionThemeProvider, useTheme } from "../../src/lib/useTheme";
@@ -59,6 +59,7 @@ import {
   occasionLabel,
 } from "../../src/components/redesign/Questions";
 import { PlanReveal } from "../../src/components/redesign/PlanReveal";
+import { AreaMap, BuildingNight, DayPicker, ShapeNight } from "../../src/components/redesign/Questions2";
 import { Body, LookButton } from "../../src/components/look";
 import { isDriving } from "../../src/lib/budget";
 import { registerForPush } from "../../src/lib/push";
@@ -140,6 +141,8 @@ export default function PlanNew() {
   const [hydrated, setHydrated] = useState(false);
   // The reveal shows first (PlanReveal); the full plan, with swaps and menus, opens from it.
   const [full, setFull] = useState(false);
+  // A dial, the sun or a loop on the map is being dragged: the page holds still.
+  const [dragging, setDragging] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -359,7 +362,9 @@ export default function PlanNew() {
    * occasion mid-flow reshapes the remaining questions rather than leaving
    * someone on a step that no longer applies.
    */
-  const steps = stepsFor(inputs.occasion, occasionPreset);
+  const asked = stepsFor(inputs.occasion, occasionPreset);
+  // "How many places" is asked inside Shape the night (Questions2.tsx), not on its own.
+  const steps = asked.includes("shape") ? asked.filter((id) => id !== "stops") : asked;
 
   /*
    * Each question reached, for where people stop (usage_events, 0097): the
@@ -392,7 +397,8 @@ export default function PlanNew() {
    */
   useEffect(() => {
     // The redesigned questions, the checkpoint and the reveal draw their own header.
-    const own = phase.name === "steps" || phase.name === "checkpoint" || (phase.name === "result" && !full);
+    const own =
+      phase.name === "steps" || phase.name === "checkpoint" || phase.name === "loading" || (phase.name === "result" && !full);
     navigation.setOptions({ headerShown: !own });
     if (own) {
       navigation.setOptions({ gestureEnabled: phase.name === "steps" && phase.step === 0 });
@@ -415,18 +421,6 @@ export default function PlanNew() {
       </Pressable>
     );
 
-    if (phase.name === "loading") {
-      // Nothing to go back to mid-generation, and leaving would strand the call.
-      // No close mid-generation: the request is already in flight and
-      // leaving would strand it.
-      navigation.setOptions({
-        title: "",
-        headerBackVisible: false,
-        gestureEnabled: false,
-        headerRight: undefined,
-      });
-      return;
-    }
 
     navigation.setOptions({
       title: phase.name === "result" ? longDate(inputs.date) : "",
@@ -450,7 +444,21 @@ export default function PlanNew() {
     </OccasionThemeProvider>
   );
 
-  if (phase.name === "loading") return themed(<LoadingPlan inputs={inputs} />);
+  if (phase.name === "loading") {
+    return (
+      <BuildingNight
+        inputs={inputs}
+        chips={[
+          occasionLabel(inputs.occasion),
+          inputs.partySize === 1 ? "Just you" : `${inputs.partySize} people`,
+          inputs.surpriseMe ? "Anywhere good" : inputs.near ? "Near you" : inputs.areaNames.slice(0, 2).join(" & ") || inputs.city || "Accra",
+          `GHS ${inputs.budget.toLocaleString()}`,
+          shortDate(inputs.date),
+          time12(inputs.startTime),
+        ]}
+      />
+    );
+  }
 
   if (phase.name === "no_match") {
     return themed(
@@ -626,7 +634,7 @@ export default function PlanNew() {
     occasion: { title: "What's the occasion?", subtitle: "It shapes everything after." },
     party: { title: PARTY_RULES[inputs.occasion].fixed ? "Who's coming?" : "How many of you?" },
     extra: { title: extra?.title ?? "A little more", subtitle: extra?.subtitle },
-    area: { title: `Where in ${inputs.city || "Accra"}?`, subtitle: "Pick up to two, near you, or let us choose." },
+    area: { title: `Where in ${inputs.city || "Accra"}?`, subtitle: "Up to four areas, near you, or let us choose." },
     budget: {
       title: "What's the budget?",
       subtitle: isDriving(inputs) ? "Everything, and no fares: you're driving." : "Food and rides included.",
@@ -635,7 +643,7 @@ export default function PlanNew() {
     timing: { title: "What time?", subtitle: "We fit each stop around it, travel included." },
     details: { title: "Anything we should know?", subtitle: "All optional." },
     vibe: { title: "Which feels more like it?", subtitle: "Pick one each time, or let it be either." },
-    shape: { title: "What's the night made of?", subtitle: "Pick up to two, or leave it to us." },
+    shape: { title: "Shape the night", subtitle: "How many places, and what kind. Or leave it to us." },
     stops: { title: "How many places?", subtitle: "We'll fit them to the time you have." },
   };
 
@@ -673,17 +681,29 @@ export default function PlanNew() {
       </>
     ) : stepId === "budget" ? (
       <>
-        <BudgetDial inputs={inputs} update={update} />
+        <BudgetDial inputs={inputs} update={update} onDragging={setDragging} />
         {settings}
       </>
     ) : stepId === "timing" ? (
       <>
-        <SunTime value={inputs.startTime} onChange={(startTime) => update({ startTime })} />
+        <SunTime value={inputs.startTime} onChange={(startTime) => update({ startTime })} onDragging={setDragging} />
         {settings}
       </>
     ) : stepId === "vibe" ? (
       <>
         <VibeDuel options={vibesFor(inputs.occasion, inputs.partySize)} inputs={inputs} update={update} />
+        {settings}
+      </>
+    ) : stepId === "when" ? (
+      <DayPicker value={inputs.date} onChange={(date) => update({ date })} />
+    ) : stepId === "shape" ? (
+      <>
+        <ShapeNight inputs={inputs} update={update} />
+        {settings}
+      </>
+    ) : stepId === "area" && areas.length > 0 ? (
+      <>
+        <AreaMap areas={areas} inputs={inputs} city={inputs.city || "Accra"} update={update} onDragging={setDragging} />
         {settings}
       </>
     ) : stepId === "area" && areas.length === 0 ? (
@@ -711,6 +731,7 @@ export default function PlanNew() {
         chips={chips}
         title={TITLES[stepId].title}
         subtitle={TITLES[stepId].subtitle}
+        scrollEnabled={!dragging}
         footer={
           <View style={{ gap: 6 }}>
             <LookButton

@@ -42,6 +42,7 @@ export function QuestionShell({
   children,
   footer,
   scroll = true,
+  scrollEnabled = true,
 }: {
   progress: number;
   label: string;
@@ -53,6 +54,8 @@ export function QuestionShell({
   children: ReactNode;
   footer?: ReactNode;
   scroll?: boolean;
+  /** Off while a dial, the sun or a loop is being dragged, so the page holds still. */
+  scrollEnabled?: boolean;
 }) {
   const look = useLook();
   const insets = useSafeAreaInsets();
@@ -97,7 +100,12 @@ export function QuestionShell({
           </View>
         </View>
         {scroll ? (
-          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ paddingBottom: 24 }}>
+          <ScrollView
+            scrollEnabled={scrollEnabled}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            contentContainerStyle={{ paddingBottom: 24 }}
+          >
             {body}
           </ScrollView>
         ) : (
@@ -235,7 +243,15 @@ function budgetHint(budget: number, party: number, driving: boolean): string {
   return `A full night out${rides}.`;
 }
 
-export function BudgetDial({ inputs, update }: { inputs: PlanInputs; update: (p: Partial<PlanInputs>) => void }) {
+export function BudgetDial({
+  inputs,
+  update,
+  onDragging,
+}: {
+  inputs: PlanInputs;
+  update: (p: Partial<PlanInputs>) => void;
+  onDragging?: (on: boolean) => void;
+}) {
   const look = useLook();
   const size = 280;
   const stroke = 18;
@@ -267,10 +283,12 @@ export function BudgetDial({ inputs, update }: { inputs: PlanInputs; update: (p:
     .runOnJS(true)
     .minDistance(0)
     .onBegin((e) => {
+      onDragging?.(true);
       last.current = turnFor(inputs.budget);
       setFrom(e.x, e.y);
     })
-    .onUpdate((e) => setFrom(e.x, e.y));
+    .onUpdate((e) => setFrom(e.x, e.y))
+    .onFinalize(() => onDragging?.(false));
 
   const a = f * 2 * Math.PI;
   const kx = size / 2 + r * Math.sin(a);
@@ -359,7 +377,15 @@ function momentFor(hour: number): string {
   return "Late";
 }
 
-export function SunTime({ value, onChange }: { value: string; onChange: (t: string) => void }) {
+export function SunTime({
+  value,
+  onChange,
+  onDragging,
+}: {
+  value: string;
+  onChange: (t: string) => void;
+  onDragging?: (on: boolean) => void;
+}) {
   const look = useLook();
   const { width } = useWindowDimensions();
   const w = width - GUTTER * 2;
@@ -388,8 +414,12 @@ export function SunTime({ value, onChange }: { value: string; onChange: (t: stri
   const pan = Gesture.Pan()
     .runOnJS(true)
     .minDistance(0)
-    .onBegin((e) => setFrom(e.x))
-    .onUpdate((e) => setFrom(e.x));
+    .onBegin((e) => {
+      onDragging?.(true);
+      setFrom(e.x);
+    })
+    .onUpdate((e) => setFrom(e.x))
+    .onFinalize(() => onDragging?.(false));
 
   const nudge = (d: number) => {
     const i = Math.max(0, Math.min(TIMES.length - 1, idx + d));
@@ -438,8 +468,10 @@ export function SunTime({ value, onChange }: { value: string; onChange: (t: stri
 /* ── Vibe: this or that ───────────────────────────────────────────────── */
 
 /**
- * Two at a time, three rounds: each card picked is a vibe kept. "Either is
- * fine" moves on without one. The same vibes the chips offered.
+ * Two at a time, three rounds: each card picked is a vibe kept, Both keeps
+ * the pair, Neither keeps none (owner, 2 Nov 2026: "what if the person wants
+ * both or neither?"). Three vibes at most, as the chips allowed, so the rounds
+ * end once three are kept. The same vibes the chips offered.
  */
 export function VibeDuel({
   options,
@@ -455,15 +487,17 @@ export function VibeDuel({
   for (let i = 0; i + 1 < options.length && pairs.length < 3; i += 2) pairs.push([options[i], options[i + 1]]);
   const [round, setRound] = useState(0);
 
-  const pick = (label: string | null) => {
+  const pick = (labels: string[]) => {
     void Haptics.selectionAsync();
-    if (label) {
-      const val = label.toLowerCase();
-      const vibes = [...inputs.vibes.filter((x) => x !== val), val].slice(-3);
+    let vibes = inputs.vibes;
+    if (labels.length) {
+      const vals = labels.map((l) => l.toLowerCase());
+      vibes = [...inputs.vibes.filter((x) => !vals.includes(x)), ...vals].slice(0, 3);
       const daylight = wantsDaylight(vibes) && inputs.startTime === DEFAULT_START_TIME;
       update({ vibes, ...(daylight ? { startTime: DAYTIME_START } : {}) });
     }
-    setRound((r) => r + 1);
+    // Three is all the planner takes: the rounds stop there.
+    setRound((r) => (vibes.length >= 3 ? pairs.length : r + 1));
   };
 
   if (round >= pairs.length) {
@@ -500,7 +534,7 @@ export function VibeDuel({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={() => pick(label)}
+      onPress={() => pick([label])}
       style={({ pressed }) => ({
         height: 200,
         borderRadius: 30,
@@ -541,11 +575,10 @@ export function VibeDuel({
           </Display>
         </View>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => pick(null)} style={{ alignSelf: "center", padding: 10 }}>
-        <Body size={15} weight="600" tone="secondary">
-          Either is fine
-        </Body>
-      </Pressable>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <LookButton label="Both" kind="outline" onPress={() => pick([a, b])} style={{ flex: 1 }} accessibilityLabel={`Both: ${a} and ${b}`} />
+        <LookButton label="Neither" kind="outline" onPress={() => pick([])} style={{ flex: 1 }} accessibilityLabel={`Neither ${a} nor ${b}`} />
+      </View>
     </View>
   );
 }

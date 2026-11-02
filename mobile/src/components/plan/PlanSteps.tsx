@@ -432,7 +432,7 @@ export function PlanSteps({
           title="Which day?"
           subtitle="Pick one, or choose another date from the calendar."
         />
-        <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
+        {bare ? null : <DayStrip value={inputs.date} onChange={(date) => update({ date })} />}
       </>
     );
   }
@@ -520,6 +520,7 @@ export function PlanSteps({
           outing is made of; on, the mix below is not asked, since there is
           no meal or bar slot for it to shape.
         */}
+        {bare ? null : (
         <Group footer={inputs.eventNight ? "Films and classes are planned to their start time. Bands, parties and the like you can drop into while they are on." : undefined}>
           <Row
             icon="ticket"
@@ -529,8 +530,9 @@ export function PlanSteps({
             onPress={() => update({ eventNight: !inputs.eventNight })}
           />
         </Group>
+        )}
 
-        {asksFocus(inputs.occasion) && !inputs.eventNight ? (
+        {!bare && asksFocus(inputs.occasion) && !inputs.eventNight ? (
         <Group>
           {FOCUS_OPTIONS.map((f) => {
             const chosen = focusesOf(inputs);
