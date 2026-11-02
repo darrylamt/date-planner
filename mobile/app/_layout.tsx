@@ -25,8 +25,6 @@ import { Figtree_700Bold } from "@expo-google-fonts/figtree/700Bold";
 import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
-import { SeasonProvider } from "../src/lib/season";
-import { useSeasonalIconReset } from "../src/components/AppIconPicker";
 import { onRedesign, switchApp } from "../src/lib/redesign";
 import { BurstProvider } from "../src/components/Burst";
 import {
@@ -101,10 +99,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   return (
     <AppearanceProvider>
-      {/* The season sits inside the appearance, because its colours depend on light or dark. */}
-      <SeasonProvider>
-        <RootShell />
-      </SeasonProvider>
+      <RootShell />
     </AppearanceProvider>
   );
 }
@@ -112,7 +107,6 @@ export default function RootLayout() {
 function RootShell() {
   const c = useTheme();
   const isDark = useIsDark();
-  useSeasonalIconReset();
 
   const [fontsLoaded, fontError] = useFonts({
     Figtree_400Regular,

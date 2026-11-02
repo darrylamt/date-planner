@@ -7,11 +7,8 @@ import { Glow } from "./Glow";
 import { useReducedMotion } from "../motion";
 import { Radius, Spacing } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
-import { useSeason } from "../../lib/season";
 
 const PALETTE = ["#7C5CFF", "#FF5CA8", "#FFB020", "#33D6C7"];
-/** Halloween's ring: pumpkin and night purple, the logo's two colours. */
-const HALLOWEEN_PALETTE = ["#FF7A00", "#6B2FA0", "#FFB347", "#3D1B5B"];
 const HEIGHT = 54;
 const RING = 2;
 
@@ -29,15 +26,6 @@ const LINES = [
   "“Open late on Monday?”",
 ];
 
-/** At Halloween: things Durobot can actually answer from the catalogue. */
-const HALLOWEEN_LINES = [
-  "Ask Duro! 🎃",
-  "“Halloween plans Saturday?”",
-  "“A spooky night for four?”",
-  "“Late dessert after a film?”",
-  "“Anything on for Halloween?”",
-];
-
 /** Blend two hex colours, t from 0 to 1. */
 function mix(a: string, b: string, t: number): string {
   const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -53,7 +41,6 @@ const slicesOf = (palette: string[]) =>
     return mix(palette[from], palette[(from + 1) % palette.length], at - Math.floor(at));
   });
 const SLICES = slicesOf(PALETTE);
-const HALLOWEEN_SLICES = slicesOf(HALLOWEEN_PALETTE);
 
 /**
  * The way to Durobot on Home.
@@ -67,10 +54,8 @@ const HALLOWEEN_SLICES = slicesOf(HALLOWEEN_PALETTE);
 export function AskBar({ onPress }: { onPress: () => void }) {
   const c = useTheme();
   const reduced = useReducedMotion();
-  const { season } = useSeason();
-  const spooky = season === "halloween";
-  const slices = spooky ? HALLOWEEN_SLICES : SLICES;
-  const palette = spooky ? HALLOWEEN_PALETTE : PALETTE;
+  const slices = SLICES;
+  const palette = PALETTE;
   const [width, setWidth] = useState(0);
 
   const spin = useRef(new Animated.Value(0)).current;
@@ -207,7 +192,7 @@ export function AskBar({ onPress }: { onPress: () => void }) {
               </Animated.View>
 
               <View style={{ flex: 1, height: HEIGHT - RING * 2, justifyContent: "center", overflow: "hidden" }}>
-                <TurningLine reduced={reduced} lines={spooky ? HALLOWEEN_LINES : LINES} />
+                <TurningLine reduced={reduced} lines={LINES} />
               </View>
 
               <Symbol name="chevron.right" size={14} color={c.textTertiary} />

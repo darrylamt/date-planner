@@ -38,6 +38,9 @@
     }
   },
   "submit": {
+    "redesign": {
+      "extends": "production"
+    },
     "production": {
       "ios": {
         "appleTeamId": "26H979HZC3",

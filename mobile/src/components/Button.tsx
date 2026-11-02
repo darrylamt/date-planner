@@ -4,8 +4,6 @@ import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
-import { useSeason } from "../lib/season";
-import { SPOOKY, useBurst } from "./Burst";
 import type { SymbolViewProps } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -40,8 +38,6 @@ export function Button({
   style,
 }: ButtonProps) {
   const c = useTheme();
-  const { season } = useSeason();
-  const burst = useBurst();
   const inert = disabled || loading;
 
   const bg =
@@ -77,8 +73,6 @@ export function Button({
       disabled={inert}
       onPress={(e) => {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // At Halloween the main buttons throw a few pumpkins and bats from the finger.
-        if (season === "halloween" && kind === "filled") burst(e.nativeEvent.pageX, e.nativeEvent.pageY, SPOOKY, 6);
         onPress();
       }}
       style={({ pressed }) => [

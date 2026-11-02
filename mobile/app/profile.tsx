@@ -23,7 +23,6 @@ import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
-import { AppIconPicker, appIconsAvailable, currentAppIcon } from "../src/components/AppIconPicker";
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
@@ -44,7 +43,6 @@ import {
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
 import { resetLearning } from "../src/lib/signals";
-import { useSeason } from "../src/lib/season";
 import { mayTryRedesign, onRedesign, switchApp } from "../src/lib/redesign";
 
 /*
@@ -94,7 +92,6 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   const [aiAllowed, setAiAllowed] = useState(false);
   // Weekend ideas (nudges.ts): null when signed out or before the server has them.
@@ -103,7 +100,6 @@ export default function Profile() {
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const { preview: seasonPreview, setPreview: setSeasonPreview, season } = useSeason();
   // The redesign switch (redesign.ts): admins, and anyone already on it so they can get back.
   const [redesignRow, setRedesignRow] = useState(onRedesign());
 
@@ -521,19 +517,6 @@ export default function Profile() {
             onPress={() => setPreference("system")}
           />
         ) : null}
-        {/* Hidden rather than disabled on a build without the module: a row
-            that explains why it cannot work is worse than no row. Only with
-            something to choose: a seasonal icon, or a way back from a mascot
-            chosen before the redesign. */}
-        {appIconsAvailable() && (season === "halloween" || currentAppIcon() !== null) ? (
-          <Row
-            icon="app.badge"
-            title="App icon"
-            subtitle={season === "halloween" ? "A Halloween one, for now" : "Back to the original"}
-            chevron
-            onPress={() => setIconPickerOpen(true)}
-          />
-        ) : null}
       </Group>
 
       <Group header="This device">
@@ -716,13 +699,6 @@ export default function Profile() {
       */}
       <Pressable
         onPress={() => setShowBuild((v) => !v)}
-        // Hidden: hold to preview the Halloween look outside its dates.
-        onLongPress={() => {
-          const on = !seasonPreview;
-          setSeasonPreview(on);
-          setToast(on ? "Halloween preview on 🎃" : "Halloween preview off");
-        }}
-        delayLongPress={800}
         style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}
       >
         <Text variant="caption1" tone="tertiary" center>
@@ -737,12 +713,6 @@ export default function Profile() {
           </Text>
         ) : null}
       </Pressable>
-
-      <AppIconPicker
-        visible={iconPickerOpen}
-        onClose={() => setIconPickerOpen(false)}
-        onChanged={setToast}
-      />
 
       <ProSheet
         visible={proOpen}

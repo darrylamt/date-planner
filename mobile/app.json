@@ -2,7 +2,7 @@
   "expo": {
     "name": "Duro!",
     "slug": "aduro",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "aduro",
@@ -106,19 +106,6 @@
         }
       ],
       [
-        "expo-alternate-app-icons",
-        [
-          {
-            "name": "Halloween",
-            "ios": "./assets/app-icons/halloween.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/halloween.png",
-              "backgroundColor": "#0D0015"
-            }
-          }
-        ]
-      ],
-      [
         "expo-notifications",
         {
           "color": "#E4572E",
@@ -149,7 +136,6 @@
         }
       ],
       "expo-maps",
-      "./plugins/withAllAppIcons",
       [
         "expo-sensors",
         {
@@ -203,7 +189,8 @@
           "speechRecognitionPermission": "Duro turns what you say to Durobot into text, so you can ask without typing."
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

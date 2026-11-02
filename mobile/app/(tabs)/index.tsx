@@ -21,8 +21,6 @@ import { NativeSheet } from "../../src/components/native/NativeSheet";
 import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { setBillSource } from "../../src/lib/bill";
-import { useSeason } from "../../src/lib/season";
-import { HalloweenCard, SpookyDrift } from "../../src/components/home/Halloween";
 import { countSavedPlans, fetchProfile } from "../../src/lib/account";
 import { supabase } from "../../src/lib/supabase";
 import { myGroups } from "../../src/lib/groupApi";
@@ -72,7 +70,6 @@ const FIRST_SAVE_KEY = "duro.firstSave.v1";
  */
 export default function Home() {
   const c = useTheme();
-  const { season } = useSeason();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
   const [pro, setPro] = useState(false);
@@ -152,8 +149,6 @@ export default function Home() {
       contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
       showsVerticalScrollIndicator={false}
     >
-      {season === "halloween" ? <SpookyDrift /> : null}
-
       {/* Where, and you. One slim row: the city a plan starts in, and Settings. */}
       <View
         style={{
@@ -180,7 +175,7 @@ export default function Home() {
         <Text variant="title1">What are you planning?</Text>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: Spacing.three }}>
           <Text variant="footnote" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
-            {season === "halloween" ? "Pick one, or make it Halloween." : "Pick one. We plan the whole outing."}
+            Pick one. We plan the whole outing.
           </Text>
           <Pressable hitSlop={10} onPress={() => setAllOpen(true)} accessibilityRole="button">
             <Text variant="subheadline" weight="600" style={{ color: c.accent }}>
@@ -190,20 +185,7 @@ export default function Home() {
         </View>
       </View>
       <View style={{ marginTop: Spacing.three }}>
-        <OccasionRow
-          order={ROW_ORDER}
-          onPick={(id) => void startNewPlan(id, "home_row")}
-          lead={
-            season === "halloween"
-              ? (width) => (
-                  <HalloweenCard
-                    width={width}
-                    onPlan={(date) => void startNewPlan(undefined, "home_season", date ? { date, start: "19:00" } : undefined)}
-                  />
-                )
-              : undefined
-          }
-        />
+        <OccasionRow order={ROW_ORDER} onPick={(id) => void startNewPlan(id, "home_row")} />
       </View>
 
       <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.two }}>

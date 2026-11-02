@@ -21,8 +21,6 @@ import { Symbol } from "../src/components/Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { STORE } from "../src/lib/store";
-import { useSeason } from "../src/lib/season";
-import { SWEETS, useBurst } from "../src/components/Burst";
 import { startListening, voiceAvailable } from "../src/lib/voice";
 import { ensureSession, useAuth } from "../src/lib/useAuth";
 import { saveDraft } from "../src/lib/draft";
@@ -89,20 +87,9 @@ const OPENERS: { text: string; icon: Parameters<typeof Symbol>[0]["name"] }[] = 
 ];
 const AT_THE_TABLE = "I'm at ";
 
-/** At Halloween, openers for the season: still things the catalogue can answer. */
-const HALLOWEEN_OPENERS: typeof OPENERS = [
-  { text: "Anything on for Halloween this weekend?", icon: "sparkles" },
-  { text: "A horror film and dinner after", icon: "film" },
-  { text: "A spooky night out for four, under 1,500", icon: "person.3.fill" },
-  { text: "Somewhere lively in Osu for Halloween", icon: "music.note" },
-];
-/** "Trick or treat", and the ways people actually type it. */
-const TRICK_OR_TREAT = /trick\s*(or|'?r|n|&)\s*treat/i;
 
 export default function ChatScreen() {
   const c = useTheme();
-  const { season } = useSeason();
-  const burst = useBurst();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, loading: authLoading } = useAuth();
@@ -219,20 +206,6 @@ export default function ChatScreen() {
     const message = text.trim();
     if (!message || busy) return;
 
-    // An easter egg for the season: sweets from the send button, then Durobot plays along.
-    if (season === "halloween" && TRICK_OR_TREAT.test(message)) {
-      const { width, height } = Dimensions.get("window");
-      /*
-       * From above the keyboard when it is up. The burst layer is in the app's
-       * window and the keyboard is in its own, over it, so sweets thrown from
-       * where the send button sits with the keyboard down landed under it and
-       * nobody saw a thing.
-       */
-      const floor = Keyboard.metrics()?.height ?? insets.bottom;
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      burst(width - 44, height - floor - 60, SWEETS, 18, 30);
-    }
-
     /*
      * Every send until it is allowed, unlike plans. The assistant is the
      * model, so a "no" here means the message is not sent at all, and asking
@@ -275,7 +248,7 @@ export default function ChatScreen() {
     };
 
     try {
-      for await (const ev of streamChat({ message, conversationId, season })) {
+      for await (const ev of streamChat({ message, conversationId })) {
         if (ev.type === "conversation") {
           setConversationId(ev.id);
           if (ev.tier === "free") {
@@ -388,7 +361,7 @@ export default function ChatScreen() {
       >
         {empty ? (
           <Welcome
-            openers={season === "halloween" ? HALLOWEEN_OPENERS : OPENERS}
+            openers={OPENERS}
             onAsk={(o) => void send(o)}
             onAtTheTable={() => {
               setDraft(`${AT_THE_TABLE}`);
