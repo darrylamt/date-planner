@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CUISINE_KINDS, VIBE_CHIP_TAGS, expandVibes } from "../../catalog";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { Venue } from "../../types";
+import { accentPattern, foldIncludes } from "../../fold";
 import type { ChatTool, ToolContext } from "./types";
 import { compactVenue, describePrice, isPriced, keywordHits, keywordPatterns, menusFor, openStateAt, type CompactVenue } from "./shared";
 
@@ -326,15 +327,15 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
    * worse failure than any amount of hedging: it is the product's one promise,
    * inverted.
    */
-  if (args.name) {
-    const needle = args.name.trim().replace(/[\\%_]/g, (ch) => `\\${ch}`);
-    q = q.ilike("name", `%${needle}%`);
-  }
+  // However it is accented, either side: "a la lune" is "À La Lune" (fold.ts).
+  if (args.name) q = q.ilike("name", accentPattern(args.name));
 
   const { data, error } = await q;
   if (error) throw new Error(`venue search failed: ${error.message}`);
 
   let venues = (data ?? []) as unknown as Venue[];
+  // The pattern finds more than it should; only names that really contain it stay.
+  if (args.name) venues = venues.filter((v) => foldIncludes(v.name, args.name!.trim()));
 
   /*
    * Areas are matched here rather than in the query because the model sends

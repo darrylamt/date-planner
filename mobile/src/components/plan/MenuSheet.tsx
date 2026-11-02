@@ -12,6 +12,7 @@ import { fetchMenu } from "../../lib/data";
 import type { ItineraryOrder, MenuItem } from "../../lib/types";
 import { NativeSheet } from "../native/NativeSheet";
 import { SkeletonMenu } from "../Skeleton";
+import { fold } from "../../lib/fold";
 import { track } from "../../lib/signals";
 
 /*
@@ -128,12 +129,12 @@ export function MenuSheet({
 
   // Name and notes both: "vegetarian" and "serves two" live in notes, and are
   // exactly what somebody types when they are changing an order.
-  const needle = query.trim().toLowerCase();
+  const needle = fold(query.trim());
   const matching = needle
     ? (menu ?? []).filter(
         (m) =>
-          m.name.toLowerCase().includes(needle) ||
-          (m.notes ?? "").toLowerCase().includes(needle)
+          fold(m.name).includes(needle) ||
+          fold(m.notes ?? "").includes(needle)
       )
     : (menu ?? []);
 

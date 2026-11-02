@@ -9,6 +9,7 @@ import { csvToObjects } from "@/lib/csv";
 import { Toast } from "@/components/Toast";
 import { MenuReaderPanel } from "@/components/admin/MenuReaderPanel";
 import { MENU_CATEGORIES, dishLabels, normaliseCategory, understoodKey } from "@/lib/catalog";
+import { fold } from "@/lib/fold";
 import type { Area } from "@/lib/types";
 
 /**
@@ -161,7 +162,7 @@ export function CsvImporter({
      */
     if (mode === "enrich") {
       const byName = new Map(
-        venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
+        venues.map((v) => [fold(v.name.trim()), v.id] as [string, string])
       );
       const known = new Map(venues.map((v) => [v.id, v]));
 
@@ -173,7 +174,7 @@ export function CsvImporter({
       let unmatched = 0;
 
       for (const [i, r] of rows.entries()) {
-        const id = byName.get((r.name ?? "").trim().toLowerCase());
+        const id = byName.get(fold((r.name ?? "").trim()));
         if (!id) {
           if ((r.name ?? "").trim()) {
             log.push(`Row ${i + 2}: no venue called "${r.name}"`);
@@ -314,7 +315,7 @@ export function CsvImporter({
       ok += await insertInChunks("venues", pending, log);
     } else {
       const venueByName = new Map(
-        venues.map((v) => [v.name.trim().toLowerCase(), v.id] as [string, string])
+        venues.map((v) => [fold(v.name.trim()), v.id] as [string, string])
       );
 
       /*
@@ -325,12 +326,12 @@ export function CsvImporter({
        * fix is obvious rather than a hunt.
        */
       const nearest = (typed: string): string => {
-        const key = typed.trim().toLowerCase();
+        const key = fold(typed.trim());
         if (!key) return "";
         const close = venues
           .map((v) => v.name)
           .filter((n) => {
-            const low = n.toLowerCase();
+            const low = fold(n);
             return low.includes(key) || key.includes(low);
           })
           .slice(0, 3);
@@ -338,7 +339,7 @@ export function CsvImporter({
       };
 
       for (const [i, r] of rows.entries()) {
-        const venueId = venueByName.get((r.venue ?? "").trim().toLowerCase());
+        const venueId = venueByName.get(fold((r.venue ?? "").trim()));
         if (!r.name) {
           log.push(`Row ${i + 2}: skipped, no item name`);
           continue;

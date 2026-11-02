@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Toast } from "@/components/Toast";
+import { fold } from "@/lib/fold";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 export interface PlannerRow {
@@ -55,7 +56,7 @@ export function PlannerLogins({ rows }: { rows: PlannerRow[] }) {
   const paged = usePagedRows(
     planners,
     (r, needle) =>
-      r.username.toLowerCase().includes(needle) || r.display_name.toLowerCase().includes(needle)
+      fold(r.username).includes(needle) || fold(r.display_name).includes(needle)
   );
 
   const say = (m: string) => {

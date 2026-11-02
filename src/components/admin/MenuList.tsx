@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { fold } from "@/lib/fold";
 import { PagedTable } from "./PagedTable";
 
 export interface MenuListRow {
@@ -25,12 +26,12 @@ const missingDrinks = (r: MenuListRow) => SERVES_DRINKS.has(r.type) && r.items >
 export function MenuList({ rows }: { rows: MenuListRow[] }) {
   const [query, setQuery] = useState("");
   const [drinksOnly, setDrinksOnly] = useState(false);
-  const q = query.trim().toLowerCase();
+  const q = fold(query.trim());
   const missing = useMemo(() => rows.filter(missingDrinks).length, [rows]);
   const shown = useMemo(
     () =>
       rows
-        .filter((r) => !q || `${r.name} ${r.area} ${r.type}`.toLowerCase().includes(q))
+        .filter((r) => !q || fold(`${r.name} ${r.area} ${r.type}`).includes(q))
         .filter((r) => !drinksOnly || missingDrinks(r))
         .sort((a, b) => a.items - b.items || a.name.localeCompare(b.name)),
     [rows, q, drinksOnly]

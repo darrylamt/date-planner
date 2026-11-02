@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CUISINE_KINDS } from "@/lib/catalog";
 import { Toast } from "@/components/Toast";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 /**
  * Every venue's kitchen, on one screen.
@@ -64,7 +65,7 @@ export function KitchenEditor({ rows }: { rows: Row[] }) {
   );
 
   const paged = usePagedRows(visible, (r, needle) =>
-    r.name.toLowerCase().includes(needle) || r.area.toLowerCase().includes(needle)
+    fold(r.name).includes(needle) || fold(r.area).includes(needle)
   );
 
   const done = rows.filter((r) => (state[r.id] ?? []).length > 0).length;

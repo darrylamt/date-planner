@@ -8,6 +8,7 @@ import { leadTimeLabel } from "@/lib/pickups";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import type { Area } from "@/lib/types";
 import { ImageField } from "./ImageField";
+import { fold } from "@/lib/fold";
 
 /**
  * Managing florists, bakers and what they sell.
@@ -57,10 +58,10 @@ export function GiftsManager({ areas, vendors }: { areas: Area[]; vendors: Vendo
   const paged = usePagedRows(
     vendors,
     (v, needle) =>
-      v.name.toLowerCase().includes(needle) ||
+      fold(v.name).includes(needle) ||
       v.kind.includes(needle) ||
-      (v.areas?.name ?? "").toLowerCase().includes(needle) ||
-      v.gift_products.some((p) => p.name.toLowerCase().includes(needle))
+      fold(v.areas?.name ?? "").includes(needle) ||
+      v.gift_products.some((p) => fold(p.name).includes(needle))
   );
 
   const [draft, setDraft] = useState({

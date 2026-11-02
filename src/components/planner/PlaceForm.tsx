@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PosterUpload } from "./PosterUpload";
 import { IconCheck, IconPin, IconSearch, IconWarn } from "./icons";
 import type { Place } from "./nights";
+import { fold } from "@/lib/fold";
 
 const TYPES: { value: string; label: string; hint: string; emoji: string }[] = [
   { value: "lounge", label: "Bar or club", hint: "Taking you for the night", emoji: "🍸" },
@@ -346,9 +347,9 @@ function AreaPicker({
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const needle = typed.trim().toLowerCase();
-  const matches = needle ? areas.filter((a) => a.name.toLowerCase().includes(needle)).slice(0, 6) : [];
-  const exact = areas.some((a) => a.name.toLowerCase() === needle);
+  const needle = fold(typed.trim());
+  const matches = needle ? areas.filter((a) => fold(a.name).includes(needle)).slice(0, 6) : [];
+  const exact = areas.some((a) => fold(a.name) === needle);
 
   async function addNew() {
     setChecking(true);

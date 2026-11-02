@@ -8,6 +8,7 @@ import { Toast } from "@/components/Toast";
 import type { Area } from "@/lib/types";
 import type { AccessVenue, LineSummary } from "@/app/admin/getting-around/page";
 import { FareSteps, RouteMapReview } from "./RouteMapReview";
+import { fold } from "@/lib/fold";
 import { fareText, type CarRental, type TrotroRoute, type TrotroStation, type VenueAccess } from "@/lib/transit";
 
 type Tab = "map" | "stations" | "routes" | "venues" | "rentals";
@@ -541,8 +542,8 @@ function VenueDirections({ venues, access, stations, areas, say }: Props) {
   const shown = venues.filter((v) => {
     const a = byVenue.get(v.id);
     if (onlyMissing && a?.landmark) return false;
-    const q = query.trim().toLowerCase();
-    return !q || v.name.toLowerCase().includes(q) || (areaName.get(v.area_id) ?? "").toLowerCase().includes(q);
+    const q = fold(query.trim());
+    return !q || fold(v.name).includes(q) || fold(areaName.get(v.area_id)).includes(q);
   });
 
   return (

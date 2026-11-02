@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ImageField } from "./ImageField";
+import { fold } from "@/lib/fold";
 import { PagedTable } from "./PagedTable";
 
 export interface PhotoRow {
@@ -27,18 +28,18 @@ export interface PosterRow {
 export function PhotoQueue({ tab, venues, events }: { tab: "venues" | "events"; venues: PhotoRow[]; events: PosterRow[] }) {
   const [query, setQuery] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(true);
-  const q = query.trim().toLowerCase();
+  const q = fold(query.trim());
 
   const shownVenues = useMemo(
     () =>
       venues
-        .filter((v) => !q || `${v.name} ${v.area}`.toLowerCase().includes(q))
+        .filter((v) => !q || fold(`${v.name} ${v.area}`).includes(q))
         .filter((v) => !onlyMissing || !v.cover || v.gallery < 3)
         .sort((a, b) => Number(Boolean(a.cover)) - Number(Boolean(b.cover)) || a.gallery - b.gallery || a.name.localeCompare(b.name)),
     [venues, q, onlyMissing]
   );
   const shownEvents = useMemo(
-    () => events.filter((e) => !q || `${e.title} ${e.venue}`.toLowerCase().includes(q)).filter((e) => !onlyMissing || !e.image),
+    () => events.filter((e) => !q || fold(`${e.title} ${e.venue}`).includes(q)).filter((e) => !onlyMissing || !e.image),
     [events, q, onlyMissing]
   );
 

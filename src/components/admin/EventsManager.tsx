@@ -10,6 +10,7 @@ import { ImageField } from "./ImageField";
 import { PosterStart } from "@/components/planner/PosterStart";
 import { guessVenue } from "@/lib/menuRead";
 import { PlaceAdder } from "./PlaceAdder";
+import { fold } from "@/lib/fold";
 
 const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "workshop", "film_night", "other"];
 
@@ -71,9 +72,9 @@ export function EventsManager({
   const paged = usePagedRows(ordered, (e, needle) => {
     const area = areas.find((a) => a.id === e.area_id)?.name ?? "";
     return (
-      e.title.toLowerCase().includes(needle) ||
+      fold(e.title).includes(needle) ||
       e.event_date.includes(needle) ||
-      area.toLowerCase().includes(needle)
+      fold(area).includes(needle)
     );
   });
 

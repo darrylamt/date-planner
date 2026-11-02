@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeHref } from "@/lib/safeHref";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 interface PendingVenue {
   id: string;
@@ -54,8 +55,8 @@ export function PhoneReview({
    * looking at.
    */
   const byNameOrNumber = (v: PendingVenue, needle: string) =>
-    v.name.toLowerCase().includes(needle) ||
-    (v.area ?? "").toLowerCase().includes(needle) ||
+    fold(v.name).includes(needle) ||
+    fold(v.area ?? "").includes(needle) ||
     (v.phone_pending ?? "").includes(needle) ||
     (v.phone ?? "").includes(needle);
 

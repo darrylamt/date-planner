@@ -2,6 +2,7 @@ import { z } from "zod";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { MenuItem, Venue } from "../../types";
 import type { ChatTool } from "./types";
+import { accentPattern, fold, foldIncludes } from "../../fold";
 
 /**
  * Find a dish, and say where it is actually served.
@@ -56,24 +57,37 @@ export const searchMenuItems: ChatTool<SearchMenuItemsArgs> = {
   parse: (raw) => argsSchema.parse(raw),
 
   async run(args, ctx) {
-    // Escaped, so a query containing % or _ searches for those characters
-    // rather than turning into a wildcard that matches the whole catalogue.
-    const needle = args.query.replace(/[\\%_]/g, (c) => `\\${c}`);
-
-    let q = ctx.catalog
-      .from("menu_items")
-      // "*" so the recommendation count arrives without a named column that
-      // would fail on a database without 0063.
-      .select("*")
-      .ilike("name", `%${needle}%`);
-
-    if (args.category) q = q.eq("category", args.category);
-    if (args.max_price_ghs) q = q.lte("price_ghs", args.max_price_ghs);
-
-    const { data, error } = await q.limit(200);
+    /*
+     * However it is accented, either side: "creme brulee" is "Crème brûlée"
+     * (fold.ts). Two reads: the words as typed without accents, which is
+     * exact and finds every plainly spelt name; and the accent pattern, which
+     * widens accented letters, over only the names with an accent in them, so
+     * a short word like "sauté" does not match half the catalogue and push
+     * the real answers past the limit. Every row is checked once more below.
+     */
+    const base = () => {
+      let q = ctx.catalog
+        .from("menu_items")
+        // "*" so the recommendation count arrives without a named column that
+        // would fail on a database without 0063.
+        .select("*");
+      if (args.category) q = q.eq("category", args.category);
+      if (args.max_price_ghs) q = q.lte("price_ghs", args.max_price_ghs);
+      return q;
+    };
+    const plain = fold(args.query.trim()).replace(/[\\%_]/g, (c) => `\\${c}`);
+    const [asTyped, accented] = await Promise.all([
+      base().ilike("name", `%${plain}%`).limit(300),
+      // Any character outside plain ASCII: an accent, a curly quote, an emoji.
+      base().ilike("name", accentPattern(args.query)).filter("name", "match", "[^ -~]").limit(300),
+    ]);
+    const error = asTyped.error ?? accented.error;
     if (error) throw new Error(`menu search failed: ${error.message}`);
 
-    const items = (data ?? []) as MenuItem[];
+    const seen = new Set<string>();
+    const items = ([...(asTyped.data ?? []), ...(accented.data ?? [])] as MenuItem[]).filter(
+      (m) => !seen.has(m.id) && (seen.add(m.id), foldIncludes(m.name, args.query.trim()))
+    );
     if (!items.length) {
       return {
         matches: [],

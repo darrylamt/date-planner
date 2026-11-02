@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { fold } from "@/lib/fold";
 import { MENU_ONLY_TYPES } from "@/lib/budget";
 
 interface Row {
@@ -71,9 +72,9 @@ export function UnpricedVenues({ rows }: { rows: Row[] }) {
   const paged = usePagedRows(
     rows,
     (r, needle) =>
-      r.name.toLowerCase().includes(needle) ||
-      r.area.toLowerCase().includes(needle) ||
-      r.type.toLowerCase().includes(needle)
+      fold(r.name).includes(needle) ||
+      fold(r.area).includes(needle) ||
+      fold(r.type).includes(needle)
   );
 
   function draftFor(row: Row): Draft {

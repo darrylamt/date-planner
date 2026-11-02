@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { OFFICIAL_FARES_FROM, OFFICIAL_TROTRO_FARES, fareText } from "@/lib/transit";
 import type { LineSummary } from "@/app/admin/getting-around/page";
+import { fold } from "@/lib/fold";
 
 type Filter = "unchecked" | "confirmed" | "hidden" | "all";
 
@@ -38,10 +39,10 @@ export function RouteMapReview({ lines, say }: { lines: LineSummary[] | null; sa
       list.push(l);
       by.set(key, list);
     }
-    const q = query.trim().toLowerCase();
+    const q = fold(query.trim());
     return [...by.values()]
       .filter((dirs) => filter === "all" || dirs.some((d) => d.status === filter))
-      .filter((dirs) => !q || dirs.some((d) => d.name.toLowerCase().includes(q) || (d.headsign ?? "").toLowerCase().includes(q)))
+      .filter((dirs) => !q || dirs.some((d) => fold(d.name).includes(q) || fold(d.headsign ?? "").includes(q)))
       .sort((a, b) => Math.max(...b.map((d) => d.near_venues)) - Math.max(...a.map((d) => d.near_venues)));
   }, [lines, filter, query]);
 

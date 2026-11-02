@@ -4,6 +4,7 @@ import { fetchAllRows } from "../../fetchAll";
 import { isOpenAt, parsePeriods, weekdayOf, describeDay } from "../../hours";
 import type { MenuItem, Venue } from "../../types";
 import { byTheGlass } from "../../bottles";
+import { fold } from "../../fold";
 
 /**
  * The pieces every catalogue tool needs, in one place so they cannot drift
@@ -326,8 +327,8 @@ function firstSentence(text: string | null | undefined): string | null {
  * its alternatives, and a word counts once however many of them match.
  */
 export function keywordPatterns(text: string | undefined, stop: Set<string>, also: Record<string, string[]>): RegExp[][] {
-  return (text ?? "")
-    .toLowerCase()
+  // Folded first: "crème" split on its accent into "cr" and "me" and found nothing.
+  return fold(text)
     .split(/[^a-z0-9']+/)
     .filter((w) => w.length >= 3 && !stop.has(w))
     .map((w) =>
@@ -339,5 +340,6 @@ export function keywordPatterns(text: string | undefined, stop: Set<string>, als
 
 /** How many of the searched words the text matches. */
 export function keywordHits(patterns: RegExp[][], text: string): number {
-  return patterns.filter((alts) => alts.some((re) => re.test(text))).length;
+  const plain = fold(text);
+  return patterns.filter((alts) => alts.some((re) => re.test(plain))).length;
 }

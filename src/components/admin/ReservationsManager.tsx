@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ReservationRequest, ReservationStatus } from "@/lib/types";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 const STATUSES: ReservationStatus[] = ["requested", "sent", "confirmed", "declined", "cancelled"];
 
@@ -26,8 +27,8 @@ export function ReservationsManager({ reservations }: { reservations: Reservatio
   const paged = usePagedRows(
     rows,
     (r, needle) =>
-      r.venue_name.toLowerCase().includes(needle) ||
-      (r.guest_name ?? "").toLowerCase().includes(needle) ||
+      fold(r.venue_name).includes(needle) ||
+      fold(r.guest_name ?? "").includes(needle) ||
       r.status.includes(needle) ||
       r.reservation_date.includes(needle)
   );

@@ -16,6 +16,7 @@ import {
   type PlaceDetails,
 } from "@/lib/places";
 import { areaCentroids } from "@/lib/areaCentroids";
+import { accentPattern, foldIncludes } from "@/lib/fold";
 import { ensureAreaId, isNeighbourhood } from "@/lib/areas";
 import { logPlannerActivity } from "@/lib/plannerActivity";
 
@@ -95,11 +96,12 @@ async function describe(db: Db, details: PlaceDetails | null, pin: { lat: number
    * "Daddy boba").
    */
   if (!existing && details?.name) {
-    const word = details.name.split(/[^A-Za-z0-9']+/).find((w) => w.length >= 3);
+    // Its first real word, accents aside, so "Café Kwae" finds "Cafe Kwae" (fold.ts).
+    const word = details.name.split(/[^\p{L}0-9']+/u).find((w) => w.length >= 3);
     if (word) {
-      const { data } = await db.from("venues").select("id, name, lat, lng, areas(name)").ilike("name", `%${word}%`).not("lat", "is", null).limit(30);
+      const { data } = await db.from("venues").select("id, name, lat, lng, areas(name)").ilike("name", accentPattern(word)).not("lat", "is", null).limit(60);
       const near = ((data ?? []) as unknown as { id: string; name: string; lat: number; lng: number; areas: { name: string } | null }[]).find(
-        (v) => metresBetweenPoints(pin, { lat: Number(v.lat), lng: Number(v.lng) }) <= 300
+        (v) => foldIncludes(v.name, word) && metresBetweenPoints(pin, { lat: Number(v.lat), lng: Number(v.lng) }) <= 300
       );
       if (near) existing = { id: near.id, name: near.name, area: near.areas?.name ?? "" };
     }

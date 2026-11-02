@@ -1,3 +1,4 @@
+import { fold } from "@/lib/fold";
 "use client";
 
 import { useState } from "react";
@@ -44,7 +45,7 @@ export function usePagedRows<T>(
   const [query, setQuery] = useState("");
   const [requestedPage, setRequestedPage] = useState(0);
 
-  const needle = query.trim().toLowerCase();
+  const needle = fold(query.trim());
   const filtered = needle && matches ? rows.filter((r) => matches(r, needle)) : rows;
 
   const { page, pageCount, start } = pageWindow(filtered.length, requestedPage, pageSize);

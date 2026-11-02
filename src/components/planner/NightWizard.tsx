@@ -27,6 +27,7 @@ import {
   type Night,
   type Place,
 } from "./nights";
+import { fold } from "@/lib/fold";
 import { IconArrow, IconBack, IconCheck, IconClose, IconPlus, IconSearch, IconSparkle, IconWarn } from "./icons";
 
 type StepKey = "basics" | "when" | "where" | "door" | "feel" | "poster" | "review";
@@ -358,9 +359,9 @@ export function NightWizard({
   }
 
   const s = STEPS[step];
-  const needle = search.trim().toLowerCase();
+  const needle = fold(search.trim());
   const shown = places.filter(
-    (p) => p.id === d.venueId || !needle || p.name.toLowerCase().includes(needle) || p.area.toLowerCase().includes(needle)
+    (p) => p.id === d.venueId || !needle || fold(p.name).includes(needle) || fold(p.area).includes(needle)
   );
   const favourites = shown.filter((p) => p.mine || p.id === usualPlace);
   const others = shown.filter((p) => !p.mine && p.id !== usualPlace);

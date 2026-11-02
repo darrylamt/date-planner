@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Toast } from "@/components/Toast";
 import type { MenuItem } from "@/lib/types";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 /**
  * Bulk price quick-edit, matching the designed table:
@@ -39,7 +40,7 @@ export function BulkPriceEditor({
   const paged = usePagedRows(
     items,
     (i, needle) =>
-      i.name.toLowerCase().includes(needle) || i.category.toLowerCase().includes(needle)
+      fold(i.name).includes(needle) || fold(i.category).includes(needle)
   );
 
   /*

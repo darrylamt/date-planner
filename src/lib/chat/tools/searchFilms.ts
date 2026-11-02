@@ -2,6 +2,7 @@ import { z } from "zod";
 import { genreFits, listShowtimes } from "../../movies";
 import { MOVIE_GENRES, MOVIE_PRICE_GHS } from "../../planConstants";
 import type { ChatTool } from "./types";
+import { fold } from "../../fold";
 
 /**
  * What's showing at the cinema.
@@ -61,7 +62,7 @@ export const searchFilms: ChatTool<SearchFilmsArgs> = {
     const nowMins = now.getUTCHours() * 60 + now.getUTCMinutes(); // Accra is UTC all year
     const rows = (await listShowtimes(from, to)).filter((r) => {
       if (genreFits(r.genres, args.genres) === 0) return false;
-      if (args.title && !r.title.toLowerCase().includes(args.title.trim().toLowerCase())) return false;
+      if (args.title && !fold(r.title).includes(fold(args.title.trim()))) return false;
       // Not one that has already started today.
       if (r.show_date === ctx.today) {
         const [h, m] = r.show_time.split(":").map(Number);

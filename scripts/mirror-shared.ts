@@ -20,6 +20,7 @@ import path from "path";
 
 const FILES = [
   "budget.ts",
+  "fold.ts",
   "format.ts",
   "groups.ts",
   "planConstants.ts",

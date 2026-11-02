@@ -26,6 +26,7 @@ import type { MenuItem } from "../../src/lib/types";
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
 import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../src/lib/freeMenus";
+import { fold } from "../../src/lib/fold";
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -206,7 +207,7 @@ export default function VenuePage() {
         .slice(0, 8),
     [menu]
   );
-  const needle = query.trim().toLowerCase();
+  const needle = fold(query.trim());
   /*
    * A search looks through the whole menu, not just the open tab: somebody
    * typing "jollof" should not have to guess which heading it sits under.
@@ -214,7 +215,7 @@ export default function VenuePage() {
   const shown = useMemo(() => {
     const all = menu ?? [];
     const list = needle
-      ? all.filter((m) => m.name.toLowerCase().includes(needle) || (m.notes ?? "").toLowerCase().includes(needle))
+      ? all.filter((m) => fold(m.name).includes(needle) || fold(m.notes ?? "").includes(needle))
       : all.filter((m) => m.category === current);
     return [...list].sort((a, b) => Number(a.price_ghs) - Number(b.price_ghs));
   }, [menu, needle, current]);

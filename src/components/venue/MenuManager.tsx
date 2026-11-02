@@ -8,6 +8,7 @@ import { Confetti } from "@/components/planner/Confetti";
 import { IconPlus, IconSearch, IconWarn } from "@/components/planner/icons";
 import type { MenuCategory, MenuItem } from "@/lib/types";
 import { useToast } from "./ui";
+import { fold } from "@/lib/fold";
 import { MenuFromPhotos } from "./MenuFromPhotos";
 
 const COURSES: { value: MenuCategory; label: string; emoji: string }[] = [
@@ -78,9 +79,9 @@ export function MenuManager({ scope, items }: { scope: MenuScope; items: MenuIte
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
 
-  const needle = query.trim().toLowerCase();
+  const needle = fold(query.trim());
   const filtered = rows.filter(
-    (r) => (course === "all" || r.category === course) && (!needle || r.name.toLowerCase().includes(needle) || (r.notes ?? "").toLowerCase().includes(needle))
+    (r) => (course === "all" || r.category === course) && (!needle || fold(r.name).includes(needle) || fold(r.notes ?? "").includes(needle))
   );
   const groups = useMemo(
     () =>

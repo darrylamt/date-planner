@@ -8,6 +8,7 @@ import { Toast } from "@/components/Toast";
 import Link from "next/link";
 import type { Area } from "@/lib/types";
 import type { AreaVenue } from "@/app/admin/areas/page";
+import { fold } from "@/lib/fold";
 
 export function AreasManager({
   areas,
@@ -49,7 +50,7 @@ export function AreasManager({
   const paged = usePagedRows(
     areas,
     (a, needle) =>
-      a.name.toLowerCase().includes(needle) || (a.city ?? "").toLowerCase().includes(needle)
+      fold(a.name).includes(needle) || fold(a.city ?? "").includes(needle)
   );
 
   async function add() {

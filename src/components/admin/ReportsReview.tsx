@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ADMIN_PAGE_SIZE, Pager, SearchBox, usePagedRows } from "./TableControls";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fold } from "@/lib/fold";
 import { Toast } from "@/components/Toast";
 
 /**
@@ -117,7 +118,7 @@ export function ReportsReview({ rows }: { rows: ReportRow[] }) {
    * hook cannot be skipped on some renders and not others.
    */
   const paged = usePagedRows(groups, (g, needle) =>
-    g.venue_name.toLowerCase().includes(needle)
+    fold(g.venue_name).includes(needle)
   );
 
   if (!groups.length) {

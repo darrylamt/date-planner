@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ghs } from "@/lib/format";
+import { fold } from "@/lib/fold";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 /**
@@ -86,9 +87,9 @@ export function VenueTable({ rows, queues = [] }: { rows: Row[]; queues?: Queue[
   const paged = usePagedRows(
     visible,
     (r, needle) =>
-      r.name.toLowerCase().includes(needle) ||
-      r.area.toLowerCase().includes(needle) ||
-      r.type.toLowerCase().includes(needle)
+      fold(r.name).includes(needle) ||
+      fold(r.area).includes(needle) ||
+      fold(r.type).includes(needle)
   );
 
   return (

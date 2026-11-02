@@ -12,6 +12,7 @@ import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { listVenues, type VenueListing } from "../../src/lib/data";
 import { VENUE_KIND } from "../../src/lib/venueKinds";
 import { SkeletonRows } from "../../src/components/Skeleton";
+import { fold } from "../../src/lib/fold";
 import { record } from "../../src/lib/usage";
 
 /*
@@ -58,7 +59,7 @@ export default function Venues() {
   const shown = useMemo(() => {
     if (!venues) return [];
     const types = FILTERS[filter].types;
-    const needle = query.trim().toLowerCase();
+    const needle = fold(query.trim());
     return venues.filter((v) => {
       if (types && !types.includes(v.type)) return false;
       if (!needle) return true;
@@ -67,11 +68,11 @@ export default function Venues() {
        * things people type: "Honeysuckle", "Osu", "korean", "rooftop".
        */
       return (
-        v.name.toLowerCase().includes(needle) ||
-        (v.area ?? "").toLowerCase().includes(needle) ||
-        (v.city ?? "").toLowerCase().includes(needle) ||
-        v.cuisines.some((x) => x.toLowerCase().includes(needle)) ||
-        v.vibe_tags.some((x) => x.toLowerCase().includes(needle))
+        fold(v.name).includes(needle) ||
+        fold(v.area ?? "").includes(needle) ||
+        fold(v.city ?? "").includes(needle) ||
+        v.cuisines.some((x) => fold(x).includes(needle)) ||
+        v.vibe_tags.some((x) => fold(x).includes(needle))
       );
     });
   }, [venues, query, filter]);

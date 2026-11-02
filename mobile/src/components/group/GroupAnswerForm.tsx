@@ -10,6 +10,7 @@ import { useTheme } from "../../lib/useTheme";
 import { fetchAreas } from "../../lib/data";
 import { VIBES } from "../../lib/planConstants";
 import { HARD_NOS, SLOTS, SLOT_LABEL, datesInRange, type Availability, type GroupAnswer, type GroupPublic, type HardNo, type Slot } from "../../lib/groups";
+import { fold } from "../../lib/fold";
 import type { Area } from "../../lib/types";
 
 /**
@@ -61,7 +62,7 @@ export function GroupAnswerForm({
 
   const chosenArea = areas.find((a) => a.id === fromAreaId) ?? null;
   const matches = areaQuery.trim()
-    ? areas.filter((a) => a.name.toLowerCase().includes(areaQuery.trim().toLowerCase())).slice(0, 8)
+    ? areas.filter((a) => fold(a.name).includes(fold(areaQuery.trim()))).slice(0, 8)
     : [];
 
   const toggleSlot = (date: string, slot: Slot) =>

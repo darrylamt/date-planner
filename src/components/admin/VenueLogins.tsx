@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Toast } from "@/components/Toast";
+import { fold } from "@/lib/fold";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
 
 export interface LoginRow {
@@ -42,7 +43,7 @@ export function VenueLogins({
   const [issued, setIssued] = useState<{ username: string; password: string } | null>(null);
 
   const paged = usePagedRows(links, (r, needle) =>
-    r.username.toLowerCase().includes(needle) || r.venue_name.toLowerCase().includes(needle)
+    fold(r.username).includes(needle) || fold(r.venue_name).includes(needle)
   );
 
   const say = (m: string) => {

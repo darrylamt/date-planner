@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 interface Row {
   id: string;
@@ -52,9 +53,9 @@ export function ThinMenus({ rows }: { rows: Row[] }) {
   const paged = usePagedRows(
     rows,
     (r, needle) =>
-      r.name.toLowerCase().includes(needle) ||
-      r.area.toLowerCase().includes(needle) ||
-      r.type.toLowerCase().includes(needle)
+      fold(r.name).includes(needle) ||
+      fold(r.area).includes(needle) ||
+      fold(r.type).includes(needle)
   );
 
   const needWork = rows.filter((r) => r.serves < ENOUGH_MAINS).length;

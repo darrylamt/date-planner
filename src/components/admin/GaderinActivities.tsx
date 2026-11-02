@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeHref } from "@/lib/safeHref";
 import { Pager, SearchBox, usePagedRows } from "./TableControls";
+import { fold } from "@/lib/fold";
 
 export interface GaderinRow {
   slug: string;
@@ -45,7 +46,7 @@ export function GaderinActivities({ rows, venues }: { rows: GaderinRow[]; venues
     tab === "dismissed" ? r.dismissed : tab === "linked" ? !r.dismissed && r.venueId : !r.dismissed && !r.venueId
   );
   const paged = usePagedRows(inTab, (r, n) =>
-    [r.title, r.host, r.location, r.category, r.venueName].some((s) => (s ?? "").toLowerCase().includes(n))
+    [r.title, r.host, r.location, r.category, r.venueName].some((s) => fold(s ?? "").includes(n))
   );
   const counts = {
     waiting: rows.filter((r) => !r.dismissed && !r.venueId).length,

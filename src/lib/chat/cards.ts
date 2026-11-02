@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatCard } from "../types";
 import { listShowtimes } from "../movies";
 import { tidyName } from "../nudges";
+import { fold } from "../fold";
 
 /*
  * Cards for what Durobot names (owner, 31 Oct 2026: "instead of giving items
@@ -105,7 +106,7 @@ function clock(hhmm: string): string {
 
 /** The ways a name is written in a reply: whole, or without "- Osu" or "(main branch)". */
 function namesOf(name: string): string[] {
-  const whole = name.toLowerCase().replace(/\s+/g, " ").trim();
+  const whole = fold(name).replace(/\s+/g, " ").trim();
   const short = whole.split(/\s+[-–|]\s+|\s*\(/)[0].trim();
   return [...new Set([whole, short])].filter((n) => n.length >= 4);
 }
@@ -115,7 +116,8 @@ const nameOf = (c: Candidate) => (c.kind === "venue" ? c.name : c.kind === "nigh
 
 /** The candidates the reply names, in the order it names them. */
 export function namedIn(text: string, candidates: Candidate[]): Candidate[] {
-  const said = text.toLowerCase().replace(/\*+/g, "");
+  // Accents aside, so a reply that writes "A La Lune" still finds "À La Lune".
+  const said = fold(text).replace(/\*+/g, "");
   const found = new Map<string, { at: number; c: Candidate }>();
   for (const c of candidates) {
     const at = Math.min(...namesOf(nameOf(c)).map((n) => said.indexOf(n)).filter((i) => i >= 0));
