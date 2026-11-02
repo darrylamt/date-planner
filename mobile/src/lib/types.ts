@@ -30,6 +30,9 @@ export interface Area {
   id: string;
   name: string;
   city: string;
+  /** The area's middle, from its located venues (/api/areas, 2 Nov 2026). Absent with none located. */
+  lat?: number;
+  lng?: number;
 }
 
 export type NoiseLevel = "quiet" | "conversational" | "buzzy" | "loud";
