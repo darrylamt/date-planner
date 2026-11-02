@@ -10,7 +10,8 @@ import { draftFromPlan } from "../../src/lib/repeatPlan";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { chooseAction } from "../../src/lib/actionSheet";
 import { Symbol } from "../../src/components/Symbol";
-import { Mascot, SpeechBubble } from "../../src/components/Mascot";
+import { SpeechBubble } from "../../src/components/SpeechBubble";
+import { OccasionMark } from "../../src/components/OccasionMark";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
@@ -249,7 +250,7 @@ function Empty({
       }}
     >
       <SpeechBubble text={bubble} />
-      <Mascot occasion="date_night" size={110} style={{ marginTop: Spacing.two }} />
+      <OccasionMark occasion="date_night" size={110} style={{ marginTop: Spacing.two }} />
       <Text variant="title3" center style={{ marginTop: space.lg }}>
         {title}
       </Text>

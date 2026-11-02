@@ -6,7 +6,6 @@ import { Text } from "../Text";
 import { useBurst } from "../Burst";
 import { appIconsAvailable, setHalloweenIcon } from "../AppIconPicker";
 import { PressScale, useReducedMotion } from "../motion";
-import { Mascot } from "../Mascot";
 import { Radius, Spacing, radius, space } from "../../theme";
 
 const NIGHT = "#0D0015";
@@ -170,7 +169,6 @@ export function HalloweenCard({ width, onPlan }: { width: number; onPlan: (date:
       ))}
 
       <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-        <Mascot occasion="friend_outing" size={72} animate={false} style={{ marginLeft: 8, marginTop: 14 }} />
         <Pressable
           hitSlop={10}
           onPress={(e) => poke(e.nativeEvent.pageX, e.nativeEvent.pageY)}

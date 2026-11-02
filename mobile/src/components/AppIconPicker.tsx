@@ -11,7 +11,7 @@ import { NativeSheet } from "./native/NativeSheet";
 import { useSeason } from "../lib/season";
 
 /**
- * Change the icon on the home screen to one of the mascots.
+ * Change the icon on the home screen: the original, or a seasonal one.
  *
  * iOS only, and only for icons declared at build time: alternate icons live in
  * the binary, so nothing here can add one over the air. That is also why this
@@ -28,14 +28,6 @@ const Icons = nativeOptional<IconsModule>(() => require("expo-alternate-app-icon
 
 /** Name in app.json, the sprite to preview, and what to call it on screen. */
 export const APP_ICONS: { name: string; label: string; source: number }[] = [
-  { name: "DateNight", label: "Date night", source: require("../../assets/app-icons/date_night.png") },
-  { name: "FirstDate", label: "First date", source: require("../../assets/app-icons/first_date.png") },
-  { name: "Anniversary", label: "Anniversary", source: require("../../assets/app-icons/anniversary.png") },
-  { name: "Birthday", label: "Birthday", source: require("../../assets/app-icons/birthday.png") },
-  { name: "Graduation", label: "Graduation", source: require("../../assets/app-icons/graduation.png") },
-  { name: "Celebration", label: "Celebration", source: require("../../assets/app-icons/celebration.png") },
-  { name: "Friends", label: "Friends", source: require("../../assets/app-icons/friend_outing.png") },
-  { name: "SoloDay", label: "Solo day", source: require("../../assets/app-icons/solo_day.png") },
   // The witch-hat pumpkin, from the Halloween logo. In the binary from build 24.
   { name: "Halloween", label: "Halloween", source: require("../../assets/app-icons/halloween.png") },
 ];
@@ -107,6 +99,15 @@ export function useSeasonalIconReset() {
     }, 4000);
     return () => clearTimeout(t);
   }, [ready, season]);
+}
+
+/** The icon on the home screen now, null for the original or when it cannot be read. */
+export function currentAppIcon(): string | null {
+  try {
+    return Icons?.getAppIconName() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** False on a build without the module, so Profile can hide the row entirely. */

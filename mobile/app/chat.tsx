@@ -44,7 +44,6 @@ import {
   streamChat,
 } from "../src/lib/chat";
 import { SkeletonChat } from "../src/components/Skeleton";
-import { Mascot } from "../src/components/Mascot";
 import { Rise, useReducedMotion } from "../src/components/motion";
 import { useOccasionHue } from "../src/lib/useTheme";
 
@@ -628,7 +627,7 @@ function BubbleView({ bubble, first, last }: { bubble: Bubble; first: boolean; l
 
 const FACE = 30;
 
-/** Durobot's face: the mascot in its suit, on its own colour. */
+/** Durobot's face: its symbol on its own colour (no mascots in the redesign). */
 function DurobotFace({ size = FACE }: { size?: number }) {
   const hue = useOccasionHue(DUROBOT);
   return (
@@ -643,7 +642,7 @@ function DurobotFace({ size = FACE }: { size?: number }) {
         overflow: "hidden",
       }}
     >
-      <Mascot occasion={DUROBOT} size={size * 0.95} animate={false} style={{ marginTop: size * 0.18 }} />
+      <Symbol name="wand.and.stars" size={Math.round(size * 0.55)} color={hue.fg} />
     </View>
   );
 }
@@ -814,7 +813,7 @@ function Welcome({
     <View style={{ gap: space.lg, paddingTop: space.md }}>
       <View style={{ alignItems: "center", gap: space.sm }}>
         <View style={{ width: 104, height: 104, borderRadius: 52, backgroundColor: hue.bg, alignItems: "center", justifyContent: "center" }}>
-          <Mascot occasion={DUROBOT} size={84} />
+          <Symbol name="wand.and.stars" size={48} color={hue.fg} />
         </View>
         <Text variant="title2" center>
           Hi, I&apos;m Durobot

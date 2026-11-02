@@ -15,7 +15,7 @@ import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
 import { Button, ActionBar } from "../../src/components/Button";
 import { PlanSteps } from "../../src/components/plan/PlanSteps";
-import { StepMascot } from "../../src/components/plan/StepMascot";
+import { StepTip } from "../../src/components/plan/StepTip";
 import { ErrorState, LoadingPlan, NoMatch } from "../../src/components/plan/StatusScreens";
 import { ItineraryView } from "../../src/components/plan/ItineraryView";
 import { GUTTER, radius, space } from "../../src/theme";
@@ -705,7 +705,7 @@ export default function PlanNew() {
               wellnessFloors={wellnessFloors}
               update={update}
             />
-            <StepMascot step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />
+            <StepTip step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />
           </>
         )}
       </ScrollView>

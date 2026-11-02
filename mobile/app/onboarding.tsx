@@ -4,7 +4,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Text } from "../src/components/Text";
-import { Mascot, SpeechBubble } from "../src/components/Mascot";
+import { SpeechBubble } from "../src/components/SpeechBubble";
+import { OccasionMark } from "../src/components/OccasionMark";
 import { Symbol } from "../src/components/Symbol";
 import { OccasionGrid } from "../src/components/home/OccasionGrid";
 import { useReducedMotion } from "../src/components/motion";
@@ -200,12 +201,7 @@ export default function Onboarding() {
             }}
           >
             <SpeechBubble text={slide.says} />
-            <Mascot
-              occasion={slide.occasion}
-              size={132}
-              animate={!reduced}
-              style={{ marginTop: Spacing.two }}
-            />
+            <OccasionMark occasion={slide.occasion} size={132} style={{ marginTop: Spacing.two }} />
             <Text
               variant="title1"
               center

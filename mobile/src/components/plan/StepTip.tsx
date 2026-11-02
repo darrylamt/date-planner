@@ -1,11 +1,12 @@
 import { View } from "react-native";
-import { Mascot, SpeechBubble } from "../Mascot";
+import { SpeechBubble } from "../SpeechBubble";
+import { OccasionMark } from "../OccasionMark";
 import { GUTTER, Spacing } from "../../theme";
 import type { StepId } from "../../lib/planConstants";
 import type { Occasion } from "../../lib/types";
 
 /**
- * A tip from the mascot, sitting beside the question it is about.
+ * A tip, sitting beside the question it is about, with the occasion's mark.
  *
  * Deliberately advice a person could not get from the field itself, "pick two
  * areas" is already on the label. These say what the answer will *do* to the
@@ -49,7 +50,7 @@ const OCCASION_TIPS: Partial<Record<Occasion, Partial<Record<StepId, string>>>> 
   },
 };
 
-export function StepMascot({
+export function StepTip({
   step,
   occasion,
   driving = false,
@@ -75,7 +76,7 @@ export function StepMascot({
         marginTop: Spacing.five,
       }}
     >
-      <Mascot occasion={occasion} size={64} />
+      <OccasionMark occasion={occasion} size={44} />
       <View style={{ flex: 1, paddingBottom: Spacing.two }}>
         <SpeechBubble text={tip} align="left" />
       </View>

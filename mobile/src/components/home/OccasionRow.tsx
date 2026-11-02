@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { Text } from "../Text";
-import { Mascot } from "../Mascot";
+import { OccasionMark } from "../OccasionMark";
 import { PressScale } from "../motion";
 import { GUTTER, Radius, Spacing } from "../../theme";
 import { useOccasionHue } from "../../lib/useTheme";
@@ -79,7 +79,7 @@ function OccasionCard({
       }}
     >
       <View style={{ alignItems: "flex-start" }}>
-        <Mascot occasion={occasion.id as PlanInputs["occasion"]} size={72} animate={false} />
+        <OccasionMark occasion={occasion.id as PlanInputs["occasion"]} size={72} />
       </View>
       <View style={{ gap: 2 }}>
         <Text variant="headline" numberOfLines={2} style={{ color: hue.fg }}>

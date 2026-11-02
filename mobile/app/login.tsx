@@ -20,7 +20,7 @@ import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Symbol } from "../src/components/Symbol";
 import { BrandMark } from "../src/components/BrandMark";
-import { Mascot } from "../src/components/Mascot";
+import { OccasionMark } from "../src/components/OccasionMark";
 import { PressScale, Rise, useReducedMotion } from "../src/components/motion";
 import { GUTTER, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
@@ -488,7 +488,7 @@ function Character({ occasion, small, reduced }: { occasion: Occasion; small: bo
       {/* Two layers, one driver each: a value cannot be driven from both sides. */}
       <Animated.View style={{ transform: [{ scale: pop }] }}>
         <Animated.View style={{ transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }}>
-          <Mascot occasion={occasion} size={size} animate={!reduced} />
+          <OccasionMark occasion={occasion} size={size} />
         </Animated.View>
       </Animated.View>
       {/* The shadow tightens as the character rises, so it reads as floating. */}

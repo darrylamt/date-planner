@@ -13,7 +13,11 @@ import { supabase } from "./supabase";
  *
  * An update reaches only builds with the same runtime version, so once the
  * redesign needs native code the App Store build lacks, it moves to a new
- * runtime and this phone needs the TestFlight build that has it.
+ * runtime and this phone needs the TestFlight build that has it (the
+ * "redesign" profile in eas.json).
+ *
+ * In this copy: whatever replaces Profile must keep a way back to the current
+ * app. The crash screen keeps one too.
  */
 export const REDESIGN_CHANNEL = "redesign";
 

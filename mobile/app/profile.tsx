@@ -23,7 +23,7 @@ import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
-import { AppIconPicker, appIconsAvailable } from "../src/components/AppIconPicker";
+import { AppIconPicker, appIconsAvailable, currentAppIcon } from "../src/components/AppIconPicker";
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
@@ -103,7 +103,7 @@ export default function Profile() {
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const { preview: seasonPreview, setPreview: setSeasonPreview } = useSeason();
+  const { preview: seasonPreview, setPreview: setSeasonPreview, season } = useSeason();
   // The redesign switch (redesign.ts): admins, and anyone already on it so they can get back.
   const [redesignRow, setRedesignRow] = useState(onRedesign());
 
@@ -522,12 +522,14 @@ export default function Profile() {
           />
         ) : null}
         {/* Hidden rather than disabled on a build without the module: a row
-            that explains why it cannot work is worse than no row. */}
-        {appIconsAvailable() ? (
+            that explains why it cannot work is worse than no row. Only with
+            something to choose: a seasonal icon, or a way back from a mascot
+            chosen before the redesign. */}
+        {appIconsAvailable() && (season === "halloween" || currentAppIcon() !== null) ? (
           <Row
             icon="app.badge"
             title="App icon"
-            subtitle="Pick a mascot for your home screen"
+            subtitle={season === "halloween" ? "A Halloween one, for now" : "Back to the original"}
             chevron
             onPress={() => setIconPickerOpen(true)}
           />

@@ -24,6 +24,10 @@
         "buildType": "apk"
       }
     },
+    "redesign": {
+      "extends": "production",
+      "channel": "redesign"
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",
