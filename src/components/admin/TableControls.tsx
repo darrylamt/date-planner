@@ -1,7 +1,7 @@
-import { fold } from "@/lib/fold";
 "use client";
 
 import { useState } from "react";
+import { fold } from "@/lib/fold";
 
 /**
  * Search and paging for the admin tables.
