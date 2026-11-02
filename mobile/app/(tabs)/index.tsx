@@ -2,22 +2,17 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Text } from "../../src/components/Text";
+import * as Haptics from "expo-haptics";
 import { Symbol } from "../../src/components/Symbol";
-import { Chip } from "../../src/components/Chip";
-import { GUTTER, HAIRLINE, Radius, Spacing, TAB_BAR } from "../../src/theme";
-import { useTheme } from "../../src/lib/useTheme";
+import { GUTTER, TAB_BAR } from "../../src/theme";
+import { useLook } from "../../src/lib/appearance";
 import { loadDraft, type Draft } from "../../src/lib/draft";
 import { longDate } from "../../src/lib/format";
 import { TOTAL_STEPS } from "../../src/lib/planConstants";
 import { FeaturedRow } from "../../src/components/home/FeaturedRow";
-import { CityChip } from "../../src/components/home/CityChip";
-import { SectionHeading } from "../../src/components/home/SectionHeading";
 import { Avatar } from "../../src/components/home/Avatar";
-import { OccasionRow } from "../../src/components/home/OccasionRow";
-import { OccasionGrid } from "../../src/components/home/OccasionGrid";
-import { NativeSheet } from "../../src/components/native/NativeSheet";
 import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { setBillSource } from "../../src/lib/bill";
@@ -28,6 +23,7 @@ import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
 import { HeardFromCard } from "../../src/components/HeardFromCard";
 import { askForNudgesOnce } from "../../src/lib/nudges";
+import { Body, Display, KenteBand, LookScreen } from "../../src/components/look";
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -35,48 +31,35 @@ import { askForNudgesOnce } from "../../src/lib/nudges";
  */
 const GROUPS_LAUNCHED = false;
 
-/*
- * The occasion row's order: most planned first, from plan_demand over the 60
- * days to 18 Oct 2026 (date night 48, birthday 32, first date 27, solo 25,
- * friends 18, graduation 16). Most people only see the first two and a half
- * without swiping. Here rather than in the mirrored constants so it can be
- * reordered over the air.
- */
-const ROW_ORDER: PlanInputs["occasion"][] = [
-  "date_night",
-  "birthday",
-  "first_date",
-  "solo_day",
-  "friend_outing",
-  "graduation",
-  "anniversary",
-  "business_meeting",
-  "family_day",
-  "celebration",
-];
-
 /** Set once the first plan is saved; "How it works" is only for people who have not planned yet. */
 const FIRST_SAVE_KEY = "duro.firstSave.v1";
 
+/** "Akwaaba." in Kente; otherwise the time of day. */
+function greeting(lookId: string): string {
+  if (lookId === "kente") return "Akwaaba.";
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning." : h < 17 ? "Good afternoon." : "Good evening.";
+}
+
 /**
- * Home: what are you planning?
+ * Home, redesigned (owner, 2 Nov 2026).
  *
- * A new user should know what to do from the first screen, so the occasions
- * come first, as one row of big cards, and everything else follows in order
- * of how often it is needed: a plan already under way, "out already", the
- * week's featured places, how it works for first-timers, and the bill tools
- * for a night that was never planned here. Durobot has its own tab now, so
- * it no longer takes the top of this screen.
+ * One question and one button: where to tonight, and Plan a night, which asks
+ * the occasion first. Durobot sits under it as a bar to talk to, then the
+ * things for a night already under way, what is on, and the bill tools. The
+ * same layout in every look; only the look changes.
  */
 export default function Home() {
-  const c = useTheme();
+  const look = useLook();
+  const c = look.colors;
+  const insets = useSafeAreaInsets();
+  const [mode, setMode] = useState<"outings" | "trips">("outings");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
   const [pro, setPro] = useState(false);
   const [groupsOn, setGroupsOn] = useState(GROUPS_LAUNCHED);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [newcomer, setNewcomer] = useState(false);
-  const [allOpen, setAllOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,19 +67,12 @@ export default function Home() {
       // Weekend ideas, asked once on this phone, after Home has settled (nudges.ts).
       const ask = setTimeout(() => active && void askForNudgesOnce(), 2500);
       void loadDraft().then((d) => active && setDraft(d));
-      // On focus, so a new photo set in Settings is here when they come back.
       void fetchProfile()
         .then((p) =>
           active &&
-          setMe(
-            // No email is an account-less session: nobody to show yet.
-            p?.email
-              ? { avatarUrl: p.avatarUrl, initial: (p.displayName ?? "").slice(0, 1).toUpperCase() }
-              : null
-          )
+          setMe(p?.email ? { avatarUrl: p.avatarUrl, initial: (p.displayName ?? "").slice(0, 1).toUpperCase() } : null)
         )
         .catch(() => undefined);
-      // "How it works" until the first plan is saved, on this phone or on the account.
       void (async () => {
         const seen = await AsyncStorage.getItem(FIRST_SAVE_KEY).catch(() => null);
         if (seen) return active && setNewcomer(false);
@@ -107,7 +83,6 @@ export default function Home() {
         }
         if (active) setNewcomer(true);
       })();
-      // Group outings: everyone once launched, admins until then; their groups either way.
       void (async () => {
         const { data } = await supabase.auth.getUser();
         if (!data.user) return;
@@ -123,7 +98,6 @@ export default function Home() {
           if (active && r.ok) setGroups(r.data.groups.filter((g) => g.status !== "cancelled").slice(0, 3));
         }
       })().catch(() => undefined);
-      // On focus too, so the star is there when they come back from buying Pro.
       void fetchAllowance()
         .then((a) => active && setPro(a?.tier === "pro"))
         .catch(() => undefined);
@@ -139,262 +113,368 @@ export default function Home() {
   const hasDraft = Boolean(draftInputs && !draft?.shareSlug && (draft?.itinerary || draft?.step));
   const draftDone = draft?.itinerary ? TOTAL_STEPS : Math.min(draft?.step ?? 0, TOTAL_STEPS);
   const draftPct = Math.round((draftDone / TOTAL_STEPS) * 100);
-  /** First stop's photo stands in for the plan, the way a cover image would. */
   const draftImage = draft?.itinerary?.stops?.[0]?.image_url ?? null;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: c.background }}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Where, and you. One slim row: the city a plan starts in, and Settings. */}
-      <View
-        style={{
-          paddingHorizontal: GUTTER,
-          paddingTop: Spacing.four,
-          minHeight: 44,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+    <LookScreen band="none">
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR.clearance }}
+        showsVerticalScrollIndicator={false}
       >
-        <CityChip style={{ marginBottom: 0 }} />
-        <Avatar
-          size={40}
-          avatarUrl={me?.avatarUrl ?? null}
-          initial={me?.initial || null}
-          pro={pro}
-          onPress={() => router.push("/profile")}
-        />
-      </View>
+        {/* The band scrolls with the page, under the status bar, so the clock never sits on it. */}
+        <View style={{ height: insets.top, backgroundColor: look.band ? look.colors.background : "transparent" }} />
+        <KenteBand />
 
-      {/* What are you planning? See all sits on the line right above the cards it opens. */}
-      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.one }}>
-        <Text variant="title1">What are you planning?</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: Spacing.three }}>
-          <Text variant="footnote" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
-            Pick one. We plan the whole outing.
-          </Text>
-          <Pressable hitSlop={10} onPress={() => setAllOpen(true)} accessibilityRole="button">
-            <Text variant="subheadline" weight="600" style={{ color: c.accent }}>
-              See all
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-      <View style={{ marginTop: Spacing.three }}>
-        <OccasionRow order={ROW_ORDER} onPick={(id) => void startNewPlan(id, "home_row")} />
-      </View>
-
-      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three, gap: Spacing.two }}>
-        {/* A plan already under way: one slim bar, straight back into it. */}
-        {hasDraft && draftInputs ? (
-          <Pressable
-            onPress={() => router.push("/plan/new")}
-            accessibilityRole="button"
-            accessibilityLabel="Resume your plan in progress"
-            style={({ pressed }) => ({
-              height: 56,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: Spacing.three,
-              paddingHorizontal: Spacing.three,
-              borderRadius: Radius.lg,
-              backgroundColor: c.backgroundElement,
-              borderWidth: HAIRLINE,
-              borderColor: c.border,
-              overflow: "hidden",
-              opacity: pressed ? 0.75 : 1,
-            })}
-          >
-            {draftImage ? (
-              <Image source={{ uri: draftImage }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.skeleton }} contentFit="cover" />
-            ) : (
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.backgroundSunken, alignItems: "center", justifyContent: "center" }}>
-                <Symbol name="calendar" size={16} color={c.textTertiary} />
-              </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text variant="subheadline" weight="600" numberOfLines={1}>
-                {draft?.itinerary ? draft.itinerary.title : `Plan for ${longDate(draftInputs.date)}`}
-              </Text>
-              <Text variant="footnote" tone="secondary">
-                {draft?.itinerary ? "Ready to view" : `${draftPct}% done`}
-              </Text>
-            </View>
-            <Symbol name="play.fill" size={14} color={c.accent} />
-            <View style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${draftPct}%`, backgroundColor: c.accent }} />
-          </Pressable>
-        ) : null}
-
-        {/* Out already, and with friends when that is switched on. */}
-        <View style={{ flexDirection: "row", gap: Spacing.two }}>
-          <QuickTile
-            icon="iphone.radiowaves.left.and.right"
-            title="Out already?"
-            sub={groupsOn ? "Shake for a spot" : "Shake for somewhere near you"}
-            tint
-            onPress={() => router.push("/where-next")}
-          />
-          {groupsOn ? (
-            <QuickTile icon="person.3.fill" title="Plan with friends" sub="Every budget fits" onPress={() => router.push("/group/new")} />
-          ) : null}
-        </View>
-        {groups.map((g) => (
-          <Pressable
-            key={g.code}
-            onPress={() => router.push(`/group/${g.code}`)}
-            accessibilityRole="button"
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: Spacing.two,
-              paddingVertical: Spacing.two,
-              paddingHorizontal: Spacing.three,
-              borderRadius: Radius.lg,
-              backgroundColor: c.accentSoft,
-              opacity: pressed ? 0.75 : 1,
-            })}
-          >
-            <Symbol name="person.3.fill" size={14} color={c.accent} />
-            <Text variant="subheadline" weight="600" style={{ flex: 1 }} numberOfLines={1}>
-              {g.title || "Group outing"}
-            </Text>
-            <Text variant="footnote" tone="secondary">
-              {g.status === "locked" ? "Planned" : g.role === "organiser" ? "Collecting answers" : "Answered"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <FeaturedRow />
-
-      {/* Asked once, and not on a first visit. */}
-      {newcomer ? null : <HeardFromCard />}
-
-      {/* Only for somebody who has not planned yet. */}
-      {newcomer ? (
-        <>
-          <SectionHeading title="How it works" />
-          <View style={{ paddingHorizontal: GUTTER, gap: Spacing.three }}>
-            <Step n="01" title="Pick the occasion" body="A date, a birthday, a day on your own, a night out with friends." />
-            <Step n="02" title="Area, budget and day" body="Where, how much, and when. Everything else is optional." />
-            <Step n="03" title="Get the whole outing, priced" body="Back-to-back stops from real menus, inside your budget." />
+        <View style={{ paddingHorizontal: GUTTER, paddingTop: 20, gap: 18 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Body size={15} weight="600" tone="secondary">
+              {greeting(look.id)}
+            </Body>
+            <Avatar size={40} avatarUrl={me?.avatarUrl ?? null} initial={me?.initial || null} pro={pro} onPress={() => router.push("/profile")} />
           </View>
-        </>
-      ) : null}
 
-      {/* For a night that was never planned here. Inside a plan they are already one tap away. */}
-      <View
-        style={{
-          paddingHorizontal: GUTTER,
-          marginTop: Spacing.section,
-          flexDirection: "row",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: Spacing.two,
-        }}
-      >
-        <Text variant="footnote" tone="secondary" style={{ marginRight: Spacing.one }}>
-          Out with no plan?
-        </Text>
-        <Chip
-          label="🎲 Who pays?"
-          onPress={() => {
-            setBillSource(null);
-            router.push("/who-pays");
-          }}
-        />
-        <Chip
-          label="💸 Split a bill"
-          onPress={() => {
-            setBillSource(null);
-            router.push("/split");
-          }}
-        />
-      </View>
+          <Display size={48} weight="700" style={{ marginTop: 6 }}>
+            {mode === "outings" ? "Where to tonight?" : "Where are you headed?"}
+          </Display>
 
-      <Text variant="footnote" tone="tertiary" style={{ paddingHorizontal: GUTTER, marginTop: Spacing.section }}>
-        Menu prices come from our catalogue and can change. Transport is always an estimate.
-      </Text>
+          <Segmented value={mode} onChange={setMode} />
 
-      {/* Every occasion, with what each is for. Closes before the planner opens. */}
-      <NativeSheet visible={allOpen} onClose={() => setAllOpen(false)} detents={["medium", "large"]}>
-        <ScrollView contentContainerStyle={{ padding: GUTTER, gap: Spacing.three }}>
-          <Text variant="title2">What are you planning?</Text>
-          <OccasionGrid
-            onPick={(id) => {
-              setAllOpen(false);
-              setTimeout(() => void startNewPlan(id, "home_all"), 350);
-            }}
-          />
-        </ScrollView>
-      </NativeSheet>
-    </ScrollView>
+          {mode === "trips" ? (
+            <View style={{ borderRadius: 28, borderWidth: 1, borderColor: look.tileEdge, padding: 20, gap: 8 }}>
+              <Display size={24} weight="700">
+                Trips are on the way
+              </Display>
+              <Body tone="secondary">
+                Cape Coast, Volta, Kumasi and more: how to get there, where to stay, and what to do once you arrive.
+              </Body>
+            </View>
+          ) : (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Plan a night. We plan it all, with real prices."
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  void startNewPlan(undefined, "home_cta");
+                }}
+                style={({ pressed }) => ({
+                  height: 136,
+                  borderRadius: 28,
+                  backgroundColor: look.sky ? look.tile : look.primary,
+                  borderWidth: look.sky ? 1 : 0,
+                  borderColor: look.tileEdge,
+                  padding: 20,
+                  justifyContent: "space-between",
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                })}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <Display size={28} weight="700" color={look.sky ? c.text : look.onPrimary}>
+                    Plan a night
+                  </Display>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: look.sky ? look.primary : look.id === "daylight" ? c.accent : look.colors.background,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Symbol
+                      name="arrow.right"
+                      size={18}
+                      weight="bold"
+                      color={look.sky ? look.onPrimary : look.id === "daylight" ? "#FFFFFF" : look.primary}
+                    />
+                  </View>
+                </View>
+                <Body size={15} weight="500" color={look.sky ? c.textSecondary : look.onPrimary} style={{ opacity: look.sky ? 1 : 0.85 }}>
+                  We plan it all, with real prices.
+                </Body>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Ask Durobot anything"
+                onPress={() => router.navigate("/durobot")}
+                style={({ pressed }) => ({
+                  height: 56,
+                  borderRadius: look.id === "daylight" ? 18 : 28,
+                  borderWidth: 1,
+                  borderColor: look.tileEdge,
+                  backgroundColor: look.sky ? look.tile : "transparent",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingLeft: 12,
+                  paddingRight: 8,
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: look.primary, alignItems: "center", justifyContent: "center" }}>
+                  <Symbol name="wand.and.stars" size={16} color={look.onPrimary} />
+                </View>
+                <Body size={15} weight="500" tone="secondary" style={{ flex: 1 }}>
+                  Ask Durobot anything
+                </Body>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: look.tile, alignItems: "center", justifyContent: "center" }}>
+                  <Symbol name="mic.fill" size={16} color={c.text} />
+                </View>
+              </Pressable>
+
+              {hasDraft && draftInputs ? (
+                <Pressable
+                  onPress={() => router.push("/plan/new")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Resume your plan in progress"
+                  style={({ pressed }) => ({
+                    minHeight: 64,
+                    borderRadius: 22,
+                    backgroundColor: look.tile,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingHorizontal: 14,
+                    overflow: "hidden",
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  {draftImage ? (
+                    <Image source={{ uri: draftImage }} style={{ width: 40, height: 40, borderRadius: 20 }} contentFit="cover" />
+                  ) : (
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: look.tile, alignItems: "center", justifyContent: "center" }}>
+                      <Symbol name="calendar" size={16} color={c.textSecondary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Body size={15} weight="600" numberOfLines={1}>
+                      {draft?.itinerary ? draft.itinerary.title : `Plan for ${longDate(draftInputs.date)}`}
+                    </Body>
+                    <Body size={13} tone="secondary">
+                      {draft?.itinerary ? "Ready to view" : `${draftPct}% done`}
+                    </Body>
+                  </View>
+                  <Symbol name="play.fill" size={14} color={c.accent} />
+                  <View style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${draftPct}%`, backgroundColor: look.primary }} />
+                </Pressable>
+              ) : null}
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <Tile icon="iphone.radiowaves.left.and.right" title="Where next?" sub="Out already? Shake" filled onPress={() => router.push("/where-next")} />
+                {groupsOn ? (
+                  <Tile icon="person.3.fill" title="With friends" sub="Every budget fits" onPress={() => router.push("/group/new")} />
+                ) : (
+                  <Tile
+                    icon="dice.fill"
+                    title="Who pays?"
+                    sub="Or split the bill"
+                    onPress={() => {
+                      setBillSource(null);
+                      router.push("/who-pays");
+                    }}
+                  />
+                )}
+              </View>
+
+              {groups.map((g) => (
+                <Pressable
+                  key={g.code}
+                  onPress={() => router.push(`/group/${g.code}`)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 18,
+                    backgroundColor: look.tile,
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Symbol name="person.3.fill" size={14} color={c.accent} />
+                  <Body size={15} weight="600" style={{ flex: 1 }} numberOfLines={1}>
+                    {g.title || "Group outing"}
+                  </Body>
+                  <Body size={13} tone="secondary">
+                    {g.status === "locked" ? "Planned" : g.role === "organiser" ? "Collecting answers" : "Answered"}
+                  </Body>
+                </Pressable>
+              ))}
+            </>
+          )}
+        </View>
+
+        {mode === "outings" ? (
+          <>
+            <FeaturedRow />
+
+            {newcomer ? null : <HeardFromCard />}
+
+            {newcomer ? (
+              <View style={{ paddingHorizontal: GUTTER, marginTop: 32, gap: 16 }}>
+                <Display size={22} weight="700">
+                  How it works
+                </Display>
+                <HowStep n="1" title="Say what it's for" body="A date, a birthday, a day on your own, friends out." />
+                <HowStep n="2" title="Where, how much, and when" body="Five quick answers. Everything else is optional." />
+                <HowStep n="3" title="Get the whole outing, priced" body="Back-to-back stops from real menus, inside your budget." />
+              </View>
+            ) : null}
+
+            <View style={{ paddingHorizontal: GUTTER, marginTop: 28, flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+              {groupsOn ? (
+                <SmallLink
+                  label="Who pays?"
+                  onPress={() => {
+                    setBillSource(null);
+                    router.push("/who-pays");
+                  }}
+                />
+              ) : null}
+              <SmallLink
+                label="Split a bill"
+                onPress={() => {
+                  setBillSource(null);
+                  router.push("/split");
+                }}
+              />
+            </View>
+
+            <Body size={12} tone="tertiary" style={{ paddingHorizontal: GUTTER, marginTop: 28 }}>
+              Menu prices come from our catalogue and can change. Transport is always an estimate.
+            </Body>
+          </>
+        ) : null}
+      </ScrollView>
+    </LookScreen>
   );
 }
 
-function QuickTile({
+function Segmented({ value, onChange }: { value: "outings" | "trips"; onChange: (v: "outings" | "trips") => void }) {
+  const look = useLook();
+  const option = (id: "outings" | "trips", label: string) => {
+    const on = value === id;
+    return (
+      <Pressable
+        key={id}
+        accessibilityRole="button"
+        accessibilityState={{ selected: on }}
+        onPress={() => {
+          void Haptics.selectionAsync();
+          onChange(id);
+        }}
+        style={{
+          height: 34,
+          paddingHorizontal: 18,
+          borderRadius: 17,
+          justifyContent: "center",
+          backgroundColor: on ? look.third : "transparent",
+        }}
+      >
+        <Body size={14} weight={on ? "700" : "600"} color={on ? look.onThird : look.colors.text}>
+          {label}
+        </Body>
+      </Pressable>
+    );
+  };
+  return (
+    <View style={{ flexDirection: "row", alignSelf: "flex-start", padding: 3, borderRadius: 20, borderWidth: 1, borderColor: look.tileEdge }}>
+      {option("outings", "Outings")}
+      {option("trips", "Trips")}
+    </View>
+  );
+}
+
+function Tile({
   icon,
   title,
   sub,
-  tint = false,
+  filled = false,
   onPress,
 }: {
-  icon: "iphone.radiowaves.left.and.right" | "person.3.fill";
+  icon: "iphone.radiowaves.left.and.right" | "person.3.fill" | "dice.fill";
   title: string;
   sub: string;
-  tint?: boolean;
+  filled?: boolean;
   onPress: () => void;
 }) {
-  const c = useTheme();
+  const look = useLook();
+  const fg = filled ? look.onSecond : look.colors.text;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${sub}`}
+      style={({ pressed }) => ({
+        flex: 1,
+        height: 112,
+        borderRadius: 24,
+        padding: 16,
+        justifyContent: "space-between",
+        backgroundColor: filled ? look.second : "transparent",
+        borderWidth: filled ? 0 : 1,
+        borderColor: look.tileEdge,
+        transform: [{ scale: pressed ? 0.98 : 1 }],
+      })}
+    >
+      <Symbol name={icon} size={22} color={fg} />
+      <View>
+        <Display size={18} weight="700" color={fg}>
+          {title}
+        </Display>
+        <Body size={13} weight="500" color={fg} style={{ opacity: 0.8 }} numberOfLines={1}>
+          {sub}
+        </Body>
+      </View>
+    </Pressable>
+  );
+}
+
+function HowStep({ n, title, body }: { n: string; title: string; body: string }) {
+  const look = useLook();
+  return (
+    <View style={{ flexDirection: "row", gap: 14 }}>
+      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: look.primary, alignItems: "center", justifyContent: "center" }}>
+        <Body size={14} weight="700" color={look.onPrimary}>
+          {n}
+        </Body>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Body size={16} weight="700">
+          {title}
+        </Body>
+        <Body size={14} tone="secondary">
+          {body}
+        </Body>
+      </View>
+    </View>
+  );
+}
+
+function SmallLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const look = useLook();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       style={({ pressed }) => ({
-        flex: 1,
-        minHeight: 56,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.two,
-        paddingHorizontal: Spacing.three,
-        paddingVertical: Spacing.two,
-        borderRadius: Radius.lg,
-        backgroundColor: tint ? c.accentSoft : c.backgroundElement,
-        borderWidth: tint ? 0 : HAIRLINE,
-        borderColor: c.border,
-        opacity: pressed ? 0.75 : 1,
+        height: 38,
+        paddingHorizontal: 14,
+        borderRadius: 19,
+        borderWidth: 1,
+        borderColor: look.tileEdge,
+        justifyContent: "center",
+        alignSelf: "flex-start",
+        opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Symbol name={icon} size={18} color={c.accent} />
-      <View style={{ flex: 1 }}>
-        <Text variant="subheadline" weight="600" numberOfLines={1}>
-          {title}
-        </Text>
-        <Text variant="caption1" tone="secondary" numberOfLines={1}>
-          {sub}
-        </Text>
-      </View>
-      <Symbol name="chevron.right" size={12} weight="semibold" color={c.textTertiary} />
+      <Body size={14} weight="600">
+        {label}
+      </Body>
     </Pressable>
-  );
-}
-
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
-  return (
-    <View style={{ flexDirection: "row", gap: Spacing.three }}>
-      <Text variant="caption" tone="tertiary" tabular style={{ width: 22, marginTop: 2 }}>
-        {n}
-      </Text>
-      <View style={{ flex: 1 }}>
-        <Text variant="headline">{title}</Text>
-        <Text variant="footnote" tone="secondary" style={{ marginTop: 1 }}>
-          {body}
-        </Text>
-      </View>
-    </View>
   );
 }

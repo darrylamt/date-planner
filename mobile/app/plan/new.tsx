@@ -14,7 +14,7 @@ import * as Haptics from "expo-haptics";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
 import { Button, ActionBar } from "../../src/components/Button";
-import { PlanSteps } from "../../src/components/plan/PlanSteps";
+import { BareSteps, PlanSteps } from "../../src/components/plan/PlanSteps";
 import { StepTip } from "../../src/components/plan/StepTip";
 import { ErrorState, LoadingPlan, NoMatch } from "../../src/components/plan/StatusScreens";
 import { ItineraryView } from "../../src/components/plan/ItineraryView";
@@ -37,13 +37,29 @@ import {
   defaultStopsFor,
   defaultInputs,
   isOptionalStep,
+  OCCASION_EXTRA,
+  PARTY_RULES,
   stepsFor,
+  vibesFor,
+  type StepId,
   tidyForPathway,
   wellnessAllowed,
   wellnessKindsOf,
 } from "../../src/lib/planConstants";
 import { possessiveName, pronounForGender } from "../../src/lib/pronouns";
-import { longDate } from "../../src/lib/format";
+import { longDate, shortDate, time12 } from "../../src/lib/format";
+import {
+  BudgetDial,
+  EnoughToPlan,
+  OccasionCards,
+  PeopleCounter,
+  QuestionShell,
+  SunTime,
+  VibeDuel,
+  occasionLabel,
+} from "../../src/components/redesign/Questions";
+import { PlanReveal } from "../../src/components/redesign/PlanReveal";
+import { Body, LookButton } from "../../src/components/look";
 import { isDriving } from "../../src/lib/budget";
 import { registerForPush } from "../../src/lib/push";
 import { getAiConsent, setAiConsent } from "../../src/lib/aiConsent";
@@ -52,129 +68,6 @@ import { supabase } from "../../src/lib/supabase";
 import { record } from "../../src/lib/usage";
 import type { Area, GenerateResponse, Itinerary, PlanInputs } from "../../src/lib/types";
 import { SkeletonRows, SkeletonSteps } from "../../src/components/Skeleton";
-
-/**
- * The step progress rail.
- *
- * Its own component so it reads the theme from inside OccasionThemeProvider.
- * The screen's own useTheme() runs above that provider in the tree, so a
- * colour taken from there is resolved before the occasion theme exists, which
- * is why this bar stayed teal on every pathway.
- */
-function ProgressRail({ total, current, optionalFrom }: { total: number; current: number; optionalFrom: number }) {
-  const c = useTheme();
-
-  /*
-   * The navigation header sits above OccasionThemeProvider in the tree, so it
-   * is painted with the base background while everything below it is painted
-   * with the occasion's. On a birthday that showed as a strip of a different
-   * colour along the top edge, directly above this rail. The header cannot
-   * read the occasion theme, so the occasion theme tells the header.
-   */
-  const navigation = useNavigation();
-  useEffect(() => {
-    navigation.setOptions({
-      headerStyle: { backgroundColor: c.background },
-      headerTintColor: c.accent,
-      headerTitleStyle: { color: c.text },
-    });
-  }, [navigation, c.background, c.accent, c.text]);
-
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        gap: 4,
-        paddingHorizontal: GUTTER,
-        paddingBottom: space.lg,
-        backgroundColor: c.background,
-      }}
-    >
-      {Array.from({ length: total }, (_, i) => (
-        <View
-          key={i}
-          style={{
-            flex: 1,
-            // The optional steps are thinner and paler: the part you may skip looks like it.
-            height: i >= optionalFrom ? 3 : 5,
-            alignSelf: "center",
-            borderRadius: radius.pill,
-            backgroundColor: i <= current ? c.accent : c.backgroundSelected,
-            opacity: i >= optionalFrom && i > current ? 0.55 : 1,
-          }}
-        />
-      ))}
-    </View>
-  );
-}
-
-/**
- * At the start of every pathway: how few questions are actually needed.
- *
- * People were complaining there were too many questions, reading every one
- * as compulsory; the "optional" in a field label was too small to notice.
- * So it is said first, plainly, and with the reason to answer more anyway.
- */
-function EssentialsIntro({ needed }: { needed: number }) {
-  const c = useTheme();
-  return (
-    <View
-      style={{
-        marginHorizontal: GUTTER,
-        marginBottom: space.lg,
-        padding: space.md,
-        borderRadius: radius.card,
-        backgroundColor: c.accentSoft,
-        flexDirection: "row",
-        gap: space.sm,
-        alignItems: "flex-start",
-      }}
-    >
-      <Symbol name="clock" size={18} color={c.accent} />
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text variant="headline" style={{ color: c.accent }}>
-          Only {needed} quick questions are needed
-        </Text>
-        <Text variant="subheadline" style={{ color: c.text }}>
-          After those, everything is optional and you can build your plan straight away. Every extra answer makes it more personal, so add what you like.
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-/** On every optional step: say so, big enough to be seen. */
-function OptionalBanner({ first }: { first: boolean }) {
-  const c = useTheme();
-  return (
-    <View
-      style={{
-        marginHorizontal: GUTTER,
-        marginBottom: space.lg,
-        padding: space.md,
-        borderRadius: radius.card,
-        backgroundColor: c.accentSoft,
-        gap: 4,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-        <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: c.accent }}>
-          <Text variant="caption1" weight="700" uppercase style={{ color: c.textOnBrand, letterSpacing: 0.6 }}>
-            Optional
-          </Text>
-        </View>
-        <Text variant="headline" style={{ color: c.accent, flex: 1 }}>
-          {first ? "That's all we need" : "Skip it if you like"}
-        </Text>
-      </View>
-      <Text variant="subheadline" style={{ color: c.text }}>
-        {first
-          ? "Answer a few more for a more personal plan, or skip the rest and build it now."
-          : "Each answer makes the plan more personal. Skip the rest whenever you're ready."}
-      </Text>
-    </View>
-  );
-}
 
 /** Page fill, likewise resolved inside the provider. */
 function ThemedPage({ children }: { children: React.ReactNode }) {
@@ -194,6 +87,7 @@ function isOccasion(v: string): v is PlanInputs["occasion"] {
 
 type Phase =
   | { name: "steps"; step: number }
+  | { name: "checkpoint" }
   | { name: "loading" }
   | { name: "result"; itinerary: Itinerary }
   | { name: "no_match"; data: Extract<GenerateResponse, { status: "no_match" }> }
@@ -244,6 +138,8 @@ export default function PlanNew() {
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // The reveal shows first (PlanReveal); the full plan, with swaps and menus, opens from it.
+  const [full, setFull] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -400,6 +296,7 @@ export default function PlanNew() {
         // A key for this plan, kept through swaps and saving, and its stops counted as shown (signals.ts).
         const itinerary = { ...data.itinerary, plan_key: newPlanKey() };
         trackStops("shown", itinerary, finalInputs.occasion);
+        setFull(false);
         setPhase({ name: "result", itinerary });
         void saveDraft({ itinerary });
       } else if (data.status === "no_match") {
@@ -494,6 +391,13 @@ export default function PlanNew() {
    * out was to force-quit. Every phase except generation now offers an exit.
    */
   useEffect(() => {
+    // The redesigned questions, the checkpoint and the reveal draw their own header.
+    const own = phase.name === "steps" || phase.name === "checkpoint" || (phase.name === "result" && !full);
+    navigation.setOptions({ headerShown: !own });
+    if (own) {
+      navigation.setOptions({ gestureEnabled: phase.name === "steps" && phase.step === 0 });
+      return;
+    }
     /**
      * Close is always available, and always safe: answers are written to the
      * draft on every change, so leaving keeps the plan on the home screen
@@ -510,16 +414,6 @@ export default function PlanNew() {
         <Symbol name="xmark" size={17} weight="semibold" />
       </Pressable>
     );
-
-    if (phase.name === "steps") {
-      navigation.setOptions({
-        title: `${phase.step + 1} of ${totalSteps}`,
-        headerBackVisible: phase.step === 0,
-        gestureEnabled: phase.step === 0,
-        headerRight: closeButton,
-      });
-      return;
-    }
 
     if (phase.name === "loading") {
       // Nothing to go back to mid-generation, and leaving would strand the call.
@@ -541,7 +435,7 @@ export default function PlanNew() {
       gestureEnabled: true,
       headerRight: closeButton,
     });
-  }, [navigation, phase, inputs.date, totalSteps]);
+  }, [navigation, phase, inputs.date, totalSteps, full]);
 
   if (!hydrated) {
     return (
@@ -589,6 +483,20 @@ export default function PlanNew() {
     return themed(<ErrorState message={phase.message} onRetry={() => void generate()} />);
   }
 
+  if (phase.name === "result" && !full) {
+    return (
+      <PlanReveal
+        itinerary={phase.itinerary}
+        inputs={inputs}
+        saving={saving}
+        saved={Boolean(shareSlug)}
+        onSave={() => void handleSave()}
+        onOpenFull={() => setFull(true)}
+        onClose={() => router.dismissTo("/")}
+      />
+    );
+  }
+
   if (phase.name === "result") {
     return themed(
       <ItineraryView
@@ -610,7 +518,7 @@ export default function PlanNew() {
   }
 
   /* ── Step screens ── */
-  const step = phase.step;
+  const step = phase.name === "steps" ? phase.step : 0;
 
   const goTo = (next: number) => {
     setPhase({ name: "steps", step: next });
@@ -623,8 +531,6 @@ export default function PlanNew() {
   const stepId = steps[stepIndex];
 
   const goBack = () => (stepIndex === 0 ? router.back() : goTo(stepIndex - 1));
-  const goNext = () =>
-    stepIndex === totalSteps - 1 ? void generate() : goTo(stepIndex + 1);
 
   /*
    * The floor for what they chose: one of each treatment, so the kinds add up.
@@ -660,103 +566,166 @@ export default function PlanNew() {
   const optional = stepIndex >= optionalFrom;
   const lastStep = stepIndex === totalSteps - 1;
 
-  return themed(
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={insets.top + 44}
-    >
-      <ProgressRail total={totalSteps} current={stepIndex} optionalFrom={optionalFrom} />
-      <AiConsentSheet
-        purpose={askingConsent ? "plan" : null}
-        onAnswer={(allowed) => {
-          setAskingConsent(false);
-          consentAnswer.current?.(allowed);
-          consentAnswer.current = null;
+  const goNext = () => {
+    if (lastStep) return void generate();
+    // The essentials are done: say so, and offer to build now (owner, 2 Nov 2026).
+    if (stepIndex === optionalFrom - 1 && optionalFrom < totalSteps) return setPhase({ name: "checkpoint" });
+    goTo(stepIndex + 1);
+  };
+
+  const consentSheet = (
+    <AiConsentSheet
+      purpose={askingConsent ? "plan" : null}
+      onAnswer={(allowed) => {
+        setAskingConsent(false);
+        consentAnswer.current?.(allowed);
+        consentAnswer.current = null;
+      }}
+    />
+  );
+
+  const whereText = inputs.surpriseMe
+    ? "Anywhere good"
+    : inputs.near
+      ? "Near you"
+      : inputs.areaNames.slice(0, 2).join(" & ") || inputs.city || "Accra";
+
+  if (phase.name === "checkpoint") {
+    return (
+      <>
+        {consentSheet}
+        <EnoughToPlan
+          rows={[
+            { label: "Who", value: `${occasionLabel(inputs.occasion)} · ${inputs.partySize === 1 ? "just you" : `${inputs.partySize} people`}` },
+            { label: "Where", value: whereText },
+            { label: "Budget", value: `GHS ${inputs.budget.toLocaleString()}` },
+            { label: "When", value: `${longDate(inputs.date)}, ${time12(inputs.startTime)}` },
+          ]}
+          optionalCount={totalSteps - optionalFrom}
+          onBuild={() => void generate()}
+          onMore={() => goTo(optionalFrom)}
+          onBack={() => goTo(optionalFrom - 1)}
+        />
+      </>
+    );
+  }
+
+  /* The answers so far, as chips above each question. */
+  const done = new Set(steps.slice(0, stepIndex));
+  const chips = [
+    done.has("occasion") || occasionPreset ? occasionLabel(inputs.occasion) : null,
+    done.has("party") ? (inputs.partySize === 1 ? "Just you" : `${inputs.partySize} people`) : null,
+    done.has("area") ? whereText : null,
+    done.has("budget") ? `GHS ${inputs.budget.toLocaleString()}` : null,
+    done.has("when") ? shortDate(inputs.date) : null,
+    done.has("timing") ? time12(inputs.startTime) : null,
+  ].filter((x): x is string => Boolean(x));
+
+  const extra = OCCASION_EXTRA[inputs.occasion];
+  const TITLES: Record<StepId, { title: string; subtitle?: string }> = {
+    occasion: { title: "What's the occasion?", subtitle: "It shapes everything after." },
+    party: { title: PARTY_RULES[inputs.occasion].fixed ? "Who's coming?" : "How many of you?" },
+    extra: { title: extra?.title ?? "A little more", subtitle: extra?.subtitle },
+    area: { title: `Where in ${inputs.city || "Accra"}?`, subtitle: "Pick up to two, near you, or let us choose." },
+    budget: {
+      title: "What's the budget?",
+      subtitle: isDriving(inputs) ? "Everything, and no fares: you're driving." : "Food and rides included.",
+    },
+    when: { title: "Which day?" },
+    timing: { title: "What time?", subtitle: "We fit each stop around it, travel included." },
+    details: { title: "Anything we should know?", subtitle: "All optional." },
+    vibe: { title: "Which feels more like it?", subtitle: "Pick one each time, or let it be either." },
+    shape: { title: "What's the night made of?", subtitle: "Pick up to two, or leave it to us." },
+    stops: { title: "How many places?", subtitle: "We'll fit them to the time you have." },
+  };
+
+  // What the old steps still draw under the new controls: settings, names, choices.
+  const settings = (
+    <BareSteps.Provider value={true}>
+      <View style={{ marginHorizontal: -GUTTER }}>
+        <PlanSteps
+          step={stepId}
+          inputs={inputs}
+          areas={areas}
+          cuisines={cuisines}
+          wellnessFloor={wellnessFloor}
+          wellnessFloors={wellnessFloors}
+          update={update}
+        />
+      </View>
+    </BareSteps.Provider>
+  );
+
+  const body =
+    stepId === "occasion" ? (
+      <OccasionCards
+        value={inputs.occasion}
+        onPick={(id) => {
+          update({ occasion: id });
+          // A card is an answer: on to the next question.
+          setTimeout(() => goTo(stepIndex + 1), 180);
         }}
       />
-
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: space.xxl }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-      >
-        {stepId === "area" && areas.length === 0 ? (
-          <View style={{ paddingTop: space.xxxl, paddingHorizontal: areasFailed ? GUTTER : 0 }}>
-            {areasFailed ? (
-              <Text variant="body" tone="secondary" center>
-                We could not load areas. Check your connection and try again.
-              </Text>
-            ) : (
-              <SkeletonRows rows={7} thumb={0} />
-            )}
-          </View>
-        ) : (
-          <>
-            {stepIndex === 0 && optionalFrom < totalSteps ? <EssentialsIntro needed={optionalFrom} /> : null}
-            {optional ? <OptionalBanner first={stepIndex === optionalFrom} /> : null}
-            <PlanSteps
-              step={stepId}
-              inputs={inputs}
-              areas={areas}
-              cuisines={cuisines}
-              wellnessFloor={wellnessFloor}
-              wellnessFloors={wellnessFloors}
-              update={update}
-            />
-            <StepTip step={stepId} occasion={inputs.occasion} driving={isDriving(inputs)} />
-          </>
-        )}
-      </ScrollView>
-
-      {/*
-        Back beside Continue, not beneath it.
-        *
-        * Stacked, Back sat directly under the full-width primary button and
-        * about a thumb's width from it, so the tap that was meant to go back a
-        * question went forward instead. Side by side, the two are in different
-        * places as well as different weights: Back is a bordered button at the
-        * left, Continue takes the rest of the row and stays the obvious one.
-      */}
-      {/*
-        On an optional step the row people have been tapping all along stays
-        exactly where and what it was: Back, and the big filled button that
-        moves on. Building early is the lighter button underneath.
-
-        It used to be the other way round, with Build as the big filled button
-        on top. Every required step trains the thumb to the big filled button,
-        so on the first optional step people built the plan when they meant to
-        keep answering.
-      */}
-      {optional && !lastStep ? (
-        <ActionBar style={{ gap: space.sm }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
-            <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
-            <Button title="Next question" size="large" onPress={goNext} disabled={!canContinue} style={{ flex: 1 }} />
-          </View>
-          <Button
-            title={`Skip the rest, build ${poss} plan`}
-            kind="tinted"
-            icon="sparkles"
-            onPress={() => void generate()}
-            disabled={!canContinue}
-          />
-        </ActionBar>
+    ) : stepId === "party" ? (
+      <>
+        <PeopleCounter inputs={inputs} update={update} />
+        {settings}
+      </>
+    ) : stepId === "budget" ? (
+      <>
+        <BudgetDial inputs={inputs} update={update} />
+        {settings}
+      </>
+    ) : stepId === "timing" ? (
+      <>
+        <SunTime value={inputs.startTime} onChange={(startTime) => update({ startTime })} />
+        {settings}
+      </>
+    ) : stepId === "vibe" ? (
+      <>
+        <VibeDuel options={vibesFor(inputs.occasion, inputs.partySize)} inputs={inputs} update={update} />
+        {settings}
+      </>
+    ) : stepId === "area" && areas.length === 0 ? (
+      areasFailed ? (
+        <Body tone="secondary">We could not load areas. Check your connection and try again.</Body>
       ) : (
-        <ActionBar style={{ flexDirection: "row", alignItems: "center" }}>
-          {stepIndex > 0 ? (
-            <Button title="Back" kind="gray" size="large" onPress={goBack} style={{ minWidth: 104 }} />
-          ) : null}
-          <Button
-            title={lastStep ? `Build ${poss} plan` : "Continue"}
-            icon={lastStep ? "sparkles" : undefined}
-            onPress={goNext}
-            disabled={!canContinue}
-            style={{ flex: 1 }}
-          />
-        </ActionBar>
-      )}
-    </KeyboardAvoidingView>
+        <SkeletonRows rows={6} thumb={0} />
+      )
+    ) : (
+      settings
+    );
+
+  const label = optional
+    ? `${stepIndex - optionalFrom + 1} of ${totalSteps - optionalFrom}`
+    : `${stepIndex + 1} of ${optionalFrom}`;
+
+  return (
+    <>
+      {consentSheet}
+      <QuestionShell
+        progress={(stepIndex + 1) / totalSteps}
+        label={label}
+        onBack={goBack}
+        onSkip={optional && !lastStep ? goNext : undefined}
+        chips={chips}
+        title={TITLES[stepId].title}
+        subtitle={TITLES[stepId].subtitle}
+        footer={
+          <View style={{ gap: 6 }}>
+            <LookButton
+              label={lastStep ? `Build ${poss} plan` : optional ? "Next" : "Continue"}
+              onPress={goNext}
+              disabled={!canContinue}
+            />
+            {optional && !lastStep ? (
+              <LookButton label="Build my plan now" kind="outline" onPress={() => void generate()} disabled={!canContinue} />
+            ) : null}
+          </View>
+        }
+      >
+        {body}
+      </QuestionShell>
+    </>
   );
 }

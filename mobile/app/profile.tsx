@@ -23,6 +23,7 @@ import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
+import { LOOK_CHOICES } from "../src/lib/looks";
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
@@ -68,7 +69,7 @@ export default function Profile() {
    * the subscription they just paid for.
    */
   const hasAccount = Boolean(session) && !anonymous;
-  const { preference, scheme, setPreference } = useAppearance();
+  const { choice: lookChoice, setLook } = useAppearance();
 
   const [showBuild, setShowBuild] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -497,26 +498,11 @@ export default function Profile() {
         />
       </Group>
 
-      <Group header="Appearance">
-        <Row
-          icon="moon"
-          title="Dark mode"
-          subtitle={preference === "system" ? "Following your phone" : undefined}
-          trailing={
-            <Toggle
-              value={scheme === "dark"}
-              onValueChange={(on) => setPreference(on ? "dark" : "light")}
-              accessibilityLabel="Dark mode"
-            />
-          }
-        />
-        {preference !== "system" ? (
-          <Row
-            icon="iphone"
-            title="Match my phone instead"
-            onPress={() => setPreference("system")}
-          />
-        ) : null}
+      {/* The look (looks.ts): every screen works the same in each, only the look changes. */}
+      <Group header="Look" footer="Every screen works the same in each. Only the look changes.">
+        {LOOK_CHOICES.map((l) => (
+          <Row key={l.id} title={l.title} subtitle={l.sub} selected={lookChoice === l.id} onPress={() => setLook(l.id)} />
+        ))}
       </Group>
 
       <Group header="This device">
