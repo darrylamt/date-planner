@@ -26,6 +26,8 @@ import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
 import { SeasonProvider } from "../src/lib/season";
+import { useSeasonalIconReset } from "../src/components/AppIconPicker";
+import { onRedesign, switchApp } from "../src/lib/redesign";
 import { BurstProvider } from "../src/components/Burst";
 import {
   configureNotificationHandler,
@@ -82,6 +84,8 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
             .then(() => router.replace("/")),
         false
       )}
+      {/* On the redesign, a way back that does not depend on the screen that failed. */}
+      {onRedesign() ? button("Back to the current app", () => void switchApp("current"), false) : null}
     </View>
   );
 }
@@ -108,6 +112,7 @@ export default function RootLayout() {
 function RootShell() {
   const c = useTheme();
   const isDark = useIsDark();
+  useSeasonalIconReset();
 
   const [fontsLoaded, fontError] = useFonts({
     Figtree_400Regular,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Platform, Pressable, ScrollView, View } from "react-native";
+import { AppState, Platform, Pressable, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Text } from "./Text";
@@ -8,6 +8,7 @@ import { GUTTER, HAIRLINE, radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
 import { nativeOptional } from "../lib/nativeOptional";
 import { NativeSheet } from "./native/NativeSheet";
+import { useSeason } from "../lib/season";
 
 /**
  * Change the icon on the home screen to one of the mascots.
@@ -82,6 +83,32 @@ export async function setHalloweenIcon(): Promise<string> {
   }
 }
 
+/**
+ * The pumpkin goes back to the original once Halloween is over (owner, 2 Nov
+ * 2026: "the icon should switch back by itself"). Checked a few seconds after
+ * launch, so Home's own questions come first, and only with the app on screen:
+ * iOS refuses a change otherwise. iOS shows its usual alert as it does it. A
+ * refusal is left for the next launch rather than retried here.
+ *
+ * Halloween is offered in the picker only in its season, so this never undoes
+ * a pumpkin somebody has just chosen.
+ */
+export function useSeasonalIconReset() {
+  const { season, ready } = useSeason();
+  useEffect(() => {
+    if (!ready || season === "halloween" || Platform.OS !== "ios" || !Icons?.supportsAlternateIcons) return;
+    const t = setTimeout(() => {
+      try {
+        if (AppState.currentState !== "active" || Icons.getAppIconName() !== "Halloween") return;
+      } catch {
+        return;
+      }
+      void setIcon(null).catch((e) => console.warn("app icon reset", (e as { message?: string } | null)?.message));
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [ready, season]);
+}
+
 /** False on a build without the module, so Profile can hide the row entirely. */
 export function appIconsAvailable(): boolean {
   return Platform.OS === "ios" && Boolean(Icons?.supportsAlternateIcons);
@@ -97,8 +124,11 @@ export function AppIconPicker({
   onChanged: (message: string) => void;
 }) {
   const c = useTheme();
+  const { season } = useSeason();
   const [current, setCurrent] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The pumpkin only in its season (and in the preview), as useSeasonalIconReset undoes it after.
+  const icons = APP_ICONS.filter((icon) => icon.name !== "Halloween" || season === "halloween");
 
   useEffect(() => {
     if (!visible || !Icons) return;
@@ -175,7 +205,7 @@ export function AppIconPicker({
               onPress={() => void choose(null)}
               source={require("../../assets/icon.png")}
             />
-            {APP_ICONS.map((icon) => (
+            {icons.map((icon) => (
               <IconTile
                 key={icon.name}
                 label={icon.label}

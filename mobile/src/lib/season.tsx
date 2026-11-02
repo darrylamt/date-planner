@@ -20,14 +20,22 @@ export function isHalloween(at: Date = new Date()): boolean {
   return (m === 10 && d >= 10) || (m === 11 && d <= 5);
 }
 
-const SeasonContext = createContext<{ season: Season; preview: boolean; setPreview: (on: boolean) => void }>({
+const SeasonContext = createContext<{
+  season: Season;
+  preview: boolean;
+  setPreview: (on: boolean) => void;
+  /** The stored preview has been read: before that, "no season" might only mean "not read yet". */
+  ready: boolean;
+}>({
   season: null,
   preview: false,
   setPreview: () => {},
+  ready: false,
 });
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
   const [preview, setPreviewState] = useState(false);
+  const [ready, setReady] = useState(false);
   // Read once at launch and on every return to the app is plenty: a season
   // turning over while the app sits open on the night is not worth a timer.
   const [today, setToday] = useState(() => new Date());
@@ -36,7 +44,8 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     let active = true;
     void AsyncStorage.getItem(PREVIEW_KEY)
       .then((v) => active && setPreviewState(v === "halloween"))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => active && setReady(true));
     const t = setInterval(() => setToday(new Date()), 60 * 60 * 1000);
     return () => {
       active = false;
@@ -50,7 +59,7 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const season: Season = isHalloween(today) || preview ? "halloween" : null;
-  return <SeasonContext.Provider value={{ season, preview, setPreview }}>{children}</SeasonContext.Provider>;
+  return <SeasonContext.Provider value={{ season, preview, setPreview, ready }}>{children}</SeasonContext.Provider>;
 }
 
 export function useSeason() {
