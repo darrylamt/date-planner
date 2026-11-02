@@ -246,7 +246,8 @@ function RootShell() {
             name="chat"
             options={{
               title: "Durobot",
-              headerRight: () => <Text style={{ fontSize: 26 }}>🤖</Text>,
+              // No robot: Durobot's face is its orb, in the screen's own header (chat.tsx).
+              headerRight: () => null,
             }}
           />
           {/* No bar: the screen draws its own close button over its own stage. */}

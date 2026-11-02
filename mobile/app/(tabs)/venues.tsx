@@ -14,6 +14,7 @@ import { VENUE_KIND } from "../../src/lib/venueKinds";
 import { SkeletonRows } from "../../src/components/Skeleton";
 import { fold } from "../../src/lib/fold";
 import { record } from "../../src/lib/usage";
+import { KenteBand } from "../../src/components/look";
 
 /*
  * Kinds as people browse them, which is not quite how they are stored:
@@ -102,8 +103,9 @@ export default function Venues() {
   };
 
   const header = (
-    <View style={{ paddingTop: insets.top + space.lg, gap: space.md, paddingBottom: space.md }}>
-      <Text variant="display" style={{ paddingHorizontal: GUTTER }}>
+    <View style={{ paddingTop: insets.top, gap: space.md, paddingBottom: space.md }}>
+      <KenteBand />
+      <Text variant="display" style={{ paddingHorizontal: GUTTER, marginTop: space.sm }}>
         Venues
       </Text>
 

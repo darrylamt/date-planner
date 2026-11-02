@@ -5,6 +5,7 @@ import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { GUTTER, HAIRLINE, radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
+import { useLook } from "../lib/appearance";
 import type { SymbolViewProps } from "expo-symbols";
 
 /**
@@ -25,18 +26,21 @@ export function Group({
   inset?: boolean;
 }) {
   const c = useTheme();
+  const look = useLook();
   const items = Children.toArray(children).filter(Boolean);
 
   return (
     <View style={[{ marginBottom: space.xxl }, style]}>
       {header ? (
         <Text
-          variant="footnote"
+          variant="caption"
           tone="secondary"
+          weight="700"
           style={{
-            marginHorizontal: inset ? GUTTER + space.lg : GUTTER,
+            marginHorizontal: inset ? GUTTER + space.xs : GUTTER,
             marginBottom: space.sm,
             textTransform: "uppercase",
+            letterSpacing: 1,
           }}
         >
           {header}
@@ -45,8 +49,10 @@ export function Group({
 
       <View
         style={{
-          backgroundColor: c.backgroundElement,
-          borderRadius: inset ? radius.row : 0,
+          backgroundColor: look.tile,
+          borderWidth: inset ? 1 : 0,
+          borderColor: look.tileEdge,
+          borderRadius: inset ? 22 : 0,
           marginHorizontal: inset ? GUTTER : 0,
           overflow: "hidden",
         }}
@@ -57,7 +63,7 @@ export function Group({
               <View
                 style={{
                   height: HAIRLINE,
-                  backgroundColor: c.border,
+                  backgroundColor: look.tileEdge,
                   // Hairlines start after the text, not at the card edge.
                   marginLeft: space.lg,
                 }}

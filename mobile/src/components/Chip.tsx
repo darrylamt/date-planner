@@ -5,6 +5,7 @@ import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
+import { useLook } from "../lib/appearance";
 
 /**
  * A choice you tap, and feel tapped.
@@ -26,6 +27,7 @@ export function Chip({
   disabled?: boolean;
 }) {
   const c = useTheme();
+  const look = useLook();
   const press = useRef(new Animated.Value(1)).current;
   const on = useRef(new Animated.Value(selected ? 1 : 0)).current;
 
@@ -55,14 +57,10 @@ export function Chip({
           height: 40,
           borderRadius: radius.pill,
           borderWidth: 1,
-          borderColor: selected ? c.accent : c.border,
-          backgroundColor: c.backgroundElement,
+          borderColor: selected ? look.primary : look.tileEdge,
+          backgroundColor: "transparent",
           overflow: "hidden",
           justifyContent: "center",
-          shadowColor: c.accent,
-          shadowOpacity: selected ? 0.28 : 0,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
         }}
       >
         <Animated.View
@@ -73,17 +71,17 @@ export function Chip({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: c.accent,
+            backgroundColor: look.primary,
             opacity: on,
           }}
         />
         <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: space.lg, gap: 6 }}>
           {selected ? (
             <Animated.View style={{ transform: [{ scale: on }] }}>
-              <Symbol name="checkmark" size={12} weight="bold" color={c.textOnBrand} />
+              <Symbol name="checkmark" size={12} weight="bold" color={look.onPrimary} />
             </Animated.View>
           ) : null}
-          <Text variant="subheadline" weight="600" style={{ color: selected ? c.textOnBrand : c.text }}>
+          <Text variant="subheadline" weight="600" style={{ color: selected ? look.onPrimary : c.text }}>
             {label}
           </Text>
         </View>

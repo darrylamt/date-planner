@@ -44,6 +44,7 @@ import {
 import { SkeletonChat } from "../src/components/Skeleton";
 import { Rise, useReducedMotion } from "../src/components/motion";
 import { useOccasionHue } from "../src/lib/useTheme";
+import { DurobotOrb } from "../src/components/redesign/DurobotOrb";
 
 /**
  * The concierge.
@@ -600,24 +601,9 @@ function BubbleView({ bubble, first, last }: { bubble: Bubble; first: boolean; l
 
 const FACE = 30;
 
-/** Durobot's face: its symbol on its own colour (no mascots in the redesign). */
-function DurobotFace({ size = FACE }: { size?: number }) {
-  const hue = useOccasionHue(DUROBOT);
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: hue.bg,
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-      }}
-    >
-      <Symbol name="wand.and.stars" size={Math.round(size * 0.55)} color={hue.fg} />
-    </View>
-  );
+/** Durobot's face: the orb in the look's colours (DurobotOrb), quickening while it thinks. */
+function DurobotFace({ size = FACE, thinking = false }: { size?: number; thinking?: boolean }) {
+  return <DurobotOrb size={size} thinking={thinking} />;
 }
 
 /** The header: who this is and what it is for, in place of a robot emoji. */
@@ -667,7 +653,7 @@ function TypingBubble({ status }: { status: string }) {
   });
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space.sm, marginBottom: space.md }}>
-      <DurobotFace />
+      <DurobotFace thinking />
       <View style={{ gap: 4 }}>
         <View
           accessibilityLabel={`${status}`}
@@ -785,9 +771,7 @@ function Welcome({
   return (
     <View style={{ gap: space.lg, paddingTop: space.md }}>
       <View style={{ alignItems: "center", gap: space.sm }}>
-        <View style={{ width: 104, height: 104, borderRadius: 52, backgroundColor: hue.bg, alignItems: "center", justifyContent: "center" }}>
-          <Symbol name="wand.and.stars" size={48} color={hue.fg} />
-        </View>
+        <DurobotOrb size={96} />
         <Text variant="title2" center>
           Hi, I&apos;m Durobot
         </Text>

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
 import { StopGallery } from "../../src/components/plan/StopGallery";
+import { LinearGradient } from "expo-linear-gradient";
 import { Paywall } from "../../src/components/chat/Paywall";
 import { PaySafely } from "../../src/components/PaySafely";
 import { ItemSheet, availability } from "../../src/components/venue/ItemSheet";
@@ -315,11 +316,17 @@ export default function VenuePage() {
             }}
           >
             <StopGallery images={images} alt={venue.name} />
+            {/* The photo fades into the page, and the name sits on the fade (redesign). */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={["transparent", c.background]}
+              style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 150 }}
+            />
           </Animated.View>
         ) : null}
 
         {/* ── Is this the place ── */}
-        <Rise style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs, backgroundColor: c.background }}>
+        <Rise style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs, marginTop: images.length ? -84 : 0 }}>
           <Text variant="eyebrow" tone="tint" uppercase>
             {[VENUE_KIND[venue.type] ?? venue.type, venue.area].filter(Boolean).join(" · ")}
           </Text>
