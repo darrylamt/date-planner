@@ -720,6 +720,80 @@ function metresApart(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return metresBetween(a.lat, a.lng, b.lat, b.lng);
 }
 
+export interface LodgingPlace extends PlaceSummary {
+  lat: number | null;
+  lng: number | null;
+  types: string[];
+  rating: number | null;
+  ratingCount: number | null;
+  phone: string | null;
+  website: string | null;
+  googleMapsUri: string | null;
+  addressParts: string[];
+  localities: string[];
+}
+
+/** A stay's listing at a glance: where, how to reach them, how it is rated. One search, no lookups after. */
+const LODGING_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.businessStatus",
+  "places.primaryType",
+  "places.types",
+  "places.rating",
+  "places.userRatingCount",
+  "places.internationalPhoneNumber",
+  "places.websiteUri",
+  "places.googleMapsUri",
+  "places.addressComponents",
+  "nextPageToken",
+].join(",");
+
+/**
+ * Places to stay near a point (stays, 0099): hotels, guesthouses, lodges and
+ * resorts Google lists within reach, with their phone, website and Maps link
+ * in the same answer, so the stays team triages a town in one go rather than
+ * looking each one up. Two wordings, two pages each: "hotels" alone misses
+ * the guesthouses and lodges that most of Ghana's smaller towns have.
+ * Nothing here is a rate; those still come from the place.
+ */
+export async function findLodging(near: { lat: number; lng: number }, radiusKm: number, place: string): Promise<LodgingPlace[]> {
+  const circle = { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: Math.min(50000, Math.max(2000, radiusKm * 1000)) } };
+  const ask = (textQuery: string, pageToken?: string) =>
+    call<{ places?: RawPlace[]; nextPageToken?: string }>(`${BASE}/places:searchText`, LODGING_MASK, {
+      textQuery,
+      includedType: "lodging",
+      locationBias: circle,
+      regionCode: "GH",
+      languageCode: "en",
+      ...(pageToken ? { pageToken } : {}),
+    });
+  const twoPages = async (q: string) => {
+    const first = await ask(q);
+    const second = first.nextPageToken ? await ask(q, first.nextPageToken).catch(() => ({ places: [] })) : { places: [] };
+    return [...(first.places ?? []), ...(second.places ?? [])];
+  };
+  const [hotels, smaller] = await Promise.all([twoPages(`hotels in ${place}, Ghana`), twoPages(`guest houses, lodges and resorts in ${place}, Ghana`)]);
+  const seen = new Set<string>();
+  return [...hotels, ...smaller]
+    .filter((p) => p.id && !seen.has(p.id) && (seen.add(p.id), true))
+    .map((p) => ({
+      ...toSummary(p),
+      lat: p.location?.latitude ?? null,
+      lng: p.location?.longitude ?? null,
+      types: p.types ?? [],
+      rating: p.rating ?? null,
+      ratingCount: p.userRatingCount ?? null,
+      phone: p.internationalPhoneNumber ?? null,
+      website: p.websiteUri ?? null,
+      googleMapsUri: p.googleMapsUri ?? null,
+      addressParts: addressPartsOf(p),
+      localities: localitiesOf(p),
+    }));
+}
+
 export interface FoundPlace extends PlaceSummary {
   lat: number | null;
   lng: number | null;

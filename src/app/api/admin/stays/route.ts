@@ -4,8 +4,10 @@ import { requireStaff } from "@/lib/adminAuth";
 import { areaCentroids } from "@/lib/areaCentroids";
 import { ensureAreaId } from "@/lib/areas";
 import { readMapsLink } from "@/lib/mapsLink";
-import { cityOf, matchArea, placeDetails, placesConfigured, searchPlaces, type PlaceDetails } from "@/lib/places";
-import { GHANA_REGIONS, REGION_OF_TOWN, ROOM_TYPES, STAY_AMENITY_IDS, STAY_KINDS, regionFromAddress } from "@/lib/stays";
+import { cityOf, findLodging, isClosed, matchArea, placeDetails, placesConfigured, searchPlaces, type PlaceDetails } from "@/lib/places";
+import { GHANA_REGIONS, REGION_OF_TOWN, ROOM_TYPES, STAY_AMENITY_IDS, STAY_KINDS, regionFromAddress, stayKindFromTypes } from "@/lib/stays";
+import { CITY_CENTRES } from "@/lib/neighbourhoods";
+import { haversineKm } from "@/lib/transport";
 import { areaForPlace } from "@/lib/venueFromPlace";
 
 /**
@@ -13,7 +15,13 @@ import { areaForPlace } from "@/lib/venueFromPlace";
  *
  *   locate: where a place is, from a Google place, a Maps link or a pin,
  *           with the region and town read from it.
- *   save:   the stay (a venue of type 'stay'), its details and its rooms.
+ *   save:   the stay (a venue of type 'stay'), its details, rooms and photos.
+ *   find:   the stay finder: places to stay Google lists near a Trips
+ *           destination, with phone, website and Maps link, marked when
+ *           we already hold them.
+ *   import: those picked from the finder, made stays in one go: where,
+ *           what kind, region and town, how to reach them. Rooms, rates
+ *           and photos are then added on each stay's page.
  *
  * The writes run as the service role, so a staff login's are logged by hand
  * (staff_edits), as /api/admin/gaderin does.
@@ -63,6 +71,8 @@ const bodySchema = z.discriminatedUnion("action", [
     email: text(200),
     description: z.string().trim().max(2000),
     image_url: text(1000),
+    // The pictures after the cover, in the order shown (venues.gallery_urls).
+    gallery_urls: z.array(z.string().trim().url().max(1000)).max(30).default([]),
     check_in: clock,
     check_out: clock,
     min_nights: z.number().int().min(1).max(60).nullable(),
@@ -73,7 +83,36 @@ const bodySchema = z.discriminatedUnion("action", [
     is_active: z.boolean(),
     rooms: z.array(room).max(40),
   }),
+  z.object({ action: z.literal("find"), destination: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(40) }),
+  z.object({
+    action: z.literal("import"),
+    destination: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(40),
+    places: z
+      .array(
+        z.object({
+          id: z.string().min(4).max(400),
+          name: z.string().trim().min(2).max(120),
+          address: z.string().max(300).default(""),
+          lat: z.number().min(4).max(12),
+          lng: z.number().min(-4).max(2),
+          types: z.array(z.string().max(60)).max(40).default([]),
+          rating: z.number().nullable().default(null),
+          ratingCount: z.number().int().nullable().default(null),
+          phone: z.string().max(40).nullable().default(null),
+          website: z.string().max(600).nullable().default(null),
+          googleMapsUri: z.string().max(600).nullable().default(null),
+          addressParts: z.array(z.string().max(120)).max(20).default([]),
+          localities: z.array(z.string().max(120)).max(10).default([]),
+        })
+      )
+      .min(1)
+      .max(40),
+  }),
 ]);
+
+/** The nearest of our towns, for filing a stay's area where no neighbourhood of ours is close. */
+const nearestTown = (at: { lat: number; lng: number }) =>
+  Object.entries(CITY_CENTRES).sort((a, b) => haversineKm(at, a[1]) - haversineKm(at, b[1]))[0][0];
 
 /** What the form fills from a place: the pin, the link, the phone, the region and town. */
 function facts(d: PlaceDetails) {
@@ -131,6 +170,97 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── find ───────────────────────────────────────────────────────────────
+  if (body.action === "find" || body.action === "import") {
+    if (!placesConfigured()) return NextResponse.json({ error: "Google Places is not configured. Add GOOGLE_PLACES_API_KEY." }, { status: 501 });
+    const { data: dest } = await db.from("destinations").select("slug, name, region, town, lat, lng, radius_km").eq("slug", body.destination).maybeSingle();
+    if (!dest || dest.lat == null || dest.lng == null) return NextResponse.json({ error: "That destination has no location yet." }, { status: 404 });
+    const centre = { lat: Number(dest.lat), lng: Number(dest.lng) };
+    // A stay a short ride out still serves the place: Busua's lodges, Kakum's, Wli's.
+    const reachKm = Math.max(8, Number(dest.radius_km) * 1.5);
+
+    if (body.action === "find") {
+      try {
+        const [found, { data: held }] = await Promise.all([
+          findLodging(centre, reachKm, dest.town && dest.town !== dest.name ? `${dest.name}, ${dest.town}` : dest.name),
+          db.from("venues").select("id, name, google_place_id").eq("type", "stay"),
+        ]);
+        const byPlace = new Map(((held ?? []) as { id: string; name: string; google_place_id: string | null }[]).filter((v) => v.google_place_id).map((v) => [v.google_place_id!, v.id]));
+        const byName = new Map(((held ?? []) as { id: string; name: string }[]).map((v) => [v.name.trim().toLowerCase(), v.id]));
+        const results = found
+          .filter((p) => p.lat != null && p.lng != null && !isClosed(p.businessStatus))
+          .map((p) => ({ ...p, km: Math.round(haversineKm(centre, { lat: p.lat!, lng: p.lng! }) * 10) / 10, kind: stayKindFromTypes(p.types), have: byPlace.get(p.id) ?? byName.get(p.name.trim().toLowerCase()) ?? null }))
+          .filter((p) => p.km <= reachKm)
+          .sort((a, b) => Number(Boolean(a.have)) - Number(Boolean(b.have)) || (b.ratingCount ?? 0) - (a.ratingCount ?? 0));
+        return NextResponse.json({ results, reachKm });
+      } catch (e) {
+        return NextResponse.json({ error: (e as Error).message || "Google did not answer." }, { status: 502 });
+      }
+    }
+
+    // ── import ──
+    const centroids = await areaCentroids(db);
+    const added: { id: string; name: string }[] = [];
+    const failures: string[] = [];
+    let skipped = 0;
+    for (const p of body.places) {
+      const { data: clash } = await db.from("venues").select("id").eq("google_place_id", p.id).maybeSingle();
+      if (clash) {
+        skipped++;
+        continue;
+      }
+      const at = { lat: p.lat, lng: p.lng };
+      const town = p.localities[0] ?? dest.town ?? dest.name;
+      let areaId = matchArea(p.addressParts, centroids, at).existingId;
+      if (!areaId) areaId = (await ensureAreaId(db, town, nearestTown(at)))?.id ?? null;
+      if (!areaId) {
+        failures.push(`${p.name}: could not place it in an area`);
+        continue;
+      }
+      const { data: row, error } = await db
+        .from("venues")
+        .insert({
+          name: p.name,
+          type: "stay",
+          area_id: areaId,
+          lat: p.lat,
+          lng: p.lng,
+          google_place_id: p.id,
+          google_maps_url: p.googleMapsUri,
+          phone: p.phone,
+          booking_url: p.website,
+          description: "",
+          is_active: true,
+          price_band: "mid",
+          place_rating: p.rating,
+          place_rating_count: p.ratingCount,
+          business_status: "OPERATIONAL",
+          places_synced_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (error || !row) {
+        failures.push(`${p.name}: ${error?.message ?? "not saved"}`);
+        continue;
+      }
+      const id = (row as { id: string }).id;
+      const { error: detailsError } = await db.from("stay_details").insert({
+        venue_id: id,
+        kind: stayKindFromTypes(p.types),
+        region: regionFromAddress(p.addressParts) ?? (dest.region as string),
+        town,
+        address: p.address || null,
+        updated_by: gate.userId,
+      });
+      if (detailsError) failures.push(`${p.name}: saved, but its details did not: ${detailsError.message}`);
+      added.push({ id, name: p.name });
+      if (!gate.isAdmin) {
+        await db.from("staff_edits").insert({ user_id: gate.userId, table_name: "stays", row_id: id, venue_id: id, action: "insert", changes: { name: p.name, from: "stay finder", destination: dest.slug } });
+      }
+    }
+    return NextResponse.json({ added, skipped, failures });
+  }
+
   // ── save ───────────────────────────────────────────────────────────────
   if (body.lat == null || body.lng == null) {
     return NextResponse.json({ error: "Add where it is: find it on Google, paste a Maps link, or type the coordinates." }, { status: 422 });
@@ -172,6 +302,7 @@ export async function POST(req: Request) {
     booking_url: body.booking_url,
     description: body.description,
     image_url: body.image_url,
+    gallery_urls: body.gallery_urls,
     is_active: body.is_active,
     // A night's rate says the band: under GHS 500 budget, over 1,500 premium.
     price_band: !Number.isFinite(cheapest) ? "mid" : cheapest < 500 ? "budget" : cheapest > 1500 ? "premium" : "mid",

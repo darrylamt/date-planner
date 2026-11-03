@@ -64,6 +64,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
     links: [
       { href: "/admin/trips", label: "Destinations", icon: "compass", keywords: "trips travel towns regions volta cape coast", roles: ["stays"] },
       { href: "/admin/trips/routes", label: "Ways to get there", icon: "bus", keywords: "intercity buses flights vip stc fares trips", roles: ["stays"] },
+      { href: "/admin/stays/find", label: "Find stays", icon: "search", keywords: "hotels guesthouses lodges google discover import trips", roles: ["stays"] },
     ],
   },
   {

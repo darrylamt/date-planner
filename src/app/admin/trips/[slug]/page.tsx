@@ -66,9 +66,14 @@ export default async function AdminDestinationPage({ params }: { params: { slug:
         <section className="max-w-[900px]">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="adm-section-title">Ways to get to {initial.gateway_town} · {ways.length}</h2>
-            <Link href={`/admin/trips/routes?town=${encodeURIComponent(initial.gateway_town)}`} className="text-[13px] font-semibold text-flame">
-              Add or change them →
-            </Link>
+            <span className="flex gap-4">
+              <Link href={`/admin/stays/find?d=${initial.slug}`} className="text-[13px] font-semibold text-flame">
+                Find stays near here →
+              </Link>
+              <Link href={`/admin/trips/routes?town=${encodeURIComponent(initial.gateway_town)}`} className="text-[13px] font-semibold text-flame">
+                Add or change them →
+              </Link>
+            </span>
           </div>
           <div className="card mt-2 divide-y divide-black/5">
             {ways.map((r) => (

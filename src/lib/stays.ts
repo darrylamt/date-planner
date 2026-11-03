@@ -101,3 +101,27 @@ export function regionFromAddress(parts: string[]): GhanaRegion | null {
   }
   return null;
 }
+
+/**
+ * Our kind of stay from Google's types (Places "lodging" family), for a stay
+ * found with the stay finder. The first that matches wins; plain "lodging"
+ * is a hotel until somebody says otherwise.
+ */
+const KIND_OF_TYPE: [string, StayKind][] = [
+  ["resort_hotel", "resort"],
+  ["hostel", "hostel"],
+  ["guest_house", "guesthouse"],
+  ["bed_and_breakfast", "guesthouse"],
+  ["inn", "guesthouse"],
+  ["extended_stay_hotel", "apartment"],
+  ["private_guest_room", "homestay"],
+  ["farmstay", "homestay"],
+  ["cottage", "lodge"],
+  ["camping_cabin", "lodge"],
+  ["campground", "other"],
+  ["motel", "hotel"],
+  ["hotel", "hotel"],
+];
+export function stayKindFromTypes(types: string[]): StayKind {
+  return KIND_OF_TYPE.find(([t]) => types.includes(t))?.[1] ?? "hotel";
+}

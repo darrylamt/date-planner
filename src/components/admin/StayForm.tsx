@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { PlaceDetails } from "@/lib/places";
 import { GHANA_REGIONS, ROOM_TYPES, STAY_AMENITIES, STAY_KINDS, regionFromAddress } from "@/lib/stays";
 import { PlacesLookup } from "./PlacesLookup";
-import { ImageField } from "./ImageField";
+import { ImageField, ImageListField } from "./ImageField";
 
 export interface StayRoomDraft {
   id?: string;
@@ -38,6 +38,7 @@ export interface StayDraft {
   email: string;
   description: string;
   image_url: string;
+  gallery_urls: string[];
   check_in: string;
   check_out: string;
   min_nights: string;
@@ -162,6 +163,7 @@ export function StayForm({ initial, areas }: { initial: StayDraft; areas: { id: 
         email: orNull(s.email),
         description: s.description.trim(),
         image_url: orNull(s.image_url),
+        gallery_urls: s.gallery_urls.map((u) => u.trim()).filter(Boolean),
         check_in: orNull(s.check_in),
         check_out: orNull(s.check_out),
         min_nights: num(s.min_nights),
@@ -310,6 +312,15 @@ export function StayForm({ initial, areas }: { initial: StayDraft; areas: { id: 
         </label>
         <div className="md:col-span-3">
           <ImageField label="Cover photo" folder="stays" value={s.image_url} onChange={(url) => set({ image_url: url })} />
+        </div>
+        <div className="md:col-span-3">
+          <ImageListField
+            label="More photos"
+            folder="stays"
+            values={s.gallery_urls}
+            onChange={(gallery_urls) => set({ gallery_urls })}
+            hint="Pick several at once. The rooms, the bathroom, the view, the pool: shown in this order after the cover."
+          />
         </div>
       </div>
 
