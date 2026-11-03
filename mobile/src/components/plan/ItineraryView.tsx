@@ -66,6 +66,9 @@ import type {
   PlanInputs,
   StopAlternate,
 } from "../../lib/types";
+import { useLook } from "../../lib/appearance";
+import { RouteMap } from "../redesign/RouteMap";
+import { stopColours } from "../redesign/stopColours";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -106,6 +109,8 @@ export function ItineraryView({
   askVibe?: boolean;
 }) {
   const c = useTheme();
+  const look = useLook();
+  const colours = stopColours(look);
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -687,15 +692,33 @@ export function ItineraryView({
         contentContainerStyle={{ paddingBottom: space.xxxl }}
         contentInsetAdjustmentBehavior="automatic"
       >
+        {/* The route on the map, the stops numbered as their cards are (redesign, 3 Nov 2026). */}
+        <RouteMap itinerary={itinerary} height={230} />
         {top}
         {/* Title block */}
-        <View style={{ paddingHorizontal: GUTTER, paddingTop: space.sm, marginBottom: space.lg }}>
-          <Text variant="footnote" tone="secondary">
+        <View style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, marginBottom: space.lg }}>
+          <Text variant="footnote" weight="700" style={{ color: look.colors.accent }}>
             {longDate(inputs.date)}
           </Text>
-          <Text variant="title1" style={{ marginTop: space.xs }}>
+          <Text variant="largeTitle" style={{ marginTop: space.xs }}>
             {itinerary.title}
           </Text>
+          {/* At a glance: how many places, when it starts, and what it comes to. */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.md }}>
+            {[
+              `${itinerary.stops.length} ${itinerary.stops.length === 1 ? "place" : "places"}`,
+              itinerary.stops[0] ? `From ${itinerary.stops[0].arrival_time.replace(/\s?(AM|PM)$/i, (m) => m.trim().toLowerCase())}` : null,
+              `About GHS ${Math.round(itinerary.est_total_ghs).toLocaleString()}`,
+            ]
+              .filter((x): x is string => Boolean(x))
+              .map((label) => (
+                <View key={label} style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: look.tileEdge, justifyContent: "center" }}>
+                  <Text variant="footnote" weight="600">
+                    {label}
+                  </Text>
+                </View>
+              ))}
+          </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.xs, marginTop: space.sm }}>
             <Symbol name="arrow.triangle.turn.up.right.diamond" size={13} color={c.textSecondary} />
             <Text variant="footnote" tone="secondary" style={{ flex: 1 }}>
@@ -779,6 +802,30 @@ export function ItineraryView({
         <View style={{ paddingHorizontal: GUTTER }}>
           {itinerary.stops.map((stop, i) => (
             <Fragment key={`${stop.venue_id}-${i}`}>
+              {/* The stop's number, in the colour of its pin on the map. */}
+              <View
+                pointerEvents="none"
+                style={{
+                  alignSelf: "flex-start",
+                  zIndex: 2,
+                  marginBottom: -22,
+                  marginLeft: 12,
+                  marginTop: 0,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: colours[i % colours.length].bg,
+                  borderWidth: 2,
+                  borderColor: look.colors.background,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: [{ translateY: 12 }],
+                }}
+              >
+                <Text variant="footnote" weight="800" style={{ color: colours[i % colours.length].fg }}>
+                  {String(i + 1)}
+                </Text>
+              </View>
               <StopCard
                 stop={stop}
                 previous={i > 0 ? itinerary.stops[i - 1] : null}

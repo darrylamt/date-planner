@@ -12,80 +12,9 @@ import type { Itinerary, PlanInputs } from "../../lib/types";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../look";
 import { forParty } from "./Questions";
 import { Confetti } from "./Confetti";
+import { RouteMap } from "./RouteMap";
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 const MAP_H = 260;
-
-/**
- * Where the stops sit on the panel: their real positions, fitted to it, or
- * an easy diagonal when the plan has too few pins to place.
- */
-function placeStops(it: Itinerary, w: number, h: number): { x: number; y: number }[] {
-  const pad = 46;
-  const pins = it.stops.map((s) => (s.lat != null && s.lng != null ? { lat: Number(s.lat), lng: Number(s.lng) } : null));
-  const known = pins.filter((p): p is { lat: number; lng: number } => p != null);
-  const n = it.stops.length;
-  const fallback = (i: number) => ({
-    x: pad + (n === 1 ? 0.5 : i / (n - 1)) * (w - pad * 2),
-    y: h - pad - (n === 1 ? 0.5 : i / (n - 1)) * (h - pad * 2 - 30),
-  });
-  if (known.length < 2 || known.length !== n) return it.stops.map((_, i) => fallback(i));
-  const lats = known.map((p) => p.lat);
-  const lngs = known.map((p) => p.lng);
-  const [minLat, maxLat, minLng, maxLng] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
-  const spanLat = Math.max(maxLat - minLat, 0.004);
-  const spanLng = Math.max(maxLng - minLng, 0.004);
-  // One scale for both, so the route keeps its real shape.
-  const scale = Math.min((w - pad * 2) / spanLng, (h - pad * 2 - 30) / spanLat);
-  const ox = (w - spanLng * scale) / 2;
-  const oy = (h + 30 - spanLat * scale) / 2;
-  return apart(
-    known.map((p) => ({ x: ox + (p.lng - minLng) * scale, y: oy + (maxLat - p.lat) * scale })),
-    w,
-    h
-  );
-}
-
-/** Stops on the same street would hide each other: nudge them apart until every pin shows. */
-function apart(pts: { x: number; y: number }[], w: number, h: number): { x: number; y: number }[] {
-  const min = 34;
-  const out = pts.map((p) => ({ ...p }));
-  for (let round = 0; round < 24; round++) {
-    for (let i = 0; i < out.length; i++) {
-      for (let j = i + 1; j < out.length; j++) {
-        let dx = out[j].x - out[i].x;
-        let dy = out[j].y - out[i].y;
-        const d = Math.hypot(dx, dy);
-        if (d >= min) continue;
-        if (d === 0) [dx, dy] = [1, 0];
-        const push = (min - d) / 2 / Math.max(d, 1);
-        out[i].x -= dx * push;
-        out[i].y -= dy * push;
-        out[j].x += dx * push;
-        out[j].y += dy * push;
-      }
-    }
-  }
-  return out.map((p) => ({ x: Math.min(w - 20, Math.max(20, p.x)), y: Math.min(h - 20, Math.max(50, p.y)) }));
-}
-
-/** A smooth line through the points (Catmull-Rom as cubic Béziers), and roughly how long it is. */
-function smoothPath(pts: { x: number; y: number }[]): { d: string; length: number } {
-  if (pts.length < 2) return { d: "", length: 0 };
-  let d = `M${pts[0].x} ${pts[0].y}`;
-  let length = 0;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] ?? p2;
-    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
-    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
-    d += ` C${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
-    length += Math.hypot(p2.x - p1.x, p2.y - p1.y) * 1.15;
-  }
-  return { d, length };
-}
 
 /**
  * The plan, revealed (owner, 2 Nov 2026): the route draws itself between the
@@ -115,7 +44,6 @@ export function PlanReveal({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
-  const pts = useMemo(() => placeStops(itinerary, width, MAP_H), [itinerary, width]);
   // A handful of confetti the moment it is saved, not on every visit to a saved plan.
   const [fire, setFire] = useState(0);
   const wasSaved = useRef(saved);
@@ -123,19 +51,6 @@ export function PlanReveal({
     if (saved && !wasSaved.current) setFire((f) => f + 1);
     wasSaved.current = saved;
   }, [saved]);
-  const route = useMemo(() => smoothPath(pts), [pts]);
-
-  const drawn = useSharedValue(reduced ? 1 : 0);
-  useEffect(() => {
-    if (reduced) {
-      drawn.value = 1;
-      return;
-    }
-    drawn.value = 0;
-    drawn.value = withDelay(250, withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.cubic) }));
-  }, [itinerary, reduced, drawn]);
-  const routeProps = useAnimatedProps(() => ({ strokeDashoffset: route.length * (1 - drawn.value) }));
-
   const blocks = [
     { bg: look.primary, fg: look.onPrimary },
     { bg: look.second, fg: look.onSecond },
@@ -147,39 +62,7 @@ export function PlanReveal({
     <LookScreen band="none">
       <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
         <View style={{ height: MAP_H + insets.top, paddingTop: insets.top, backgroundColor: look.id === "daylight" ? "#F3F4F6" : look.tile }}>
-          <Svg width={width} height={MAP_H}>
-            {/* A few streets, for the feel of a map. */}
-            <Path
-              d={`M0 ${MAP_H * 0.8} L${width} ${MAP_H * 0.6} M0 ${MAP_H * 0.42} L${width} ${MAP_H * 0.52} M${width * 0.23} 0 L${width * 0.38} ${MAP_H} M${width * 0.66} 0 L${width * 0.59} ${MAP_H} M0 ${MAP_H * 0.15} L${width} ${MAP_H * 0.08}`}
-              stroke={look.id === "daylight" ? "#E2E4E9" : c.text}
-              strokeOpacity={look.id === "daylight" ? 1 : 0.07}
-              strokeWidth={7}
-              strokeLinecap="round"
-              fill="none"
-            />
-            {route.d ? (
-              <>
-                <Path d={route.d} stroke={look.primary} strokeOpacity={0.22} strokeWidth={14} strokeLinecap="round" fill="none" />
-                <AnimatedPath
-                  d={route.d}
-                  stroke={look.id === "daylight" ? c.accent : look.primary}
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  fill="none"
-                  strokeDasharray={`${route.length} ${route.length}`}
-                  animatedProps={routeProps}
-                />
-              </>
-            ) : null}
-            {pts.map((p, i) => (
-              <Circle key={`d${i}`} cx={p.x} cy={p.y} r={13} fill={dotFill(i).bg} stroke={look.colors.background} strokeWidth={2} />
-            ))}
-            {pts.map((p, i) => (
-              <SvgText key={`n${i}`} x={p.x} y={p.y + 4.5} fontSize={13} fontWeight="700" fill={dotFill(i).fg} textAnchor="middle">
-                {String(i + 1)}
-              </SvgText>
-            ))}
-          </Svg>
+          <RouteMap itinerary={itinerary} height={MAP_H} />
           <View style={{ position: "absolute", left: GUTTER, top: insets.top + 8 }}>
             <RoundButton label="Close" onPress={onClose} filled>
               <Symbol name="xmark" size={16} weight="bold" color={look.onPrimary} />

@@ -59,7 +59,8 @@ import {
   occasionLabel,
 } from "../../src/components/redesign/Questions";
 import { PlanReveal } from "../../src/components/redesign/PlanReveal";
-import { AreaMap, BuildingNight, DayPicker, ShapeNight } from "../../src/components/redesign/Questions2";
+import { BuildingNight, DayPicker, ShapeNight } from "../../src/components/redesign/Questions2";
+import { AreaMapView } from "../../src/components/redesign/AreaMapView";
 import { Body, LookButton } from "../../src/components/look";
 import { isDriving } from "../../src/lib/budget";
 import { registerForPush } from "../../src/lib/push";
@@ -703,7 +704,7 @@ export default function PlanNew() {
       </>
     ) : stepId === "area" && areas.length > 0 ? (
       <>
-        <AreaMap areas={areas} inputs={inputs} city={inputs.city || "Accra"} update={update} onDragging={setDragging} />
+        <AreaMapView areas={areas} inputs={inputs} city={inputs.city || "Accra"} update={update} onDragging={setDragging} />
         {settings}
       </>
     ) : stepId === "area" && areas.length === 0 ? (

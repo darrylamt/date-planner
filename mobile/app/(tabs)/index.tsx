@@ -24,6 +24,7 @@ import type { PlanInputs } from "../../src/lib/types";
 import { HeardFromCard } from "../../src/components/HeardFromCard";
 import { askForNudgesOnce } from "../../src/lib/nudges";
 import { Body, Display, KenteBand, LookScreen } from "../../src/components/look";
+import { DurobotOrb } from "../../src/components/redesign/DurobotOrb";
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -214,9 +215,7 @@ export default function Home() {
                   opacity: pressed ? 0.8 : 1,
                 })}
               >
-                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: look.primary, alignItems: "center", justifyContent: "center" }}>
-                  <Symbol name="wand.and.stars" size={16} color={look.onPrimary} />
-                </View>
+                <DurobotOrb size={34} />
                 <Body size={15} weight="500" tone="secondary" style={{ flex: 1 }}>
                   Ask Durobot anything
                 </Body>

@@ -28,6 +28,7 @@ import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
 import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../src/lib/freeMenus";
 import { fold } from "../../src/lib/fold";
+import { useLook } from "../../src/lib/appearance";
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -77,6 +78,7 @@ function waNumber(raw: string | null): string | null {
 export default function VenuePage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useTheme();
+  const look = useLook();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [venue, setVenue] = useState<VenueDetail | null | undefined>(undefined);
@@ -351,9 +353,7 @@ export default function VenuePage() {
             justifyContent: "space-around",
             marginHorizontal: GUTTER,
             marginTop: space.lg,
-            paddingVertical: space.md,
-            borderRadius: radius.card,
-            backgroundColor: c.backgroundElement,
+            paddingVertical: space.sm,
           }}
         >
           {usable.map((a, i) => (
@@ -368,18 +368,20 @@ export default function VenuePage() {
               <Rise delay={160 + i * 60} distance={10}>
               <View
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: c.accentSoft,
+                  width: 54,
+                  height: 54,
+                  borderRadius: 27,
+                  backgroundColor: i === 0 ? look.primary : look.tile,
+                  borderWidth: i === 0 ? 0 : 1,
+                  borderColor: look.tileEdge,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Symbol name={a.icon} size={19} color={c.accent} />
+                <Symbol name={a.icon} size={21} color={i === 0 ? look.onPrimary : c.text} />
               </View>
               </Rise>
-              <Text variant="caption" tone="secondary">
+              <Text variant="caption" weight="600">
                 {a.label}
               </Text>
             </PressScale>
@@ -664,6 +666,7 @@ export default function VenuePage() {
 /** One line on the menu: name, the start of its description, when it applies, the price. */
 function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onPress: () => void }) {
   const c = useTheme();
+  const look = useLook();
   const when = availability(item);
   return (
     <Pressable
@@ -677,12 +680,12 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
         paddingHorizontal: GUTTER,
         paddingVertical: space.md,
         borderTopWidth: first ? 0 : HAIRLINE,
-        borderTopColor: c.border,
+        borderTopColor: look.tileEdge,
         backgroundColor: pressed ? c.backgroundSunken : "transparent",
       })}
     >
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="callout" weight="600">
+        <Text variant="headline">
           {item.name}
         </Text>
         {item.notes ? (
@@ -703,14 +706,14 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
             </Text>
           </View>
         ) : null}
-        <Text variant="callout" tabular style={{ marginTop: 2 }}>
+        <Text variant="callout" weight="700" tabular style={{ marginTop: 4, color: look.colors.accent }}>
           {ghs(Number(item.price_ghs))}
         </Text>
       </View>
       {item.image_url ? (
         <Image
           source={{ uri: item.image_url }}
-          style={{ width: 72, height: 72, borderRadius: radius.row, backgroundColor: c.skeleton }}
+          style={{ width: 84, height: 84, borderRadius: 20, backgroundColor: c.skeleton }}
           contentFit="cover"
           transition={150}
         />
@@ -722,6 +725,7 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
 
 function Pill({ icon, text, quiet }: { icon: SymbolViewProps["name"]; text: string; quiet?: boolean }) {
   const c = useTheme();
+  const look = useLook();
   return (
     <View
       style={{
@@ -731,9 +735,9 @@ function Pill({ icon, text, quiet }: { icon: SymbolViewProps["name"]; text: stri
         paddingHorizontal: space.md,
         paddingVertical: 6,
         borderRadius: radius.pill,
-        backgroundColor: quiet ? "transparent" : c.backgroundElement,
-        borderWidth: quiet ? HAIRLINE : 0,
-        borderColor: c.border,
+        backgroundColor: "transparent",
+        borderWidth: 1,
+        borderColor: quiet ? look.tileEdge : look.colors.borderStrong,
       }}
     >
       <Symbol name={icon} size={12} color={quiet ? c.textSecondary : c.accent} />
