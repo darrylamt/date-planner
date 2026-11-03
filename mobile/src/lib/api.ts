@@ -326,3 +326,65 @@ export async function fetchNextSpots(input: {
     return null;
   }
 }
+
+/* ── trips ───────────────────────────────────────────────────────────── */
+
+export interface TripPlaceRoute {
+  id: string;
+  from: string;
+  to: string;
+  bothWays: boolean;
+  mode: "bus" | "trotro" | "car" | "flight" | "ferry";
+  operator: string;
+  service: string | null;
+  fromStation: string | null;
+  toStation: string | null;
+  departures: string | null;
+  minutes: number | null;
+  /** Both null: nobody knows the fare. Max null: a "from" fare. */
+  fareMin: number | null;
+  fareMax: number | null;
+  bookUrl: string | null;
+  bookPhone: string | null;
+  checkedOn: string | null;
+  notes: string | null;
+}
+
+export interface TripPlace {
+  slug: string;
+  name: string;
+  region: string;
+  town: string | null;
+  gatewayTown: string;
+  lastLeg: string | null;
+  lat: number | null;
+  lng: number | null;
+  roadKmFromAccra: number | null;
+  blurb: string | null;
+  highlights: string[];
+  bestTime: string | null;
+  image: string | null;
+  /** "Photo: author, licence, Wikimedia Commons": shown with the photo, as the licence asks. */
+  imageCredit: string | null;
+  routes: TripPlaceRoute[];
+}
+
+let placesCache: Promise<TripPlace[]> | null = null;
+
+/**
+ * Where a trip can go, researched and kept in the admin (0101). Empty until
+ * the migration has run, and on any failure: Trips then shows its samples.
+ * Asked once per launch; a failed ask is tried again next time.
+ */
+export function fetchTripPlaces(): Promise<TripPlace[]> {
+  if (!BASE) return Promise.resolve([]);
+  placesCache ??= fetch(`${BASE}/api/trips`)
+    .then((res) => (res.ok ? res.json() : { destinations: [] }))
+    .then((json: { destinations?: TripPlace[] }) => json.destinations ?? [])
+    .catch(() => [] as TripPlace[])
+    .then((list) => {
+      if (!list.length) placesCache = null;
+      return list;
+    });
+  return placesCache;
+}
