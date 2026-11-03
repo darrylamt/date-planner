@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import { PressScale, Rise } from "../../src/components/motion";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -29,6 +29,10 @@ import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
 import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../src/lib/freeMenus";
 import { fold } from "../../src/lib/fold";
 import { useLook } from "../../src/lib/appearance";
+import { myStarIds, setStar } from "../../src/lib/stars";
+import { ProSheet } from "../../src/components/profile/ProSheet";
+
+const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -90,6 +94,16 @@ export default function VenuePage() {
   const [query, setQuery] = useState("");
   const [hoursOpen, setHoursOpen] = useState(false);
   const [item, setItem] = useState<MenuItem | null>(null);
+  // Starred by this account (0103), and the Pro sheet when a free account is at its ten.
+  const [starred, setStarred] = useState(false);
+  const [proSheet, setProSheet] = useState(false);
+  useEffect(() => {
+    let on = true;
+    void myStarIds().then((ids) => on && setStarred(ids.has(id)));
+    return () => {
+      on = false;
+    };
+  }, [id, session?.user.id]);
   // Item -> whether this account's recommendation counts publicly.
   const [mine, setMine] = useState<Map<string, boolean>>(new Map());
 
@@ -269,6 +283,27 @@ export default function VenuePage() {
   actions.push({ icon: "map.fill", label: "Directions", onPress: () => void Linking.openURL(maps) });
   actions.push({ icon: "car.fill", label: "Uber", onPress: () => void Linking.openURL(uberRideLink(venue)) });
   if (instagram) actions.push({ icon: "camera.fill", label: "Instagram", onPress: () => void Linking.openURL(instagram), pro: true });
+  actions.push({
+    icon: starred ? "star.fill" : "star",
+    label: starred ? "Starred" : "Star",
+    onPress: () => {
+      const next = !starred;
+      setStarred(next);
+      void setStar(id, next).then((r) => {
+        if (r === "ok") return;
+        setStarred(!next);
+        if (r === "signed_out") router.push("/login");
+        else if (r === "limit") setProSheet(true);
+        else Alert.alert("That didn't save", "Check your connection and try again.");
+      });
+    },
+  });
+  // A link that shows the name and a picture to anybody, and the place itself only in the app (/v/<id>).
+  actions.push({
+    icon: "square.and.arrow.up",
+    label: "Share",
+    onPress: () => void Share.share({ message: `${venue.name} on Duro!: ${WEB_URL}/v/${id}`, url: `${WEB_URL}/v/${id}` }),
+  });
   // The same rule as the menu: the free months promise booking, so the buttons come with it.
   const usable = actions.filter((a) => !a.pro || open);
 
@@ -351,6 +386,9 @@ export default function VenuePage() {
           style={{
             flexDirection: "row",
             justifyContent: "space-around",
+            // Star and Share make up to seven: a second row rather than off the edge.
+            flexWrap: "wrap",
+            rowGap: space.md,
             marginHorizontal: GUTTER,
             marginTop: space.lg,
             paddingVertical: space.sm,
@@ -659,6 +697,7 @@ export default function VenuePage() {
         favouriteOnly={item ? mine.get(item.id) === false : false}
         onRecommend={item ? (on) => void recommend(item, on) : undefined}
       />
+      <ProSheet visible={proSheet} onClose={() => setProSheet(false)} tier="free" onPurchased={() => (setProSheet(false), void checkPro())} />
     </>
   );
 }

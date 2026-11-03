@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Linking, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Linking, Pressable, ScrollView, Share, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +20,7 @@ const ICON: Record<TripPlaceRoute["mode"], SymbolViewProps["name"]> = {
   ferry: "ferry.fill",
 };
 const ORDER: TripPlaceRoute["mode"][] = ["bus", "trotro", "car", "flight", "ferry"];
+const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 /** "GHS 150", "GHS 80 to 120", "from GHS 999", or null when nobody knows it. */
 function fareText(r: TripPlaceRoute): string | null {
@@ -145,9 +146,19 @@ export default function TripPlaceScreen() {
             locations={[0, 0.3, 1]}
             style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: GUTTER, paddingBottom: 18, justifyContent: "space-between" }}
           >
-            <RoundButton label="Close" onPress={() => router.back()} filled>
-              <Symbol name="xmark" size={16} weight="bold" color={look.onPrimary} />
-            </RoundButton>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <RoundButton label="Close" onPress={() => router.back()} filled>
+                <Symbol name="xmark" size={16} weight="bold" color={look.onPrimary} />
+              </RoundButton>
+              {/* The link shows the name and photo to anybody; the place itself opens only in the app (/place/<slug>). */}
+              <RoundButton
+                label="Share"
+                filled
+                onPress={() => void Share.share({ message: `${place.name} on Duro!: ${WEB_URL}/place/${place.slug}`, url: `${WEB_URL}/place/${place.slug}` })}
+              >
+                <Symbol name="square.and.arrow.up" size={16} weight="bold" color={look.onPrimary} />
+              </RoundButton>
+            </View>
             <View style={{ gap: 4 }}>
               <Body size={14} weight="700" color="rgba(255,255,255,0.9)">
                 {place.roadKmFromAccra ? `${place.region} · about ${place.roadKmFromAccra} km from Accra by road` : place.region}

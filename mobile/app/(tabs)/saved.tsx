@@ -25,10 +25,12 @@ import { Segmented } from "../../src/components/Segmented";
 import { PlansCalendar } from "../../src/components/plans/PlansCalendar";
 import { useLook } from "../../src/lib/appearance";
 import { Body, Display, KenteBand } from "../../src/components/look";
+import { StarredList } from "../../src/components/redesign/StarredList";
+import { fetchAllowance } from "../../src/lib/chat";
 
 /** The last view chosen on Plans: the list, or the calendar. */
 const VIEW_KEY = "duro.plans.view";
-type PlansView = "list" | "calendar";
+type PlansView = "list" | "calendar" | "starred";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -40,6 +42,10 @@ export default function Plans() {
   const { session, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<SavedPlan[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pro, setPro] = useState(false);
+  useEffect(() => {
+    if (session) void fetchAllowance().then((a) => setPro(a?.tier === "pro")).catch(() => undefined);
+  }, [session]);
   /*
    * Plans holds what used to be two tabs: Saved as a list, and Calendar. A
    * ?view= link (old calendar links redirect here) wins over the last view
@@ -48,13 +54,13 @@ export default function Plans() {
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<PlansView>("list");
   useEffect(() => {
-    if (params.view === "calendar" || params.view === "list") {
+    if (params.view === "calendar" || params.view === "list" || params.view === "starred") {
       setView(params.view);
       void AsyncStorage.setItem(VIEW_KEY, params.view).catch(() => undefined);
       return;
     }
     void AsyncStorage.getItem(VIEW_KEY)
-      .then((v) => (v === "calendar" || v === "list") && setView(v))
+      .then((v) => (v === "calendar" || v === "list" || v === "starred") && setView(v))
       .catch(() => undefined);
   }, [params.view]);
   const chooseView = (v: PlansView) => {
@@ -123,7 +129,8 @@ export default function Plans() {
     );
   }
 
-  if (plans.length === 0) {
+  // The Starred view stands on its own: somebody can star places before they ever save a plan.
+  if (plans.length === 0 && view !== "starred") {
     return (
       <Empty
         bubble="This shelf is looking empty."
@@ -168,6 +175,7 @@ export default function Plans() {
           options={[
             { value: "list", label: "List" },
             { value: "calendar", label: "Calendar" },
+            { value: "starred", label: "Starred" },
           ]}
           value={view}
           onChange={chooseView}
@@ -175,7 +183,8 @@ export default function Plans() {
       </View>
 
       {view === "calendar" ? <PlansCalendar plans={plans} /> : null}
-      {view === "calendar" ? null : (
+      {view === "starred" ? <StarredList pro={pro} /> : null}
+      {view !== "list" ? null : (
         <View style={{ paddingHorizontal: GUTTER, gap: 16 }}>
           {plans.map((plan) => (
             <PlanCard
