@@ -5,6 +5,7 @@ import { Text } from "./Text";
 import { useReducedMotion } from "./motion";
 import { GUTTER, space } from "../theme";
 import { useIsDark, useTheme } from "../lib/useTheme";
+import { useLook } from "../lib/appearance";
 
 const HEIGHT = 44;
 const PAD = 4;
@@ -34,6 +35,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   const c = useTheme();
+  const look = useLook();
   const dark = useIsDark();
   const reduced = useReducedMotion();
   const index = Math.max(0, options.findIndex((o) => o.value === value));
@@ -70,7 +72,9 @@ export function Segmented<T extends string>({
           height: HEIGHT,
           padding: PAD,
           borderRadius: HEIGHT / 2,
-          backgroundColor: c.backgroundSunken,
+          // The look's pill switch (redesign): an outline, the chosen side filled.
+          borderWidth: 1,
+          borderColor: look.tileEdge,
           flexDirection: "row",
         }}
       >
@@ -84,12 +88,7 @@ export function Segmented<T extends string>({
               width: segment,
               height: HEIGHT - PAD * 2,
               borderRadius: (HEIGHT - PAD * 2) / 2,
-              backgroundColor: dark ? c.backgroundSelected : c.backgroundElement,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: dark ? 0.4 : 0.12,
-              shadowRadius: 6,
-              elevation: 3,
+              backgroundColor: look.third,
               transform: [{ translateX: x }],
             }}
           />
@@ -114,7 +113,7 @@ export function Segmented<T extends string>({
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
-                style={{ color: on ? c.text : c.textSecondary }}
+                style={{ color: on ? look.onThird : c.textSecondary }}
               >
                 {o.label}
               </Text>

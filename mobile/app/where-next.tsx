@@ -23,6 +23,7 @@ import { fetchAreas } from "../src/lib/data";
 import { fetchNextSpots, type NextSpot } from "../src/lib/api";
 import { ghs } from "../src/lib/format";
 import type { Area } from "../src/lib/types";
+import { useLook } from "../src/lib/appearance";
 
 /**
  * Where next, with no plan: pick a mood, shake the phone, get somewhere.
@@ -61,6 +62,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function WhereNext() {
   const c = useTheme();
+  const look = useLook();
   const isDark = useIsDark();
   const ui = swiftUI;
   const sm = swiftMods;
@@ -393,27 +395,24 @@ export default function WhereNext() {
             marginHorizontal: GUTTER,
             marginTop: space.xxl,
             paddingVertical: space.xxl,
-            borderRadius: radius.card,
-            backgroundColor: c.accentSoft,
+            // The look's main card, like Plan a night on Home (redesign).
+            borderRadius: 30,
+            backgroundColor: look.primary,
             alignItems: "center",
             gap: space.md,
             overflow: "hidden",
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <MeshBackground
-            period={5000}
-            colors={[c.accentSoft, c.background, c.accentSoft, c.background, `${c.accent}33`, c.accentSoft, c.accentSoft, c.background, `${c.accent}22`]}
-          />
           <Animated.View
             style={{ transform: [{ rotate: rock.interpolate({ inputRange: [-1, 1], outputRange: ["-14deg", "14deg"] }) }] }}
           >
-            <Symbol name="iphone.radiowaves.left.and.right" size={56} color={c.accent} />
+            <Symbol name="iphone.radiowaves.left.and.right" size={56} color={look.onPrimary} />
           </Animated.View>
-          <Text variant="title2" style={{ color: c.accent }}>
+          <Text variant="title1" style={{ color: look.onPrimary }}>
             {canShake ? "Shake your phone" : "Find me somewhere"}
           </Text>
-          <Text variant="footnote" tone="secondary" center style={{ paddingHorizontal: GUTTER }}>
+          <Text variant="footnote" center style={{ paddingHorizontal: GUTTER, color: look.onPrimary, opacity: 0.8 }}>
             {canShake ? "or tap here" : "Shaking to ask arrives with the next app update."}
           </Text>
         </Pressable>
