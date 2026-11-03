@@ -11,10 +11,10 @@ import { useTheme } from "../src/lib/useTheme";
 import { isMe, rememberNames, rememberedNames, startingNames } from "../src/lib/people";
 import { afterSharing } from "../src/lib/review";
 import { billSource } from "../src/lib/bill";
-import { Image } from "expo-image";
+import { Sprite } from "../src/components/redesign/Sprite";
 import { Confetti } from "../src/components/redesign/Confetti";
 
-const COIN = require("../assets/3d/coin.png");
+const COIN = require("../assets/3d/coin-sheet.png");
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -99,7 +99,7 @@ export default function WhoPays() {
           }}
         >
           {/* A gold coin, flipping (Blender, assets/3d). */}
-          <Image source={COIN} style={{ width: 84, height: 84 }} contentFit="contain" autoplay={!reduced} />
+          <Sprite source={COIN} size={84} fps={30} />
           <Text variant="footnote" weight="700" tone="tint" style={{ letterSpacing: 0.8 }}>
             THE WHEEL HAS SPOKEN
           </Text>

@@ -43,9 +43,8 @@ import {
 import type { Occasion } from "../src/lib/types";
 import { KenteBand, LookBackground } from "../src/components/look";
 import { useLook } from "../src/lib/appearance";
+import { DurobotOrb } from "../src/components/redesign/DurobotOrb";
 
-const RING_KENTE = require("../assets/3d/ring-kente.png");
-const RING_GOLD = require("../assets/3d/ring-gold.png");
 
 type Mode = "signin" | "signup";
 
@@ -210,7 +209,7 @@ export default function Login() {
   }
 
   // The stage gives up height to the form, so the fields sit above the keyboard.
-  const stageH = Math.round(height * (showEmail ? 0.3 : 0.5));
+  const stageH = Math.round(height * (showEmail ? 0.24 : 0.36));
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -224,13 +223,8 @@ export default function Login() {
           <KenteBand />
         </View>
         <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: 40, alignItems: "center", justifyContent: "center" }}>
-          <Image
-            source={look.band ? RING_KENTE : RING_GOLD}
-            style={{ width: showEmail ? 110 : 200, height: showEmail ? 110 : 200 }}
-            contentFit="contain"
-            autoplay={!reduced}
-            accessibilityIgnoresInvertColors
-          />
+          {/* Durobot's orb, large and breathing: the brand's face in the redesign (owner: the ring "doesnt move"). */}
+          <DurobotOrb size={showEmail ? 96 : 150} />
         </View>
       </View>
 

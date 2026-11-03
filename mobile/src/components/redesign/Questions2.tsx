@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
-import { Image } from "expo-image";
+import { Sprite } from "./Sprite";
 import * as Haptics from "expo-haptics";
 import type { SymbolViewProps } from "expo-symbols";
 import { Symbol } from "../Symbol";
@@ -435,8 +435,8 @@ export function ShapeNight({ inputs, update }: { inputs: PlanInputs; update: (p:
 
 /* ── Building the plan ────────────────────────────────────────────────── */
 
-const RING_KENTE = require("../../../assets/3d/ring-kente.png");
-const RING_GOLD = require("../../../assets/3d/ring-gold.png");
+const RING_KENTE = require("../../../assets/3d/ring-kente-sheet.png");
+const RING_GOLD = require("../../../assets/3d/ring-gold-sheet.png");
 
 /**
  * While the planner works: the answers it is working from, a woven strip
@@ -448,17 +448,11 @@ export function BuildingNight({ inputs, chips }: { inputs: PlanInputs; chips: st
   const reduced = useReducedMotion();
   const lines = useMemo(() => loadingLines(inputs), [inputs]);
   const [line, setLine] = useState(0);
-  const x = useSharedValue(0);
 
   useEffect(() => {
     const t = setInterval(() => setLine((i) => (i + 1) % Math.max(1, lines.length)), 2200);
     return () => clearInterval(t);
   }, [lines.length]);
-  useEffect(() => {
-    if (reduced) return;
-    x.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, true);
-  }, [reduced, x]);
-  const strip = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * 180 }] }));
 
   return (
     <View style={{ flex: 1 }}>
@@ -471,30 +465,12 @@ export function BuildingNight({ inputs, chips }: { inputs: PlanInputs; chips: st
           ))}
         </View>
         {/* A ring that turns while the planner works: kente in Kente, gold otherwise (Blender, assets/3d). */}
-        <Image
-          source={look.band ? RING_KENTE : RING_GOLD}
-          style={{ width: 132, height: 132, alignSelf: "center" }}
-          contentFit="contain"
-          autoplay={!reduced}
-          accessibilityIgnoresInvertColors
-        />
+        <View style={{ alignSelf: "center" }}>
+          <Sprite source={look.band ? RING_KENTE : RING_GOLD} size={150} />
+        </View>
         <Display size={40} weight="700">
           Putting your night together
         </Display>
-        <View style={{ height: 10, borderRadius: 5, backgroundColor: look.tile, overflow: "hidden" }}>
-          <Animated.View style={[{ width: 120, height: 10, borderRadius: 5, flexDirection: "row", overflow: "hidden" }, strip]}>
-            {look.band ? (
-              <>
-                <View style={{ flex: 10, backgroundColor: KENTE.gold }} />
-                <View style={{ flex: 4, backgroundColor: KENTE.green }} />
-                <View style={{ flex: 3, backgroundColor: KENTE.red }} />
-                <View style={{ flex: 10, backgroundColor: KENTE.gold }} />
-              </>
-            ) : (
-              <View style={{ flex: 1, backgroundColor: look.colors.accent }} />
-            )}
-          </Animated.View>
-        </View>
         <Body size={16} tone="secondary" style={{ minHeight: 48 }}>
           {lines[line] ?? "Checking what's open, and what fits the budget."}
         </Body>

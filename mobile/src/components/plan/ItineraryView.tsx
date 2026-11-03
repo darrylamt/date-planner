@@ -805,14 +805,15 @@ export function ItineraryView({
         <View style={{ paddingHorizontal: GUTTER }}>
           {itinerary.stops.map((stop, i) => (
             <Fragment key={`${stop.venue_id}-${i}`}>
-              {/* The stop's number, in the colour of its pin on the map. */}
+              {/* The stop's number, in the colour of its pin on the map; not on the back of a turned card. */}
+              {flip?.index === i ? null : (
               <View
                 pointerEvents="none"
                 style={{
                   alignSelf: "flex-start",
                   zIndex: 2,
                   // Over the photo when there is one; above the card, clear of its words, when not.
-                  marginBottom: stop.images?.length || stop.image_url ? -22 : 8,
+                  marginBottom: stop.images?.length || stop.image_url ? -34 : 8,
                   marginLeft: 12,
                   marginTop: 0,
                   width: 34,
@@ -823,13 +824,14 @@ export function ItineraryView({
                   borderColor: look.colors.background,
                   alignItems: "center",
                   justifyContent: "center",
-                  transform: [{ translateY: stop.images?.length || stop.image_url ? 12 : 0 }],
+                  transform: [{ translateY: stop.images?.length || stop.image_url ? 24 : 0 }],
                 }}
               >
                 <Text variant="footnote" weight="800" style={{ color: colours[i % colours.length].fg }}>
                   {String(i + 1)}
                 </Text>
               </View>
+              )}
               <FlipCard
                 flipped={flip?.index === i}
                 front={
