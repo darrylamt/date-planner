@@ -10,5 +10,8 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   Gemini's dish_role, which npm run meal:smoke reads; usage_events takes
   events, rate_hit answers, stay_details and stay_rooms exist and are closed
   to anon, and npm run audit:smoke passes 23/23 after 0099).
+- 0101_trips.sql ran on 3 November 2026 (probed: 26 destinations and 50
+  routes, both tables refuse anon, npm run audit:smoke 23/23); it is in
+  `archive/` too.
 - New migrations go here, at the top level, numbered on from 0100. Move them
   into `archive/` once they have been run.
