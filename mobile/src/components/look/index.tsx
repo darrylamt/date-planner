@@ -1,10 +1,10 @@
 import { Pressable, StyleSheet, Text as RNText, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Defs, Ellipse, Pattern, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, Pattern, Rect } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useId, type ReactNode } from "react";
 import { useLook } from "../../lib/appearance";
 import { KENTE } from "../../lib/looks";
+import { NightSky } from "./NightSky";
 
 /*
  * The redesign's shared pieces, drawn from the look being worn (looks.ts), so
@@ -138,24 +138,11 @@ export function KenteBand({ thin = false }: { thin?: boolean }) {
  */
 export function LookBackground() {
   const look = useLook();
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   if (!look.sky) return <View style={[StyleSheet.absoluteFill, { backgroundColor: look.colors.background }]} />;
+  // The living sky (NightSky.tsx, a Skia shader); the web build draws the plain gradient.
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <LinearGradient
-        colors={["#2E1D52", "#1B1336", "#0C0A16", "#08070E"]}
-        locations={[0, 0.34, 0.64, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <Svg width="100%" height={420} style={{ position: "absolute", top: 60 }}>
-        <Defs>
-          <RadialGradient id={`glow${uid}`} cx="50%" cy="100%" rx="60%" ry="60%">
-            <Stop offset="0" stopColor="#FF9650" stopOpacity="0.28" />
-            <Stop offset="1" stopColor="#FF9650" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Ellipse cx="50%" cy="300" rx="70%" ry="160" fill={`url(#glow${uid})`} />
-      </Svg>
+      <NightSky />
     </View>
   );
 }

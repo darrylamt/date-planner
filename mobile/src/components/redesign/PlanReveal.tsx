@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeInDown, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
@@ -11,6 +11,7 @@ import { longDate } from "../../lib/format";
 import type { Itinerary, PlanInputs } from "../../lib/types";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../look";
 import { forParty } from "./Questions";
+import { Confetti } from "./Confetti";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const MAP_H = 260;
@@ -115,6 +116,13 @@ export function PlanReveal({
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const pts = useMemo(() => placeStops(itinerary, width, MAP_H), [itinerary, width]);
+  // A handful of confetti the moment it is saved, not on every visit to a saved plan.
+  const [fire, setFire] = useState(0);
+  const wasSaved = useRef(saved);
+  useEffect(() => {
+    if (saved && !wasSaved.current) setFire((f) => f + 1);
+    wasSaved.current = saved;
+  }, [saved]);
   const route = useMemo(() => smoothPath(pts), [pts]);
 
   const drawn = useSharedValue(reduced ? 1 : 0);
@@ -260,6 +268,7 @@ export function PlanReveal({
           <LookButton label={saved ? "Saved" : saving ? "Saving" : "Save"} onPress={onSave} disabled={saving || saved} style={{ paddingHorizontal: 22 }} />
         </View>
       </View>
+      <Confetti fire={fire} />
     </LookScreen>
   );
 }
