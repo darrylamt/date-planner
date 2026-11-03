@@ -143,7 +143,7 @@ export default function Home() {
           <Segmented value={mode} onChange={setMode} />
 
           {mode === "trips" ? (
-            // Trips, previewed on sample data until the trip engine exists (TripsHome, tripMock.ts).
+            // Trips: the researched places and the server's trip engine (TripsHome, /api/trip/generate).
             <TripsHome />
           ) : (
             <>

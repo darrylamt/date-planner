@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,25 +6,36 @@ import * as Haptics from "expo-haptics";
 import { Symbol } from "../../src/components/Symbol";
 import { GUTTER } from "../../src/theme";
 import { useLook } from "../../src/lib/appearance";
-import { DESTINATIONS, type TravelMode } from "../../src/lib/tripMock";
+import { fetchTripPlaces, type TripComfort, type TripPlace, type TripTravel } from "../../src/lib/api";
 import { DayPicker } from "../../src/components/redesign/Questions2";
-import { DestinationTile, SampleBadge } from "../../src/components/redesign/TripsHome";
+import { PlaceTile } from "../../src/components/redesign/TripsHome";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../../src/components/look";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const isoOf = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 /**
- * Plan a trip (a preview on sample data, 3 Nov 2026): where, when, how many
- * nights, who, how comfortable, and how to get there, on one screen, in the
- * redesign's controls. Build opens the trip.
+ * Plan a trip: where (the researched places, 0101), when, how many nights,
+ * who, how comfortable, and how to get there, on one screen, in the
+ * redesign's controls. Build opens the trip, which the server plans.
  */
 export default function TripNew() {
   const look = useLook();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ to?: string }>();
-  const live = DESTINATIONS.filter((d) => d.live);
-  const [to, setTo] = useState(live.find((d) => d.id === params.to)?.id ?? live[0].id);
+  const [places, setPlaces] = useState<TripPlace[]>([]);
+  const [to, setTo] = useState(params.to ?? "");
+  useEffect(() => {
+    let on = true;
+    void fetchTripPlaces().then((list) => {
+      if (!on) return;
+      setPlaces(list);
+      setTo((cur) => (list.some((p) => p.slug === cur) ? cur : list[0]?.slug ?? ""));
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
   const [date, setDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
@@ -32,8 +43,8 @@ export default function TripNew() {
   });
   const [nights, setNights] = useState(2);
   const [people, setPeople] = useState(2);
-  const [comfort, setComfort] = useState<"easy" | "mid" | "treat">("mid");
-  const [travel, setTravel] = useState<"any" | TravelMode>("any");
+  const [comfort, setComfort] = useState<TripComfort>("mid");
+  const [travel, setTravel] = useState<TripTravel>("any");
 
   const counter = (label: string, value: number, set: (n: number) => void, min: number, max: number, unit: (n: number) => string) => (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 6 }}>
@@ -90,7 +101,6 @@ export default function TripNew() {
         <RoundButton label="Close" onPress={() => router.back()}>
           <Symbol name="xmark" size={16} weight="bold" color={look.colors.text} />
         </RoundButton>
-        <SampleBadge />
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 16, paddingBottom: 140, gap: 26 }}>
         <Display size={38} weight="700">
@@ -102,9 +112,17 @@ export default function TripNew() {
             Where to?
           </Display>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }} style={{ marginRight: -GUTTER }}>
-            {live.map((d) => (
-              <View key={d.id} style={{ borderRadius: 28, borderWidth: 3, borderColor: d.id === to ? look.primary : "transparent", padding: 2 }}>
-                <DestinationTile d={d} width={150} height={170} onPress={() => setTo(d.id)} />
+            {places.map((p) => (
+              <View key={p.slug} style={{ borderRadius: 28, borderWidth: 3, borderColor: p.slug === to ? look.primary : "transparent", padding: 2 }}>
+                <PlaceTile
+                  p={p}
+                  width={150}
+                  height={170}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setTo(p.slug);
+                  }}
+                />
               </View>
             ))}
           </ScrollView>
@@ -155,8 +173,9 @@ export default function TripNew() {
       </ScrollView>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: GUTTER, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: look.colors.background, borderTopWidth: 1, borderTopColor: look.tileEdge }}>
         <LookButton
-          label="Build my trip"
-          onPress={() => router.replace(`/trip/${to}?nights=${nights}&people=${people}&date=${date}&travel=${travel}`)}
+          label={to ? `Build my trip to ${places.find((p) => p.slug === to)?.name ?? "there"}` : "Build my trip"}
+          disabled={!to}
+          onPress={() => router.replace(`/trip/plan?to=${to}&arrive=${date}&nights=${nights}&people=${people}&comfort=${comfort}&travel=${travel}`)}
         />
       </View>
     </LookScreen>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+import { Linking, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -10,7 +10,6 @@ import { Symbol } from "../../../src/components/Symbol";
 import { GUTTER } from "../../../src/theme";
 import { useLook } from "../../../src/lib/appearance";
 import { fetchTripPlaces, type TripPlace, type TripPlaceRoute } from "../../../src/lib/api";
-import { DESTINATIONS } from "../../../src/lib/tripMock";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../../../src/components/look";
 
 const ICON: Record<TripPlaceRoute["mode"], SymbolViewProps["name"]> = {
@@ -37,8 +36,8 @@ const shortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateStrin
 /**
  * A destination as the research has it (0101): the photo with its credit,
  * what people go there for, and every way there we know, with the fare where
- * somebody has read it and the date they did. Planning a whole trip here
- * opens the sample planner where there is one; elsewhere it says so.
+ * somebody has read it and the date they did. Plan a trip here opens the
+ * trip questionnaire with it chosen.
  */
 export default function TripPlaceScreen() {
   const look = useLook();
@@ -76,7 +75,6 @@ export default function TripPlaceScreen() {
   const routes = [...(fromAccra.length ? fromAccra : place.routes)].sort(
     (a, b) => ORDER.indexOf(a.mode) - ORDER.indexOf(b.mode) || (a.fareMin ?? 1e9) - (b.fareMin ?? 1e9)
   );
-  const sample = DESTINATIONS.find((d) => d.id === place.slug && d.live);
   const heroH = Math.round(width * 0.95);
 
   const routeCard = (r: TripPlaceRoute) => {
@@ -230,12 +228,10 @@ export default function TripPlaceScreen() {
         }}
       >
         <LookButton
-          label={sample ? "Plan a trip here" : "Plan a trip here (soon)"}
-          sub={sample ? "A preview with sample stays and days" : undefined}
+          label="Plan a trip here"
           onPress={() => {
             void Haptics.selectionAsync();
-            if (sample) router.push(`/trip/new?to=${sample.id}`);
-            else Alert.alert(`We're still building ${place.name}`, "Places to stay and each day's plan are on their way. The ways there above are real.");
+            router.push(`/trip/new?to=${place.slug}`);
           }}
         />
       </View>
