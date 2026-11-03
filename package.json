@@ -49,6 +49,7 @@
     "mascots": "tsx scripts/build-mascots.ts",
     "pathway:smoke": "tsx scripts/pathway-smoke.ts",
     "audit:smoke": "tsx scripts/audit-smoke.ts",
+    "trip:smoke": "tsx --env-file=.env.local scripts/trip-smoke.ts",
     "group:check": "tsx scripts/group-orders-check.ts",
     "group:smoke": "tsx scripts/group-smoke.ts"
   },

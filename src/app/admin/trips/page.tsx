@@ -103,12 +103,17 @@ export default async function AdminTripsPage() {
     );
   }
 
-  const [venues, stays] = await Promise.all([
+  // Where people asked to go in the last 30 days (0102); none before it has run.
+  const since = new Date(Date.now() - 30 * 864e5).toISOString();
+  const [venues, stays, demand] = await Promise.all([
     fetchAllRows<Point>((a, b) => db.from("venues").select("lat, lng").eq("is_active", true).neq("type", "stay").order("id").range(a, b)),
     fetchAllRows<StayPoint>((a, b) =>
       db.from("venues").select("lat, lng, stay_rooms(price_per_night_ghs, is_active)").eq("type", "stay").eq("is_active", true).order("id").range(a, b)
     ),
+    db.from("trip_demand").select("destination").gte("created_at", since).limit(5000),
   ]);
+  const asks = new Map<string, number>();
+  for (const r of (demand.data ?? []) as { destination: string }[]) asks.set(r.destination, (asks.get(r.destination) ?? 0) + 1);
 
   const destinations = (dest.data ?? []) as Destination[];
   const allRoutes = (routes.data ?? []) as IntercityRoute[];
@@ -169,6 +174,7 @@ export default async function AdminTripsPage() {
               </span>
               <span className="mt-1 block text-[12.5px]">
                 {c.pricedStays}/{c.stays} stays priced · {c.pricedRoutes}/{c.routes} ways priced · {c.venues} places
+                {asks.get(d.slug) ? <b> · {asks.get(d.slug)} asked in 30 days</b> : null}
               </span>
               {missing.length ? <span className="mt-0.5 block text-[12.5px] text-staletext">Needs {missing.join(", ")}</span> : null}
             </span>
