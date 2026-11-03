@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View, useWindowD
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import Svg, { Circle, Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import type { SymbolViewProps } from "expo-symbols";
@@ -353,6 +354,8 @@ export function BudgetDial({
 /* ── When: drag the sun ───────────────────────────────────────────────── */
 
 const TIMES = startTimeOptions();
+const SUN = require("../../../assets/3d/sun.png");
+const MOON = require("../../../assets/3d/moon.png");
 
 /** The sky behind the sun, by the hour: morning gold to night. */
 function skyFor(hour: number, kente: boolean): [string, string, string] {
@@ -443,9 +446,15 @@ export function SunTime({
           <Svg width={w} height={h} style={{ position: "absolute" }}>
             <Path d={`M24 ${h - 40} Q ${w / 2} ${-h + 130} ${w - 24} ${h - 40}`} stroke={ink} strokeOpacity={0.25} strokeWidth={1.5} strokeDasharray="3 7" fill="none" />
             <Path d={`M0 ${h - 38} L${w} ${h - 38}`} stroke={ink} strokeOpacity={0.25} strokeWidth={1} />
-            <Circle cx={sx} cy={sy} r={38} fill={night ? "#E8E4FF" : look.id === "daylight" ? "#FF7A3D" : "#F2C14E"} opacity={0.18} />
-            <Circle cx={sx} cy={sy} r={22} fill={night ? "#E8E4FF" : look.id === "daylight" ? "#FF7A3D" : "#F2C14E"} />
+            <Circle cx={sx} cy={sy} r={40} fill={night ? "#E8E4FF" : look.id === "daylight" ? "#FF7A3D" : "#F2C14E"} opacity={0.16} />
           </Svg>
+          {/* The sun by day, the moon after seven: rendered in Blender (assets/3d). */}
+          <Image
+            source={night ? MOON : SUN}
+            style={{ position: "absolute", left: sx - 28, top: sy - 28, width: 56, height: 56 }}
+            contentFit="contain"
+            pointerEvents="none"
+          />
           <View style={{ position: "absolute", left: 20, bottom: 14 }} pointerEvents="none">
             <Display size={44} weight="800" color={ink}>
               {time12(value)}

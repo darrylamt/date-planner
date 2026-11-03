@@ -59,9 +59,10 @@ export function MorphButton({ items, onPress }: { items: MoreItem[]; onPress: ()
         onPress();
       }}
       style={({ pressed }) => ({
-        width: 46,
-        height: 46,
-        borderRadius: 23,
+        // The stop card's other actions are 40 tall (StopAction): the same, so the row lines up.
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: look.tileEdge,
         alignItems: "center",
@@ -71,10 +72,10 @@ export function MorphButton({ items, onPress }: { items: MoreItem[]; onPress: ()
       })}
     >
       {reduced || !item ? (
-        <Symbol name="ellipsis" size={18} color={look.colors.text} />
+        <Symbol name="ellipsis" size={20} color={look.colors.text} />
       ) : (
         <Animated.View key={item.key} entering={ZoomIn.duration(260)} exiting={ZoomOut.duration(180)}>
-          <ItemIcon item={item} size={18} color={look.colors.accent} />
+          <ItemIcon item={item} size={21} color={look.colors.accent} />
         </Animated.View>
       )}
     </Pressable>

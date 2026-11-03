@@ -28,7 +28,11 @@ export const Wheel = forwardRef<WheelHandle, { labels: string[]; size?: number; 
     const n = Math.max(labels.length, 1);
     const seg = 360 / n;
     const R = size / 2;
-    const font = useFont(FIGTREE_BOLD, n <= 4 ? 15 : n <= 6 ? 13 : 12);
+    // Three sizes; each name takes the biggest that fits its segment (fitLabel).
+    const fontL = useFont(FIGTREE_BOLD, 14);
+    const fontM = useFont(FIGTREE_BOLD, 12);
+    const fontS = useFont(FIGTREE_BOLD, 10);
+    const font = fontL && fontM && fontS ? fontL : null;
     const hubFont = useFont(FIGTREE_BOLD, 16);
 
     const angle = useSharedValue(0);
@@ -118,6 +122,21 @@ export const Wheel = forwardRef<WheelHandle, { labels: string[]; size?: number; 
     );
 
     const hub = R * 0.24;
+    // Room along the radius, from just off the hub to just inside the rim.
+    const room = R - hub - 22;
+    // And across the segment where the name starts, which is the narrow end.
+    const across = 2 * (hub + 10) * Math.sin(Math.min(Math.PI / 2, (seg * Math.PI) / 360)) - 4;
+    const fitLabel = (label: string) => {
+      for (const f of [fontL, fontM, fontS]) {
+        if (!f) continue;
+        if (f.getSize() > across) continue;
+        if (f.measureText(label).width <= room) return { f, text: label };
+      }
+      const f = fontS ?? fontM ?? fontL!;
+      let text = label;
+      while (text.length > 1 && f.measureText(`${text}…`).width > room) text = text.slice(0, -1);
+      return { f, text: `${text.trimEnd()}…` };
+    };
     return (
       <View style={{ width: size, height: size + 18 }}>
         <Canvas style={{ width: size, height: size + 18 }}>
@@ -130,13 +149,13 @@ export const Wheel = forwardRef<WheelHandle, { labels: string[]; size?: number; 
               ))}
               {font
                 ? labels.map((label, i) => {
-                    const text = label.length > 16 ? `${label.slice(0, 15)}…` : label;
-                    const w = font.measureText(text).width;
+                    const { f, text } = fitLabel(label);
+                    const w = f.measureText(text).width;
                     const mid = -90 + i * seg + seg / 2;
                     return (
                       <Group key={`l${i}`} origin={vec(R, R)} transform={[{ rotate: (mid * Math.PI) / 180 }]}>
-                        {/* Along the radius, reading outwards from the hub. */}
-                        <SkText x={R + hub + 10 + Math.max(0, (R - hub - 22 - w) / 2)} y={R + 5} text={text} font={font} color={colourOf(i).fg} />
+                        {/* Along the radius, reading outwards from the hub, centred in the room. */}
+                        <SkText x={R + hub + 10 + Math.max(0, (room - w) / 2)} y={R + f.getSize() * 0.36} text={text} font={f} color={colourOf(i).fg} />
                       </Group>
                     );
                   })

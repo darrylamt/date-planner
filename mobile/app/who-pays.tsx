@@ -5,13 +5,16 @@ import { Text } from "../src/components/Text";
 import { Button } from "../src/components/Button";
 import { Wheel, type WheelHandle } from "../src/components/fun/Wheel";
 import { PeopleEditor } from "../src/components/fun/PeopleEditor";
-import { useBurst } from "../src/components/Burst";
 import { useReducedMotion } from "../src/components/motion";
 import { GUTTER, radius, space, Spacing } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { isMe, rememberNames, rememberedNames, startingNames } from "../src/lib/people";
 import { afterSharing } from "../src/lib/review";
 import { billSource } from "../src/lib/bill";
+import { Image } from "expo-image";
+import { Confetti } from "../src/components/redesign/Confetti";
+
+const COIN = require("../assets/3d/coin.png");
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -25,7 +28,6 @@ const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 export default function WhoPays() {
   const c = useTheme();
   const reduced = useReducedMotion();
-  const burst = useBurst();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ count?: string }>();
   const wheel = useRef<WheelHandle>(null);
@@ -34,6 +36,8 @@ export default function WhoPays() {
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const pop = useRef(new Animated.Value(0)).current;
+  // Confetti when the wheel has spoken (Confetti.tsx).
+  const [fire, setFire] = useState(0);
 
   useEffect(() => {
     // From a group outing's plan, everyone's real names; otherwise the ones this phone remembers.
@@ -53,7 +57,7 @@ export default function WhoPays() {
     setWinner(names[at]);
     pop.setValue(0);
     Animated.timing(pop, { toValue: 1, duration: reduced ? 1 : 420, easing: Easing.out(Easing.back(1.6)), useNativeDriver: false }).start();
-    burst(width / 2, 260, ["🎉", "💸", "🥳", "🍾"], 14, 26);
+    setFire((f) => f + 1);
   }
 
   async function share() {
@@ -67,6 +71,7 @@ export default function WhoPays() {
   const size = Math.min(width - GUTTER * 2, 340);
 
   return (
+    <>
     <ScrollView style={{ flex: 1, backgroundColor: c.background }} contentContainerStyle={{ paddingBottom: space.xxxl }}>
       <View style={{ paddingHorizontal: GUTTER, paddingTop: space.md }}>
         <Text variant="display">Who pays?</Text>
@@ -93,11 +98,13 @@ export default function WhoPays() {
             transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
           }}
         >
+          {/* A gold coin, flipping (Blender, assets/3d). */}
+          <Image source={COIN} style={{ width: 84, height: 84 }} contentFit="contain" autoplay={!reduced} />
           <Text variant="footnote" weight="700" tone="tint" style={{ letterSpacing: 0.8 }}>
             THE WHEEL HAS SPOKEN
           </Text>
           <Text variant="largeTitle" center>
-            {isMe(winner) ? "You pay" : `${winner} pays`} 💸
+            {isMe(winner) ? "You pay" : `${winner} pays`}
           </Text>
           <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.sm }}>
             <Button title="Tell the group" icon="square.and.arrow.up" size="medium" onPress={() => void share()} />
@@ -131,5 +138,7 @@ export default function WhoPays() {
         </Text>
       </View>
     </ScrollView>
+    <Confetti fire={fire} />
+    </>
   );
 }

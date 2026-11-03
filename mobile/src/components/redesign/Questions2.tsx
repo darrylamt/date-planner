@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import type { SymbolViewProps } from "expo-symbols";
 import { Symbol } from "../Symbol";
@@ -434,6 +435,9 @@ export function ShapeNight({ inputs, update }: { inputs: PlanInputs; update: (p:
 
 /* ── Building the plan ────────────────────────────────────────────────── */
 
+const RING_KENTE = require("../../../assets/3d/ring-kente.png");
+const RING_GOLD = require("../../../assets/3d/ring-gold.png");
+
 /**
  * While the planner works: the answers it is working from, a woven strip
  * running along a track, and what it is doing, in turn.
@@ -466,6 +470,14 @@ export function BuildingNight({ inputs, chips }: { inputs: PlanInputs; chips: st
             <AnswerChip key={c} label={c} />
           ))}
         </View>
+        {/* A ring that turns while the planner works: kente in Kente, gold otherwise (Blender, assets/3d). */}
+        <Image
+          source={look.band ? RING_KENTE : RING_GOLD}
+          style={{ width: 132, height: 132, alignSelf: "center" }}
+          contentFit="contain"
+          autoplay={!reduced}
+          accessibilityIgnoresInvertColors
+        />
         <Display size={40} weight="700">
           Putting your night together
         </Display>
