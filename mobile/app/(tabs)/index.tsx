@@ -25,6 +25,7 @@ import { HeardFromCard } from "../../src/components/HeardFromCard";
 import { askForNudgesOnce } from "../../src/lib/nudges";
 import { Body, Display, KenteBand, LookScreen } from "../../src/components/look";
 import { DurobotOrb } from "../../src/components/redesign/DurobotOrb";
+import { TripsHome } from "../../src/components/redesign/TripsHome";
 
 /*
  * Group outings, before launch: shown to admin accounts only, so they can be
@@ -142,14 +143,8 @@ export default function Home() {
           <Segmented value={mode} onChange={setMode} />
 
           {mode === "trips" ? (
-            <View style={{ borderRadius: 28, borderWidth: 1, borderColor: look.tileEdge, padding: 20, gap: 8 }}>
-              <Display size={24} weight="700">
-                Trips are on the way
-              </Display>
-              <Body tone="secondary">
-                Cape Coast, Volta, Kumasi and more: how to get there, where to stay, and what to do once you arrive.
-              </Body>
-            </View>
+            // Trips, previewed on sample data until the trip engine exists (TripsHome, tripMock.ts).
+            <TripsHome />
           ) : (
             <>
               <Pressable
