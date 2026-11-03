@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
-import { Sprite } from "./Sprite";
+import { BuildSteps, PlanLoader } from "./PlanLoader";
 import * as Haptics from "expo-haptics";
 import type { SymbolViewProps } from "expo-symbols";
 import { Symbol } from "../Symbol";
@@ -13,8 +13,6 @@ import { GUTTER } from "../../theme";
 import { useLook } from "../../lib/appearance";
 import { KENTE } from "../../lib/looks";
 import { FOCUS_OPTIONS, asksFocus, focusesOf } from "../../lib/planConstants";
-import { loadingLines } from "../../lib/mascotLines";
-import { useReducedMotion } from "../motion";
 import type { Area, PlanFocus, PlanInputs } from "../../lib/types";
 import { AnswerChip, Body, Display, KenteBand, LookBackground, RoundButton } from "../look";
 
@@ -435,45 +433,38 @@ export function ShapeNight({ inputs, update }: { inputs: PlanInputs; update: (p:
 
 /* ── Building the plan ────────────────────────────────────────────────── */
 
-const RING_KENTE = require("../../../assets/3d/ring-kente-sheet.png");
-const RING_GOLD = require("../../../assets/3d/ring-gold-sheet.png");
+/** What the planner does, in order, with the person's own area and budget in it. */
+function buildSteps(inputs: PlanInputs): string[] {
+  const area = inputs.surpriseMe || !inputs.areaNames.length ? "Accra" : inputs.areaNames.length > 1 ? `${inputs.areaNames[0]} and nearby` : inputs.areaNames[0];
+  return [`Checking what's open in ${area}`, "Reading menus and prices", `Keeping it under GHS ${inputs.budget.toLocaleString()}`, "Putting the stops in order"];
+}
 
 /**
- * While the planner works: the answers it is working from, a woven strip
- * running along a track, and what it is doing, in turn.
+ * While the planner works: the answers it is working from, a ring turning
+ * round Durobot's orb, and its steps ticked off one by one (owner, 3 Nov
+ * 2026: nothing on the page showed a plan was being built).
  */
 export function BuildingNight({ inputs, chips }: { inputs: PlanInputs; chips: string[] }) {
-  const look = useLook();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
-  const lines = useMemo(() => loadingLines(inputs), [inputs]);
-  const [line, setLine] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setLine((i) => (i + 1) % Math.max(1, lines.length)), 2200);
-    return () => clearInterval(t);
-  }, [lines.length]);
+  const steps = useMemo(() => buildSteps(inputs), [inputs]);
 
   return (
     <View style={{ flex: 1 }}>
       <LookBackground />
       <KenteBand />
-      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40, gap: 22 }}>
+      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40, gap: 26 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {chips.map((c) => (
             <AnswerChip key={c} label={c} />
           ))}
         </View>
-        {/* A ring that turns while the planner works: kente in Kente, gold otherwise (Blender, assets/3d). */}
         <View style={{ alignSelf: "center" }}>
-          <Sprite source={look.band ? RING_KENTE : RING_GOLD} size={150} />
+          <PlanLoader size={176} />
         </View>
-        <Display size={40} weight="700">
+        <Display size={36} weight="700">
           Putting your night together
         </Display>
-        <Body size={16} tone="secondary" style={{ minHeight: 48 }}>
-          {lines[line] ?? "Checking what's open, and what fits the budget."}
-        </Body>
+        <BuildSteps steps={steps} />
       </View>
     </View>
   );

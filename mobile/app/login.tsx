@@ -208,8 +208,17 @@ export default function Login() {
     );
   }
 
-  // The stage gives up height to the form, so the fields sit above the keyboard.
-  const stageH = Math.round(height * (showEmail ? 0.24 : 0.36));
+  /*
+   * The stage gives up height to the form, so the fields sit above the
+   * keyboard. Choosing how to sign in, it takes whatever the sheet leaves, so
+   * the sheet sits at the bottom with the buttons, "Already have an account"
+   * and the terms together and nothing hidden below (owner, 3 Nov 2026: a
+   * "massive gap" before the terms). Between a quarter and half the screen.
+   */
+  const bottomPad = Math.max(insets.bottom, space.lg) + space.md;
+  const [sheetH, setSheetH] = useState(0);
+  const fitted = sheetH ? height - sheetH - bottomPad - space.md + 28 : height * 0.36;
+  const stageH = Math.round(showEmail ? height * 0.24 : Math.min(height * 0.5, Math.max(height * 0.26, fitted)));
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -265,7 +274,8 @@ export default function Login() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── the sheet ── */}
-        <Sheet bottom={Math.max(insets.bottom, space.lg) + space.md}>
+        <Sheet bottom={bottomPad}>
+          <View onLayout={(e) => setSheetH(Math.round(e.nativeEvent.layout.height))}>
           <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.border, marginBottom: space.lg }} />
 
           <Rise delay={200}>
@@ -362,8 +372,6 @@ export default function Login() {
             )}
           </View>
 
-          <View style={{ flex: 1, minHeight: space.lg }} />
-
           {/* What continuing agrees to, a tap away, as the store expects. */}
           <Text variant="caption" tone="tertiary" center style={{ marginTop: space.lg }}>
             By continuing you agree to the{" "}
@@ -375,6 +383,7 @@ export default function Login() {
               Privacy Policy
             </Text>
           </Text>
+          </View>
         </Sheet>
       </ScrollView>
     </View>
