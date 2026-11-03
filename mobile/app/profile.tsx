@@ -23,7 +23,8 @@ import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
-import { LOOK_CHOICES } from "../src/lib/looks";
+import { useLook } from "../src/lib/appearance";
+import { LookPicker } from "../src/components/redesign/LookPicker";
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
@@ -60,6 +61,7 @@ const SUPPORT_EMAIL = "planbyaduro@gmail.com";
 
 export default function Profile() {
   const c = useTheme();
+  const look = useLook();
   const insets = useSafeAreaInsets();
   const { session, anonymous } = useAuth();
   /*
@@ -69,7 +71,6 @@ export default function Profile() {
    * the subscription they just paid for.
    */
   const hasAccount = Boolean(session) && !anonymous;
-  const { choice: lookChoice, setLook } = useAppearance();
 
   const [showBuild, setShowBuild] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -270,21 +271,21 @@ export default function Profile() {
           <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
             <View
               style={{
-                flexDirection: "row",
+                // A centred hero (redesign, 3 Nov 2026): the face, the name, and what is theirs.
                 alignItems: "center",
-                gap: space.md,
-                backgroundColor: c.backgroundElement,
-                borderRadius: radius.card,
-                padding: space.md,
+                gap: space.sm,
+                paddingTop: space.md,
               }}
             >
               <Pressable onPress={pickAvatar} disabled={uploading}>
                 <View
                   style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    backgroundColor: c.accent,
+                    width: 104,
+                    height: 104,
+                    borderRadius: 52,
+                    backgroundColor: look.primary,
+                    borderWidth: 3,
+                    borderColor: look.primary,
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
@@ -295,11 +296,11 @@ export default function Profile() {
                   ) : profile?.avatarUrl ? (
                     <Image
                       source={{ uri: profile.avatarUrl }}
-                      style={{ width: 56, height: 56 }}
+                      style={{ width: 98, height: 98, borderRadius: 49 }}
                       contentFit="cover"
                     />
                   ) : (
-                    <Text variant="title3" style={{ color: "#FFFFFF" }}>
+                    <Text variant="largeTitle" style={{ color: look.onPrimary }}>
                       {(profile?.displayName ?? "?").slice(0, 1).toUpperCase()}
                     </Text>
                   )}
@@ -311,19 +312,21 @@ export default function Profile() {
                     position: "absolute",
                     right: -2,
                     bottom: -2,
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: c.backgroundElement,
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    backgroundColor: c.background,
+                    borderWidth: 1,
+                    borderColor: look.tileEdge,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Symbol name="camera.fill" size={11} color={c.textSecondary} />
+                  <Symbol name="camera.fill" size={13} color={c.text} />
                 </View>
               </Pressable>
 
-              <View style={{ flex: 1 }}>
+              <View style={{ alignItems: "center", gap: 2, marginTop: space.xs }}>
                 {editingName ? (
                   <TextInput
                     value={nameDraft}
@@ -337,8 +340,10 @@ export default function Profile() {
                     placeholderTextColor={c.textTertiary}
                     style={{
                       color: c.text,
-                      fontSize: typeScale.headline.fontSize,
-                      fontWeight: typeScale.headline.fontWeight,
+                      fontSize: typeScale.title1.fontSize,
+                      fontFamily: look.display["700"],
+                      textAlign: "center",
+                      minWidth: 200,
                       paddingVertical: 0,
                     }}
                   />
@@ -350,22 +355,40 @@ export default function Profile() {
                     }}
                     style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
                   >
-                    <Text variant="headline" numberOfLines={1}>
+                    <Text variant="title1" numberOfLines={1}>
                       {profile?.displayName ?? "You"}
                     </Text>
                     <Symbol name="pencil" size={13} color={c.textTertiary} />
                   </Pressable>
                 )}
-                <Text variant="footnote" tone="secondary" numberOfLines={1}>
+                <Text variant="footnote" tone="secondary" numberOfLines={1} center>
                   {profile?.email ?? session?.user.email ?? ""}
                 </Text>
               </View>
 
-              <Pressable onPress={() => router.push("/(tabs)/saved")} hitSlop={10}>
-                <Text variant="footnote" tone="secondary">
-                  {planCount === null ? "" : `${planCount} saved`}
-                </Text>
-              </Pressable>
+              {planCount === null ? null : (
+                <Pressable
+                  onPress={() => router.push("/(tabs)/saved")}
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({
+                    marginTop: space.sm,
+                    height: 36,
+                    paddingHorizontal: 16,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: look.tileEdge,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Symbol name="bookmark.fill" size={12} color={look.colors.accent} />
+                  <Text variant="footnote" weight="600">
+                    {`${planCount} saved plan${planCount === 1 ? "" : "s"}`}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </>
@@ -498,12 +521,13 @@ export default function Profile() {
         />
       </Group>
 
-      {/* The look (looks.ts): every screen works the same in each, only the look changes. */}
-      <Group header="Look" footer="Every screen works the same in each. Only the look changes.">
-        {LOOK_CHOICES.map((l) => (
-          <Row key={l.id} title={l.title} subtitle={l.sub} selected={lookChoice === l.id} onPress={() => setLook(l.id)} />
-        ))}
-      </Group>
+      {/* The look, chosen from pictures of it (LookPicker): every screen works the same in each. */}
+      <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xxl, gap: space.sm }}>
+        <Text variant="caption" tone="secondary" weight="700" uppercase style={{ letterSpacing: 1, marginLeft: space.xs }}>
+          Look
+        </Text>
+        <LookPicker />
+      </View>
 
       <Group header="This device">
         <Row
