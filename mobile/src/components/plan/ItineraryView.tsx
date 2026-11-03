@@ -69,6 +69,7 @@ import type {
 import { useLook } from "../../lib/appearance";
 import { RouteMap } from "../redesign/RouteMap";
 import { stopColours } from "../redesign/stopColours";
+import { FlipCard, ReserveBack, type ReserveChannel } from "../redesign/FlipCard";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -112,6 +113,10 @@ export function ItineraryView({
   const look = useLook();
   const colours = stopColours(look);
   const [reservingIndex, setReservingIndex] = useState<number | null>(null);
+  // The card turned over for a reservation (FlipCard): which stop, and what its back says.
+  const [flip, setFlip] = useState<{ index: number; when: string; who: string; channels: ReserveChannel[]; mapListing: (() => void) | null } | null>(
+    null
+  );
   const [toast, setToast] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   // "share" is the note asked for on the way to the share sheet; "edit" is
@@ -370,29 +375,27 @@ export function ItineraryView({
       });
     }
 
-    if (!channels.length) {
-      const maps = stop.google_maps_url;
-      Alert.alert(
-        "No way to book this one yet",
-        `We have no booking page, number or Instagram for ${stop.name}. Most places like it take walk-ins, and the map listing sometimes has a number we do not.`,
-        [
-          { text: "OK", style: "cancel" },
-          ...(maps ? [{ text: "Open map listing", onPress: () => void Linking.openURL(maps) }] : []),
-        ]
-      );
-      return;
-    }
-
-    // How to reach them is a choice of what to do next, so it is asked the way the phone asks those.
-    chooseAction({
-      title: "Request a table?",
-      message: `${stop.name}, ${when}, for ${who}.\n\nChoose how to reach them. We keep a note of the request either way.\n\nNever pay a deposit or send money over a phone call. If a deposit is needed, pay it on the venue's own booking page.`,
-      actions: channels.map((ch) => ({ text: ch.text, onPress: () => void reserveVia(index, ch) })),
-      cancel: "Not yet",
+    /*
+     * On the back of the stop's own card, turned over (owner, 3 Nov 2026), in
+     * place of the phone's action sheet. With no way to book, the back says
+     * so and offers the map listing.
+     */
+    const maps = stop.google_maps_url;
+    setFlip({
+      index,
+      when,
+      who,
+      mapListing: maps ? () => void Linking.openURL(maps) : null,
+      channels: channels.map((ch) => ({
+        text: ch.text,
+        open: () => {
+          setFlip(null);
+          void reserveVia(index, ch);
+        },
+      })),
     });
   }
 
-  /** Log the request (our system of record), then hand over to the channel they picked. */
   async function reserveVia(index: number, channel: { open: () => Promise<void>; toast: string }) {
     if (reservingIndex !== null) return;
     const stop = itinerary.stops[index];
@@ -808,7 +811,8 @@ export function ItineraryView({
                 style={{
                   alignSelf: "flex-start",
                   zIndex: 2,
-                  marginBottom: -22,
+                  // Over the photo when there is one; above the card, clear of its words, when not.
+                  marginBottom: stop.images?.length || stop.image_url ? -22 : 8,
                   marginLeft: 12,
                   marginTop: 0,
                   width: 34,
@@ -819,26 +823,43 @@ export function ItineraryView({
                   borderColor: look.colors.background,
                   alignItems: "center",
                   justifyContent: "center",
-                  transform: [{ translateY: 12 }],
+                  transform: [{ translateY: stop.images?.length || stop.image_url ? 12 : 0 }],
                 }}
               >
                 <Text variant="footnote" weight="800" style={{ color: colours[i % colours.length].fg }}>
                   {String(i + 1)}
                 </Text>
               </View>
-              <StopCard
-                stop={stop}
-                previous={i > 0 ? itinerary.stops[i - 1] : null}
-                index={i}
-                swapping={false}
-                locked={Boolean(groupCode)}
-                reserving={reservingIndex === i}
-                onSwap={() => handleSwap(i)}
-                onReserve={() => void handleReserve(i)}
-                onReported={setToast}
-                onOrdersChange={(orders) => handleOrdersChange(i, orders)}
-                planKey={itinerary.plan_key}
-                occasion={inputs.occasion}
+              <FlipCard
+                flipped={flip?.index === i}
+                front={
+                  <StopCard
+                    stop={stop}
+                    previous={i > 0 ? itinerary.stops[i - 1] : null}
+                    index={i}
+                    swapping={false}
+                    locked={Boolean(groupCode)}
+                    reserving={reservingIndex === i}
+                    onSwap={() => handleSwap(i)}
+                    onReserve={() => void handleReserve(i)}
+                    onReported={setToast}
+                    onOrdersChange={(orders) => handleOrdersChange(i, orders)}
+                    planKey={itinerary.plan_key}
+                    occasion={inputs.occasion}
+                  />
+                }
+                back={
+                  flip?.index === i ? (
+                    <ReserveBack
+                      venue={stop.name}
+                      when={flip.when}
+                      who={flip.who}
+                      channels={flip.channels}
+                      mapListing={flip.mapListing}
+                      onClose={() => setFlip(null)}
+                    />
+                  ) : null
+                }
               />
               {itinerary.hops[i] && i < itinerary.stops.length - 1 ? (
                 <Hop

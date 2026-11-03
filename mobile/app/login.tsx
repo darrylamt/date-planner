@@ -41,6 +41,11 @@ import {
   signInWithGoogle,
 } from "../src/lib/socialAuth";
 import type { Occasion } from "../src/lib/types";
+import { KenteBand, LookBackground } from "../src/components/look";
+import { useLook } from "../src/lib/appearance";
+
+const RING_KENTE = require("../assets/3d/ring-kente.png");
+const RING_GOLD = require("../assets/3d/ring-gold.png");
 
 type Mode = "signin" | "signup";
 
@@ -79,6 +84,7 @@ const NEXT: { word: string; occasion: Occasion; bits: [string, string, string] }
  */
 export default function Login() {
   const c = useTheme();
+  const look = useLook();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const isDark = useIsDark();
@@ -212,10 +218,19 @@ export default function Login() {
 
       {/* ── the stage ── */}
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: stageH + 40, overflow: "hidden" }}>
-        <Mesh reduced={reduced} dark={isDark} />
+        {/* The look's own ground, the band along the top, and the woven ring turning (redesign, 3 Nov 2026). */}
+        <LookBackground />
+        <View style={{ position: "absolute", left: 0, right: 0, top: 0 }}>
+          <KenteBand />
+        </View>
         <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: 40, alignItems: "center", justifyContent: "center" }}>
-          {!showEmail ? <Bits key={now.word} bits={now.bits} reduced={reduced} /> : null}
-          <Character occasion={showEmail ? "date_night" : now.occasion} small={showEmail} reduced={reduced} />
+          <Image
+            source={look.band ? RING_KENTE : RING_GOLD}
+            style={{ width: showEmail ? 110 : 200, height: showEmail ? 110 : 200 }}
+            contentFit="contain"
+            autoplay={!reduced}
+            accessibilityIgnoresInvertColors
+          />
         </View>
       </View>
 

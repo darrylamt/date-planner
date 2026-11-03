@@ -47,6 +47,8 @@ export function WentCard({ slug, date, firstStop, occasion }: { slug: string; da
     <View
       style={{
         marginHorizontal: GUTTER,
+        // Clear of the map above it (owner, 3 Nov 2026).
+        marginTop: space.lg,
         marginBottom: space.lg,
         padding: space.lg,
         gap: space.md,
