@@ -162,6 +162,9 @@ export function StayFinder({ destinations, initial }: { destinations: FinderDest
               <button type="button" className="btn2 btnsm" onClick={() => setPicked(new Set(fresh.map((r) => r.id)))}>
                 Tick all new
               </button>
+              <button type="button" className="btn2 btnsm" disabled={!picked.size} onClick={() => setPicked(new Set())}>
+                Untick all
+              </button>
               <button type="button" className="btn btnsm" disabled={busy || !picked.size} onClick={() => void addPicked()}>
                 {busy ? "Adding…" : `Add ${picked.size} as stays`}
               </button>

@@ -14,5 +14,7 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   routes, both tables refuse anon, npm run audit:smoke 23/23); it is in
   `archive/` too. 0102_trip_demand.sql ran the same day (probed: the table
   answers the server and refuses anon both ways; audit:smoke 23/23).
+  0103_venue_stars.sql ran the same day (probed: a free account stops at
+  10, Pro does not, nobody sees or writes another's stars; audit:smoke 23/23).
 - New migrations go here, at the top level, numbered on from 0100. Move them
   into `archive/` once they have been run.
