@@ -3,6 +3,7 @@ import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, Share, TextI
 import { PressScale, Rise } from "../../src/components/motion";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
@@ -283,27 +284,48 @@ export default function VenuePage() {
   actions.push({ icon: "map.fill", label: "Directions", onPress: () => void Linking.openURL(maps) });
   actions.push({ icon: "car.fill", label: "Uber", onPress: () => void Linking.openURL(uberRideLink(venue)) });
   if (instagram) actions.push({ icon: "camera.fill", label: "Instagram", onPress: () => void Linking.openURL(instagram), pro: true });
-  actions.push({
-    icon: starred ? "star.fill" : "star",
-    label: starred ? "Starred" : "Star",
-    onPress: () => {
-      const next = !starred;
-      setStarred(next);
-      void setStar(id, next).then((r) => {
-        if (r === "ok") return;
-        setStarred(!next);
-        if (r === "signed_out") router.push("/login");
-        else if (r === "limit") setProSheet(true);
-        else Alert.alert("That didn't save", "Check your connection and try again.");
-      });
-    },
-  });
+  const toggleStar = () => {
+    const next = !starred;
+    setStarred(next);
+    void Haptics.selectionAsync();
+    void setStar(id, next).then((r) => {
+      if (r === "ok") return;
+      setStarred(!next);
+      if (r === "signed_out") router.push("/login");
+      else if (r === "limit") setProSheet(true);
+      else Alert.alert("That didn't save", "Check your connection and try again.");
+    });
+  };
   // A link that shows the name and a picture to anybody, and the place itself only in the app (/v/<id>).
-  actions.push({
-    icon: "square.and.arrow.up",
-    label: "Share",
-    onPress: () => void Share.share({ message: `${venue.name} on Duro!: ${WEB_URL}/v/${id}`, url: `${WEB_URL}/v/${id}` }),
-  });
+  const share = () => void Share.share({ message: `${venue.name} on Duro!: ${WEB_URL}/v/${id}`, url: `${WEB_URL}/v/${id}` });
+  /* Star and Share, small (owner: "not as that big circle"): on the photo's top corner, or in the bar with no photo. */
+  const cornerIcons = (onPhoto: boolean) => (
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      {[
+        { icon: (starred ? "star.fill" : "star") as SymbolViewProps["name"], label: starred ? "Unstar" : "Star", onPress: toggleStar, on: starred },
+        { icon: "square.and.arrow.up" as SymbolViewProps["name"], label: "Share", onPress: share, on: false },
+      ].map((b) => (
+        <Pressable
+          key={b.label}
+          accessibilityRole="button"
+          accessibilityLabel={b.label}
+          hitSlop={8}
+          onPress={b.onPress}
+          style={({ pressed }) => ({
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: onPhoto ? "rgba(0,0,0,0.38)" : "transparent",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Symbol name={b.icon} size={15} weight="semibold" color={b.on ? look.primary : onPhoto ? "#FFFFFF" : c.accent} />
+        </Pressable>
+      ))}
+    </View>
+  );
   // The same rule as the menu: the free months promise booking, so the buttons come with it.
   const usable = actions.filter((a) => !a.pro || open);
 
@@ -323,7 +345,7 @@ export default function VenuePage() {
   return (
     <>
       {/* The name moves up into the bar once it has scrolled out of sight. */}
-      <Stack.Screen options={{ title: nameInBar ? venue.name : "" }} />
+      <Stack.Screen options={{ title: nameInBar ? venue.name : "", headerRight: images.length ? undefined : () => cornerIcons(false) }} />
       <Animated.ScrollView
         style={{ flex: 1, backgroundColor: c.background }}
         contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}
@@ -353,6 +375,7 @@ export default function VenuePage() {
             }}
           >
             <StopGallery images={images} alt={venue.name} />
+            <View style={{ position: "absolute", top: 12, right: GUTTER }}>{cornerIcons(true)}</View>
             {/* The photo fades into the page, and the name sits on the fade (redesign). */}
             <LinearGradient
               pointerEvents="none"
@@ -386,9 +409,6 @@ export default function VenuePage() {
           style={{
             flexDirection: "row",
             justifyContent: "space-around",
-            // Star and Share make up to seven: a second row rather than off the edge.
-            flexWrap: "wrap",
-            rowGap: space.md,
             marginHorizontal: GUTTER,
             marginTop: space.lg,
             paddingVertical: space.sm,

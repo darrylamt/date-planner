@@ -146,18 +146,20 @@ export default function TripPlaceScreen() {
             locations={[0, 0.3, 1]}
             style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: GUTTER, paddingBottom: 18, justifyContent: "space-between" }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <RoundButton label="Close" onPress={() => router.back()} filled>
                 <Symbol name="xmark" size={16} weight="bold" color={look.onPrimary} />
               </RoundButton>
               {/* The link shows the name and photo to anybody; the place itself opens only in the app (/place/<slug>). */}
-              <RoundButton
-                label="Share"
-                filled
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Share"
+                hitSlop={8}
                 onPress={() => void Share.share({ message: `${place.name} on Duro!: ${WEB_URL}/place/${place.slug}`, url: `${WEB_URL}/place/${place.slug}` })}
+                style={({ pressed }) => ({ width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.38)", opacity: pressed ? 0.7 : 1 })}
               >
-                <Symbol name="square.and.arrow.up" size={16} weight="bold" color={look.onPrimary} />
-              </RoundButton>
+                <Symbol name="square.and.arrow.up" size={15} weight="semibold" color="#FFFFFF" />
+              </Pressable>
             </View>
             <View style={{ gap: 4 }}>
               <Body size={14} weight="700" color="rgba(255,255,255,0.9)">
