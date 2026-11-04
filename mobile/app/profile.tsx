@@ -45,7 +45,6 @@ import {
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
 import { resetLearning } from "../src/lib/signals";
-import { mayTryRedesign, onRedesign, switchApp } from "../src/lib/redesign";
 
 /*
  * Added after the build on TestFlight, so it is resolved defensively. An
@@ -102,8 +101,6 @@ export default function Profile() {
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  // The redesign switch (redesign.ts): admins, and anyone already on it so they can get back.
-  const [redesignRow, setRedesignRow] = useState(onRedesign());
 
   useFocusEffect(
     useCallback(() => {
@@ -111,9 +108,6 @@ export default function Profile() {
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
       void getAiConsent().then((v) => active && setAiAllowed(v === "granted"));
       void nudgesOn().then((v) => active && setNudgesState(v));
-      void mayTryRedesign()
-        .then((v) => active && setRedesignRow(v || onRedesign()))
-        .catch(() => undefined);
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
@@ -592,30 +586,6 @@ export default function Profile() {
             })
           }
         />
-        {redesignRow ? (
-          <Row
-            icon="paintbrush"
-            title={onRedesign() ? "Back to the current app" : "Try the redesign"}
-            subtitle={onRedesign() ? "You are on the redesign" : "Only this phone. Everyone else keeps this app."}
-            onPress={() =>
-              chooseAction({
-                title: onRedesign() ? "Back to the current app?" : "Try the redesign?",
-                message: "Duro restarts to switch. You can come back from here at any time.",
-                actions: [
-                  {
-                    text: "Switch",
-                    onPress: async () => {
-                      setBusy(true);
-                      const problem = await switchApp(onRedesign() ? "current" : "redesign");
-                      setBusy(false);
-                      if (problem) setToast(problem);
-                    },
-                  },
-                ],
-              })
-            }
-          />
-        ) : null}
       </Group>
 
       <Group header="Support">
