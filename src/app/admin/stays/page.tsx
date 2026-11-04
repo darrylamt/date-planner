@@ -56,9 +56,14 @@ export default async function AdminStaysPage() {
     <div className="max-w-[900px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1>Stays</h1>
-        <Link href="/admin/stays/new" className="btn btnsm">
-          Add a stay
-        </Link>
+        <span className="flex gap-2">
+          <Link href="/admin/stays/find" className="btn2 btnsm">
+            Find stays near a destination
+          </Link>
+          <Link href="/admin/stays/new" className="btn btnsm">
+            Add a stay
+          </Link>
+        </span>
       </div>
       <p className="mt-1 max-w-[680px] text-[14px] text-mutedbrown">
         Hotels, guesthouses and lodges across Ghana, with their rooms and what a night costs, ready for Trips. Not shown in the

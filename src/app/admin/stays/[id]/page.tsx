@@ -13,14 +13,14 @@ export default async function AdminStayPage({ params }: { params: { id: string }
   let initial: StayDraft = {
     id: null, name: "", kind: "hotel", region: "", town: "", address: "", area_id: "", lat: "", lng: "",
     google_maps_url: "", google_place_id: "", phone: "", whatsapp_phone: "", booking_url: "", email: "",
-    description: "", image_url: "", check_in: "14:00", check_out: "11:00", min_nights: "", amenities: [],
+    description: "", image_url: "", gallery_urls: [], check_in: "14:00", check_out: "11:00", min_nights: "", amenities: [],
     activities: "", notes: "", rates_checked_on: today, is_active: true, rooms: [],
   };
 
   if (params.id !== "new") {
     const { data: v } = await db
       .from("venues")
-      .select("id, name, area_id, lat, lng, google_maps_url, google_place_id, phone, whatsapp_phone, booking_url, description, image_url, is_active, type")
+      .select("id, name, area_id, lat, lng, google_maps_url, google_place_id, phone, whatsapp_phone, booking_url, description, image_url, gallery_urls, is_active, type")
       .eq("id", params.id)
       .maybeSingle();
     if (!v || (v as { type: string }).type !== "stay") notFound();
@@ -49,6 +49,7 @@ export default async function AdminStayPage({ params }: { params: { id: string }
       email: str(det.email),
       description: str(venue.description),
       image_url: str(venue.image_url),
+      gallery_urls: (venue.gallery_urls as string[] | null) ?? [],
       check_in: str(det.check_in),
       check_out: str(det.check_out),
       min_nights: str(det.min_nights),

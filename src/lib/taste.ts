@@ -31,6 +31,8 @@ export const TASTE = {
   /** Dish signals before dishes lean at all. */
   minDishes: 2,
   cap: 1.5,
+  /** What a star adds to a place (0103), before the cap. */
+  starred: 0.75,
   /** Points per unit of cosine similarity, before the cap. */
   scale: 3,
   dishCap: 2,
@@ -202,8 +204,16 @@ export async function tasteFor(db: SupabaseClient, who: { deviceId?: string | nu
     .limit(1500);
   q = userId && deviceId ? q.or(`user_id.eq.${userId},device_id.eq.${deviceId}`) : userId ? q.eq("user_id", userId) : q.eq("device_id", deviceId!);
 
-  const [{ data, error }, vecs] = await Promise.all([q, vectors(db)]);
-  if (error || !data?.length) return null;
-  const taste = computeTaste(data as Sig[], vecs);
+  const [{ data, error }, vecs, starred] = await Promise.all([
+    q,
+    vectors(db),
+    // The account's starred places (0103); none before it has run, or for a phone with no account.
+    userId ? db.from("venue_stars").select("venue_id").eq("user_id", userId).limit(500) : Promise.resolve({ data: [] as { venue_id: string }[] }),
+  ]);
+  const taste = !error && data?.length ? computeTaste(data as Sig[], vecs) : { places: new Map<string, number>(), words: {} };
+  // A star is said outright, so it counts for a good deal of what keeping a place does, within the same cap.
+  for (const { venue_id } of (starred.data ?? []) as { venue_id: string }[]) {
+    taste.places.set(venue_id, Math.min(TASTE.cap, (taste.places.get(venue_id) ?? 0) + TASTE.starred));
+  }
   return taste.places.size || Object.keys(taste.words).length ? taste : null;
 }

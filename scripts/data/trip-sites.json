@@ -1,0 +1,841 @@
+[
+ {
+  "dest": "cape-coast",
+  "name": "Cape Coast Castle",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": [
+   "fee",
+   20,
+   "gmmb-cc"
+  ],
+  "hours": "gmmb",
+  "desc": "The castle on the sea that held enslaved Africans before the crossing, now a museum. Guided tours take in the dungeons and the Door of No Return.",
+  "at": {
+   "lat": 5.10363,
+   "lng": -1.2411,
+   "osm": "way/216864117",
+   "what": "attraction",
+   "label": "Cape Coast Castle, John Evans Mills Avenue, First Ridge, Cape Coast, Cape Coast ",
+   "km": 3.8,
+   "q": "Cape Coast Castle"
+  }
+ },
+ {
+  "dest": "cape-coast",
+  "name": "Fort William Lighthouse",
+  "type": "activity",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A small fort on a hill above Cape Coast with a lighthouse and views over the town and the castle.",
+  "at": {
+   "lat": 5.10804,
+   "lng": -1.24434,
+   "osm": "way/538515296",
+   "what": "lighthouse",
+   "label": "Fort William Lighthouse, Coronation Drive, First Ridge, Cape Coast, Cape Coast M",
+   "km": 3.2,
+   "q": "Fort William, Cape Coast"
+  }
+ },
+ {
+  "dest": "kakum",
+  "name": "Kakum National Park Canopy Walkway",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy",
+   "scenic",
+   "family_friendly"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Rope bridges strung high between the rainforest treetops, reached on a guided walk from the visitor centre. Go early for birds and the cooler air.",
+  "at": {
+   "lat": 5.35362,
+   "lng": -1.38344,
+   "osm": "node/558549732",
+   "what": "attraction",
+   "label": "Kakum National Park Canopy Walkway, Cape Coast - Twifo Praso Road, Wawase, Kweku",
+   "km": 0.0,
+   "q": "Kakum National Park canopy walkway"
+  }
+ },
+ {
+  "dest": "elmina",
+  "name": "Elmina Castle",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": [
+   "fee",
+   20,
+   "gmmb-el"
+  ],
+  "hours": "gmmb",
+  "desc": "St George's Castle, built by the Portuguese in 1482, the oldest European building south of the Sahara. Guided tours through the courtyards and dungeons.",
+  "at": {
+   "lat": 5.08274,
+   "lng": -1.34824,
+   "osm": "way/136939031",
+   "what": "attraction",
+   "label": "Saint George’s Castle, J.J. Rawlings High Street, Elmina, Komenda/Edina/Eguafo/A",
+   "km": 0.2,
+   "q": "Elmina Castle"
+  }
+ },
+ {
+  "dest": "elmina",
+  "name": "Fort St Jago",
+  "type": "activity",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The hilltop fort across the lagoon from Elmina Castle, with the best view of the castle and the fishing harbour.",
+  "at": {
+   "lat": 5.08482,
+   "lng": -1.35081,
+   "osm": "way/515964037",
+   "what": "attraction",
+   "label": "Fort Coenraadsburg, Benya Street, Elmina, Komenda/Edina/Eguafo/Abirem Municipal ",
+   "km": 0.2,
+   "q": "Fort Coenraadsburg"
+  }
+ },
+ {
+  "dest": "kumasi",
+  "name": "Manhyia Palace Museum",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The former palace of the Asantehene, now a museum of the Asante kings: their furniture, regalia and lifelike figures, on a guided tour.",
+  "at": {
+   "lat": 6.70416,
+   "lng": -1.61594,
+   "osm": "node/3577283361",
+   "what": "museum",
+   "label": "Manhyia Palace Museum, Manhyia Road, Ashtown, Kumasi, Kumasi Metropolitan Distri",
+   "km": 2.0,
+   "q": "Manhyia Palace Museum"
+  }
+ },
+ {
+  "dest": "kumasi",
+  "name": "Kejetia Market",
+  "type": "outdoor",
+  "tags": [
+   "lively",
+   "adventurous"
+  ],
+  "price": [
+   "free"
+  ],
+  "hours": null,
+  "desc": "One of West Africa's biggest markets: thousands of stalls of cloth, beads, food and everything else, under the new Kejetia complex and around it.",
+  "at": {
+   "lat": 6.69583,
+   "lng": -1.62105,
+   "osm": "node/3577283350",
+   "what": "marketplace",
+   "label": "Kejetia Market, Osei Tutu I Avenue, Adum, Kumasi, Kumasi Metropolitan District, ",
+   "km": 0.9,
+   "q": "Kejetia Market"
+  }
+ },
+ {
+  "dest": "kumasi",
+  "name": "Prempeh II Jubilee Museum",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A small museum at the Kumasi Cultural Centre with Asante royal regalia and the story of the Golden Stool.",
+  "at": {
+   "lat": 6.70161,
+   "lng": -1.63008,
+   "osm": "node/2621634133",
+   "what": "museum",
+   "label": "Prempeh II Jubilee Museum, Okomfo Anokye Road, Adum, Kumasi, Kumasi Metropolitan",
+   "km": 1.6,
+   "q": "Prempeh II Jubilee Museum"
+  }
+ },
+ {
+  "dest": "kumasi",
+  "name": "Kumasi Fort and Military Museum",
+  "type": "activity",
+  "tags": [
+   "artsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The old British fort in Kumasi, now the Armed Forces Museum, with exhibits from the Anglo-Asante wars to the World Wars.",
+  "at": {
+   "lat": 6.69142,
+   "lng": -1.62495,
+   "osm": "way/621564879",
+   "what": "museum",
+   "label": "Ghana Armed Forces Museum, Ananta Link, Adum, Kumasi, Kumasi Metropolitan Distri",
+   "km": 0.3,
+   "q": "Armed Forces Museum Kumasi"
+  }
+ },
+ {
+  "dest": "kumasi",
+  "name": "Bonwire Kente Weaving Centre",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "family_friendly"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The village where kente is said to have begun. Watch weavers at their looms and buy cloth straight from them.",
+  "at": {
+   "lat": 6.79334,
+   "lng": -1.47323,
+   "osm": "node/443430634",
+   "what": "village",
+   "label": "Bonwire, Juaben Municipal District, Ashanti Region, Ghana",
+   "km": 20.4,
+   "q": "Bonwire"
+  }
+ },
+ {
+  "dest": "bosomtwe",
+  "name": "Lake Bosomtwe at Abono",
+  "type": "outdoor",
+  "tags": [
+   "scenic",
+   "calm",
+   "outdoorsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The lakeshore at Abono, where the road meets Ghana's only natural lake: swimming, canoe rides and walks round the crater rim.",
+  "at": {
+   "lat": 6.53511,
+   "lng": -1.43019,
+   "osm": "node/1814099377",
+   "what": "village",
+   "label": "Abono, Bosomtwe District, Ashanti Region, Ghana",
+   "km": 4.0,
+   "q": "Abono"
+  }
+ },
+ {
+  "dest": "wli",
+  "name": "Wli Waterfalls",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": [
+   "fee",
+   25,
+   "wli"
+  ],
+  "hours": null,
+  "desc": "Ghana's highest waterfall. A forest walk of about 45 minutes reaches the lower falls; the upper falls are a steep climb beyond, at a higher fee.",
+  "at": {
+   "lat": 7.1058,
+   "lng": 0.60849,
+   "osm": "node/5344540412",
+   "what": "waterfall",
+   "label": "Wli Falls - Lower Falls, Hohoe Municipal District, Volta Region, Ghana",
+   "km": 0.0,
+   "q": "Wli Falls - Lower Falls"
+  }
+ },
+ {
+  "dest": "afadjato",
+  "name": "Mount Afadja",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A short, steep climb up one of Ghana's highest peaks from Liati Wote, with views across the Volta hills into Togo.",
+  "at": {
+   "lat": 7.0225,
+   "lng": 0.56195,
+   "osm": "node/3396856637",
+   "what": "peak",
+   "label": "Mount Afadja, Liati Wote, Afadzato South District, Volta Region, Ghana",
+   "km": 4.6,
+   "q": "Mount Afadjato"
+  }
+ },
+ {
+  "dest": "afadjato",
+  "name": "Tagbo Falls",
+  "type": "outdoor",
+  "tags": [
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A waterfall reached by a forest walk from Liati Wote, at the foot of Mount Afadja.",
+  "at": {
+   "lat": 7.01269,
+   "lng": 0.57176,
+   "osm": "node/7262741059",
+   "what": "waterfall",
+   "label": "Tagbo Falls, Hohoe Municipal District, Volta Region, Ghana",
+   "km": 3.8,
+   "q": "Tagbo Falls"
+  }
+ },
+ {
+  "dest": "tafi-atome",
+  "name": "Tafi Atome Monkey Sanctuary",
+  "type": "outdoor",
+  "tags": [
+   "family_friendly",
+   "outdoorsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A community forest where sacred mona monkeys live alongside the village. Guides lead short walks to see them.",
+  "at": {
+   "lat": 6.905,
+   "lng": 0.38699,
+   "osm": "node/1794371182",
+   "what": "attraction",
+   "label": "Tafi Atome Wildlife Monkey Sanctuary, N2, Logba Adzakope, Woadze, Afadzato South",
+   "km": 0.2,
+   "q": "Tafi Atome Monkey Sanctuary"
+  }
+ },
+ {
+  "dest": "ho",
+  "name": "Volta Regional Museum",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The regional museum in Ho, with Ewe crafts, regalia and the history of the Volta Region.",
+  "at": {
+   "lat": 6.60863,
+   "lng": 0.46887,
+   "osm": "node/2319228803",
+   "what": "museum",
+   "label": "Volta Regional Museum, 43, Glalah Street, Kabore, Ho, Ho Municipal District, Vol",
+   "km": 1.1,
+   "q": "Volta Regional Museum"
+  }
+ },
+ {
+  "dest": "ho",
+  "name": "Mount Adaklu",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The lone mountain south of Ho, climbed with a local guide for views across the plains.",
+  "at": {
+   "lat": 6.49554,
+   "lng": 0.49596,
+   "osm": "node/2434055714",
+   "what": "peak",
+   "label": "Mount Adaklu, Adaklu Helekpe, Adaklu District, Volta Region, Ghana",
+   "km": 12.9,
+   "q": "Mount Adaklu"
+  }
+ },
+ {
+  "dest": "akosombo",
+  "name": "Akosombo Dam",
+  "type": "outdoor",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The hydroelectric dam that made Lake Volta, one of the world's largest man-made lakes. Visits are arranged with the Volta River Authority.",
+  "at": {
+   "lat": 6.29984,
+   "lng": 0.05932,
+   "osm": "way/506145122",
+   "what": "dam",
+   "label": "Akosombo Dam, Akosombo, Asuogyaman District, Eastern Region, Ghana",
+   "km": 4.0,
+   "q": "Akosombo Dam"
+  }
+ },
+ {
+  "dest": "akosombo",
+  "name": "Adomi Bridge",
+  "type": "outdoor",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The arched suspension bridge over the Volta below the dam, a landmark of the Akosombo road.",
+  "at": {
+   "lat": 6.23987,
+   "lng": 0.09549,
+   "osm": "way/136184182",
+   "what": "yes",
+   "label": "Adomi Bridge, N2, New Chanakope, Asuogyaman District, Eastern Region, Ghana",
+   "km": 6.4,
+   "q": "Adomi Bridge"
+  }
+ },
+ {
+  "dest": "aburi",
+  "name": "Aburi Botanical Gardens",
+  "type": "outdoor",
+  "tags": [
+   "calm",
+   "scenic",
+   "outdoorsy",
+   "family_friendly"
+  ],
+  "price": [
+   "fee",
+   20,
+   "aburi"
+  ],
+  "hours": null,
+  "desc": "Gardens laid out in 1890 on the cool Akuapem ridge: avenues of palms, old trees, a forest trail and lawns for a picnic.",
+  "at": {
+   "lat": 5.84951,
+   "lng": -0.17347,
+   "osm": "way/628758999",
+   "what": "residential",
+   "label": "Botanical Gardens Avenue, Aburi, Akuapim South District, Eastern Region, Ghana",
+   "km": 1.1,
+   "q": "Aburi Botanical Gardens"
+  }
+ },
+ {
+  "dest": "boti",
+  "name": "Boti Falls",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Twin waterfalls in a forest gorge, with trails above to Umbrella Rock and a three-headed palm.",
+  "at": null
+ },
+ {
+  "dest": "boti",
+  "name": "Umbrella Rock",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A huge rock balanced on another like an umbrella, on the hills near Boti Falls, with a ladder to the top.",
+  "at": {
+   "lat": 6.18234,
+   "lng": -0.22183,
+   "osm": "node/2796444856",
+   "what": "rock",
+   "label": "Umbrella Rock, N3, Sikaben, Odokrom, Yilo-Krobo Municipal District, Eastern Regi",
+   "km": 1.2,
+   "q": "Umbrella Rock"
+  }
+ },
+ {
+  "dest": "busua",
+  "name": "Busua Beach",
+  "type": "outdoor",
+  "tags": [
+   "beach",
+   "chill",
+   "scenic"
+  ],
+  "price": [
+   "free"
+  ],
+  "hours": null,
+  "desc": "A long sandy beach in a fishing village west of Takoradi, popular for surfing lessons and swimming.",
+  "at": {
+   "lat": 4.80885,
+   "lng": -1.93464,
+   "osm": "way/345101575",
+   "what": "beach",
+   "label": "Busua Beach, Busua, Ahanta West Municipal District, Western Region, Ghana",
+   "km": 1.0,
+   "q": "Busua Beach"
+  }
+ },
+ {
+  "dest": "busua",
+  "name": "Fort Metal Cross",
+  "type": "activity",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The British fort at Dixcove, above a natural harbour of fishing canoes, a walk along the coast from Busua.",
+  "at": {
+   "lat": 4.79345,
+   "lng": -1.94502,
+   "osm": "way/178066257",
+   "what": "yes",
+   "label": "Dixcove's fort, R84, Dixcove, Ahanta West Municipal District, Western Region, Gh",
+   "km": 1.5,
+   "q": "Fort Metal Cross"
+  }
+ },
+ {
+  "dest": "busua",
+  "name": "Fort Batenstein",
+  "type": "activity",
+  "tags": [
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Ruins of a Dutch fort on the hill above Butre village, over a lagoon and a quiet beach.",
+  "at": {
+   "lat": 4.82427,
+   "lng": -1.91729,
+   "osm": "way/487662760",
+   "what": "yes",
+   "label": "Fort Batenstein, R85, Busua, Ahanta West Municipal District, Western Region, Gha",
+   "km": 3.2,
+   "q": "Fort Batenstein"
+  }
+ },
+ {
+  "dest": "nzulezo",
+  "name": "Nzulezo Stilt Village",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A whole village built on stilts over Lake Amansuri, reached by canoe through the wetland from Beyin.",
+  "at": {
+   "lat": 5.021,
+   "lng": -2.59801,
+   "osm": "node/1499351848",
+   "what": "village",
+   "label": "Nzulezo, Jomoro Municipal District, Western Region, Ghana",
+   "km": 0.1,
+   "q": "Nzulezo"
+  }
+ },
+ {
+  "dest": "nzulezo",
+  "name": "Fort Apollonia",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A restored British fort on the beach at Beyin, now a museum, where the canoes to Nzulezo set off.",
+  "at": {
+   "lat": 4.98713,
+   "lng": -2.59008,
+   "osm": "way/937830248",
+   "what": "castle",
+   "label": "Fort Apollonia, Meandah trail, Nzulezo, Jomoro Municipal District, Western Regio",
+   "km": 3.8,
+   "q": "Fort Apollonia"
+  }
+ },
+ {
+  "dest": "takoradi",
+  "name": "Market Circle",
+  "type": "outdoor",
+  "tags": [
+   "lively"
+  ],
+  "price": [
+   "free"
+  ],
+  "hours": null,
+  "desc": "Takoradi's busy central market, built in a ring around the old market hall.",
+  "at": {
+   "lat": 4.89904,
+   "lng": -1.76075,
+   "osm": "way/547873613",
+   "what": "unclassified",
+   "label": "Market Circle, Dixcove Hill, Takoradi, Sekondi Takoradi Metropolitan District, W",
+   "km": 2.5,
+   "q": "Market Circle Takoradi"
+  }
+ },
+ {
+  "dest": "mole",
+  "name": "Mole National Park",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy",
+   "family_friendly"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Ghana's largest wildlife park. Rangers lead walking and jeep safaris to see elephants, antelope, warthogs and baboons.",
+  "at": {
+   "lat": 9.6569,
+   "lng": -1.86735,
+   "osm": "way/164698067",
+   "what": "national_park",
+   "label": "Mole National Park, Savannah Region, Ghana",
+   "km": 6.1,
+   "q": "Mole National Park"
+  }
+ },
+ {
+  "dest": "larabanga",
+  "name": "Larabanga Mosque",
+  "type": "activity",
+  "tags": [
+   "artsy",
+   "calm"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "One of Ghana's oldest mosques, white mud in the Sudanese style. Visits are with a guide from the village.",
+  "at": {
+   "lat": 9.22032,
+   "lng": -1.85994,
+   "osm": "node/7067987939",
+   "what": "place_of_worship",
+   "label": "Larabanga Mosque, Yirikpani-Tugbini Route, Larabanga, West Gonja Municipal Distr",
+   "km": 0.0,
+   "q": "Larabanga Mosque"
+  }
+ },
+ {
+  "dest": "mole",
+  "name": "Mognori Eco-Village",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A village on the edge of Mole offering canoe trips on the river and walks with local guides.",
+  "at": null
+ },
+ {
+  "dest": "kintampo",
+  "name": "Kintampo Waterfalls",
+  "type": "outdoor",
+  "tags": [
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Falls in steps on the Pumpum river north of Kintampo town, with pools at the bottom and a rope bridge over the gorge.",
+  "at": {
+   "lat": 8.08958,
+   "lng": -1.69797,
+   "osm": "node/6495922247",
+   "what": "waterfall",
+   "label": "Kintampo Waterfalls, Kintampo, Kintampo North Municipal District, Bono East Regi",
+   "km": 0.1,
+   "q": "Kintampo Waterfalls"
+  }
+ },
+ {
+  "dest": "kintampo",
+  "name": "Fuller Falls",
+  "type": "outdoor",
+  "tags": [
+   "outdoorsy",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A gentler waterfall west of Kintampo, with pools for a swim.",
+  "at": {
+   "lat": 8.08277,
+   "lng": -1.79645,
+   "osm": "node/6294327586",
+   "what": "waterfall",
+   "label": "Fuller Falls, Kintampo North Municipal District, Bono East Region, Ghana",
+   "km": 10.9,
+   "q": "Fuller Falls"
+  }
+ },
+ {
+  "dest": "paga",
+  "name": "Paga Crocodile Pond",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "family_friendly"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Sacred crocodile ponds in Paga, where guides coax the crocodiles out so visitors can touch them.",
+  "at": {
+   "lat": 10.98483,
+   "lng": -1.10894,
+   "osm": "way/187655748",
+   "what": "pond",
+   "label": "Paga Crocodile Pond, Paga, Kassena-Nankana West District, Upper East Region, Gha",
+   "km": 0.9,
+   "q": "Paga Crocodile Pond"
+  }
+ },
+ {
+  "dest": "paga",
+  "name": "Pikworo Slave Camp",
+  "type": "outdoor",
+  "tags": [
+   "artsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A rocky site outside Paga where captives were held on the slave route south, with a guide to tell its story.",
+  "at": {
+   "lat": 10.96468,
+   "lng": -1.11711,
+   "osm": "node/6200926185",
+   "what": "attraction",
+   "label": "Pikworo Slave Camp, Navrongo-Paga Road, Paga, Kassena-Nankana West District, Upp",
+   "km": 3.1,
+   "q": "Pikworo Slave Camp"
+  }
+ },
+ {
+  "dest": "bolgatanga",
+  "name": "Sirigu Pottery and Art",
+  "type": "activity",
+  "tags": [
+   "artsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Sirigu's women's cooperative, known for houses painted in bold geometric patterns, pottery and basket weaving.",
+  "at": {
+   "lat": 10.95221,
+   "lng": -0.93363,
+   "osm": "node/2028051878",
+   "what": "village",
+   "label": "Sirigu, Kassena-Nankana West District, Upper East Region, Ghana",
+   "km": 20.1,
+   "q": "Sirigu"
+  }
+ },
+ {
+  "dest": "bolgatanga",
+  "name": "Tongo Hills",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "scenic"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "Boulder-strewn hills and the shrines of the Tengzug villages, walked with a local guide.",
+  "at": {
+   "lat": 10.68089,
+   "lng": -0.81196,
+   "osm": "way/740108066",
+   "what": "locality",
+   "label": "Tongo hills, Tengzug, Talensi District, Upper East Region, Ghana",
+   "km": 12.9,
+   "q": "Tongo Hills"
+  }
+ },
+ {
+  "dest": "bolgatanga",
+  "name": "Bolgatanga Craft Market",
+  "type": "outdoor",
+  "tags": [
+   "lively",
+   "artsy"
+  ],
+  "price": [
+   "free"
+  ],
+  "hours": null,
+  "desc": "The market where the woven Bolga baskets, leather and smocks are sold by the people who make them.",
+  "at": {
+   "lat": 10.78436,
+   "lng": -0.85062,
+   "osm": "way/441130996",
+   "what": "marketplace",
+   "label": "Old Market, Commercial Street, Bukere, Bolgatanga, Bolgatanga Municipal District",
+   "km": 0.9,
+   "q": "Bolgatanga Market"
+  }
+ },
+ {
+  "dest": "wa",
+  "name": "Wa Naa's Palace",
+  "type": "activity",
+  "tags": [
+   "artsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "The palace of the Wa Naa, built of mud in the Sudanese style. Visits are by arrangement, with the customary greeting.",
+  "at": null
+ },
+ {
+  "dest": "wa",
+  "name": "Wechiau Hippo Sanctuary",
+  "type": "outdoor",
+  "tags": [
+   "adventurous",
+   "outdoorsy"
+  ],
+  "price": null,
+  "hours": null,
+  "desc": "A community sanctuary on the Black Volta where hippos are seen from canoes.",
+  "at": {
+   "lat": 9.82957,
+   "lng": -2.68244,
+   "osm": "node/1824160857",
+   "what": "town",
+   "label": "Wechiau, Wa West District, Upper West Region, Ghana",
+   "km": 31.9,
+   "q": "Wechiau"
+  }
+ }
+]

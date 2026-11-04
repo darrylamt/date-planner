@@ -16,7 +16,7 @@ export const ROLE_BLURB: Record<StaffRole, string> = {
   photos: "Venue cover photos and galleries, and event images.",
   menus: "Dishes and prices, menu import, cuisines and per-person figures.",
   events: "Events and Gaderin listings.",
-  stays: "Places to stay: where they are, rooms and nightly rates, amenities and things to do there (0099).",
+  stays: "Places to stay: where they are, rooms and nightly rates, amenities and things to do there (0099). And Trips: destinations and the ways to get there (0101).",
 };
 
 /** Where each role starts when they sign in. */
