@@ -69,7 +69,13 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const setLook = useCallback((next: LookChoice) => {
     // Applied at once and saved after: a choice that waits on disk feels broken.
     setChoice(next);
-    void AsyncStorage.setItem(KEY, next).catch(() => {});
+    void AsyncStorage.setItem(KEY, next)
+      .catch(() => {})
+      .then(() => {
+        // Required here rather than imported: both read the plans, which read back through the app.
+        void (require("./widgets") as typeof import("./widgets")).refreshWidgets();
+        void (require("./liveActivity") as typeof import("./liveActivity")).refreshLiveActivity();
+      });
   }, []);
 
   const setPreference = useCallback(

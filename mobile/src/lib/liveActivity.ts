@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { requireOptionalNativeModule } from "expo-modules-core";
-import { OCCASION_THEME } from "./planConstants";
+import { widgetPalettes } from "./widgetLook";
 import { stopTimes } from "./nightClock";
 import type { Itinerary, PlanInputs } from "./types";
 import type { PlanTonightProps } from "../widgets/PlanTonight";
@@ -41,10 +41,11 @@ export const liveActivitiesAvailable = (): boolean => factory() != null;
 type Night = {
   slug: string;
   title: string;
-  accent: string;
-  accentDark: string;
   stops: { name: string; time: string; arrive: number; leave: number }[];
 };
+
+/** A moment's words; the look's colours are added when it is shown (widgetLook.ts). */
+type Moment = Omit<PlanTonightProps, "light" | "dark">;
 
 const KEY = "duro.liveActivity.night";
 
@@ -58,17 +59,16 @@ const trim = (s: string, n = 28) => (s.length > n ? `${s.slice(0, n - 1).trimEnd
 function nightOf(slug: string, inputs: PlanInputs, itinerary: Itinerary): Night | null {
   const timed = stopTimes(inputs, itinerary);
   if (!timed) return null;
-  const theme = OCCASION_THEME[inputs.occasion] ?? OCCASION_THEME.date_night;
   const stops = timed.map((s) => ({ name: trim(s.name), time: s.time, arrive: s.arrive, leave: s.leave }));
-  return { slug, title: trim(itinerary.title, 40), accent: theme.accent, accentDark: theme.accentDark, stops };
+  return { slug, title: trim(itinerary.title, 40), stops };
 }
 
 /** What to show at `now`, or null once the night is over. */
-function momentOf(n: Night, now: number): { props: PlanTonightProps; until: number } | null {
+function momentOf(n: Night, now: number): { props: Moment; until: number } | null {
   const last = n.stops[n.stops.length - 1];
   if (now >= last.leave) return null;
   const schedule = n.stops.slice(0, 4).map((s) => ({ time: s.time.replace(/\s?[AP]M$/i, ""), name: s.name }));
-  const base = { title: n.title, accent: n.accent, accentDark: n.accentDark, schedule };
+  const base = { title: n.title, schedule };
 
   for (let i = 0; i < n.stops.length; i++) {
     const s = n.stops[i];
@@ -140,7 +140,7 @@ export async function follow(slug: string, inputs: PlanInputs, itinerary: Itiner
   if (!f || !n || !m) return "This plan is over, so there is nothing to follow.";
   try {
     await endAll(f);
-    f.start(m.props, `aduro://plan/${slug}`, new Date(m.until));
+    f.start({ ...m.props, ...(await widgetPalettes()) }, `aduro://plan/${slug}`, new Date(m.until));
     await AsyncStorage.setItem(KEY, JSON.stringify(n));
     return "On your Lock Screen. It moves along each time you open Duro.";
   } catch {
@@ -184,5 +184,6 @@ export async function refreshLiveActivity(changed?: { slug: string; inputs: Plan
     await AsyncStorage.removeItem(KEY).catch(() => undefined);
     return;
   }
-  for (const a of running) await a.update(m.props, new Date(m.until)).catch(() => undefined);
+  const look = await widgetPalettes();
+  for (const a of running) await a.update({ ...m.props, ...look }, new Date(m.until)).catch(() => undefined);
 }
