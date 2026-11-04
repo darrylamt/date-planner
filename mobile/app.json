@@ -40,7 +40,10 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:date-plannergh.vercel.app"
+      ]
     },
     "android": {
       "package": "com.darrylamt.aduro",
