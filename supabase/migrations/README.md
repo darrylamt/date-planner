@@ -10,6 +10,8 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   Gemini's dish_role, which npm run meal:smoke reads; usage_events takes
   events, rate_hit answers, stay_details and stay_rooms exist and are closed
   to anon, and npm run audit:smoke passes 23/23 after 0099).
+- 0100_nudges.sql ran on 30 October 2026 (probed 4 Nov: notification_prefs
+  holds people's choices, nudge_sends answers, anon sees neither); in `archive/`.
 - 0101_trips.sql ran on 3 November 2026 (probed: 26 destinations and 50
   routes, both tables refuse anon, npm run audit:smoke 23/23); it is in
   `archive/` too. 0102_trip_demand.sql ran the same day (probed: the table
