@@ -1978,6 +1978,12 @@ export interface PlanOptions {
   cars?: number;
   /** Fixed per-venue variety, so checks can be repeated exactly. Default: a random draw. */
   variety?: (venueId: string) => number;
+  /**
+   * The exact places somebody named, in their order (Durobot's build_plan):
+   * each slot is that venue, in the role its kind suits, and nothing else is
+   * chosen. Absent, the planner chooses as always.
+   */
+  named?: string[];
 }
 
 export function planItinerary(
@@ -1996,7 +2002,8 @@ export function planItinerary(
   const cars = Math.max(1, Math.floor(opts.cars ?? 1));
   // A night of events is strung together from the day's events alone, with no meal slot to fill (eventNight.ts).
   if (inputs.eventNight) return planEventNight(inputs, candidates, variety, cars);
-  return planWith(inputs, candidates, false, variety, cars) ?? planWith(inputs, candidates, true, variety, cars);
+  const named = opts.named?.length ? opts.named : null;
+  return planWith(inputs, candidates, false, variety, cars, named) ?? planWith(inputs, candidates, true, variety, cars, named);
 }
 
 function planWith(
@@ -2004,8 +2011,33 @@ function planWith(
   candidates: Candidates,
   barsMayStandIn: boolean,
   variety: (venueId: string) => number = () => 0,
-  cars = 1
+  cars = 1,
+  /** The exact places somebody named (PlanOptions.named). */
+  named: string[] | null = null
 ): PlannedItinerary | null {
+  /*
+   * The role each named place plays, by its kind and in order: the first
+   * restaurant is the meal and a later one the sweet or drinks stop, so four
+   * named places with two restaurants are not two dinners (meals must be
+   * intentional) and not a slot nobody named (owner, 5 Nov 2026: Gallery
+   * 1957, Bella Dolce Vita, Palm Moments, Front/Back came back as three).
+   */
+  const namedRoles = (ids: string[]): Role[] => {
+    let meal = false;
+    return ids.map((id) => {
+      const t = candidates.venues.find((v) => v.id === id)?.type;
+      if (t === "restaurant") {
+        if (meal) return "dessert";
+        meal = true;
+        return "meal";
+      }
+      if (t === "cafe") return "cafe";
+      if (t === "lounge") return "lounge";
+      if (t === "dessert") return "dessert";
+      if (t === "wellness") return "wellness";
+      return "activity";
+    });
+  };
   /*
    * A spa stop runs longer the more it books: an hour a treatment, and never
    * under the hour and a half a single visit is given.
@@ -2670,16 +2702,15 @@ function planWith(
     stopCount: number,
     pin: Anchor | null
   ): PlannedItinerary | null => {
-    const roles = withWellness(
-      roleSequence(startHour, stopCount, focusesOf(inputs), inputs.vibes, meetingRole(inputs)),
-      inputs
-    );
+    const roles = named
+      ? namedRoles(named.slice(0, stopCount))
+      : withWellness(roleSequence(startHour, stopCount, focusesOf(inputs), inputs.vibes, meetingRole(inputs)), inputs);
     /*
      * Dessert is not a one-in-the-morning stop: the plan check kept finding
      * them, at places mostly shut by then. Past half eleven the slot is a
      * last drink instead, or, on a family day or a meeting, it goes.
      */
-    for (let i = roles.length - 1; i >= 0; i--) {
+    for (let i = roles.length - 1; i >= 0 && !named; i--) {
       if (roles[i] !== "dessert" || nominalStart(roles, i) < 23 * 60 + 30) continue;
       if (inputs.occasion === "family_day" || inputs.occasion === "business_meeting" || inputs.alcohol === "none") roles.splice(i, 1);
       else roles[i] = "lounge";
@@ -2692,7 +2723,7 @@ function planWith(
      * which has its own placing.
      */
     // Not for a meeting or a narrowed focus, where the event is only placed in a stop of its own kind.
-    if (pin && pin.event.kind !== "movie" && roles.length > 1 && !meetingRole(inputs) && !focusTypes.length) {
+    if (!named && pin && pin.event.kind !== "movie" && roles.length > 1 && !meetingRole(inputs) && !focusTypes.length) {
       const at = pin.at ?? startMinutes;
       const byTime = roles
         .map((role, i) => ({ role, i, gap: Math.abs(nominalStart(roles, i) - at) }))
@@ -2711,16 +2742,27 @@ function planWith(
      * Club hopping: the first bar is the pregame, priced with drinks, and
      * every bar after it is priced at the door (see optionsForVenue).
      */
-    const slots = roles.map((role, i) =>
-      optionsFor(
+    const slots = roles.map((role, i) => {
+      // A named place fills its own slot and nothing else does.
+      if (named) {
+        const v = candidates.venues.find((x) => x.id === named[i]);
+        return v
+          ? optionsForVenue(v, role, nominalStart(roles, i), {
+              doorOnly: false,
+              dessertAfter: roles.slice(i + 1).includes("dessert"),
+              beforeMeal: role !== "meal" && roles.slice(i + 1).includes("meal"),
+            }).sort((a, b) => b.score - a.score || b.tier - a.tier || a.cost - b.cost)
+          : [];
+      }
+      return optionsFor(
         role,
         nominalStart(roles, i),
         clubHopping && role === "lounge" && roles.slice(0, i).includes("lounge"),
         // One dessert an evening: a meal followed by a dessert stop leaves it to that stop.
         roles.slice(i + 1).includes("dessert"),
         role !== "meal" && roles.slice(i + 1).includes("meal")
-      )
-    );
+      );
+    });
     /*
      * What each slot could swap to, kept before an event takes its slot over.
      * The event is chosen for the plan, not by the person (most days carry a
@@ -3521,8 +3563,9 @@ function planWith(
     stopCountFor(inputs.hours, focusesOf(inputs), inputs.vibes, inputs.stops),
     Math.max(floor, candidates.venues.length)
   );
-  for (let count = wanted; count >= floor; count--) {
-    const plan = attempt(count, anchor);
+  // Named places are the evening: no event takes one of their slots.
+  for (let count = named ? named.length : wanted; count >= floor; count--) {
+    const plan = attempt(count, named ? null : anchor);
     if (plan) return plan;
   }
 

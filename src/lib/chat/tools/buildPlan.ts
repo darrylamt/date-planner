@@ -271,7 +271,8 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
       };
     }
 
-    const plan = planItinerary(inputs, candidates);
+    // Named places keep their order and each its own slot (planner.ts, PlanOptions.named).
+    const plan = planItinerary(inputs, candidates, pickedIds ? { named: pickedIds } : {});
 
     /*
      * When it cannot be built, say which part failed rather than that nothing
