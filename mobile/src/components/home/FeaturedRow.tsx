@@ -53,6 +53,10 @@ export function FeaturedRow() {
           <Card key={row.id} row={row} />
         ))}
       </ScrollView>
+      {/* Every event coming up, Gaderin's included (app/events.tsx). */}
+      <Text variant="subheadline" weight="600" style={{ color: c.accent, paddingHorizontal: GUTTER, marginTop: space.md }} onPress={() => router.push("/events")}>
+        See what's on this week →
+      </Text>
     </>
   );
 }
@@ -68,7 +72,7 @@ function Card({ row }: { row: FeaturedVenue }) {
 
   return (
     <Pressable
-      onPress={() => router.push(`/venue/${row.venue_id}`)}
+      onPress={() => router.push(row.event_id ? `/event/${row.event_id}` : `/venue/${row.venue_id}`)}
       accessibilityRole="button"
       accessibilityLabel={`${row.name}, see the place`}
       style={({ pressed }) => ({
