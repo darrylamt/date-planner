@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 const UPDATED = "21 September 2026";
-const CONTACT = "planbyaduro@gmail.com";
+const CONTACT = "support@duroplans.com";
 
 /** Terms of use. Linked from the App Store listing and from Profile. */
 export default function TermsPage() {

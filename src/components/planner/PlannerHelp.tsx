@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { IconCheck, IconSparkle } from "./icons";
 
-const SUPPORT_EMAIL = "planbyaduro@gmail.com";
+const SUPPORT_EMAIL = "partners@duroplans.com";
 
 const TOPICS = ["Putting a night on", "A place", "My logo or name", "Signing in", "Something else"];
 

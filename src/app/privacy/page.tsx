@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 const UPDATED = "30 October 2026";
-const CONTACT = "planbyaduro@gmail.com";
+const CONTACT = "support@duroplans.com";
 
 /**
  * Privacy policy.

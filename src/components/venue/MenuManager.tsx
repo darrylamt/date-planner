@@ -243,8 +243,8 @@ export function MenuManager({ scope, items }: { scope: MenuScope; items: MenuIte
           </button>
           <p className="mt-5 max-w-[360px] text-[13.5px] text-[var(--p-muted)]">
             Got a long menu? Use &ldquo;Add from a photo of your menu&rdquo; above, or send a photo or PDF to{" "}
-            <a className="font-bold text-[var(--p-accent)] underline" href={`mailto:planbyaduro@gmail.com?subject=${encodeURIComponent(`Menu for ${scope.venueName}`)}`}>
-              planbyaduro@gmail.com
+            <a className="font-bold text-[var(--p-accent)] underline" href={`mailto:partners@duroplans.com?subject=${encodeURIComponent(`Menu for ${scope.venueName}`)}`}>
+              partners@duroplans.com
             </a>{" "}
             and we&apos;ll type it in for you.
           </p>

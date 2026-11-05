@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { IconCheck, IconSparkle } from "@/components/planner/icons";
 
-const SUPPORT_EMAIL = "planbyaduro@gmail.com";
+const SUPPORT_EMAIL = "partners@duroplans.com";
 
 const TOPICS = ["Bookings", "Menu or prices", "Photos or details", "Hours", "Signing in", "Something else"];
 

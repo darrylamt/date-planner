@@ -131,7 +131,7 @@ function VenueLoginInner() {
           {/* No reset link: the address behind a username takes no mail. */}
           <p className="mt-5 text-[13.5px] leading-relaxed text-[var(--p-muted)]">
             Lost your password? Message us and we&apos;ll give you a new one. Not listed yet?{" "}
-            <a href="mailto:planbyaduro@gmail.com?subject=Listing%20on%20Duro!" className="font-bold text-[var(--p-accent)] underline">
+            <a href="mailto:partners@duroplans.com?subject=Listing%20on%20Duro!" className="font-bold text-[var(--p-accent)] underline">
               Get in touch
             </a>
             .
