@@ -330,6 +330,41 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
     });
   }
 
+  /*
+   * Two softer answers before saying no (owner, 5 Nov 2026, after reading
+   * the week's failed plans):
+   * - A late start, when most places shut not long after: the part of the
+   *   night that is still open, two hours, and the plan says so. A birthday
+   *   from 21:30 asking for calm got nothing, because calm places close by 23.
+   * - A budget that fits one good stop but not two: that stop, said plainly,
+   *   rather than nothing. A first date at GHS 300 for two failed while the
+   *   same plan at 450 had two stops.
+   * Only when the full plan failed, so every plan that works is unchanged.
+   */
+  let softer: string | null = null;
+  if (!plan && !inputs.eventNight) {
+    const [sh, sm] = inputs.startTime.split(":").map(Number);
+    const start = sh * 60 + sm;
+    if (start >= 20 * 60 && inputs.hours > 2) {
+      const shorter: PlanInputs = { ...inputs, hours: 2 };
+      const p = planItinerary(shorter, candidates);
+      if (p) {
+        plan = p;
+        inputs = shorter;
+        softer = `Most places close not long after ${inputs.startTime}, so this plan covers the two hours that are still open.`;
+      }
+    }
+    if (!plan && inputs.budget > 0 && inputs.stops !== 1) {
+      const one: PlanInputs = { ...inputs, stops: 1 };
+      const p = planItinerary(one, candidates);
+      if (p) {
+        plan = p;
+        inputs = one;
+        softer = `GHS ${inputs.budget.toLocaleString()} fits one good stop rather than a whole evening, so here it is. A little more opens up a second.`;
+      }
+    }
+  }
+
   // No arrangement of real venues fits, so say so rather than trimming into
   // something nobody would want. First, the next neighbourhood over.
   if (!plan) {
@@ -475,6 +510,7 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   const copy = written?.ok ? written.copy : fallbackCopy(inputs, plan);
 
   const itinerary = assembleItinerary(inputs, plan, copy);
+  if (softer) itinerary.notice = softer;
   const missed = movieNotice(inputs, plan);
   if (missed) itinerary.notice = missed;
   // Fewer events than the evening has room for: said, not padded with a dinner.

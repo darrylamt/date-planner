@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "Dates, birthdays, a night out with friends or a day on your own. Duro! plans it stop by stop from real menus and real prices in Accra and Kumasi.",
 };
 
-const CONTACT = "planbyaduro@gmail.com";
+const CONTACT = "hello@duroplans.com";
 
 type Place = { name: string; area: string | null; image: string };
 type SoonEvent = {

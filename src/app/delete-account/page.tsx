@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "How to delete your Duro! account and what happens to your data.",
 };
 
-const CONTACT = "planbyaduro@gmail.com";
+const CONTACT = "support@duroplans.com";
 
 /**
  * The page Google Play links to as the app's account-deletion page: the app's

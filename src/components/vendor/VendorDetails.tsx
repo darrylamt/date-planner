@@ -133,7 +133,7 @@ export function VendorDetails({ vendor, areas, username }: { vendor: VendorRow; 
       </section>
 
       <p className="text-center text-[13.5px] text-[var(--p-muted)]">
-        To change your shop&apos;s name, email planbyaduro@gmail.com.
+        To change your shop&apos;s name, email partners@duroplans.com.
       </p>
       <button type="button" className="pl-btn-ghost w-full !text-[#b42318]" onClick={() => void signOut()}>
         Sign out

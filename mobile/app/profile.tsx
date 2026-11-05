@@ -56,7 +56,7 @@ const ImagePicker = nativeOptional<typeof import("expo-image-picker")>(() =>
 );
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-const SUPPORT_EMAIL = "planbyaduro@gmail.com";
+const SUPPORT_EMAIL = "support@duroplans.com";
 
 export default function Profile() {
   const c = useTheme();

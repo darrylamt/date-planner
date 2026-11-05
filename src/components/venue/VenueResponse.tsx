@@ -28,7 +28,7 @@ export interface VenueResponseData {
   } | null;
 }
 
-const SUPPORT_EMAIL = "planbyaduro@gmail.com";
+const SUPPORT_EMAIL = "partners@duroplans.com";
 const pct = (a: number, b: number) => (a + b > 0 ? Math.round((100 * a) / (a + b)) : null);
 
 export function VenueResponse({ data, areaName, venueName, days }: { data: VenueResponseData; areaName: string; venueName: string; days: number }) {
