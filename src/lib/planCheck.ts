@@ -1,3 +1,4 @@
+import { SPOTLIGHT_EVENT_IDS } from "./spotlight";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Candidates } from "./matching";
 import { planItinerary, type PlannedItinerary } from "./planner";
@@ -130,7 +131,15 @@ export async function checkPlan(
    * point about it is only recorded.
    */
   const targets = [
-    ...new Set(problems.filter((p) => p.severity === "serious" && !plan.stops[p.stop - 1].event?.id.startsWith("movie:")).map((p) => p.stop)),
+    ...new Set(
+      problems
+        .filter((p) => {
+          const ev = plan.stops[p.stop - 1].event;
+          // A film was asked for, and a spotlit night (spotlight.ts) is offered on purpose: both stay; the person can swap it.
+          return p.severity === "serious" && !ev?.id.startsWith("movie:") && !(ev && SPOTLIGHT_EVENT_IDS.has(ev.id));
+        })
+        .map((p) => p.stop)
+    ),
   ].slice(0, 2);
   if (!targets.length) {
     await record(problems.length ? "flagged" : "good", problems, "kept", model);
