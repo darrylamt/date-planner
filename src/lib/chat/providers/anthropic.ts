@@ -78,7 +78,7 @@ export function anthropicProvider(): Provider {
           // structure even though the bytes on the wire are identical.
           input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
         })),
-        messages: req.messages.map(toAnthropicTurn),
+        messages: withHistoryCached(req.messages.map(toAnthropicTurn)),
       });
 
       return {
@@ -144,4 +144,21 @@ function stopReasonOf(reason: string | null): StopReason {
     default:
       return "other";
   }
+}
+
+/**
+ * A second cache point on the newest block (owner, 5 Nov 2026: "does each
+ * question cost 0.06?"). One question is several calls, a search, a venue,
+ * a plan, and each resent everything said so far at full price; with this
+ * the next call reads it back at a tenth. The system cache point stays the
+ * first of the two.
+ */
+function withHistoryCached(turns: Anthropic.MessageParam[]): Anthropic.MessageParam[] {
+  const last = turns[turns.length - 1];
+  if (!last || typeof last.content === "string" || !last.content.length) return turns;
+  const blocks = [...last.content];
+  const end = blocks[blocks.length - 1];
+  if (end.type !== "text" && end.type !== "tool_result") return turns;
+  blocks[blocks.length - 1] = { ...end, cache_control: { type: "ephemeral" } };
+  return [...turns.slice(0, -1), { ...last, content: blocks }];
 }

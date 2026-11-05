@@ -50,7 +50,7 @@ const DEFAULTS = {
 const argsSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   start_time: z.string().regex(/^\d{1,2}:\d{2}$/).optional(),
-  hours: z.number().min(1).max(12).optional(),
+  hours: z.number().min(1).max(24).transform((h) => Math.min(h, 12)).optional(),
   party_size: z.number().int().min(1).max(20).optional(),
   budget_ghs: z.number().positive().max(100000).optional(),
   areas: z.array(z.string()).max(6).optional(),
@@ -272,7 +272,36 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
     }
 
     // Named places keep their order and each its own slot (planner.ts, PlanOptions.named).
-    const plan = planItinerary(inputs, candidates, pickedIds ? { named: pickedIds } : {});
+    let plan = planItinerary(inputs, candidates, pickedIds ? { named: pickedIds } : {});
+
+    /*
+     * Named places that do not all fit from the time asked: try the start
+     * later or earlier, keeping the same end where it can, before giving up
+     * on any of them (owner, 5 Nov 2026: a 13:00 start could not wait until
+     * Front/Back opened at 20:00, the plan came back short, and Durobot typed
+     * the night out as text instead of a plan they could open). The card
+     * says the start it used.
+     */
+    let movedFrom: string | null = null;
+    if (pickedIds && (plan?.stops.length ?? 0) < pickedIds.length) {
+      const [h0, m0] = inputs.startTime.split(":").map(Number);
+      const asked = h0 * 60 + m0;
+      const end = asked + inputs.hours * 60;
+      for (const shift of [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 360, 420, -30, -60, -90, -120, -180, -240, -300, -360, -420]) {
+        const at = asked + shift;
+        if (at < 9 * 60 || at > 23 * 60) continue;
+        const hours = Math.min(12, Math.max(4, Math.round(((end - at) / 60) * 2) / 2));
+        const tryInputs = { ...inputs, startTime: `${String(Math.floor(at / 60)).padStart(2, "0")}:${String(at % 60).padStart(2, "0")}`, hours };
+        const p = planItinerary(tryInputs, candidates, { named: pickedIds });
+        if (p && p.stops.length === pickedIds.length) {
+          movedFrom = inputs.startTime;
+          inputs.startTime = tryInputs.startTime;
+          inputs.hours = hours;
+          plan = p;
+          break;
+        }
+      }
+    }
 
     /*
      * When it cannot be built, say which part failed rather than that nothing
@@ -307,6 +336,9 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
      */
     const digest = {
       built: true as const,
+      ...(movedFrom
+        ? { start_moved: `Starts at ${inputs.startTime}, not ${movedFrom}, so every place they named is open when they get there. Say so in one line.` }
+        : {}),
       // A named place the evening could not fit, said rather than swapped (owner, 5 Nov 2026).
       ...(pickedIds && plan.stops.length < pickedIds.length
         ? {
