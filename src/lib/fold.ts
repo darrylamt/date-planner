@@ -28,9 +28,20 @@ export function fold(text: string | null | undefined): string {
   return out;
 }
 
-/** Whether `text` contains `query`, accents and case aside. */
+/** Letters and digits only: "Front/Back", "front back" and "frontback" are one name. */
+export function compact(text: string | null | undefined): string {
+  return fold(text).replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Whether `text` contains `query`, accents and case aside, and spacing and
+ * punctuation too: Durobot asked for a spelling of Front/Back the catalogue
+ * did not write the same way, and said it was not there (owner, 5 Nov 2026).
+ */
 export function foldIncludes(text: string | null | undefined, query: string): boolean {
-  return fold(text).includes(fold(query));
+  if (fold(text).includes(fold(query))) return true;
+  const q = compact(query);
+  return q.length >= 3 && compact(text).includes(q);
 }
 
 /**
@@ -42,5 +53,6 @@ export function foldIncludes(text: string | null | undefined, query: string): bo
 export function accentPattern(query: string): string {
   const plain = fold(query.trim()).replace(/[\\%_]/g, (c) => `\\${c}`);
   // Only the letters that carry accents here: widening every letter matched nearly every dish.
-  return `%${plain.replace(/[aceinouy]/g, "_")}%`;
+  // Spaces and punctuation match any run of them: "front back" finds "Front/Back".
+  return `%${plain.replace(/[aceinouy]/g, "_").replace(/[^a-z0-9_\\%]+/g, "%")}%`;
 }

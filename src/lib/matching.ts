@@ -70,7 +70,7 @@ export async function fetchCandidates(
   supabase: SupabaseClient,
   inputs: PlanInputs,
   /** taste: the person's own lean (taste.ts), put on each venue for the planner. */
-  opts: { excludeVenueIds?: string[]; taste?: Taste | null } = {}
+  opts: { excludeVenueIds?: string[]; taste?: Taste | null; mustInclude?: string[] } = {}
 ): Promise<Candidates> {
   const bands = allowedBands(inputs.budget);
   const wantedTags = expandVibes(inputs.vibes);
@@ -763,6 +763,10 @@ export async function fetchCandidates(
    * with a menu, by two points, four at the meal (planner.ts, ESTIMATE_PENALTY).
    */
   picked = [...picked, ...scoredAll.filter((sc) => sc.v.estimate).slice(0, 8).map((sc) => sc.v)];
+  // Places somebody named (Durobot's build_plan): in the shortlist whatever their score, once past the filters.
+  if (opts.mustInclude?.length) {
+    picked = [...picked, ...scoredAll.filter((sc) => opts.mustInclude!.includes(sc.v.id) && !picked.includes(sc.v)).map((sc) => sc.v)];
+  }
 
   /*
    * A venue with something on that night joins the shortlist outright.

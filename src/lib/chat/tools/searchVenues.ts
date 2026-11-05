@@ -336,6 +336,19 @@ async function load(ctx: ToolContext, args: SearchVenuesArgs): Promise<Venue[]> 
   let venues = (data ?? []) as unknown as Venue[];
   // The pattern finds more than it should; only names that really contain it stay.
   if (args.name) venues = venues.filter((v) => foldIncludes(v.name, args.name!.trim()));
+  /*
+   * Run together ("frontback") the pattern cannot find a name written apart,
+   * so before saying a place is not here, every active name is compared with
+   * spacing and punctuation set aside, and those found are read in full.
+   */
+  if (args.name && !venues.length) {
+    const { data: names } = await ctx.catalog.from("venues").select("id, name").eq("is_active", true).limit(5000);
+    const ids = ((names ?? []) as { id: string; name: string }[]).filter((v) => foldIncludes(v.name, args.name!.trim())).map((v) => v.id);
+    if (ids.length) {
+      const { data: found } = await ctx.catalog.from("venues").select(VENUE_SELECT).in("id", ids.slice(0, 20));
+      venues = (found ?? []) as unknown as Venue[];
+    }
+  }
 
   /*
    * Areas are matched here rather than in the query because the model sends

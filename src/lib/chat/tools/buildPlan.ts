@@ -5,6 +5,7 @@ import { assembleItinerary } from "../../itinerary";
 import { VIBE_CHIP_TAGS } from "../../catalog";
 import type { Itinerary, PlanInputs } from "../../types";
 import type { ChatTool, ToolContext } from "./types";
+import { compact, foldIncludes } from "../../fold";
 
 /**
  * Build a real evening.
@@ -77,6 +78,8 @@ const argsSchema = z.object({
   movie: z.boolean().optional(),
   movie_genres: z.array(z.string().max(24)).max(6).optional(),
   events_night: z.boolean().optional(),
+  /** The exact places they asked for, by name: the plan uses only these. */
+  venue_names: z.array(z.string().min(2).max(120)).min(1).max(5).optional(),
 });
 
 export type BuildPlanArgs = z.infer<typeof argsSchema>;
@@ -181,6 +184,13 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         items: { type: "string" },
         description: "With movie: only these genres (Action, Comedy, Horror, Romance, Thriller, Drama, Animation, Adventure, Sci-fi, Nollywood, Ghallywood). Omit for any film.",
       },
+      venue_names: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 5,
+        description:
+          "When they name the exact places they want (\"start at Gallery 1957, then Bella Dolce Vita...\"), their names as the catalogue has them, in the order asked. The plan then uses only those places, with real orders, times, rides and the total. It may put them in a different order so meals land at sensible times; if it does, say so. Leave areas and vibes out when you send this.",
+      },
       events_night: {
         type: "boolean",
         description:
@@ -212,8 +222,46 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
 
     const start = args.start_time ?? defaultStart(args.date, ctx.today);
     const inputs = toPlanInputs(args, areas, start);
+
+    /*
+     * Named places (owner, 5 Nov 2026: "give me a plan that starts at the
+     * Gallery 1957, then bella dolce vita, then palm moments, then
+     * front/back" came back as four other places). Each name is found in the
+     * catalogue, the search is narrowed to their areas, and the shortlist to
+     * them alone, so the planner prices and times exactly those.
+     */
+    let pickedIds: string[] | null = null;
+    if (args.venue_names?.length) {
+      const { data: all } = await ctx.catalog.from("venues").select("id, name, area_id").eq("is_active", true).neq("type", "stay").limit(5000);
+      const rows = (all ?? []) as { id: string; name: string; area_id: string }[];
+      const found = args.venue_names.map((n) => ({ n, v: rows.find((r) => compact(r.name) === compact(n)) ?? rows.find((r) => foldIncludes(r.name, n)) }));
+      const missing = found.filter((f) => !f.v).map((f) => f.n);
+      if (missing.length) {
+        return { built: false as const, reason: `Not found by those names: ${missing.join(", ")}. Search for each with search_venues and send the names exactly as the catalogue has them.` };
+      }
+      pickedIds = [...new Set(found.map((f) => f.v!.id))];
+      inputs.areaIds = [...new Set(found.map((f) => f.v!.area_id))];
+      inputs.areaNames = [];
+      inputs.surpriseMe = false;
+      inputs.radiusKm = 0;
+      inputs.vibes = [];
+      inputs.stops = pickedIds.length;
+    }
+
     // Leaning towards what they keep, as their plans in the app do (taste.ts).
-    const candidates = await fetchCandidates(ctx.catalog, inputs, { taste: await ctx.taste() });
+    const candidates = await fetchCandidates(ctx.catalog, inputs, { taste: await ctx.taste(), mustInclude: pickedIds ?? undefined });
+    if (pickedIds) {
+      const kept = new Set(candidates.venues.filter((v) => pickedIds!.includes(v.id)).map((v) => v.id));
+      const dropped = pickedIds.filter((id) => !kept.has(id));
+      if (dropped.length) {
+        const { data: names } = await ctx.catalog.from("venues").select("name").in("id", dropped);
+        return {
+          built: false as const,
+          reason: `These cannot be planned yet: ${((names ?? []) as { name: string }[]).map((x) => x.name).join(", ")}. We have no price on record for them, or they are closed then. Say so, and offer the plan without them.`,
+        };
+      }
+      candidates.venues = candidates.venues.filter((v) => kept.has(v.id));
+    }
 
     if (candidates.totalActiveVenues < 2) {
       return {
@@ -258,6 +306,16 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
      */
     const digest = {
       built: true as const,
+      // A named place the evening could not fit, said rather than swapped (owner, 5 Nov 2026).
+      ...(pickedIds && plan.stops.length < pickedIds.length
+        ? {
+            left_out: candidates.venues
+              .filter((v) => !plan.stops.some((st) => st.venue.id === v.id))
+              .map((v) => `${v.name}${v.opening_hours_text?.length ? ` (hours: ${v.opening_hours_text.find((l) => l.startsWith(new Date(`${inputs.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" }))) ?? "see the venue"})` : ""}`),
+            left_out_note:
+              "These named places did not fit this evening's hours with the others. Say which, and why from their hours, and offer an earlier start, a longer evening, or another day. Do not swap in other places.",
+          }
+        : {}),
       /*
        * What was filled in for them, in the words the reply should use.
        *
