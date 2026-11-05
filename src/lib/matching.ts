@@ -1,3 +1,4 @@
+import { SPOTLIGHT_EVENT_IDS } from "./spotlight";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Taste } from "./taste";
 import { expandVibes, loungeFloor } from "./catalog";
@@ -428,6 +429,27 @@ export async function fetchCandidates(
       .eq("is_active", true)
       .in("id", cinemaIds);
     venues = [...venues, ...((data ?? []) as unknown as Venue[])];
+  }
+
+  /*
+   * A spotlit event (spotlight.ts) on this date, wherever it is: the event
+   * and its venue join the shortlist as a cinema does, so every plan that
+   * day can offer it.
+   */
+  if (SPOTLIGHT_EVENT_IDS.size) {
+    const { data: lit } = await supabase
+      .from("events")
+      .select("*")
+      .eq("is_active", true)
+      .eq("event_date", inputs.date)
+      .in("id", [...SPOTLIGHT_EVENT_IDS]);
+    const add = ((lit ?? []) as typeof events).filter((e) => !events.some((x) => x.id === e.id));
+    events = [...events, ...add];
+    const missing = [...new Set(add.map((e) => e.venue_id).filter((id): id is string => Boolean(id)))].filter((id) => !venues.some((v) => v.id === id));
+    if (missing.length) {
+      const { data } = await supabase.from("venues").select(`${columns.join(",")},areas(name)`).eq("is_active", true).in("id", missing);
+      venues = [...venues, ...((data ?? []) as unknown as Venue[])];
+    }
   }
 
   if (opts.excludeVenueIds?.length) {

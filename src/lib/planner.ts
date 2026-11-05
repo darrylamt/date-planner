@@ -1,3 +1,4 @@
+import { SPOTLIGHT_EVENT_IDS } from "./spotlight";
 import type { Candidates } from "./matching";
 import { chargesOn, chargesTotal } from "./budget";
 import { dishMatchesCuisine } from "./cuisineDishes";
@@ -2110,7 +2111,9 @@ function planWith(
          * for clearly better. The owner's rule, 23 Oct 2026.
          */
         const once = x.event.recurring ? 0 : 2;
-        return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length + once };
+        // A spotlit night (spotlight.ts) comes first whatever was asked for.
+        const lit = SPOTLIGHT_EVENT_IDS.has(x.event.id) ? 100 : 0;
+        return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length + once + lit };
       })
       .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
 
@@ -2150,7 +2153,9 @@ function planWith(
         /party|rave|club|turn ?up|hype|vibes?\b|nights?\b.*dj|\bdj\b|amapiano|afrobeats/i.test(`${x.event.title} ${x.event.category} ${x.event.description ?? ""}`)
       );
     };
-    return placeable.find((x) => x.event.kind !== "movie" && !(talking && !wantsNoise && tooLoud(x))) ?? null;
+    return (
+      placeable.find((x) => x.event.kind !== "movie" && (SPOTLIGHT_EVENT_IDS.has(x.event.id) || !(talking && !wantsNoise && tooLoud(x)))) ?? null
+    );
   })();
 
   /** Every way one slot could be filled, cheapest order first within a venue. */

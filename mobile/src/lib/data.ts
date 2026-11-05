@@ -412,7 +412,7 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
   const { data, error } = await supabase
     .from("featured_venues")
     .select(
-      "id, venue_id, headline, is_paid, sort, venues(name, description, image_url, instagram_handle, is_active, areas(name))"
+      "id, venue_id, headline, is_paid, sort, venues(name, description, image_url, instagram_handle, is_active, areas(name)), events(title, image_url, is_active)"
     )
     .lte("starts_on", today)
     .gte("ends_on", today)
@@ -436,14 +436,17 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
       // A venue that has hidden itself, or been deactivated, must not keep
       // appearing on the home screen because a run was booked before it did.
       if (v.is_active === false) return null;
+      // A slot for an event at the venue (0104): its title and poster on the card; the tap still opens the venue.
+      const e = row.events as { title: string; image_url: string | null; is_active: boolean } | null;
+      const ev = e && e.is_active !== false ? e : null;
       return {
         id: row.id as string,
         venue_id: row.venue_id as string,
         headline: (row.headline as string | null) ?? null,
         is_paid: Boolean(row.is_paid),
-        name: v.name,
+        name: ev?.title ?? v.name,
         description: v.description,
-        image_url: v.image_url,
+        image_url: ev?.image_url ?? v.image_url,
         instagram_handle: v.instagram_handle,
         area: v.areas?.name ?? null,
       };
