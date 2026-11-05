@@ -66,7 +66,8 @@ export interface Provider {
  * in the running. A chat turn is a few sentences and a tool call; anything
  * approaching this ceiling has gone wrong rather than gone long.
  */
-export const MAX_TOKENS = 1500;
+// Room for a weekend's events listed in full: at 1500 they were cut off and arrived as nothing.
+export const MAX_TOKENS = 2500;
 
 /**
  * How many tool calls one user message may set off before the loop gives up.

@@ -65,6 +65,7 @@ type Row = Pick<
   | "audience"
   | "vibe_tags"
   | "booking_url"
+  | "source_url"
   | "organiser_name"
   | "is_active"
 >;
@@ -110,7 +111,7 @@ export const searchEvents: ChatTool<SearchEventsArgs> = {
       fetchAllRows<Row>((a, b) =>
         ctx.catalog
           .from("events")
-          .select("id,title,venue_id,area_id,event_date,start_time,cost_ghs,category,description,audience,vibe_tags,booking_url,organiser_name,is_active")
+          .select("id,title,venue_id,area_id,event_date,start_time,cost_ghs,category,description,audience,vibe_tags,booking_url,source_url,organiser_name,is_active")
           .eq("is_active", true)
           .gte("event_date", ctx.today)
           .lte("event_date", addDays(ctx.today, REPEAT_HORIZON_DAYS))
@@ -189,6 +190,8 @@ export const searchEvents: ChatTool<SearchEventsArgs> = {
           ...(who ? { who } : {}),
           about: r.description ? r.description.replace(/\s+/g, " ").trim().slice(0, 140) : null,
           book_via: r.booking_url ? hostOf(r.booking_url) : null,
+          // The link itself, so "give me the booking link" gets one (owner, 5 Nov 2026).
+          book_url: r.booking_url || r.source_url || null,
         };
       });
 
