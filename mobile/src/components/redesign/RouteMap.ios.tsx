@@ -43,6 +43,33 @@ function along(points: LatLng[], t: number): LatLng[] {
   return [...points.slice(0, whole + 1), { latitude: a.latitude + (b.latitude - a.latitude) * part, longitude: a.longitude + (b.longitude - a.longitude) * part }];
 }
 
+/*
+ * The roads between the stops, not straight lines (owner, 5 Nov 2026: "why
+ * does the map use straight lines instead of the actual routes?"): one
+ * driving route through every stop from OSRM, kept for the session. Straight
+ * lines remain the fallback when it cannot be reached.
+ */
+const roads = new Map<string, LatLng[]>();
+async function roadThrough(points: LatLng[]): Promise<LatLng[] | null> {
+  const key = points.map((p) => `${p.longitude.toFixed(5)},${p.latitude.toFixed(5)}`).join(";");
+  if (roads.has(key)) return roads.get(key)!;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${key}?overview=full&geometries=geojson`, { signal: ctrl.signal });
+    const json = (await res.json()) as { routes?: { geometry?: { coordinates?: [number, number][] } }[] };
+    const line = json.routes?.[0]?.geometry?.coordinates;
+    if (!line?.length) return null;
+    const path = line.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+    roads.set(key, path);
+    return path;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function RouteMap({ itinerary, height }: { itinerary: Itinerary; height: number }) {
   const look = useLook();
   const { width } = useWindowDimensions();
@@ -55,6 +82,16 @@ export function RouteMap({ itinerary, height }: { itinerary: Itinerary; height: 
     [itinerary]
   );
   const [t, setT] = useState(reduced ? 1 : 0);
+  const [road, setRoad] = useState<LatLng[] | null>(null);
+  useEffect(() => {
+    let on = true;
+    setRoad(null);
+    if (points.length > 1) void roadThrough(points).then((r) => on && setRoad(r));
+    return () => {
+      on = false;
+    };
+  }, [points]);
+  const path = road ?? points;
 
   useEffect(() => {
     if (reduced) return setT(1);
@@ -92,7 +129,7 @@ export function RouteMap({ itinerary, height }: { itinerary: Itinerary; height: 
           monogram: String(i + 1),
           tintColor: colours[i % colours.length].bg,
         }))}
-      polylines={points.length > 1 ? [{ id: "route", coordinates: along(points, t), color: look.id === "daylight" ? look.colors.accent : look.primary, width: 5 }] : []}
+      polylines={points.length > 1 ? [{ id: "route", coordinates: along(path, t), color: look.id === "daylight" ? look.colors.accent : look.primary, width: 5 }] : []}
     />
   );
 }
