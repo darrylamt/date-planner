@@ -392,6 +392,8 @@ export interface FeaturedVenue {
   image_url: string | null;
   instagram_handle: string | null;
   area: string | null;
+  /** Set when the slot is for an event at the venue (0104): the card opens the event. */
+  event_id: string | null;
 }
 
 /**
@@ -412,7 +414,7 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
   const { data, error } = await supabase
     .from("featured_venues")
     .select(
-      "id, venue_id, headline, is_paid, sort, venues(name, description, image_url, instagram_handle, is_active, areas(name)), events(title, image_url, is_active)"
+      "id, venue_id, event_id, headline, is_paid, sort, venues(name, description, image_url, instagram_handle, is_active, areas(name)), events(title, image_url, is_active)"
     )
     .lte("starts_on", today)
     .gte("ends_on", today)
@@ -449,6 +451,7 @@ export async function fetchFeatured(): Promise<FeaturedVenue[]> {
         image_url: ev?.image_url ?? v.image_url,
         instagram_handle: v.instagram_handle,
         area: v.areas?.name ?? null,
+        event_id: ev ? ((row.event_id as string | null) ?? null) : null,
       };
     })
     .filter((r): r is FeaturedVenue => r !== null);

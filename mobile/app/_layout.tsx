@@ -256,6 +256,8 @@ function RootShell() {
           */}
           <Stack.Screen name="profile" options={{ title: "Settings" }} />
           <Stack.Screen name="venue/[id]" options={{ title: "" }} />
+          <Stack.Screen name="event/[id]" options={{ title: "" }} />
+          <Stack.Screen name="events" options={{ title: "What's on" }} />
           {/* Full screen and gesture-locked: a half-swiped intro that lands
               back on an empty app is worse than no intro. */}
           <Stack.Screen
