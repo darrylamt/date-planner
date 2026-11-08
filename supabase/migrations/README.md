@@ -18,5 +18,7 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   answers the server and refuses anon both ways; audit:smoke 23/23).
   0103_venue_stars.sql ran the same day (probed: a free account stops at
   10, Pro does not, nobody sees or writes another's stars; audit:smoke 23/23).
+- 0104_featured_events.sql ran on 5 November 2026 (probed: featured_venues
+  carries event_id and the rugby final's slot pointed at its event); in `archive/`.
 - New migrations go here, at the top level, numbered on from 0100. Move them
   into `archive/` once they have been run.

@@ -7,7 +7,6 @@
  * An ordinary stop otherwise: swappable like any other. Take an id out once
  * its night is over.
  */
-export const SPOTLIGHT_EVENT_IDS: ReadonlySet<string> = new Set([
-  // Friday Night Footy, rugby league finals, 6 Nov 2026: the owner plays in it.
-  "6ad34846-d674-41af-9f12-dc6f61e52145",
+export const SPOTLIGHT_EVENT_IDS: ReadonlySet<string> = new Set<string>([
+  // Friday Night Footy (6 Nov 2026) was here; taken out once its night was over.
 ]);
