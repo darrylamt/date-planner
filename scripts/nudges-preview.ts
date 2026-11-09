@@ -13,13 +13,14 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 
 (async () => {
   const day = process.argv[2];
-  const now = day ? new Date(`${day}T15:00:00Z`) : new Date();
-  const friday = new Date(`${weekendOf(now)[0]}T15:00:00Z`);
+  const now = day ? new Date(`${day}T17:00:00Z`) : new Date();
+  // Sent the Thursday before the weekend, at 17:00.
+  const thursday = new Date(Date.parse(`${weekendOf(now)[0]}T17:00:00Z`) - 86_400_000);
 
   const show = (label: string, n: { title: string; body: string; url: string } | null) =>
     console.log(`${label}\n  ${n ? `${n.title}\n  ${n.body}\n  -> ${n.url}` : "(nothing to say, so not sent)"}\n`);
 
-  show(`Weekend, as sent on Friday ${friday.toISOString().slice(0, 10)}:`, await weekendNudge(db, friday));
+  show(`Weekend, as sent on Thursday ${thursday.toISOString().slice(0, 10)}:`, await weekendNudge(db, thursday));
   show("New this week:", await newThisWeekNudge(db, now));
   show("It's been a while (usually date nights):", lapsedNudge("date_night", now));
 

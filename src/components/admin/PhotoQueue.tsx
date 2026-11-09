@@ -14,6 +14,10 @@ export interface PhotoRow {
   type: string;
   cover: string | null;
   gallery: number;
+  /** Plans it was in over the last 90 days, the team's own left out. */
+  plans: number;
+  /** One of the fifty without a cover that are planned most. */
+  first: boolean;
 }
 
 export interface PosterRow {
@@ -35,7 +39,7 @@ export function PhotoQueue({ tab, venues, events }: { tab: "venues" | "events"; 
       venues
         .filter((v) => !q || fold(`${v.name} ${v.area}`).includes(q))
         .filter((v) => !onlyMissing || !v.cover || v.gallery < 3)
-        .sort((a, b) => Number(Boolean(a.cover)) - Number(Boolean(b.cover)) || a.gallery - b.gallery || a.name.localeCompare(b.name)),
+        .sort((a, b) => Number(Boolean(a.cover)) - Number(Boolean(b.cover)) || b.plans - a.plans || a.gallery - b.gallery || a.name.localeCompare(b.name)),
     [venues, q, onlyMissing]
   );
   const shownEvents = useMemo(
@@ -60,6 +64,7 @@ export function PhotoQueue({ tab, venues, events }: { tab: "venues" | "events"; 
           head={
             <>
               <th>Venue</th>
+              <th>In plans</th>
               <th>Cover</th>
               <th>More</th>
               <th />
@@ -68,11 +73,14 @@ export function PhotoQueue({ tab, venues, events }: { tab: "venues" | "events"; 
           rows={shownVenues.map((v) => (
             <tr key={v.id}>
               <td>
-                <div className="font-semibold">{v.name}</div>
+                <div className="font-semibold">
+                  {v.name} {v.first ? <span className="badge b-stale ml-1">Do first</span> : null}
+                </div>
                 <div className="text-[12px] text-mutedbrown">
                   {v.area} · {v.type}
                 </div>
               </td>
+              <td className="tabular-nums">{v.plans || "–"}</td>
               <td>
                 {v.cover ? (
                   // eslint-disable-next-line @next/next/no-img-element

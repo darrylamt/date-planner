@@ -3,12 +3,13 @@ import { sendExpoPush, tokensForUsers, type PushMessage } from "./pushServer";
 
 /**
  * Nudges, so people remember the app is there (owner, 30 Oct 2026): what's
- * on this weekend (Fridays), what's new this week (Tuesdays), and "it's been
- * a while" (Wednesdays). Sent from /api/cron/nudges at 15:00, which is 3pm in
- * Accra all year.
+ * on this weekend (Thursdays, owner 9 Nov 2026: the evening before Friday, while
+ * there is still time to plan it), what's new this week (Tuesdays), and "it's
+ * been a while" (Wednesdays). Sent from /api/cron/nudges at 17:00, which is 5pm
+ * in Accra all year.
  *
  * Only to people who turned them on (notification_prefs, 0100), and never
- * more than one every 60 hours: at most two a week, Tuesday and Friday, and
+ * more than one every 44 hours: at most two a week, Tuesday and Thursday, and
  * the Wednesday one only when Tuesday had nothing new to say. Nobody with a
  * saved plan in the next three days is nudged; their reminder is coming.
  *
@@ -26,7 +27,7 @@ export interface Nudge {
 }
 
 const DAY_MS = 86_400_000;
-const CAP_HOURS = 60;
+const CAP_HOURS = 44;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY_MS);
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -74,15 +75,15 @@ type Candidate = { score: number; title: string; body: string; url: string };
 
 /**
  * The one thing worth a weekend: a one-off event first (one-off-events-first),
- * then a weekly fixture, then a film that has just opened. Tonight wins a tie,
- * since it goes out on Friday afternoon. Null when there is nothing to say.
+ * then a weekly fixture, then a film that has just opened. Friday wins a tie,
+ * since it goes out the evening before. Null when there is nothing to say.
  */
 export async function weekendNudge(db: SupabaseClient, now: Date): Promise<Nudge | null> {
   const days = weekendOf(now);
   const today = iso(now);
   const live = days.filter((d) => d >= today);
   if (!live.length) return null;
-  const dayWord = (d: string) => (d === today ? "tonight" : `on ${DAY_NAMES[new Date(`${d}T12:00:00Z`).getUTCDay()]}`);
+  const dayWord = (d: string) => (d === today ? "tonight" : `${DAY_NAMES[new Date(`${d}T12:00:00Z`).getUTCDay()]}`);
   const candidates: Candidate[] = [];
 
   // Events, with how many dates each title runs on nearby: three or more is a daily or weekly listing, not an occasion.
@@ -256,7 +257,7 @@ export async function runNudges(
 ): Promise<NudgeRun> {
   const weekday = now.getUTCDay();
   const kinds: NudgeKind[] =
-    opts.kinds ?? (weekday === 5 ? ["weekend"] : weekday === 2 ? ["new"] : weekday === 3 ? ["lapsed"] : []);
+    opts.kinds ?? (weekday === 4 ? ["weekend"] : weekday === 2 ? ["new"] : weekday === 3 ? ["lapsed"] : []);
   const skipped: Record<string, number> = {};
   const skip = (why: string) => (skipped[why] = (skipped[why] ?? 0) + 1);
   const run: NudgeRun = { kinds, optedIn: 0, messages: [], skipped };

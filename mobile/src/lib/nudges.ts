@@ -10,7 +10,12 @@ import { registerForPush } from "./push";
  * reminders and birthday greetings are not part of it.
  */
 
-const ASKED = "duro.nudges.asked.v1";
+/*
+ * v2: asked after a plan is saved, the moment the app has just been useful
+ * (owner, 9 Nov 2026), rather than on Home before it had done anything. A
+ * phone that said "Not now" on Home is asked once more, this way.
+ */
+const ASKED = "duro.nudges.asked.v2";
 
 /** Whether they are on for this account; null when signed out or not yet available (before 0100). */
 export async function nudgesOn(): Promise<boolean | null> {
@@ -61,8 +66,8 @@ export async function askForNudgesOnce(): Promise<void> {
     await AsyncStorage.setItem(ASKED, "1");
     if (current) return;
     Alert.alert(
-      "Ideas for the weekend?",
-      "What's on in Accra this weekend, what's new on Duro, and a nudge if it's been a while. At most twice a week. You can turn this off in Profile.",
+      "Plans for Friday, every Thursday?",
+      "On Thursday evenings, what's on in Accra that weekend, ready to plan in a tap. Now and then what's new on Duro, or a nudge if it's been a while. At most twice a week. You can turn this off in Profile.",
       [
         { text: "Not now", style: "cancel" },
         {
