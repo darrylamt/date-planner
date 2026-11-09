@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
 import { AccountlessNote, Card, Hero, PERKS, Paywall, PerkRow } from "../chat/Paywall";
+import { menusFree } from "../../lib/freeMenus";
 import { useReducedMotion } from "../motion";
 import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
@@ -136,7 +137,10 @@ export function ProSheet({
                     </Pressable>
                   ) : null}
                   <PerkRow perk={PERKS.chat} />
-                  <PerkRow perk={PERKS.venue} />
+                  <PerkRow perk={PERKS.trips} />
+                  <PerkRow perk={PERKS.stars} />
+                  {/* Venue pages are free for everyone now (freeMenus.ts): not a perk to sell. */}
+                  {menusFree() ? null : <PerkRow perk={PERKS.venue} />}
                   <PerkRow perk={PERKS.order} />
                   <Text variant="footnote" tone="secondary">
                     Planning from the questionnaire is free for everyone, and always will be.

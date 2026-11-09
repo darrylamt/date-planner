@@ -271,7 +271,11 @@ interface PlaceRow {
 export class UnknownDestination extends Error {}
 
 /** What /api/trip/generate answers. */
-export type TripResponse = { status: "ok"; trip: Trip } | { status: "error"; message: string };
+export type TripResponse =
+  | { status: "ok"; trip: Trip }
+  | { status: "error"; message: string }
+  /** A free account's trip this month is used (/api/trip/generate); Pro plans any number and changes them. */
+  | { status: "limit"; message: string };
 
 /**
  * Build a trip. `db` reads as the server: stays are hidden from anybody else

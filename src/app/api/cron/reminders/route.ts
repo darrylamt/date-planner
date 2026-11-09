@@ -88,31 +88,6 @@ export async function GET(req: Request) {
   const claimed: string[] = [];
 
   /*
-   * A group's organiser gets one nudge once answers have closed and the group
-   * is still waiting on them to plan it. Once, ever: claimed per group.
-   */
-  const { data: waiting } = await supabase
-    .from("groups")
-    .select("id, code, owner_id, title")
-    .eq("status", "collecting")
-    .lte("answer_deadline", now.toISOString())
-    .limit(200);
-  for (const g of (waiting ?? []) as { id: string; code: string; owner_id: string; title: string | null }[]) {
-    const tokens = (await tokensForUsers(supabase, [g.owner_id])).get(g.owner_id) ?? [];
-    if (!tokens.length) continue;
-    const { error: claimError } = await supabase.from("group_notifications").insert({ group_id: g.id, kind: "deadline", key: "" });
-    if (claimError) continue;
-    for (const token of tokens) {
-      messages.push({
-        to: token,
-        title: "Answers are in",
-        body: g.title ? `Get a plan for ${g.title}.` : "Get a plan that works for your group.",
-        data: { url: `/group/${g.code}` },
-      });
-    }
-  }
-
-  /*
    * "Did you go?", the evening after (0097). The one question that turns a
    * plan into a visit we can count: for venues, what Duro! sends them; for
    * us, whether the plan was any good. Once per plan, claimed like "eve",
@@ -176,40 +151,6 @@ export async function GET(req: Request) {
         // Opens the plan itself rather than the app's front door.
         data: { url: `/plan/${plan.share_slug}`, slug: plan.share_slug },
       });
-    }
-  }
-
-  /*
-   * Everyone going on a group outing, not only its organiser: each member with
-   * an account, claimed per member, and opened on the group so they land on
-   * their own order rather than the organiser's saved plan.
-   */
-  for (const plan of plans.filter((p) => p.group_id)) {
-    const { data: g } = await supabase.from("groups").select("id, code, owner_id").eq("id", plan.group_id!).maybeSingle();
-    const { data: locked } = await supabase
-      .from("group_plans")
-      .select("attending_member_ids")
-      .eq("group_id", plan.group_id!)
-      .eq("status", "locked")
-      .maybeSingle();
-    if (!g || !locked) continue;
-    const { data: people } = await supabase
-      .from("group_members")
-      .select("id, user_id")
-      .in("id", locked.attending_member_ids as string[])
-      .not("user_id", "is", null)
-      .neq("user_id", g.owner_id);
-    const rows = (people ?? []) as { id: string; user_id: string }[];
-    const tokens = await tokensForUsers(supabase, rows.map((r) => r.user_id));
-    for (const person of rows) {
-      const theirs = tokens.get(person.user_id) ?? [];
-      if (!theirs.length) continue;
-      const { error: claimError } = await supabase
-        .from("plan_notifications")
-        .insert({ plan_id: plan.id, kind: `eve:${person.id}`, delivered: theirs.length });
-      if (claimError) continue;
-      const { title, body } = reminderFor(plan.inputs, plan.itinerary, `${plan.id}${person.id}`);
-      for (const token of theirs) messages.push({ to: token, title, body, data: { url: `/group/${g.code}` } });
     }
   }
 

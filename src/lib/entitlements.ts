@@ -243,9 +243,8 @@ function isPro(row: {
 /**
  * Whether this account is Pro right now, for gates other than chat.
  *
- * Group outings let free accounts run two at once and Pro any number; the
- * limit itself is checked inside group_create under a lock (0083), so this
- * only chooses which limit to pass. Absent row means free.
+ * Trips use it: one a month free, any number on Pro (/api/trip/generate).
+ * Absent row means free.
  */
 export async function isProUser(userId: string): Promise<boolean> {
   const { data: row } = await createServiceClient()

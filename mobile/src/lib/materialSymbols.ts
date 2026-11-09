@@ -118,6 +118,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   "square.and.arrow.up": "share",
   star: "star",
   "star.fill": "star",
+  "suitcase.fill": "luggage",
   "sun.max": "light_mode",
   ticket: "confirmation_number",
   timer: "timer",

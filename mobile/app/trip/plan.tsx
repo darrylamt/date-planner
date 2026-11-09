@@ -21,6 +21,7 @@ import {
   type TripWay,
 } from "../../src/lib/api";
 import { BuildSteps, PlanLoader } from "../../src/components/redesign/PlanLoader";
+import { ProSheet } from "../../src/components/profile/ProSheet";
 import { stopColours } from "../../src/components/redesign/stopColours";
 import { Body, Display, KenteBand, LookBackground, LookButton, LookScreen, RoundButton } from "../../src/components/look";
 
@@ -68,6 +69,9 @@ export default function TripPlan() {
   );
   const [trip, setTrip] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The free trip this month is used: what to say, and the Pro sheet.
+  const [limit, setLimit] = useState<string | null>(null);
+  const [proSheet, setProSheet] = useState(false);
   const [placeName, setPlaceName] = useState<{ name: string; gateway: string } | null>(null);
   const [wayId, setWayId] = useState<string | null>(null);
   const [stayAt, setStayAt] = useState(0);
@@ -75,6 +79,7 @@ export default function TripPlan() {
 
   const build = useCallback(() => {
     setError(null);
+    setLimit(null);
     setTrip(null);
     void generateTrip(inputs).then((res) => {
       if (res.status === "ok") {
@@ -82,7 +87,8 @@ export default function TripPlan() {
         setWayId(res.trip.chosenWay);
         setStayAt(0);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else setError(res.message);
+      } else if (res.status === "limit") setLimit(res.message);
+      else setError(res.message);
     });
   }, [inputs]);
 
@@ -103,7 +109,19 @@ export default function TripPlan() {
         <LookBackground />
         <KenteBand />
         <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: GUTTER, paddingBottom: insets.bottom + 40, gap: 26 }}>
-          {error ? (
+          {limit ? (
+            <>
+              <Display size={32} weight="700">
+                More trips with Pro
+              </Display>
+              <Body size={16} tone="secondary">
+                {limit}
+              </Body>
+              <LookButton label="See Pro" onPress={() => setProSheet(true)} />
+              <LookButton label="Back" kind="outline" onPress={() => router.back()} />
+              <ProSheet visible={proSheet} onClose={() => setProSheet(false)} tier="free" onPurchased={() => (setProSheet(false), build())} />
+            </>
+          ) : error ? (
             <>
               <Display size={32} weight="700">
                 That didn&apos;t work

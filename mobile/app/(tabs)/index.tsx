@@ -17,20 +17,11 @@ import { fetchAllowance } from "../../src/lib/chat";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { setBillSource } from "../../src/lib/bill";
 import { countSavedPlans, fetchProfile } from "../../src/lib/account";
-import { supabase } from "../../src/lib/supabase";
-import { myGroups } from "../../src/lib/groupApi";
-import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
 import { HeardFromCard } from "../../src/components/HeardFromCard";
 import { Body, Display, KenteBand, LookScreen } from "../../src/components/look";
 import { DurobotOrb } from "../../src/components/redesign/DurobotOrb";
 import { TripsHome } from "../../src/components/redesign/TripsHome";
-
-/*
- * Group outings, before launch: shown to admin accounts only, so they can be
- * tried on a real phone. Set true to show everybody.
- */
-const GROUPS_LAUNCHED = false;
 
 /** Set once the first plan is saved; "How it works" is only for people who have not planned yet. */
 const FIRST_SAVE_KEY = "duro.firstSave.v1";
@@ -58,8 +49,6 @@ export default function Home() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [me, setMe] = useState<{ avatarUrl: string | null; initial: string } | null>(null);
   const [pro, setPro] = useState(false);
-  const [groupsOn, setGroupsOn] = useState(GROUPS_LAUNCHED);
-  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [newcomer, setNewcomer] = useState(false);
 
   useFocusEffect(
@@ -82,21 +71,6 @@ export default function Home() {
         }
         if (active) setNewcomer(true);
       })();
-      void (async () => {
-        const { data } = await supabase.auth.getUser();
-        if (!data.user) return;
-        let on = GROUPS_LAUNCHED;
-        if (!on) {
-          const { data: row } = await supabase.from("profiles").select("is_admin").eq("id", data.user.id).maybeSingle();
-          on = Boolean((row as { is_admin?: boolean } | null)?.is_admin);
-        }
-        if (!active) return;
-        setGroupsOn(on);
-        if (on) {
-          const r = await myGroups();
-          if (active && r.ok) setGroups(r.data.groups.filter((g) => g.status !== "cancelled").slice(0, 3));
-        }
-      })().catch(() => undefined);
       void fetchAllowance()
         .then((a) => active && setPro(a?.tier === "pro"))
         .catch(() => undefined);
@@ -254,46 +228,17 @@ export default function Home() {
 
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <Tile icon="iphone.radiowaves.left.and.right" title="Where next?" sub="Out already? Shake" filled onPress={() => router.push("/where-next")} />
-                {groupsOn ? (
-                  <Tile icon="person.3.fill" title="With friends" sub="Every budget fits" onPress={() => router.push("/group/new")} />
-                ) : (
-                  <Tile
-                    icon="dice.fill"
-                    title="Who pays?"
-                    sub="Or split the bill"
-                    onPress={() => {
-                      setBillSource(null);
-                      router.push("/who-pays");
-                    }}
-                  />
-                )}
+                <Tile
+                  icon="dice.fill"
+                  title="Who pays?"
+                  sub="Or split the bill"
+                  onPress={() => {
+                    setBillSource(null);
+                    router.push("/who-pays");
+                  }}
+                />
               </View>
 
-              {groups.map((g) => (
-                <Pressable
-                  key={g.code}
-                  onPress={() => router.push(`/group/${g.code}`)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => ({
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    paddingVertical: 12,
-                    paddingHorizontal: 14,
-                    borderRadius: 18,
-                    backgroundColor: look.tile,
-                    opacity: pressed ? 0.8 : 1,
-                  })}
-                >
-                  <Symbol name="person.3.fill" size={14} color={c.accent} />
-                  <Body size={15} weight="600" style={{ flex: 1 }} numberOfLines={1}>
-                    {g.title || "Group outing"}
-                  </Body>
-                  <Body size={13} tone="secondary">
-                    {g.status === "locked" ? "Planned" : g.role === "organiser" ? "Collecting answers" : "Answered"}
-                  </Body>
-                </Pressable>
-              ))}
             </>
           )}
         </View>
@@ -316,15 +261,6 @@ export default function Home() {
             ) : null}
 
             <View style={{ paddingHorizontal: GUTTER, marginTop: 28, flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-              {groupsOn ? (
-                <SmallLink
-                  label="Who pays?"
-                  onPress={() => {
-                    setBillSource(null);
-                    router.push("/who-pays");
-                  }}
-                />
-              ) : null}
               <SmallLink
                 label="Split a bill"
                 onPress={() => {

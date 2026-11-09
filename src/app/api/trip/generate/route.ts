@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createCatalogClient, createServiceClient, getCaller } from "@/lib/supabase/server";
 import { allow, clientIp, rateKey } from "@/lib/rateLimit";
+import { isProUser } from "@/lib/entitlements";
 import { buildTrip, tripInputsSchema, UnknownDestination, type Trip, type TripResponse } from "@/lib/trip";
 
 /**
@@ -31,6 +32,38 @@ export async function POST(req: Request): Promise<NextResponse<TripResponse>> {
   }
 
   const db = createCatalogClient(true);
+
+  /*
+   * One trip a month free; Pro plans any number and changes them (owner,
+   * 4 Nov 2026: "they can only plan 1 free trip per month ... cant edit
+   * unless pro"). Trips are not saved, so the result screen builds again
+   * whenever it opens: the same trip opened again is never refused, and any
+   * change to it is a new trip. Counted from trip_demand by the same keyed
+   * hash it already keeps, this calendar month, only trips that planned
+   * something. Without an account or a phone id there is nothing to count by.
+   */
+  const demandKey = who ? rateKey("trip:demand", who) : null;
+  if (demandKey && !(caller && !caller.anonymous && (await isProUser(caller.id).catch(() => false)))) {
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const { data: mine } = await createServiceClient()
+      .from("trip_demand")
+      .select("destination, arrive, nights, party_size, comfort, travel, parts_planned")
+      .eq("who", demandKey)
+      .gte("created_at", monthStart)
+      .gt("parts_planned", 0);
+    const rows = (mine ?? []) as { destination: string; arrive: string; nights: number; party_size: number; comfort: string; travel: string }[];
+    const same = rows.some(
+      (r) => r.destination === inputs.to && r.arrive === inputs.arrive && r.nights === inputs.nights && r.party_size === inputs.partySize && r.comfort === inputs.comfort && r.travel === inputs.travel
+    );
+    if (rows.length && !same) {
+      return NextResponse.json({
+        status: "limit",
+        message: "Your free trip this month is planned. With Pro you can plan as many trips as you like, and change them whenever you want.",
+      });
+    }
+  }
+
   let trip: Trip;
   try {
     trip = await buildTrip(db, inputs);
@@ -55,7 +88,7 @@ export async function POST(req: Request): Promise<NextResponse<TripResponse>> {
       gaps: trip.gaps,
       parts_planned: parts.filter((p) => p.itinerary).length,
       parts_total: parts.length,
-      who: who ? rateKey("trip:demand", who) : null,
+      who: demandKey,
       platform: said === "ios" || said === "android" ? said : device ? null : "web",
       app_version: req.headers.get("x-duro-version")?.slice(0, 32) || null,
     });

@@ -498,7 +498,11 @@ export interface Trip {
   ready: boolean;
 }
 
-export type TripResponse = { status: "ok"; trip: Trip } | { status: "error"; message: string };
+export type TripResponse =
+  | { status: "ok"; trip: Trip }
+  | { status: "error"; message: string }
+  /** The free trip this month is used: offer Pro (the server's /api/trip/generate). */
+  | { status: "limit"; message: string };
 
 /** Build a trip: the ways there, stays, each day planned, and the total. */
 export async function generateTrip(inputs: TripInputs): Promise<TripResponse> {

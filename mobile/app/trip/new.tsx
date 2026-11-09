@@ -10,6 +10,7 @@ import { fetchTripPlaces, type TripComfort, type TripPlace, type TripTravel } fr
 import { DayPicker } from "../../src/components/redesign/Questions2";
 import { PlaceTile } from "../../src/components/redesign/TripsHome";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../../src/components/look";
+import { fetchAllowance } from "../../src/lib/chat";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const isoOf = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -25,6 +26,13 @@ export default function TripNew() {
   const params = useLocalSearchParams<{ to?: string }>();
   const [places, setPlaces] = useState<TripPlace[]>([]);
   const [to, setTo] = useState(params.to ?? "");
+  // Free accounts plan one trip a month (the server's /api/trip/generate); said before they build.
+  const [pro, setPro] = useState<boolean | null>(null);
+  useEffect(() => {
+    void fetchAllowance()
+      .then((a) => setPro(a?.tier === "pro"))
+      .catch(() => setPro(null));
+  }, []);
   useEffect(() => {
     let on = true;
     void fetchTripPlaces().then((list) => {
@@ -172,6 +180,11 @@ export default function TripNew() {
         </View>
       </ScrollView>
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: GUTTER, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: look.colors.background, borderTopWidth: 1, borderTopColor: look.tileEdge }}>
+        {pro === false ? (
+          <Body size={13} tone="secondary" style={{ textAlign: "center", marginBottom: 8 }}>
+            One trip a month is free. Pro plans as many as you like, and changes them.
+          </Body>
+        ) : null}
         <LookButton
           label={to ? `Build my trip to ${places.find((p) => p.slug === to)?.name ?? "there"}` : "Build my trip"}
           disabled={!to}

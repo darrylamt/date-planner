@@ -55,9 +55,6 @@ import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
 import { VibeCheck } from "./VibeCheck";
-import { YourOrder } from "../group/YourOrder";
-import { getMe } from "../../lib/groupApi";
-import type { GroupMe } from "../../lib/groups";
 import { giftsForOccasion, pickupLine, pickupTotal } from "../../lib/pickups";
 import type { PickupChoice } from "../../lib/pickups";
 import type {
@@ -220,22 +217,6 @@ export function ItineraryView({
   // Read from the inputs rather than inferred from a zero hop cost: an old
   // plan saved before this existed has real fares and must keep showing them.
   const driving = isDriving(inputs);
-  /*
-   * A group outing's plan: the stops show what everyone pays, and each person
-   * sees their own order underneath, fetched for this account alone.
-   */
-  const groupCode = itinerary.group?.code ?? null;
-  const [myOrder, setMyOrder] = useState<GroupMe["order"]>(null);
-  useEffect(() => {
-    if (!groupCode) return;
-    let live = true;
-    void getMe(groupCode).then((r) => {
-      if (live && r.ok) setMyOrder(r.data.order);
-    });
-    return () => {
-      live = false;
-    };
-  }, [groupCode]);
 
   /**
    * Swap a stop for its next alternate.
@@ -252,8 +233,6 @@ export function ItineraryView({
    * number does not have.
    */
   function handleSwap(index: number) {
-    // A group's orders were sized per person; one phone may not rearrange the evening.
-    if (groupCode) return;
     const result = swapStopLocally(itinerary, index, inputs.budget);
     if (!result) {
       // Usually the hour, not the catalogue: at 6 am on a Saturday one cafe in Accra is open.
@@ -271,7 +250,6 @@ export function ItineraryView({
 
   /** Menu edits recompute food and overall totals locally, no round trip. */
   function handleOrdersChange(index: number, orders: ItineraryOrder[]) {
-    if (groupCode) return;
     const stop = itinerary.stops[index];
     /*
      * The venue's service charge and tax follow the order: add a dish and
@@ -840,7 +818,6 @@ export function ItineraryView({
                     previous={i > 0 ? itinerary.stops[i - 1] : null}
                     index={i}
                     swapping={false}
-                    locked={Boolean(groupCode)}
                     reserving={reservingIndex === i}
                     onSwap={() => handleSwap(i)}
                     onReserve={() => void handleReserve(i)}
@@ -930,12 +907,6 @@ export function ItineraryView({
             ) : null}
         </View>
 
-        {myOrder ? (
-          <View style={{ paddingHorizontal: GUTTER, marginTop: space.lg }}>
-            <YourOrder order={myOrder} />
-          </View>
-        ) : null}
-
         {/* Under the stops, where the Reserve buttons are. */}
         <PaySafely style={{ marginHorizontal: GUTTER, marginTop: space.lg }} />
 
@@ -994,7 +965,7 @@ export function ItineraryView({
             </View>
           ) : null}
           <Button title="Add to calendar" kind="gray" icon="calendar" onPress={handleAddToCalendar} />
-          {groupCode ? null : <Button title="Edit my answers" kind="plain" onPress={onEdit} />}
+          <Button title="Edit my answers" kind="plain" onPress={onEdit} />
           {/* A second way out. The header back button is the primary one, but
               this screen is where people stop, so the exit should be visible
               at the point they finish reading rather than only at the top. */}

@@ -79,12 +79,12 @@ export function AccountlessNote() {
   );
 }
 
-type Reason = "limit" | "browse" | "venue" | "groups";
+type Reason = "limit" | "browse" | "venue";
 
 export type Perk = { icon: SymbolViewProps["name"]; title: string; body: string };
 
 /** What Pro unlocks, and nothing it does not. */
-export const PERKS: Record<"chat" | "venue" | "order" | "groups", Perk> = {
+export const PERKS: Record<"chat" | "venue" | "order" | "trips" | "stars", Perk> = {
   chat: {
     icon: "bubble.left.and.text.bubble.right.fill",
     title: "Plan by chatting with Durobot",
@@ -103,10 +103,16 @@ export const PERKS: Record<"chat" | "venue" | "order" | "groups", Perk> = {
     title: "Know what to order",
     body: "Ask Durobot what is good there, and what fits your budget, when you arrive.",
   },
-  groups: {
-    icon: "person.3.fill",
-    title: "Plan with as many groups as you like",
-    body: "Free accounts run two group outings at once. Pro has no limit.",
+  // Group outings were removed on 9 Nov 2026; trips and stars are what Pro adds now.
+  trips: {
+    icon: "suitcase.fill",
+    title: "Plan every trip",
+    body: "One trip a month is free. Pro plans as many as you like, and changes them whenever you want.",
+  },
+  stars: {
+    icon: "star.fill",
+    title: "Star every place you love",
+    body: "Free accounts keep 10 starred places. Pro has no limit.",
   },
 };
 
@@ -116,22 +122,17 @@ const COPY: Record<Reason, { title: string; line: string; perks: (keyof typeof P
     title: "That was your last free message",
     line: "Never spend 30 minutes figuring out where to go again.",
     // Not "every venue's full page": that is free for everyone now (freeMenus.ts).
-    perks: menusFree() ? ["chat", "order"] : ["chat", "order", "venue"],
+    perks: menusFree() ? ["chat", "order", "trips"] : ["chat", "order", "venue"],
   },
   browse: {
     title: "Never spend 30 minutes figuring out where to go again",
     line: menusFree() ? "Duro Pro plans with you, whenever you ask." : "Duro Pro plans with you, and opens every place up.",
-    perks: menusFree() ? ["chat", "order"] : ["chat", "venue", "order"],
+    perks: menusFree() ? ["chat", "trips", "stars"] : ["chat", "venue", "order"],
   },
   venue: {
     title: "See the whole page",
     line: "Menus, hours and booking for every place, with Duro Pro.",
     perks: ["venue", "chat", "order"],
-  },
-  groups: {
-    title: "You have two group outings going",
-    line: "Finish one, or plan as many as you like with Duro Pro.",
-    perks: ["groups", "chat", "venue"],
   },
 };
 
