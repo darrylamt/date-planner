@@ -23,11 +23,17 @@ import { Figtree_500Medium } from "@expo-google-fonts/figtree/500Medium";
 import { Figtree_600SemiBold } from "@expo-google-fonts/figtree/600SemiBold";
 import { Figtree_700Bold } from "@expo-google-fonts/figtree/700Bold";
 import { Figtree_800ExtraBold } from "@expo-google-fonts/figtree/800ExtraBold";
+// Display type for each look (looks.ts): Kente, Night and Daylight.
+import { BricolageGrotesque_600SemiBold } from "@expo-google-fonts/bricolage-grotesque/600SemiBold";
+import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque/700Bold";
+import { BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque/800ExtraBold";
+import { InterTight_600SemiBold } from "@expo-google-fonts/inter-tight/600SemiBold";
+import { InterTight_700Bold } from "@expo-google-fonts/inter-tight/700Bold";
+import { Geist_600SemiBold } from "@expo-google-fonts/geist/600SemiBold";
+import { Geist_700Bold } from "@expo-google-fonts/geist/700Bold";
+import { Geist_800ExtraBold } from "@expo-google-fonts/geist/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
-import { SeasonProvider } from "../src/lib/season";
-import { useSeasonalIconReset } from "../src/components/AppIconPicker";
-import { onRedesign, switchApp } from "../src/lib/redesign";
 import { BurstProvider } from "../src/components/Burst";
 import {
   configureNotificationHandler,
@@ -84,8 +90,6 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
             .then(() => router.replace("/")),
         false
       )}
-      {/* On the redesign, a way back that does not depend on the screen that failed. */}
-      {onRedesign() ? button("Back to the current app", () => void switchApp("current"), false) : null}
     </View>
   );
 }
@@ -101,10 +105,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 export default function RootLayout() {
   return (
     <AppearanceProvider>
-      {/* The season sits inside the appearance, because its colours depend on light or dark. */}
-      <SeasonProvider>
-        <RootShell />
-      </SeasonProvider>
+      <RootShell />
     </AppearanceProvider>
   );
 }
@@ -112,7 +113,6 @@ export default function RootLayout() {
 function RootShell() {
   const c = useTheme();
   const isDark = useIsDark();
-  useSeasonalIconReset();
 
   const [fontsLoaded, fontError] = useFonts({
     Figtree_400Regular,
@@ -120,6 +120,14 @@ function RootShell() {
     Figtree_600SemiBold,
     Figtree_700Bold,
     Figtree_800ExtraBold,
+    BricolageGrotesque_600SemiBold,
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_800ExtraBold,
+    InterTight_600SemiBold,
+    InterTight_700Bold,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    Geist_800ExtraBold,
   });
 
   useEffect(() => {
@@ -235,7 +243,8 @@ function RootShell() {
             name="chat"
             options={{
               title: "Durobot",
-              headerRight: () => <Text style={{ fontSize: 26 }}>🤖</Text>,
+              // No robot: Durobot's face is its orb, in the screen's own header (chat.tsx).
+              headerRight: () => null,
             }}
           />
           {/* No bar: the screen draws its own close button over its own stage. */}

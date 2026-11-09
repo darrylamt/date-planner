@@ -24,6 +24,10 @@
         "buildType": "apk"
       }
     },
+    "redesign": {
+      "extends": "production",
+      "channel": "redesign"
+    },
     "production": {
       "autoIncrement": true,
       "channel": "production",
@@ -34,6 +38,9 @@
     }
   },
   "submit": {
+    "redesign": {
+      "extends": "production"
+    },
     "production": {
       "ios": {
         "appleTeamId": "26H979HZC3",

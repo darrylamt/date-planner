@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, Share, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,7 +12,8 @@ import { draftFromPlan } from "../../src/lib/repeatPlan";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { chooseAction } from "../../src/lib/actionSheet";
 import { Symbol } from "../../src/components/Symbol";
-import { Mascot, SpeechBubble } from "../../src/components/Mascot";
+import { SpeechBubble } from "../../src/components/SpeechBubble";
+import { OccasionMark } from "../../src/components/OccasionMark";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
@@ -20,10 +23,14 @@ import type { SavedPlan } from "../../src/lib/types";
 import { SkeletonSaved } from "../../src/components/Skeleton";
 import { Segmented } from "../../src/components/Segmented";
 import { PlansCalendar } from "../../src/components/plans/PlansCalendar";
+import { useLook } from "../../src/lib/appearance";
+import { Body, Display, KenteBand } from "../../src/components/look";
+import { StarredList } from "../../src/components/redesign/StarredList";
+import { fetchAllowance } from "../../src/lib/chat";
 
 /** The last view chosen on Plans: the list, or the calendar. */
 const VIEW_KEY = "duro.plans.view";
-type PlansView = "list" | "calendar";
+type PlansView = "list" | "calendar" | "starred";
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -35,6 +42,10 @@ export default function Plans() {
   const { session, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<SavedPlan[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pro, setPro] = useState(false);
+  useEffect(() => {
+    if (session) void fetchAllowance().then((a) => setPro(a?.tier === "pro")).catch(() => undefined);
+  }, [session]);
   /*
    * Plans holds what used to be two tabs: Saved as a list, and Calendar. A
    * ?view= link (old calendar links redirect here) wins over the last view
@@ -43,13 +54,13 @@ export default function Plans() {
   const params = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<PlansView>("list");
   useEffect(() => {
-    if (params.view === "calendar" || params.view === "list") {
+    if (params.view === "calendar" || params.view === "list" || params.view === "starred") {
       setView(params.view);
       void AsyncStorage.setItem(VIEW_KEY, params.view).catch(() => undefined);
       return;
     }
     void AsyncStorage.getItem(VIEW_KEY)
-      .then((v) => (v === "calendar" || v === "list") && setView(v))
+      .then((v) => (v === "calendar" || v === "list" || v === "starred") && setView(v))
       .catch(() => undefined);
   }, [params.view]);
   const chooseView = (v: PlansView) => {
@@ -118,7 +129,8 @@ export default function Plans() {
     );
   }
 
-  if (plans.length === 0) {
+  // The Starred view stands on its own: somebody can star places before they ever save a plan.
+  if (plans.length === 0 && view !== "starred") {
     return (
       <Empty
         bubble="This shelf is looking empty."
@@ -139,7 +151,7 @@ export default function Plans() {
     <ScrollView
       style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={{
-        paddingTop: insets.top + space.lg,
+        paddingTop: insets.top,
         paddingBottom: TAB_BAR.clearance,
       }}
       refreshControl={
@@ -154,7 +166,8 @@ export default function Plans() {
         />
       }
     >
-      <Text variant="display" style={{ paddingHorizontal: GUTTER, marginBottom: space.md }}>
+      <KenteBand />
+      <Text variant="display" style={{ paddingHorizontal: GUTTER, marginTop: space.lg, marginBottom: space.md }}>
         Plans
       </Text>
       <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xl }}>
@@ -162,6 +175,7 @@ export default function Plans() {
           options={[
             { value: "list", label: "List" },
             { value: "calendar", label: "Calendar" },
+            { value: "starred", label: "Starred" },
           ]}
           value={view}
           onChange={chooseView}
@@ -169,58 +183,26 @@ export default function Plans() {
       </View>
 
       {view === "calendar" ? <PlansCalendar plans={plans} /> : null}
-      {view === "calendar" ? null : plans.map((plan) => (
-        <Group key={plan.id} header={longDate(plan.inputs.date)}>
-          {/*
-            The plan itself, and the reason this row exists.
-            
-            It has never been tappable: you could repeat an evening, share it
-            or delete it, and never look at it, so the only way back to a plan
-            you had already built was to build it again.
-          */}
-          <Row
-            title={plan.itinerary.title}
-            subtitle={plan.itinerary.summary_route}
-            value={ghs(Number(plan.estimated_total_ghs))}
-            chevron
-            onPress={() => router.push(`/plan/${plan.share_slug}`)}
-          />
-          {/*
-            Same places, another day.
-            *
-            * A plan that worked is the best starting point for the next one,
-            * and retyping seven answers to get back to it is the reason people
-            * do not bother. This reopens the questionnaire with every answer
-            * already filled in and only the date cleared, so it is a plan to
-            * adjust rather than a plan to rebuild: the venues are re-picked
-            * against that day's opening hours rather than copied, because a
-            * Saturday plan repeated on a Monday can land on a locked door.
-          */}
-          <Row
-            icon="arrow.clockwise"
-            title="Plan this again"
-            subtitle="Same answers, new date"
-            onPress={() => void repeat(plan)}
-          />
-          <Row
-            icon="square.and.arrow.up"
-            title="Share link"
-            onPress={() =>
-              void Share.share({
-                message: `Our plan for ${longDate(plan.inputs.date)}, ${WEB_URL}/p/${plan.share_slug}`,
-                url: `${WEB_URL}/p/${plan.share_slug}`,
-              })
-            }
-          />
-          <Row
-            icon="trash"
-            iconColor={c.danger}
-            title="Delete"
-            destructive
-            onPress={() => confirmDelete(plan)}
-          />
-        </Group>
-      ))}
+      {view === "starred" ? <StarredList pro={pro} /> : null}
+      {view !== "list" ? null : (
+        <View style={{ paddingHorizontal: GUTTER, gap: 16 }}>
+          {plans.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              onOpen={() => router.push(`/plan/${plan.share_slug}`)}
+              onRepeat={() => void repeat(plan)}
+              onShare={() =>
+                void Share.share({
+                  message: `Our plan for ${longDate(plan.inputs.date)}, ${WEB_URL}/p/${plan.share_slug}`,
+                  url: `${WEB_URL}/p/${plan.share_slug}`,
+                })
+              }
+              onDelete={() => confirmDelete(plan)}
+            />
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -249,7 +231,7 @@ function Empty({
       }}
     >
       <SpeechBubble text={bubble} />
-      <Mascot occasion="date_night" size={110} style={{ marginTop: Spacing.two }} />
+      <OccasionMark occasion="date_night" size={110} style={{ marginTop: Spacing.two }} />
       <Text variant="title3" center style={{ marginTop: space.lg }}>
         {title}
       </Text>
@@ -257,6 +239,84 @@ function Empty({
         {body}
       </Text>
       <View style={{ alignSelf: "stretch", marginTop: space.xl }}>{action}</View>
+    </View>
+  );
+}
+
+/**
+ * A saved plan as a card (redesign, 2 Nov 2026): its first stop's photo
+ * fading into the card, the date, the evening's name, the route and the
+ * total, and what can be done with it as pills: the plan opens on a tap.
+ */
+function PlanCard({
+  plan,
+  onOpen,
+  onRepeat,
+  onShare,
+  onDelete,
+}: {
+  plan: SavedPlan;
+  onOpen: () => void;
+  onRepeat: () => void;
+  onShare: () => void;
+  onDelete: () => void;
+}) {
+  const look = useLook();
+  const c = look.colors;
+  const image = plan.itinerary.stops.find((x) => x.image_url)?.image_url ?? null;
+  const pill = (label: string, onPress: () => void, danger = false) => (
+    <Pressable
+      key={label}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        height: 38,
+        paddingHorizontal: 14,
+        borderRadius: 19,
+        borderWidth: 1,
+        borderColor: look.tileEdge,
+        justifyContent: "center",
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Body size={14} weight="600" color={danger ? c.danger : c.text}>
+        {label}
+      </Body>
+    </Pressable>
+  );
+  return (
+    <View style={{ borderRadius: 26, backgroundColor: look.tile, borderWidth: 1, borderColor: look.tileEdge, overflow: "hidden" }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${plan.itinerary.title}, ${longDate(plan.inputs.date)}`} onPress={onOpen}>
+        {image ? (
+          <View style={{ height: 150 }}>
+            <Image source={{ uri: image }} style={{ width: "100%", height: 150 }} contentFit="cover" transition={200} />
+            <LinearGradient
+              pointerEvents="none"
+              colors={["transparent", look.id === "daylight" ? "#F5F5F7" : look.colors.background]}
+              style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 90 }}
+            />
+          </View>
+        ) : null}
+        <View style={{ padding: 16, paddingTop: image ? 0 : 16, gap: 4 }}>
+          <Body size={13} weight="700" color={c.accent}>
+            {longDate(plan.inputs.date)}
+          </Body>
+          <Display size={22} weight="700">
+            {plan.itinerary.title}
+          </Display>
+          <Body size={14} tone="secondary" numberOfLines={1}>
+            {plan.itinerary.summary_route}
+          </Body>
+          <Body size={15} weight="700" style={{ marginTop: 4 }}>
+            {ghs(Number(plan.estimated_total_ghs))}
+          </Body>
+        </View>
+      </Pressable>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 16 }}>
+        {pill("Plan this again", onRepeat)}
+        {pill("Share", onShare)}
+        {pill("Delete", onDelete, true)}
+      </View>
     </View>
   );
 }

@@ -20,11 +20,10 @@ import { Button } from "../src/components/Button";
 import { Field } from "../src/components/Field";
 import { Symbol } from "../src/components/Symbol";
 import { BrandMark } from "../src/components/BrandMark";
-import { Mascot } from "../src/components/Mascot";
+import { OccasionMark } from "../src/components/OccasionMark";
 import { PressScale, Rise, useReducedMotion } from "../src/components/motion";
 import { GUTTER, space } from "../src/theme";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
-import { useSeason } from "../src/lib/season";
 import { MeshBackground, meshAvailable } from "../src/components/native/MeshBackground";
 import { adoptPurchases } from "../src/lib/purchases";
 import {
@@ -42,6 +41,10 @@ import {
   signInWithGoogle,
 } from "../src/lib/socialAuth";
 import type { Occasion } from "../src/lib/types";
+import { KenteBand, LookBackground } from "../src/components/look";
+import { useLook } from "../src/lib/appearance";
+import { DurobotOrb } from "../src/components/redesign/DurobotOrb";
+
 
 type Mode = "signin" | "signup";
 
@@ -80,11 +83,11 @@ const NEXT: { word: string; occasion: Occasion; bits: [string, string, string] }
  */
 export default function Login() {
   const c = useTheme();
+  const look = useLook();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const isDark = useIsDark();
   const reduced = useReducedMotion();
-  const { season } = useSeason();
   const { height } = useWindowDimensions();
 
   const [mode, setMode] = useState<Mode>("signin");
@@ -205,8 +208,17 @@ export default function Login() {
     );
   }
 
-  // The stage gives up height to the form, so the fields sit above the keyboard.
-  const stageH = Math.round(height * (showEmail ? 0.3 : 0.5));
+  /*
+   * The stage gives up height to the form, so the fields sit above the
+   * keyboard. Choosing how to sign in, it takes whatever the sheet leaves, so
+   * the sheet sits at the bottom with the buttons, "Already have an account"
+   * and the terms together and nothing hidden below (owner, 3 Nov 2026: a
+   * "massive gap" before the terms). Between a quarter and half the screen.
+   */
+  const bottomPad = Math.max(insets.bottom, space.lg) + space.md;
+  const [sheetH, setSheetH] = useState(0);
+  const fitted = sheetH ? height - sheetH - bottomPad - space.md + 28 : height * 0.36;
+  const stageH = Math.round(showEmail ? height * 0.24 : Math.min(height * 0.5, Math.max(height * 0.26, fitted)));
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -214,19 +226,14 @@ export default function Login() {
 
       {/* ── the stage ── */}
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: stageH + 40, overflow: "hidden" }}>
-        <Mesh reduced={reduced} dark={isDark} />
+        {/* The look's own ground, the band along the top, and the woven ring turning (redesign, 3 Nov 2026). */}
+        <LookBackground />
+        <View style={{ position: "absolute", left: 0, right: 0, top: 0 }}>
+          <KenteBand />
+        </View>
         <View style={{ position: "absolute", left: 0, right: 0, top: insets.top, bottom: 40, alignItems: "center", justifyContent: "center" }}>
-          {/* The season's logo above the character, while there is room for it. */}
-          {season === "halloween" && !showEmail ? (
-            <Image
-              source={require("../assets/halloween/logo.png")}
-              style={{ width: 230, aspectRatio: 920 / 365, borderRadius: 16, marginBottom: space.md }}
-              contentFit="cover"
-              accessibilityLabel="Duro! Halloween"
-            />
-          ) : null}
-          {!showEmail ? <Bits key={now.word} bits={now.bits} reduced={reduced} /> : null}
-          <Character occasion={showEmail ? "date_night" : now.occasion} small={showEmail} reduced={reduced} />
+          {/* Durobot's orb, large and breathing: the brand's face in the redesign (owner: the ring "doesnt move"). */}
+          <DurobotOrb size={showEmail ? 96 : 150} />
         </View>
       </View>
 
@@ -267,7 +274,8 @@ export default function Login() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── the sheet ── */}
-        <Sheet bottom={Math.max(insets.bottom, space.lg) + space.md}>
+        <Sheet bottom={bottomPad}>
+          <View onLayout={(e) => setSheetH(Math.round(e.nativeEvent.layout.height))}>
           <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: c.border, marginBottom: space.lg }} />
 
           <Rise delay={200}>
@@ -364,8 +372,6 @@ export default function Login() {
             )}
           </View>
 
-          <View style={{ flex: 1, minHeight: space.lg }} />
-
           {/* What continuing agrees to, a tap away, as the store expects. */}
           <Text variant="caption" tone="tertiary" center style={{ marginTop: space.lg }}>
             By continuing you agree to the{" "}
@@ -377,6 +383,7 @@ export default function Login() {
               Privacy Policy
             </Text>
           </Text>
+          </View>
         </Sheet>
       </ScrollView>
     </View>
@@ -488,7 +495,7 @@ function Character({ occasion, small, reduced }: { occasion: Occasion; small: bo
       {/* Two layers, one driver each: a value cannot be driven from both sides. */}
       <Animated.View style={{ transform: [{ scale: pop }] }}>
         <Animated.View style={{ transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }}>
-          <Mascot occasion={occasion} size={size} animate={!reduced} />
+          <OccasionMark occasion={occasion} size={size} />
         </Animated.View>
       </Animated.View>
       {/* The shadow tightens as the character rises, so it reads as floating. */}

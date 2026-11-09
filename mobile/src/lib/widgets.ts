@@ -2,8 +2,7 @@ import { Platform } from "react-native";
 import { requireOptionalNativeModule } from "expo-modules-core";
 import { listPlans } from "./data";
 import { supabase } from "./supabase";
-import { OCCASION_THEME } from "./planConstants";
-import { WIDGET_MASCOTS } from "../widgets/mascots";
+import { widgetPalettes } from "./widgetLook";
 import type { SavedPlan } from "./types";
 import type { NextPlanProps } from "../widgets/NextPlan";
 
@@ -50,7 +49,7 @@ function countdownAt(at: Date, start: Date, end: Date): string {
   return `In ${days} days`;
 }
 
-const EMPTY: NextPlanProps = {
+const EMPTY: Omit<NextPlanProps, "light" | "dark"> = {
   empty: true,
   url: "aduro://plan/new?from=widget",
   title: "",
@@ -59,10 +58,6 @@ const EMPTY: NextPlanProps = {
   firstTime: "",
   firstName: "",
   stops: [],
-  accent: OCCASION_THEME.date_night.accent,
-  accentDark: OCCASION_THEME.date_night.accentDark,
-  // Waving, with sparkles: an invitation rather than an empty box.
-  mascot: WIDGET_MASCOTS.celebration ?? "",
 };
 
 /**
@@ -88,6 +83,8 @@ export async function refreshWidgets(): Promise<void> {
     // Offline: the empty state is the honest answer.
   }
 
+  // In the person's look (widgetLook.ts), not the occasion's colours: the redesign's widgets wear the app.
+  const look = await widgetPalettes();
   const now = new Date();
   const upcoming = plans
     .map((p) => ({ p, w: windowOf(p) }))
@@ -95,12 +92,11 @@ export async function refreshWidgets(): Promise<void> {
     .sort((a, b) => a.w.start.getTime() - b.w.start.getTime())[0];
 
   if (!upcoming) {
-    widget.updateTimeline([{ date: now, props: EMPTY }]);
+    widget.updateTimeline([{ date: now, props: { ...EMPTY, ...look } }]);
     return;
   }
 
   const { p, w } = upcoming;
-  const theme = OCCASION_THEME[p.inputs.occasion] ?? OCCASION_THEME.date_night;
   const stops = (p.itinerary.stops ?? []).slice(0, 3).map((s) => ({ time: s.arrival_time, name: s.name }));
   const base: Omit<NextPlanProps, "countdown"> = {
     empty: false,
@@ -110,10 +106,7 @@ export async function refreshWidgets(): Promise<void> {
     firstTime: stops[0]?.time ?? "",
     firstName: stops[0]?.name ?? "",
     stops,
-    accent: theme.accent,
-    accentDark: theme.accentDark,
-    // In the occasion's costume, as on the app's own cards.
-    mascot: WIDGET_MASCOTS[p.inputs.occasion] ?? WIDGET_MASCOTS.celebration ?? "",
+    ...look,
   };
 
   // Now, every midnight until the day, the start, and the end.
@@ -123,7 +116,7 @@ export async function refreshWidgets(): Promise<void> {
   }
   if (w.start > now) moments.push(w.start);
   const entries = moments.map((at) => ({ date: at, props: { ...base, countdown: countdownAt(at, w.start, w.end) } }));
-  entries.push({ date: w.end, props: EMPTY });
+  entries.push({ date: w.end, props: { ...EMPTY, ...look } });
 
   try {
     widget.updateTimeline(entries);

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Animated, LayoutAnimation, Linking, Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import { PressScale, Rise } from "../../src/components/motion";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../src/components/Text";
 import { Symbol } from "../../src/components/Symbol";
 import { StopGallery } from "../../src/components/plan/StopGallery";
+import { LinearGradient } from "expo-linear-gradient";
 import { Paywall } from "../../src/components/chat/Paywall";
 import { PaySafely } from "../../src/components/PaySafely";
 import { ItemSheet, availability } from "../../src/components/venue/ItemSheet";
@@ -27,6 +29,11 @@ import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonMenu, SkeletonVenue } from "../../src/components/Skeleton";
 import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../src/lib/freeMenus";
 import { fold } from "../../src/lib/fold";
+import { useLook } from "../../src/lib/appearance";
+import { myStarIds, setStar } from "../../src/lib/stars";
+import { ProSheet } from "../../src/components/profile/ProSheet";
+
+const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
@@ -76,6 +83,7 @@ function waNumber(raw: string | null): string | null {
 export default function VenuePage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useTheme();
+  const look = useLook();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const [venue, setVenue] = useState<VenueDetail | null | undefined>(undefined);
@@ -87,6 +95,16 @@ export default function VenuePage() {
   const [query, setQuery] = useState("");
   const [hoursOpen, setHoursOpen] = useState(false);
   const [item, setItem] = useState<MenuItem | null>(null);
+  // Starred by this account (0103), and the Pro sheet when a free account is at its ten.
+  const [starred, setStarred] = useState(false);
+  const [proSheet, setProSheet] = useState(false);
+  useEffect(() => {
+    let on = true;
+    void myStarIds().then((ids) => on && setStarred(ids.has(id)));
+    return () => {
+      on = false;
+    };
+  }, [id, session?.user.id]);
   // Item -> whether this account's recommendation counts publicly.
   const [mine, setMine] = useState<Map<string, boolean>>(new Map());
 
@@ -266,6 +284,48 @@ export default function VenuePage() {
   actions.push({ icon: "map.fill", label: "Directions", onPress: () => void Linking.openURL(maps) });
   actions.push({ icon: "car.fill", label: "Uber", onPress: () => void Linking.openURL(uberRideLink(venue)) });
   if (instagram) actions.push({ icon: "camera.fill", label: "Instagram", onPress: () => void Linking.openURL(instagram), pro: true });
+  const toggleStar = () => {
+    const next = !starred;
+    setStarred(next);
+    void Haptics.selectionAsync();
+    void setStar(id, next).then((r) => {
+      if (r === "ok") return;
+      setStarred(!next);
+      if (r === "signed_out") router.push("/login");
+      else if (r === "limit") setProSheet(true);
+      else Alert.alert("That didn't save", "Check your connection and try again.");
+    });
+  };
+  // A link that shows the name and a picture to anybody, and the place itself only in the app (/v/<id>).
+  const share = () => void Share.share({ message: `${venue.name} on Duro!: ${WEB_URL}/v/${id}`, url: `${WEB_URL}/v/${id}` });
+  /* Star and Share, small (owner: "not as that big circle"): on the photo's top corner, or in the bar with no photo. */
+  const cornerIcons = (onPhoto: boolean) => (
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      {[
+        { icon: (starred ? "star.fill" : "star") as SymbolViewProps["name"], label: starred ? "Unstar" : "Star", onPress: toggleStar, on: starred },
+        { icon: "square.and.arrow.up" as SymbolViewProps["name"], label: "Share", onPress: share, on: false },
+      ].map((b) => (
+        <Pressable
+          key={b.label}
+          accessibilityRole="button"
+          accessibilityLabel={b.label}
+          hitSlop={8}
+          onPress={b.onPress}
+          style={({ pressed }) => ({
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: onPhoto ? "rgba(0,0,0,0.38)" : "transparent",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Symbol name={b.icon} size={15} weight="semibold" color={b.on ? look.primary : onPhoto ? "#FFFFFF" : c.accent} />
+        </Pressable>
+      ))}
+    </View>
+  );
   // The same rule as the menu: the free months promise booking, so the buttons come with it.
   const usable = actions.filter((a) => !a.pro || open);
 
@@ -285,7 +345,7 @@ export default function VenuePage() {
   return (
     <>
       {/* The name moves up into the bar once it has scrolled out of sight. */}
-      <Stack.Screen options={{ title: nameInBar ? venue.name : "" }} />
+      <Stack.Screen options={{ title: nameInBar ? venue.name : "", headerRight: images.length ? undefined : () => cornerIcons(false) }} />
       <Animated.ScrollView
         style={{ flex: 1, backgroundColor: c.background }}
         contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}
@@ -315,11 +375,18 @@ export default function VenuePage() {
             }}
           >
             <StopGallery images={images} alt={venue.name} />
+            <View style={{ position: "absolute", top: 12, right: GUTTER }}>{cornerIcons(true)}</View>
+            {/* The photo fades into the page, and the name sits on the fade (redesign). */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={["transparent", c.background]}
+              style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 150 }}
+            />
           </Animated.View>
         ) : null}
 
         {/* ── Is this the place ── */}
-        <Rise style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs, backgroundColor: c.background }}>
+        <Rise style={{ paddingHorizontal: GUTTER, paddingTop: space.lg, gap: space.xs, marginTop: images.length ? -84 : 0 }}>
           <Text variant="eyebrow" tone="tint" uppercase>
             {[VENUE_KIND[venue.type] ?? venue.type, venue.area].filter(Boolean).join(" · ")}
           </Text>
@@ -344,9 +411,7 @@ export default function VenuePage() {
             justifyContent: "space-around",
             marginHorizontal: GUTTER,
             marginTop: space.lg,
-            paddingVertical: space.md,
-            borderRadius: radius.card,
-            backgroundColor: c.backgroundElement,
+            paddingVertical: space.sm,
           }}
         >
           {usable.map((a, i) => (
@@ -361,18 +426,20 @@ export default function VenuePage() {
               <Rise delay={160 + i * 60} distance={10}>
               <View
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: c.accentSoft,
+                  width: 54,
+                  height: 54,
+                  borderRadius: 27,
+                  backgroundColor: i === 0 ? look.primary : look.tile,
+                  borderWidth: i === 0 ? 0 : 1,
+                  borderColor: look.tileEdge,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Symbol name={a.icon} size={19} color={c.accent} />
+                <Symbol name={a.icon} size={21} color={i === 0 ? look.onPrimary : c.text} />
               </View>
               </Rise>
-              <Text variant="caption" tone="secondary">
+              <Text variant="caption" weight="600">
                 {a.label}
               </Text>
             </PressScale>
@@ -650,6 +717,7 @@ export default function VenuePage() {
         favouriteOnly={item ? mine.get(item.id) === false : false}
         onRecommend={item ? (on) => void recommend(item, on) : undefined}
       />
+      <ProSheet visible={proSheet} onClose={() => setProSheet(false)} tier="free" onPurchased={() => (setProSheet(false), void checkPro())} />
     </>
   );
 }
@@ -657,6 +725,7 @@ export default function VenuePage() {
 /** One line on the menu: name, the start of its description, when it applies, the price. */
 function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onPress: () => void }) {
   const c = useTheme();
+  const look = useLook();
   const when = availability(item);
   return (
     <Pressable
@@ -670,12 +739,12 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
         paddingHorizontal: GUTTER,
         paddingVertical: space.md,
         borderTopWidth: first ? 0 : HAIRLINE,
-        borderTopColor: c.border,
+        borderTopColor: look.tileEdge,
         backgroundColor: pressed ? c.backgroundSunken : "transparent",
       })}
     >
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="callout" weight="600">
+        <Text variant="headline">
           {item.name}
         </Text>
         {item.notes ? (
@@ -696,14 +765,14 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
             </Text>
           </View>
         ) : null}
-        <Text variant="callout" tabular style={{ marginTop: 2 }}>
+        <Text variant="callout" weight="700" tabular style={{ marginTop: 4, color: look.colors.accent }}>
           {ghs(Number(item.price_ghs))}
         </Text>
       </View>
       {item.image_url ? (
         <Image
           source={{ uri: item.image_url }}
-          style={{ width: 72, height: 72, borderRadius: radius.row, backgroundColor: c.skeleton }}
+          style={{ width: 84, height: 84, borderRadius: 20, backgroundColor: c.skeleton }}
           contentFit="cover"
           transition={150}
         />
@@ -715,6 +784,7 @@ function MenuRow({ item, first, onPress }: { item: MenuItem; first: boolean; onP
 
 function Pill({ icon, text, quiet }: { icon: SymbolViewProps["name"]; text: string; quiet?: boolean }) {
   const c = useTheme();
+  const look = useLook();
   return (
     <View
       style={{
@@ -724,9 +794,9 @@ function Pill({ icon, text, quiet }: { icon: SymbolViewProps["name"]; text: stri
         paddingHorizontal: space.md,
         paddingVertical: 6,
         borderRadius: radius.pill,
-        backgroundColor: quiet ? "transparent" : c.backgroundElement,
-        borderWidth: quiet ? HAIRLINE : 0,
-        borderColor: c.border,
+        backgroundColor: "transparent",
+        borderWidth: 1,
+        borderColor: quiet ? look.tileEdge : look.colors.borderStrong,
       }}
     >
       <Symbol name={icon} size={12} color={quiet ? c.textSecondary : c.accent} />

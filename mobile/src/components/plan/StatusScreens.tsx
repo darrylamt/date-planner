@@ -4,7 +4,8 @@ import { Text } from "../Text";
 import { Button } from "../Button";
 import { Group, Row } from "../List";
 import { Symbol } from "../Symbol";
-import { Mascot, SpeechBubble } from "../Mascot";
+import { SpeechBubble } from "../SpeechBubble";
+import { OccasionMark } from "../OccasionMark";
 import { GUTTER, Spacing, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { possessiveName, pronounForGender } from "../../lib/pronouns";
@@ -58,7 +59,7 @@ export function LoadingPlan({ inputs }: { inputs: PlanInputs }) {
   return (
     <Centred>
       <SpeechBubble text={lines[active]} />
-      <Mascot occasion={inputs.occasion} size={140} style={{ marginTop: Spacing.two }} />
+      <OccasionMark occasion={inputs.occasion} size={140} style={{ marginTop: Spacing.two }} />
 
       <Text variant="title2" center style={{ marginTop: Spacing.five }}>
         {heading}

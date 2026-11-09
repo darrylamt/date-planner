@@ -5,7 +5,8 @@ import { Text } from "../Text";
 import { Group, Row } from "../List";
 import { Chip } from "../Chip";
 import { ChipRow, Segmented } from "../Segmented";
-import { Field, StepHeading } from "../Field";
+import { Field, StepHeading as FieldHeading } from "../Field";
+import { createContext, useContext } from "react";
 import { BudgetSlider } from "../BudgetSlider";
 // The phone's own wheel where the build has SwiftUI, the drawn one where it does not.
 import { TimeStrip } from "./TimeStrip";
@@ -148,6 +149,17 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Inside the redesigned questions (app/plan/new.tsx): the new screen draws the
+ * title and the main control (the dial, the counter, the sun, the cards), so
+ * this draws only what sits under them, the settings and the names.
+ */
+export const BareSteps = createContext(false);
+
+function StepHeading(props: React.ComponentProps<typeof FieldHeading>) {
+  return useContext(BareSteps) ? null : <FieldHeading {...props} />;
+}
+
 export function PlanSteps({
   step,
   inputs,
@@ -157,6 +169,7 @@ export function PlanSteps({
   wellnessFloors = null,
   update,
 }: StepProps) {
+  const bare = useContext(BareSteps);
   const solo = inputs.partySize <= 1;
   const pair = inputs.partySize === 2;
   const pronoun = pronounForGender(inputs.partner.gender);
@@ -322,7 +335,7 @@ export function PlanSteps({
               : `Everything for ${partyLabel(inputs.partySize)}, food and rides included.`
           }
         />
-        <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />
+        {bare ? null : <BudgetSlider value={inputs.budget} onChange={(budget) => update({ budget })} />}
 
         {/*
           Only the consequence, never a second way to reach it.
@@ -419,7 +432,7 @@ export function PlanSteps({
           title="Which day?"
           subtitle="Pick one, or choose another date from the calendar."
         />
-        <DayStrip value={inputs.date} onChange={(date) => update({ date })} />
+        {bare ? null : <DayStrip value={inputs.date} onChange={(date) => update({ date })} />}
       </>
     );
   }
@@ -432,12 +445,16 @@ export function PlanSteps({
           subtitle="We fit each stop around this, travel between them included."
         />
 
-        <GroupLabel>Start time</GroupLabel>
-        <TimeStrip
-          options={startTimeOptions().map((t) => ({ value: t, label: time12(t) }))}
-          value={inputs.startTime}
-          onChange={(startTime) => update({ startTime })}
-        />
+        {bare ? null : (
+          <>
+            <GroupLabel>Start time</GroupLabel>
+            <TimeStrip
+              options={startTimeOptions().map((t) => ({ value: t, label: time12(t) }))}
+              value={inputs.startTime}
+              onChange={(startTime) => update({ startTime })}
+            />
+          </>
+        )}
 
         <GroupLabel>How long are you out for?</GroupLabel>
         <ChipRow>
@@ -503,6 +520,7 @@ export function PlanSteps({
           outing is made of; on, the mix below is not asked, since there is
           no meal or bar slot for it to shape.
         */}
+        {bare ? null : (
         <Group footer={inputs.eventNight ? "Films and classes are planned to their start time. Bands, parties and the like you can drop into while they are on." : undefined}>
           <Row
             icon="ticket"
@@ -512,8 +530,9 @@ export function PlanSteps({
             onPress={() => update({ eventNight: !inputs.eventNight })}
           />
         </Group>
+        )}
 
-        {asksFocus(inputs.occasion) && !inputs.eventNight ? (
+        {!bare && asksFocus(inputs.occasion) && !inputs.eventNight ? (
         <Group>
           {FOCUS_OPTIONS.map((f) => {
             const chosen = focusesOf(inputs);
@@ -771,6 +790,7 @@ export function PlanSteps({
     return (
       <>
         <StepHeading title="What should it feel like?" subtitle="Pick up to three, or skip it and we will choose." />
+        {bare ? null : (
         <ChipRow>
           {vibesFor(inputs.occasion, inputs.partySize).map((v) => {
             const val = v.toLowerCase();
@@ -801,6 +821,7 @@ export function PlanSteps({
             );
           })}
         </ChipRow>
+        )}
         {inputs.vibes.length > 0 ? <Note>{vibeBlurb(inputs.vibes)}</Note> : null}
 
         {/*
@@ -834,6 +855,7 @@ export function PlanSteps({
   }
 
   if (step === "occasion") {
+    if (bare) return null;
     return (
       <>
         <StepHeading title="What is the occasion?" />
@@ -861,7 +883,7 @@ export function PlanSteps({
           subtitle={rule.fixed ? undefined : (rule.note ?? undefined)}
         />
 
-        {rule.fixed ? (
+        {bare ? null : rule.fixed ? (
           /* Not a choice. Offering a wheel here would invite an answer that
              makes the rest of the plan incoherent. */
           <View style={{ alignItems: "center", paddingHorizontal: GUTTER }}>
@@ -1168,7 +1190,8 @@ function ChoiceField({
           );
         })}
       </ChipRow>
-      <View style={{ paddingHorizontal: GUTTER }}>
+      {/* Clear of the last row of chips, which it was touching (owner, 2 Nov 2026). */}
+      <View style={{ paddingHorizontal: GUTTER, marginTop: Spacing.three }}>
         <Field
           label=""
           placeholder={otherPlaceholder}

@@ -1,0 +1,85 @@
+import { View } from "react-native";
+import { SpeechBubble } from "../SpeechBubble";
+import { OccasionMark } from "../OccasionMark";
+import { GUTTER, Spacing } from "../../theme";
+import type { StepId } from "../../lib/planConstants";
+import type { Occasion } from "../../lib/types";
+
+/**
+ * A tip, sitting beside the question it is about, with the occasion's mark.
+ *
+ * Deliberately advice a person could not get from the field itself, "pick two
+ * areas" is already on the label. These say what the answer will *do* to the
+ * plan, which is the thing that is not obvious while filling a form in.
+ */
+const TIPS: Partial<Record<StepId, string>> = {
+  area: "Close together beats far apart.",
+  // Overridden below when they are driving, where it would be a lie.
+  budget: "Food and rides, all in.",
+  when: "Weeknights are quieter.",
+  // The date and the clock are two screens now, so the clock gets its own.
+  timing: "I leave room to get between places.",
+  shape: "Just drinks means just drinks.",
+  stops: "Two is a date. Four is a night.",
+  vibe: "I blend them.",
+  party: "Changes the table, not just the bill.",
+  details: "The odder, the better.",
+};
+
+/** Occasion-specific tips take precedence, a pathway should feel like one. */
+const OCCASION_TIPS: Partial<Record<Occasion, Partial<Record<StepId, string>>>> = {
+  first_date: {
+    budget: "Easy beats expensive.",
+    vibe: "Somewhere you can hear each other.",
+  },
+  anniversary: {
+    budget: "Worth stretching a little. This one gets remembered.",
+  },
+  birthday: {
+    party: "I will find a table that fits.",
+  },
+  graduation: {
+    party: "I will find room for everyone.",
+  },
+  solo_day: {
+    party: "Places that are good alone.",
+    details: "What you actually enjoy, not what sounds good.",
+  },
+  friend_outing: {
+    vibe: "Groups do better with noise than with candlelight.",
+  },
+};
+
+export function StepTip({
+  step,
+  occasion,
+  driving = false,
+}: {
+  step: StepId;
+  occasion: Occasion;
+  /** Their own car, so the budget tip must not promise to cover fares. */
+  driving?: boolean;
+}) {
+  const tip =
+    step === "budget" && driving
+      ? "No fares to pay, so it all goes on the evening."
+      : (OCCASION_TIPS[occasion]?.[step] ?? TIPS[step]);
+  if (!tip) return null;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-end",
+        gap: Spacing.two,
+        paddingHorizontal: GUTTER,
+        marginTop: Spacing.five,
+      }}
+    >
+      <OccasionMark occasion={occasion} size={44} />
+      <View style={{ flex: 1, paddingBottom: Spacing.two }}>
+        <SpeechBubble text={tip} align="left" />
+      </View>
+    </View>
+  );
+}

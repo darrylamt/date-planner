@@ -5,7 +5,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { Text } from "../Text";
 import { Symbol } from "../Symbol";
-import { Mascot } from "../Mascot";
+import { OccasionMark } from "../OccasionMark";
 import { PressScale, Rise, useReducedMotion } from "../motion";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useIsDark, useTheme } from "../../lib/useTheme";
@@ -443,7 +443,7 @@ export function Hero({ title, line, reduced }: { title: string; line: string; re
             {line}
           </Text>
         </View>
-        <Mascot occasion="celebration" size={86} animate={!reduced} />
+        <OccasionMark occasion="celebration" size={86} />
       </View>
     </View>
   );

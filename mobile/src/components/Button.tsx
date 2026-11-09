@@ -4,8 +4,7 @@ import { Text } from "./Text";
 import { Symbol } from "./Symbol";
 import { radius, space } from "../theme";
 import { useTheme } from "../lib/useTheme";
-import { useSeason } from "../lib/season";
-import { SPOOKY, useBurst } from "./Burst";
+import { useLook } from "../lib/appearance";
 import type { SymbolViewProps } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,7 +24,7 @@ export interface ButtonProps {
   style?: ViewStyle;
 }
 
-const HEIGHT: Record<Size, number> = { large: 50, medium: 40, small: 32 };
+const HEIGHT: Record<Size, number> = { large: 56, medium: 44, small: 34 };
 
 /** iOS button styles: filled, tinted, gray, plain, matching HIG naming. */
 export function Button({
@@ -40,33 +39,36 @@ export function Button({
   style,
 }: ButtonProps) {
   const c = useTheme();
-  const { season } = useSeason();
-  const burst = useBurst();
+  const look = useLook();
   const inert = disabled || loading;
 
+  /*
+   * The look's pills (redesign, 2 Nov 2026): filled is the look's main
+   * colour, tinted a soft tile, gray an outline. Plain and destructive stay
+   * words.
+   */
   const bg =
     kind === "filled"
       ? inert
         ? c.backgroundSelected
-        : c.accent
+        : look.primary
       : kind === "tinted"
-        ? c.accentSoft
-        : kind === "gray"
-          ? c.backgroundSelected
-          : "transparent";
+        ? look.tile
+        : "transparent";
 
   const fg =
     kind === "filled"
       ? inert
         ? c.textTertiary
-        : c.textOnBrand
+        : look.onPrimary
       : kind === "destructive"
         ? c.danger
         : inert
           ? c.textTertiary
-          : kind === "gray"
+          : kind === "gray" || kind === "tinted"
             ? c.text
             : c.accent;
+  const outline = kind === "gray";
 
   const isBlock = block ?? size === "large";
 
@@ -77,22 +79,23 @@ export function Button({
       disabled={inert}
       onPress={(e) => {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // At Halloween the main buttons throw a few pumpkins and bats from the finger.
-        if (season === "halloween" && kind === "filled") burst(e.nativeEvent.pageX, e.nativeEvent.pageY, SPOOKY, 6);
         onPress();
       }}
       style={({ pressed }) => [
         {
           height: HEIGHT[size],
-          borderRadius: kind === "plain" || kind === "destructive" ? 0 : radius.control,
+          borderRadius: kind === "plain" || kind === "destructive" ? 0 : HEIGHT[size] / 2,
           backgroundColor: bg,
+          borderWidth: outline ? 1 : 0,
+          borderColor: look.tileEdge,
           paddingHorizontal: kind === "plain" || kind === "destructive" ? 0 : space.lg,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
           gap: space.sm,
           alignSelf: isBlock ? "stretch" : "flex-start",
-          opacity: pressed ? 0.6 : 1,
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         style,
       ]}
@@ -104,7 +107,7 @@ export function Button({
           {icon ? <Symbol name={icon} size={size === "small" ? 14 : 17} color={fg} weight="semibold" /> : null}
           <Text
             variant={size === "small" ? "subheadline" : "body"}
-            weight="600"
+            weight="700"
             style={{ color: fg }}
           >
             {title}

@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { Text } from "../Text";
-import { Mascot } from "../Mascot";
+import { OccasionMark } from "../OccasionMark";
 import { PressScale } from "../motion";
 import { HAIRLINE, Radius, Spacing } from "../../theme";
 import { useOccasionHue, useTheme } from "../../lib/useTheme";
@@ -57,7 +57,7 @@ function Tile({ occasion, onPress }: { occasion: { id: string; title: string; su
             overflow: "hidden",
           }}
         >
-          <Mascot occasion={occasion.id as PlanInputs["occasion"]} size={40} animate={false} style={{ marginTop: 6 }} />
+          <OccasionMark occasion={occasion.id as PlanInputs["occasion"]} size={40} />
         </View>
         <View style={{ gap: 1 }}>
           <Text variant="subheadline" weight="600">

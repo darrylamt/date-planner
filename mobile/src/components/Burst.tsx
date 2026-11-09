@@ -3,8 +3,8 @@ import { Animated, Easing, StyleSheet, View } from "react-native";
 import { useReducedMotion } from "./motion";
 
 /**
- * Little bursts of emoji thrown out from a point on the screen: pumpkins and
- * bats from a button pressed at Halloween, sweets for "trick or treat".
+ * Little bursts of emoji thrown out from a point on the screen, such as the
+ * party when Who pays decides.
  *
  * One layer over the whole app, so any button can throw from wherever it was
  * pressed without owning an overlay of its own. Decoration only: the native
@@ -85,6 +85,3 @@ export function useBurst() {
   return useContext(BurstContext);
 }
 
-/** What Halloween throws. */
-export const SPOOKY = ["🎃", "🦇", "👻", "🕸️"];
-export const SWEETS = ["🍬", "🍭", "🍫", "🎃"];

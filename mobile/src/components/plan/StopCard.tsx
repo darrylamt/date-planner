@@ -11,7 +11,7 @@ import { ReportSheet } from "./ReportSheet";
 import { GettingThereSheet } from "./GettingThereSheet";
 import { HAIRLINE, radius, space } from "../../theme";
 import { useIsDark, useTheme } from "../../lib/useTheme";
-import { chooseAction } from "../../lib/actionSheet";
+import { MorphButton, MoreRow, type MoreItem } from "../redesign/MoreActions";
 import { ghs, instagramUrl, time12 } from "../../lib/format";
 import { track } from "../../lib/signals";
 import { QtyStepper } from "./QtyStepper";
@@ -159,23 +159,21 @@ export function StopCard({
       : "See what to order";
   const reason = stop.what_to_do?.trim() || stop.why_this_fits?.trim() || stop.event?.description?.trim() || "";
 
-  /** Everything used once in a hundred stops, in the phone's own action sheet. */
-  function more() {
-    void Haptics.selectionAsync();
-    chooseAction({
-      title: stop.name,
-      dark,
-      actions: [
-        // What they reached for at this stop: part of the venue's pull (signals.ts).
-        { text: "Open in Maps", onPress: () => (track("maps_opened", stop.venue_id), openMaps()) },
-        ...(instagram
-          ? [{ text: "Instagram", onPress: () => (track("instagram_opened", stop.venue_id), void Linking.openURL(instagram)) }]
-          : []),
-        ...(organiser ? [{ text: "Call the organiser", onPress: () => void Linking.openURL(`tel:${organiser}`) }] : []),
-        { text: "Report a problem", onPress: () => setReportOpen(true) },
-      ],
-    });
-  }
+  /*
+   * Everything used once in a hundred stops. The button turns through their
+   * icons and opens into a row in place (MoreActions), rather than the
+   * phone's action sheet (owner, 2 Nov 2026).
+   */
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreItems: MoreItem[] = [
+    // What they reached for at this stop: part of the venue's pull (signals.ts).
+    { key: "maps", label: "Maps", icon: "mappin.and.ellipse", onPress: () => (track("maps_opened", stop.venue_id), openMaps()) },
+    ...(instagram
+      ? [{ key: "ig", label: "Instagram", icon: "instagram" as const, onPress: () => (track("instagram_opened", stop.venue_id), void Linking.openURL(instagram)) }]
+      : []),
+    ...(organiser ? [{ key: "call", label: "Call", icon: "phone.fill" as const, onPress: () => void Linking.openURL(`tel:${organiser}`) }] : []),
+    { key: "report", label: "Report", icon: "flag", onPress: () => setReportOpen(true), danger: true },
+  ];
 
   function openMaps() {
     const url =
@@ -469,34 +467,40 @@ export function StopCard({
           is something to book; the rest, used once in a hundred stops, are
           behind "More".
         */}
-        <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.xs }}>
-          <StopAction icon="car.fill" label="Get there"
-            onPress={() => {
-              track("directions_tapped", stop.venue_id);
-              setTripOpen(true);
-            }}
-            grow
-          />
-          {tickets ? (
-            <StopAction
-              icon="ticket"
-              label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
+        {moreOpen ? (
+          <View style={{ marginTop: space.xs }}>
+            <MoreRow items={moreItems} onClose={() => setMoreOpen(false)} />
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.xs }}>
+            <StopAction icon="car.fill" label="Get there"
               onPress={() => {
-                track("book_tapped", stop.venue_id);
-                void Linking.openURL(tickets);
+                track("directions_tapped", stop.venue_id);
+                setTripOpen(true);
               }}
               grow
             />
-          ) : canReserve ? (
-            <StopAction icon="phone.fill" label="Reserve"
-              onPress={() => {
-                track("book_tapped", stop.venue_id);
-                onReserve();
-              }}
-              busy={reserving} grow />
-          ) : null}
-          <StopAction icon="ellipsis" label="More" iconOnly onPress={more} />
-        </View>
+            {tickets ? (
+              <StopAction
+                icon="ticket"
+                label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
+                onPress={() => {
+                  track("book_tapped", stop.venue_id);
+                  void Linking.openURL(tickets);
+                }}
+                grow
+              />
+            ) : canReserve ? (
+              <StopAction icon="phone.fill" label="Reserve"
+                onPress={() => {
+                  track("book_tapped", stop.venue_id);
+                  onReserve();
+                }}
+                busy={reserving} grow />
+            ) : null}
+            <MorphButton items={moreItems} onPress={() => setMoreOpen(true)} />
+          </View>
+        )}
       </View>
 
       <GettingThereSheet visible={tripOpen} onClose={() => setTripOpen(false)} stop={stop} previous={previous} />

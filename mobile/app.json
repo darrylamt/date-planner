@@ -2,7 +2,7 @@
   "expo": {
     "name": "Duro!",
     "slug": "aduro",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "aduro",
@@ -40,7 +40,10 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:date-plannergh.vercel.app"
+      ]
     },
     "android": {
       "package": "com.darrylamt.aduro",
@@ -106,83 +109,6 @@
         }
       ],
       [
-        "expo-alternate-app-icons",
-        [
-          {
-            "name": "DateNight",
-            "ios": "./assets/app-icons/date_night.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/date_night.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "FirstDate",
-            "ios": "./assets/app-icons/first_date.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/first_date.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Anniversary",
-            "ios": "./assets/app-icons/anniversary.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/anniversary.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Birthday",
-            "ios": "./assets/app-icons/birthday.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/birthday.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Graduation",
-            "ios": "./assets/app-icons/graduation.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/graduation.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Celebration",
-            "ios": "./assets/app-icons/celebration.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/celebration.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Friends",
-            "ios": "./assets/app-icons/friend_outing.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/friend_outing.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "SoloDay",
-            "ios": "./assets/app-icons/solo_day.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/solo_day.png",
-              "backgroundColor": "#FFFFFF"
-            }
-          },
-          {
-            "name": "Halloween",
-            "ios": "./assets/app-icons/halloween.png",
-            "android": {
-              "foregroundImage": "./assets/app-icons/halloween.png",
-              "backgroundColor": "#0D0015"
-            }
-          }
-        ]
-      ],
-      [
         "expo-notifications",
         {
           "color": "#E4572E",
@@ -213,7 +139,6 @@
         }
       ],
       "expo-maps",
-      "./plugins/withAllAppIcons",
       [
         "expo-sensors",
         {
@@ -267,7 +192,8 @@
           "speechRecognitionPermission": "Duro turns what you say to Durobot into text, so you can ask without typing."
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

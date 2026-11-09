@@ -29,6 +29,11 @@ export const MANAGE_URL = ANDROID
   ? `https://play.google.com/store/account/subscriptions?package=${PACKAGE}`
   : "itms-apps://apps.apple.com/account/subscriptions";
 
+/** Duro!'s own page in the store, to install it from there. */
+export const STORE_PAGE_URL = ANDROID
+  ? `market://details?id=${PACKAGE}`
+  : `itms-apps://apps.apple.com/app/id${APP_STORE_ID}`;
+
 /** The app's page in the store, open on writing a review. */
 export const REVIEW_URL = ANDROID
   ? `market://details?id=${PACKAGE}&showAllReviews=true`

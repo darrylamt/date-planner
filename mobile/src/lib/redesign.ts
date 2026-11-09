@@ -1,4 +1,6 @@
 import * as Updates from "expo-updates";
+import { Linking } from "react-native";
+import { STORE, STORE_PAGE_URL } from "./store";
 import { supabase } from "./supabase";
 
 /**
@@ -13,9 +15,16 @@ import { supabase } from "./supabase";
  *
  * An update reaches only builds with the same runtime version, so once the
  * redesign needs native code the App Store build lacks, it moves to a new
- * runtime and this phone needs the TestFlight build that has it.
+ * runtime and this phone needs the TestFlight build that has it (the
+ * "redesign" profile in eas.json).
+ *
+ * In this copy: whatever replaces Profile must keep a way back to the current
+ * app. The crash screen keeps one too.
  */
 export const REDESIGN_CHANNEL = "redesign";
+
+/** The runtime of the build on the App Store, which production updates are published for. */
+const APP_STORE_RUNTIME = "1.1.0";
 
 /** Whether this launch is running the redesign. */
 export function onRedesign(): boolean {
@@ -37,6 +46,15 @@ export async function mayTryRedesign(): Promise<boolean> {
  * nobody left to tell.
  */
 export async function switchApp(to: "redesign" | "current"): Promise<string | null> {
+  /*
+   * The TestFlight build (runtime 1.2.0) has no current app to go back to:
+   * production only publishes for the App Store build's runtime. Installing
+   * Duro! from the store puts that build back, data and sign-in kept.
+   */
+  if (to === "current" && Updates.runtimeVersion !== APP_STORE_RUNTIME) {
+    void Linking.openURL(STORE_PAGE_URL).catch(() => undefined);
+    return `To go back, install Duro! from ${STORE}. It replaces this test build.`;
+  }
   Updates.setUpdateRequestHeadersOverride(to === "redesign" ? { "expo-channel-name": REDESIGN_CHANNEL } : null);
   try {
     const update = await Updates.checkForUpdateAsync();

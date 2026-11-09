@@ -1,13 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, type ReactNode } from "react";
 import { useAppearance } from "./appearance";
-import { useSeason } from "./season";
-import {
-  Colors,
-  OCCASION_HUES,
-  OCCASION_HUES_DARK,
-  type ThemeColors,
-} from "../theme";
-import { OCCASION_THEME } from "./planConstants";
+import { OCCASION_HUES, OCCASION_HUES_DARK, type ThemeColors } from "../theme";
 import type { Occasion } from "./types";
 
 export type ColorSchemeName = "light" | "dark";
@@ -40,54 +33,14 @@ export function useColorSchemeName(): ColorSchemeName {
   return useAppearance().scheme;
 }
 
-/** Halloween's colours: the pumpkin of the logo, on a night-purple dark mode. */
-const PUMPKIN = "#D9480F";
-const PUMPKIN_DARK = "#FF922B";
-const NIGHT = "#0F0A17";
-
 export function useTheme(): ThemeColors {
-  const scheme = useColorSchemeName();
-  const occasion = useContext(OccasionContext);
-  const { season } = useSeason();
-  const base = Colors[scheme];
-
   /*
-   * Halloween recolours the app the way an occasion does, accent and page,
-   * and gives way to an occasion inside a pathway: a birthday being planned
-   * in late October is still a birthday.
+   * The look's colours, everywhere (looks.ts). An occasion no longer
+   * recolours a pathway: in the redesign the look is the identity, and a
+   * birthday planned in Kente stays Kente. OccasionThemeProvider remains so
+   * older screens still compile; it changes nothing now.
    */
-  if (!occasion && season === "halloween") {
-    const dark = scheme === "dark";
-    const accent = dark ? PUMPKIN_DARK : PUMPKIN;
-    return {
-      ...base,
-      ...(dark ? { background: NIGHT } : {}),
-      brand: accent,
-      accent,
-      accentSoft: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.82 : 0.9),
-      accentBorder: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.66 : 0.74),
-    };
-  }
-
-  if (!occasion) return base;
-
-  const theme = OCCASION_THEME[occasion];
-  if (!theme) return base;
-
-  const dark = scheme === "dark";
-  const accent = dark ? theme.accentDark : theme.accent;
-
-  // Only the accent family and the page tint move. Text, borders and status
-  // colours stay put: an occasion should recolour the app, not restate what
-  // red and green mean.
-  return {
-    ...base,
-    background: dark ? theme.pageDark : theme.page,
-    brand: accent,
-    accent,
-    accentSoft: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.82 : 0.9),
-    accentBorder: mixHex(accent, dark ? "#000000" : "#FFFFFF", dark ? 0.66 : 0.74),
-  };
+  return useAppearance().look.colors;
 }
 
 export function useIsDark(): boolean {
@@ -98,24 +51,10 @@ export function useIsDark(): boolean {
 export function useOccasionHue(id: string): { fg: string; bg: string } {
   const dark = useIsDark();
   const table = dark ? OCCASION_HUES_DARK : OCCASION_HUES;
-  const colors = Colors[dark ? "dark" : "light"];
+  const colors = useAppearance().look.colors;
   return table[id] ?? { fg: colors.accent, bg: colors.accentSoft };
 }
 
 export function useThemeWithScheme(): { colors: ThemeColors; scheme: ColorSchemeName } {
   return { colors: useTheme(), scheme: useColorSchemeName() };
-}
-
-/** Local copy of the theme's blend, so this module has no circular import. */
-function mixHex(hex: string, target: string, amount: number): string {
-  const ch = (h: string) => {
-    const v = h.replace("#", "");
-    return [0, 2, 4].map((i) => parseInt(v.substr(i, 2), 16));
-  };
-  const [r1, g1, b1] = ch(hex);
-  const [r2, g2, b2] = ch(target);
-  const blend = (a: number, b: number) => Math.round(a + (b - a) * amount);
-  return `#${[blend(r1, r2), blend(g1, g2), blend(b1, b2)]
-    .map((c) => c.toString(16).padStart(2, "0"))
-    .join("")}`;
 }

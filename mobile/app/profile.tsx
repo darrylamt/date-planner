@@ -23,7 +23,8 @@ import { GUTTER, radius, space, type as typeScale } from "../src/theme";
 import { useTheme } from "../src/lib/useTheme";
 import { useAuth, signOut } from "../src/lib/useAuth";
 import { useAppearance } from "../src/lib/appearance";
-import { AppIconPicker, appIconsAvailable } from "../src/components/AppIconPicker";
+import { useLook } from "../src/lib/appearance";
+import { LookPicker } from "../src/components/redesign/LookPicker";
 import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
@@ -44,8 +45,6 @@ import {
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
 import { resetLearning } from "../src/lib/signals";
-import { useSeason } from "../src/lib/season";
-import { mayTryRedesign, onRedesign, switchApp } from "../src/lib/redesign";
 
 /*
  * Added after the build on TestFlight, so it is resolved defensively. An
@@ -61,6 +60,7 @@ const SUPPORT_EMAIL = "support@duroplans.com";
 
 export default function Profile() {
   const c = useTheme();
+  const look = useLook();
   const insets = useSafeAreaInsets();
   const { session, anonymous } = useAuth();
   /*
@@ -70,7 +70,6 @@ export default function Profile() {
    * the subscription they just paid for.
    */
   const hasAccount = Boolean(session) && !anonymous;
-  const { preference, scheme, setPreference } = useAppearance();
 
   const [showBuild, setShowBuild] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -94,7 +93,6 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   const [aiAllowed, setAiAllowed] = useState(false);
   // Weekend ideas (nudges.ts): null when signed out or before the server has them.
@@ -103,9 +101,6 @@ export default function Profile() {
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const { preview: seasonPreview, setPreview: setSeasonPreview } = useSeason();
-  // The redesign switch (redesign.ts): admins, and anyone already on it so they can get back.
-  const [redesignRow, setRedesignRow] = useState(onRedesign());
 
   useFocusEffect(
     useCallback(() => {
@@ -113,9 +108,6 @@ export default function Profile() {
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
       void getAiConsent().then((v) => active && setAiAllowed(v === "granted"));
       void nudgesOn().then((v) => active && setNudgesState(v));
-      void mayTryRedesign()
-        .then((v) => active && setRedesignRow(v || onRedesign()))
-        .catch(() => undefined);
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
@@ -273,21 +265,21 @@ export default function Profile() {
           <View style={{ paddingHorizontal: GUTTER, marginBottom: space.lg }}>
             <View
               style={{
-                flexDirection: "row",
+                // A centred hero (redesign, 3 Nov 2026): the face, the name, and what is theirs.
                 alignItems: "center",
-                gap: space.md,
-                backgroundColor: c.backgroundElement,
-                borderRadius: radius.card,
-                padding: space.md,
+                gap: space.sm,
+                paddingTop: space.md,
               }}
             >
               <Pressable onPress={pickAvatar} disabled={uploading}>
                 <View
                   style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    backgroundColor: c.accent,
+                    width: 104,
+                    height: 104,
+                    borderRadius: 52,
+                    backgroundColor: look.primary,
+                    borderWidth: 3,
+                    borderColor: look.primary,
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
@@ -298,11 +290,11 @@ export default function Profile() {
                   ) : profile?.avatarUrl ? (
                     <Image
                       source={{ uri: profile.avatarUrl }}
-                      style={{ width: 56, height: 56 }}
+                      style={{ width: 98, height: 98, borderRadius: 49 }}
                       contentFit="cover"
                     />
                   ) : (
-                    <Text variant="title3" style={{ color: "#FFFFFF" }}>
+                    <Text variant="largeTitle" style={{ color: look.onPrimary }}>
                       {(profile?.displayName ?? "?").slice(0, 1).toUpperCase()}
                     </Text>
                   )}
@@ -314,19 +306,21 @@ export default function Profile() {
                     position: "absolute",
                     right: -2,
                     bottom: -2,
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: c.backgroundElement,
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    backgroundColor: c.background,
+                    borderWidth: 1,
+                    borderColor: look.tileEdge,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Symbol name="camera.fill" size={11} color={c.textSecondary} />
+                  <Symbol name="camera.fill" size={13} color={c.text} />
                 </View>
               </Pressable>
 
-              <View style={{ flex: 1 }}>
+              <View style={{ alignItems: "center", gap: 2, marginTop: space.xs }}>
                 {editingName ? (
                   <TextInput
                     value={nameDraft}
@@ -340,8 +334,10 @@ export default function Profile() {
                     placeholderTextColor={c.textTertiary}
                     style={{
                       color: c.text,
-                      fontSize: typeScale.headline.fontSize,
-                      fontWeight: typeScale.headline.fontWeight,
+                      fontSize: typeScale.title1.fontSize,
+                      fontFamily: look.display["700"],
+                      textAlign: "center",
+                      minWidth: 200,
                       paddingVertical: 0,
                     }}
                   />
@@ -353,22 +349,40 @@ export default function Profile() {
                     }}
                     style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}
                   >
-                    <Text variant="headline" numberOfLines={1}>
+                    <Text variant="title1" numberOfLines={1}>
                       {profile?.displayName ?? "You"}
                     </Text>
                     <Symbol name="pencil" size={13} color={c.textTertiary} />
                   </Pressable>
                 )}
-                <Text variant="footnote" tone="secondary" numberOfLines={1}>
+                <Text variant="footnote" tone="secondary" numberOfLines={1} center>
                   {profile?.email ?? session?.user.email ?? ""}
                 </Text>
               </View>
 
-              <Pressable onPress={() => router.push("/(tabs)/saved")} hitSlop={10}>
-                <Text variant="footnote" tone="secondary">
-                  {planCount === null ? "" : `${planCount} saved`}
-                </Text>
-              </Pressable>
+              {planCount === null ? null : (
+                <Pressable
+                  onPress={() => router.push("/(tabs)/saved")}
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({
+                    marginTop: space.sm,
+                    height: 36,
+                    paddingHorizontal: 16,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: look.tileEdge,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Symbol name="bookmark.fill" size={12} color={look.colors.accent} />
+                  <Text variant="footnote" weight="600">
+                    {`${planCount} saved plan${planCount === 1 ? "" : "s"}`}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </>
@@ -501,38 +515,13 @@ export default function Profile() {
         />
       </Group>
 
-      <Group header="Appearance">
-        <Row
-          icon="moon"
-          title="Dark mode"
-          subtitle={preference === "system" ? "Following your phone" : undefined}
-          trailing={
-            <Toggle
-              value={scheme === "dark"}
-              onValueChange={(on) => setPreference(on ? "dark" : "light")}
-              accessibilityLabel="Dark mode"
-            />
-          }
-        />
-        {preference !== "system" ? (
-          <Row
-            icon="iphone"
-            title="Match my phone instead"
-            onPress={() => setPreference("system")}
-          />
-        ) : null}
-        {/* Hidden rather than disabled on a build without the module: a row
-            that explains why it cannot work is worse than no row. */}
-        {appIconsAvailable() ? (
-          <Row
-            icon="app.badge"
-            title="App icon"
-            subtitle="Pick a mascot for your home screen"
-            chevron
-            onPress={() => setIconPickerOpen(true)}
-          />
-        ) : null}
-      </Group>
+      {/* The look, chosen from pictures of it (LookPicker): every screen works the same in each. */}
+      <View style={{ paddingHorizontal: GUTTER, marginBottom: space.xxl, gap: space.sm }}>
+        <Text variant="caption" tone="secondary" weight="700" uppercase style={{ letterSpacing: 1, marginLeft: space.xs }}>
+          Look
+        </Text>
+        <LookPicker />
+      </View>
 
       <Group header="This device">
         <Row
@@ -597,30 +586,6 @@ export default function Profile() {
             })
           }
         />
-        {redesignRow ? (
-          <Row
-            icon="paintbrush"
-            title={onRedesign() ? "Back to the current app" : "Try the redesign"}
-            subtitle={onRedesign() ? "You are on the redesign" : "Only this phone. Everyone else keeps this app."}
-            onPress={() =>
-              chooseAction({
-                title: onRedesign() ? "Back to the current app?" : "Try the redesign?",
-                message: "Duro restarts to switch. You can come back from here at any time.",
-                actions: [
-                  {
-                    text: "Switch",
-                    onPress: async () => {
-                      setBusy(true);
-                      const problem = await switchApp(onRedesign() ? "current" : "redesign");
-                      setBusy(false);
-                      if (problem) setToast(problem);
-                    },
-                  },
-                ],
-              })
-            }
-          />
-        ) : null}
       </Group>
 
       <Group header="Support">
@@ -714,13 +679,6 @@ export default function Profile() {
       */}
       <Pressable
         onPress={() => setShowBuild((v) => !v)}
-        // Hidden: hold to preview the Halloween look outside its dates.
-        onLongPress={() => {
-          const on = !seasonPreview;
-          setSeasonPreview(on);
-          setToast(on ? "Halloween preview on 🎃" : "Halloween preview off");
-        }}
-        delayLongPress={800}
         style={{ paddingHorizontal: GUTTER, marginTop: space.xxl }}
       >
         <Text variant="caption1" tone="tertiary" center>
@@ -735,12 +693,6 @@ export default function Profile() {
           </Text>
         ) : null}
       </Pressable>
-
-      <AppIconPicker
-        visible={iconPickerOpen}
-        onClose={() => setIconPickerOpen(false)}
-        onChanged={setToast}
-      />
 
       <ProSheet
         visible={proOpen}

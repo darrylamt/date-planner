@@ -435,6 +435,8 @@ export type PlanEntry =
   | "home_row"
   | "home_all"
   | "home_season"
+  // The redesign's "Plan a night" (2 Nov 2026), which asks the occasion first.
+  | "home_cta"
   | "tab_plus"
   | "onboarding"
   | "quick_action"

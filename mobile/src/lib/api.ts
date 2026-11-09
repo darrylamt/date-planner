@@ -326,3 +326,186 @@ export async function fetchNextSpots(input: {
     return null;
   }
 }
+
+/* ── trips ───────────────────────────────────────────────────────────── */
+
+export interface TripPlaceRoute {
+  id: string;
+  from: string;
+  to: string;
+  bothWays: boolean;
+  mode: "bus" | "trotro" | "car" | "flight" | "ferry";
+  operator: string;
+  service: string | null;
+  fromStation: string | null;
+  toStation: string | null;
+  departures: string | null;
+  minutes: number | null;
+  /** Both null: nobody knows the fare. Max null: a "from" fare. */
+  fareMin: number | null;
+  fareMax: number | null;
+  bookUrl: string | null;
+  bookPhone: string | null;
+  checkedOn: string | null;
+  notes: string | null;
+}
+
+export interface TripPlace {
+  slug: string;
+  name: string;
+  region: string;
+  town: string | null;
+  gatewayTown: string;
+  lastLeg: string | null;
+  lat: number | null;
+  lng: number | null;
+  roadKmFromAccra: number | null;
+  blurb: string | null;
+  highlights: string[];
+  bestTime: string | null;
+  image: string | null;
+  /** "Photo: author, licence, Wikimedia Commons": shown with the photo, as the licence asks. */
+  imageCredit: string | null;
+  routes: TripPlaceRoute[];
+}
+
+let placesCache: Promise<TripPlace[]> | null = null;
+
+/**
+ * Where a trip can go, researched and kept in the admin (0101). Empty until
+ * the migration has run, and on any failure: Trips then shows its samples.
+ * Asked once per launch; a failed ask is tried again next time.
+ */
+export function fetchTripPlaces(): Promise<TripPlace[]> {
+  if (!BASE) return Promise.resolve([]);
+  placesCache ??= fetch(`${BASE}/api/trips`)
+    .then((res) => (res.ok ? res.json() : { destinations: [] }))
+    .then((json: { destinations?: TripPlace[] }) => json.destinations ?? [])
+    .catch(() => [] as TripPlace[])
+    .then((list) => {
+      if (!list.length) placesCache = null;
+      return list;
+    });
+  return placesCache;
+}
+
+/* ── a whole trip (the server's src/lib/trip.ts) ─────────────────────── */
+
+export type TripComfort = "easy" | "mid" | "treat";
+export type TripTravel = "any" | "bus" | "trotro" | "car" | "flight" | "ferry";
+
+export interface TripInputs {
+  to: string;
+  from?: string;
+  arrive: string;
+  nights: number;
+  partySize: number;
+  comfort: TripComfort;
+  travel: TripTravel;
+  vibes?: string[];
+}
+
+/** Null max: a "from" figure, where only the lowest is known. */
+export interface TripRange {
+  min: number;
+  max: number | null;
+}
+
+export interface TripWay {
+  id: string;
+  mode: TripPlaceRoute["mode"];
+  operator: string;
+  service: string | null;
+  from: string;
+  to: string;
+  departures: string | null;
+  minutes: number | null;
+  fromStation: string | null;
+  toStation: string | null;
+  bookUrl: string | null;
+  bookPhone: string | null;
+  checkedOn: string | null;
+  notes: string | null;
+  perVehicle: boolean;
+  /** For the whole party. Null when nobody knows the fare. */
+  oneWay: TripRange | null;
+  return: TripRange | null;
+}
+
+export interface TripStay {
+  id: string;
+  name: string;
+  kind: string | null;
+  town: string | null;
+  image: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  bookingUrl: string | null;
+  lat: number | null;
+  lng: number | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  room: { name: string; sleeps: number; nightly: number; breakfast: boolean } | null;
+  rooms: number;
+  total: number | null;
+  ratesCheckedOn: string | null;
+}
+
+export interface TripPart {
+  label: string;
+  startTime: string;
+  hours: number;
+  itinerary: Itinerary | null;
+  note: string | null;
+}
+
+export interface TripSight {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  image: string | null;
+  mapsUrl: string | null;
+  /** A head; 0 is free, null is not on record. */
+  fee: number | null;
+  chargesNote: string | null;
+}
+
+export interface Trip {
+  destination: {
+    slug: string;
+    name: string;
+    region: string;
+    town: string | null;
+    gatewayTown: string;
+    lastLeg: string | null;
+    image: string | null;
+    imageCredit: string | null;
+    blurb: string | null;
+    highlights: string[];
+  };
+  inputs: TripInputs;
+  leave: string;
+  ways: TripWay[];
+  chosenWay: string | null;
+  stays: TripStay[];
+  askForRates: Pick<TripStay, "id" | "name" | "phone" | "whatsapp" | "bookingUrl">[];
+  days: { date: string; label: string; parts: TripPart[] }[];
+  sights: TripSight[];
+  totals: { travel: TripRange | null; stay: number | null; days: number; total: TripRange; complete: boolean };
+  /** What the trip could not do, said plainly: no fare, no stay, too few priced places. */
+  gaps: string[];
+  ready: boolean;
+}
+
+export type TripResponse = { status: "ok"; trip: Trip } | { status: "error"; message: string };
+
+/** Build a trip: the ways there, stays, each day planned, and the total. */
+export async function generateTrip(inputs: TripInputs): Promise<TripResponse> {
+  if (!BASE) return { status: "error", message: "The app isn't connected to the planner." };
+  try {
+    return await postJson<TripResponse>("/api/trip/generate", inputs, await whoIsAsking());
+  } catch {
+    return { status: "error", message: "We couldn't reach the planner. Check your connection and try again." };
+  }
+}

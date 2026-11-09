@@ -1,16 +1,35 @@
-import { HStack, Image, Spacer, Text, VStack } from "@expo/ui/swift-ui";
+import { Capsule, Circle, HStack, Rectangle, Spacer, Text, VStack, ZStack } from "@expo/ui/swift-ui";
 import {
-  aspectRatio,
+  background,
   containerBackground,
   font,
   foregroundStyle,
   frame,
   lineLimit,
-  resizable,
-  widgetAccentedRenderingMode,
+  padding,
+  shapes,
   widgetURL,
 } from "@expo/ui/swift-ui/modifiers";
 import { createWidget, type WidgetEnvironment } from "expo-widgets";
+
+/**
+ * One look's colours, as the widget draws them (the app's looks.ts). The
+ * widget runtime has no access to the app's code, so they arrive here.
+ */
+export type WidgetPalette = {
+  bg: string;
+  ink: string;
+  soft: string;
+  tile: string;
+  primary: string;
+  onPrimary: string;
+  second: string;
+  onSecond: string;
+  third: string;
+  onThird: string;
+  /** The woven kente strip along the top. */
+  band: boolean;
+};
 
 /**
  * What the app hands the widget, already worded. The widget runs in its own
@@ -30,86 +49,100 @@ export type NextPlanProps = {
   firstTime: string;
   firstName: string;
   stops: { time: string; name: string }[];
-  /** The occasion's colour, for light and dark. */
-  accent: string;
-  accentDark: string;
   /**
-   * The character in the occasion's costume, as a data: URI (see
-   * scripts/widget-mascots.ts). Empty to draw none; a picture that will not
-   * load draws nothing too, so it can never break the widget.
+   * The person's look, for the phone in light and in dark: the same look
+   * twice, or Daylight and Night for "Follow the sky".
    */
-  mascot: string;
+  light: WidgetPalette;
+  dark: WidgetPalette;
 };
 
 /**
- * "Your next plan", on the home screen and the lock screen.
- *
- * Small: the countdown, the plan's name and its first stop. Medium: the same
- * with up to three stops and their times. Lock screen: one or three lines,
- * drawn in the system's tint. With nothing coming up, an invitation to plan.
- * The home screen sizes carry the character in the occasion's costume, the
- * one the app's cards wear; the lock screen, drawn in a single tint, does not.
+ * "Your next plan", on the home screen and the lock screen, in the
+ * redesign's looks (3 Nov 2026): the kente strip, the look's ground, the
+ * countdown as a pill, and the stops numbered in the colours their pins wear
+ * in the app. Small: the countdown, the plan's name and its first stop.
+ * Medium: the same with up to three stops. Lock screen: one or three lines
+ * in the system's tint. With nothing coming up, an invitation to plan.
  *
  * Everything inside this function runs in the widget's own runtime: only
  * Expo UI's SwiftUI components and modifiers, no module-scope values, no
- * hooks. That is why the colours below are written out here.
+ * hooks.
  */
 const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
   "widget";
-  const dark = env.colorScheme === "dark";
-  const bg = dark ? "#0E1817" : "#FFFFFF";
-  const ink = dark ? "#F2F7F6" : "#0C1413";
-  const soft = dark ? "#9BABA8" : "#5F6E6C";
-  const accent = dark ? props.accentDark || "#58A8A0" : props.accent || "#0F766E";
+  const p = env.colorScheme === "dark" ? props.dark : props.light;
   const family = env.widgetFamily;
+  const fills = [p.primary, p.second, p.third];
+  const inks = [p.onPrimary, p.onSecond, p.onThird];
 
-  /* ── the lock screen ── */
+  /* ── the lock screen: the system tints it, so words only ── */
   if (family === "accessoryInline") {
     return (
       <Text modifiers={[widgetURL(props.url)]}>
-        {props.empty ? "Plan your next outing" : `${props.countdown} · ${props.firstName} ${props.firstTime}`}
+        {props.empty ? "Plan your next night" : `${props.countdown} · ${props.firstName} ${props.firstTime}`}
       </Text>
     );
   }
   if (family === "accessoryRectangular") {
     return (
       <VStack alignment="leading" spacing={1} modifiers={[widgetURL(props.url), frame({ maxWidth: 1000, alignment: "leading" })]}>
-        <Text modifiers={[font({ size: 14, weight: "bold" }), lineLimit(1)]}>
+        <Text modifiers={[font({ size: 14, weight: "heavy" }), lineLimit(1)]}>
           {props.empty ? "No plan yet" : `${props.countdown} · ${props.when}`}
         </Text>
-        <Text modifiers={[font({ size: 13 }), lineLimit(1)]}>
-          {props.empty ? "Plan your next outing" : `${props.firstTime} ${props.firstName}`}
-        </Text>
+        <Text modifiers={[font({ size: 13 }), lineLimit(1)]}>{props.empty ? "Plan your next night" : `${props.firstTime} ${props.firstName}`}</Text>
         {props.empty ? null : (
-          <Text modifiers={[font({ size: 12 }), lineLimit(1), foregroundStyle({ type: "hierarchical", style: "secondary" })]}>
-            {props.title}
-          </Text>
+          <Text modifiers={[font({ size: 12 }), lineLimit(1), foregroundStyle({ type: "hierarchical", style: "secondary" })]}>{props.title}</Text>
         )}
       </VStack>
     );
   }
+
+  /* The kente strip, or a short bar in the look's colour. */
+  const strip = p.band ? (
+    <HStack spacing={0} modifiers={[frame({ maxWidth: 1000, height: 5 })]}>
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => (
+        <Rectangle key={i} modifiers={[foregroundStyle([p.primary, p.second, p.primary, p.third][i % 4])]} />
+      ))}
+    </HStack>
+  ) : (
+    <HStack modifiers={[frame({ maxWidth: 1000, alignment: "leading" })]}>
+      <Capsule modifiers={[foregroundStyle(p.primary), frame({ width: 26, height: 4 })]} />
+      <Spacer />
+    </HStack>
+  );
+
+  const pill = (
+    <Text modifiers={[font({ size: 11, weight: "heavy" }), foregroundStyle(p.onPrimary), padding({ horizontal: 8, vertical: 3 }), background(p.primary, shapes.capsule())]}>
+      {props.countdown.toUpperCase()}
+    </Text>
+  );
+
+  const badge = (i: number, size: number) => (
+    <ZStack modifiers={[frame({ width: size, height: size })]}>
+      <Circle modifiers={[foregroundStyle(fills[i % 3])]} />
+      <Text modifiers={[font({ size: size * 0.55, weight: "heavy" }), foregroundStyle(inks[i % 3])]}>{String(i + 1)}</Text>
+    </ZStack>
+  );
 
   /* ── nothing coming up ── */
   if (props.empty) {
     return (
       <VStack
         alignment="leading"
-        spacing={4}
-        modifiers={[containerBackground(bg, "widget"), widgetURL(props.url), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
+        spacing={6}
+        modifiers={[containerBackground(p.bg, "widget"), widgetURL(props.url), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
       >
-        {props.mascot ? (
-          <Image
-            uiImage={props.mascot}
-            modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 52, height: 52 }), widgetAccentedRenderingMode("desaturated")]}
-          />
-        ) : (
-          <Image systemName="sparkles" size={22} color={accent} />
-        )}
+        {strip}
         <Spacer />
-        <Text modifiers={[font({ size: 16, weight: "bold" }), foregroundStyle(ink), lineLimit(2)]}>Plan your next outing</Text>
-        <Text modifiers={[font({ size: 12 }), foregroundStyle(soft), lineLimit(2)]}>
-          Dates, birthdays and days out, sorted in a minute.
-        </Text>
+        {/* Durobot's orb: the look's three colours, one inside another. */}
+        <ZStack modifiers={[frame({ width: 40, height: 40 })]}>
+          <Circle modifiers={[foregroundStyle(p.second)]} />
+          <Circle modifiers={[foregroundStyle(p.primary), frame({ width: 30, height: 30 })]} />
+          <Circle modifiers={[foregroundStyle(p.third), frame({ width: 12, height: 12 }), padding({ bottom: 8, trailing: 8 })]} />
+        </ZStack>
+        <Text modifiers={[font({ size: 17, weight: "heavy" }), foregroundStyle(p.ink), lineLimit(2)]}>Plan your next night</Text>
+        <Text modifiers={[font({ size: 12 }), foregroundStyle(p.soft), lineLimit(2)]}>Real places, real prices. Sorted in a minute.</Text>
       </VStack>
     );
   }
@@ -117,34 +150,32 @@ const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
   /* ── the medium widget: the plan on the left, its stops on the right ── */
   if (family === "systemMedium") {
     return (
-      <HStack spacing={14} alignment="top" modifiers={[containerBackground(bg, "widget"), widgetURL(props.url)]}>
-        <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}>
-          <HStack spacing={4}>
-            <Image systemName="calendar" size={12} color={accent} />
-            <Text modifiers={[font({ size: 12, weight: "heavy" }), foregroundStyle(accent)]}>{props.countdown.toUpperCase()}</Text>
-          </HStack>
-          <Text modifiers={[font({ size: 17, weight: "bold" }), foregroundStyle(ink), lineLimit(3)]}>{props.title}</Text>
-          <Spacer />
-          <HStack alignment="bottom" modifiers={[frame({ maxWidth: 1000, alignment: "leading" })]}>
-            <Text modifiers={[font({ size: 12, weight: "medium" }), foregroundStyle(soft)]}>{props.when}</Text>
+      <VStack alignment="leading" spacing={10} modifiers={[containerBackground(p.bg, "widget"), widgetURL(props.url)]}>
+        {strip}
+        <HStack spacing={14} alignment="top">
+          <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}>
+            {pill}
+            <Text modifiers={[font({ size: 18, weight: "heavy" }), foregroundStyle(p.ink), lineLimit(3)]}>{props.title}</Text>
             <Spacer />
-            {props.mascot ? (
-              <Image
-                uiImage={props.mascot}
-                modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 50, height: 50 }), widgetAccentedRenderingMode("desaturated")]}
-              />
-            ) : null}
-          </HStack>
-        </VStack>
-        <VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}>
-          {props.stops.map((s, i) => (
-            <VStack key={i} alignment="leading" spacing={1}>
-              <Text modifiers={[font({ size: 11, weight: "bold" }), foregroundStyle(accent)]}>{s.time}</Text>
-              <Text modifiers={[font({ size: 13, weight: "semibold" }), foregroundStyle(ink), lineLimit(1)]}>{s.name}</Text>
-            </VStack>
-          ))}
-        </VStack>
-      </HStack>
+            <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle(p.soft)]}>{props.when}</Text>
+          </VStack>
+          <VStack
+            alignment="leading"
+            spacing={7}
+            modifiers={[padding({ all: 10 }), background(p.tile, shapes.roundedRectangle({ cornerRadius: 16 })), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
+          >
+            {props.stops.map((s, i) => (
+              <HStack key={i} spacing={7}>
+                {badge(i, 18)}
+                <VStack alignment="leading" spacing={0}>
+                  <Text modifiers={[font({ size: 10, weight: "bold" }), foregroundStyle(p.soft)]}>{s.time}</Text>
+                  <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle(p.ink), lineLimit(1)]}>{s.name}</Text>
+                </VStack>
+              </HStack>
+            ))}
+          </VStack>
+        </HStack>
+      </VStack>
     );
   }
 
@@ -152,27 +183,19 @@ const NextPlan = (props: NextPlanProps, env: WidgetEnvironment) => {
   return (
     <VStack
       alignment="leading"
-      spacing={3}
-      modifiers={[containerBackground(bg, "widget"), widgetURL(props.url), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
+      spacing={6}
+      modifiers={[containerBackground(p.bg, "widget"), widgetURL(props.url), frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" })]}
     >
-      <HStack spacing={4}>
-        <Image systemName="calendar" size={12} color={accent} />
-        <Text modifiers={[font({ size: 12, weight: "heavy" }), foregroundStyle(accent)]}>{props.countdown.toUpperCase()}</Text>
-      </HStack>
-      <Text modifiers={[font({ size: 15, weight: "bold" }), foregroundStyle(ink), lineLimit(3)]}>{props.title}</Text>
+      {strip}
+      {pill}
+      <Text modifiers={[font({ size: 15, weight: "heavy" }), foregroundStyle(p.ink), lineLimit(3)]}>{props.title}</Text>
       <Spacer />
-      <HStack alignment="bottom" spacing={4} modifiers={[frame({ maxWidth: 1000, alignment: "leading" })]}>
-        <VStack alignment="leading" spacing={1}>
-          <Text modifiers={[font({ size: 11, weight: "bold" }), foregroundStyle(accent)]}>{props.firstTime}</Text>
-          <Text modifiers={[font({ size: 13, weight: "semibold" }), foregroundStyle(ink), lineLimit(1)]}>{props.firstName}</Text>
+      <HStack spacing={6}>
+        {badge(0, 20)}
+        <VStack alignment="leading" spacing={0}>
+          <Text modifiers={[font({ size: 10, weight: "bold" }), foregroundStyle(p.soft)]}>{props.firstTime}</Text>
+          <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle(p.ink), lineLimit(1)]}>{props.firstName}</Text>
         </VStack>
-        <Spacer />
-        {props.mascot ? (
-          <Image
-            uiImage={props.mascot}
-            modifiers={[resizable(), aspectRatio({ contentMode: "fit" }), frame({ width: 42, height: 42 }), widgetAccentedRenderingMode("desaturated")]}
-          />
-        ) : null}
       </HStack>
     </VStack>
   );
