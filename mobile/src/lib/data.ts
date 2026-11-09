@@ -243,6 +243,14 @@ export async function savePlan(inputs: PlanInputs, itinerary: Itinerary): Promis
 
   if (error) throw error;
   widgetsChanged();
+  // Weekend ideas, asked once, now the app has just been useful (nudges.ts); after the save sheet has settled.
+  setTimeout(() => {
+    try {
+      void (require("./nudges") as typeof import("./nudges")).askForNudgesOnce();
+    } catch {
+      // Asked another time.
+    }
+  }, 1500);
   return data.share_slug as string;
 }
 

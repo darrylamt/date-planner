@@ -22,7 +22,6 @@ import { myGroups } from "../../src/lib/groupApi";
 import type { GroupSummary } from "../../src/lib/groups";
 import type { PlanInputs } from "../../src/lib/types";
 import { HeardFromCard } from "../../src/components/HeardFromCard";
-import { askForNudgesOnce } from "../../src/lib/nudges";
 import { Body, Display, KenteBand, LookScreen } from "../../src/components/look";
 import { DurobotOrb } from "../../src/components/redesign/DurobotOrb";
 import { TripsHome } from "../../src/components/redesign/TripsHome";
@@ -66,8 +65,6 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      // Weekend ideas, asked once on this phone, after Home has settled (nudges.ts).
-      const ask = setTimeout(() => active && void askForNudgesOnce(), 2500);
       void loadDraft().then((d) => active && setDraft(d));
       void fetchProfile()
         .then((p) =>
@@ -105,7 +102,6 @@ export default function Home() {
         .catch(() => undefined);
       return () => {
         active = false;
-        clearTimeout(ask);
       };
     }, [])
   );
