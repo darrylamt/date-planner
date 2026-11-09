@@ -1,5 +1,5 @@
 import { tasteFor, type Taste } from "../../taste";
-import { createClient, createServiceClient } from "../../supabase/server";
+import { createCatalogClient, createServiceClient } from "../../supabase/server";
 import type { ChatTool, ToolContext } from "./types";
 import { todayInAccra } from "./types";
 import { searchVenues } from "./searchVenues";
@@ -51,7 +51,7 @@ export function buildToolContext(userId: string, deviceId: string | null = null)
   const admin = createServiceClient();
   let taste: Promise<Taste | null> | null = null;
   return {
-    catalog: createClient(),
+    catalog: createCatalogClient(),
     admin,
     userId,
     today: todayInAccra(),

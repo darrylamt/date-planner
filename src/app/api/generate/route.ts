@@ -12,7 +12,8 @@ import { fallbackCopy, writePlanCopy } from "@/lib/copy";
 import { assembleItinerary } from "@/lib/itinerary";
 import { recordDemand, type DemandMeta } from "@/lib/demand";
 import { allow, clientIp, rateKey } from "@/lib/rateLimit";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createCatalogClient, createServiceClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkPlan } from "@/lib/planCheck";
 import { tasteFor, type Taste } from "@/lib/taste";
 import { getCaller } from "@/lib/supabase/server";
@@ -51,7 +52,7 @@ const withoutMenus = (inputs: PlanInputs): Extract<GenerateResponse, { status: "
   inputs.estimates === false ? [{ label: "Include places without menus", action: "include_estimates" }] : [];
 
 async function reachFurther(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   inputs: PlanInputs,
   requestStart: number = Date.now(),
   taste: Taste | null = null
@@ -198,7 +199,8 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
     return NextResponse.json({ status: "error", message: "Invalid plan inputs." }, { status: 400 });
   }
 
-  const supabase = createClient();
+  // The catalogue, the same for everybody, remembered for a few minutes (catalogCache.ts).
+  const supabase = createCatalogClient();
 
   /*
    * Who is asking, so the plan can lean towards what they keep (taste.ts):

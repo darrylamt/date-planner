@@ -17,6 +17,7 @@ import { isOpenAt, parsePeriods, weekdayOf } from "./hours";
 import type { EventRow, MenuItem, PlanInputs, Venue, VenueInsight, VenueSchedule, VenueType } from "./types";
 import { PUBLIC_VENUE_COLUMNS } from "./venueColumns";
 import { fetchAllRows } from "./fetchAll";
+import { menusFor } from "./catalogCache";
 import { movieEvents } from "./movies";
 import { insightScore } from "./insights";
 
@@ -65,6 +66,14 @@ export function allowedBands(budget: number): string[] {
   if (budget >= 850) bands.push("premium");
   return bands;
 }
+
+/**
+ * Every menu column a plan reads: "*" also sent Gemini's bookkeeping and the
+ * edit time, a fifth of every row, on every plan (catalogCache.ts). A column
+ * added to menu_items for the planner goes here too.
+ */
+const MENU_COLUMNS =
+  "id,venue_id,name,category,price_ghs,notes,is_alcoholic,dietary_note,covers_people,min_players,max_players,duration_minutes,min_age,requires_gear,available_from_minute,available_to_minute,available_days,meal_time,drink_kind,dish_role,dish_type,dish_tags,recommend_count,image_url";
 
 export async function fetchCandidates(
   supabase: SupabaseClient,
@@ -817,10 +826,12 @@ export async function fetchCandidates(
    * 182 items and Bistro 22 is 156.
    */
   const ownerMenuItems = menuIds.length
-    ? await fetchAllRows<MenuItem>((from, to) =>
-        supabase.from("menu_items").select("*").in("venue_id", menuIds).order("id").range(from, to),
-        1000,
-        4
+    ? await menusFor<MenuItem>(menuIds, (ids) =>
+        fetchAllRows<MenuItem>((from, to) =>
+          supabase.from("menu_items").select(MENU_COLUMNS).in("venue_id", ids).order("id").range(from, to),
+          1000,
+          4
+        )
       )
     : ([] as MenuItem[]);
 

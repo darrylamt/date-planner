@@ -1,6 +1,7 @@
 import { createClient as createBareClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { catalogueFetch } from "../catalogCache";
 
 /** Standard server client bound to the request's auth cookies. */
 export function createClient() {
@@ -43,6 +44,21 @@ export function createServiceClient(): SupabaseClient {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
+  );
+}
+
+/**
+ * For reading the catalogue to make a plan: no session, so every caller reads
+ * the same rows, and repeated reads within a few minutes come from memory
+ * (catalogCache.ts). The app's plans were already read this way, with no
+ * cookie; the website's now are too. `service` for the trip engine, which
+ * reads stay rooms the public key cannot.
+ */
+export function createCatalogClient(service = false): SupabaseClient {
+  return createBareClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    service ? process.env.SUPABASE_SERVICE_ROLE_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: catalogueFetch } }
   );
 }
 

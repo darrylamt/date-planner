@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceClient, getCaller } from "@/lib/supabase/server";
+import { createCatalogClient, createServiceClient, getCaller } from "@/lib/supabase/server";
 import { allow, clientIp, rateKey } from "@/lib/rateLimit";
 import { buildTrip, tripInputsSchema, UnknownDestination, type Trip, type TripResponse } from "@/lib/trip";
 
@@ -30,7 +30,7 @@ export async function POST(req: Request): Promise<NextResponse<TripResponse>> {
     return NextResponse.json({ status: "error", message: "That's a lot of trips in a short time. Give it a few minutes, then try again." }, { status: 429 });
   }
 
-  const db = createServiceClient();
+  const db = createCatalogClient(true);
   let trip: Trip;
   try {
     trip = await buildTrip(db, inputs);
