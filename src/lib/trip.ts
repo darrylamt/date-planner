@@ -424,7 +424,8 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
       date,
       startTime,
       hours,
-      stops: 0,
+      // Two stops a part outside Accra, a meal and a sight or activity: travel days are slower, and towns hold fewer places (10 Nov 2026).
+      stops: city !== "Accra" ? 2 : 0,
       vibes: inputs.vibes,
       occasion: party === 1 ? "solo_day" : "friend_outing",
       ai: false,

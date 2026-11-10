@@ -21,6 +21,9 @@ import { haversineKm } from "../src/lib/transport";
 import { venueFromPlace } from "../src/lib/venueFromPlace";
 
 const dry = process.argv.includes("--dry");
+// How many places a destination should hold: 6 makes it ready; more keeps a two-night trip from running out (--target 14).
+const targetAt = process.argv.indexOf("--target");
+const TARGET = targetAt >= 0 ? Number(process.argv[targetAt + 1]) : 6;
 const MASK = "places.id,places.displayName,places.rating,places.userRatingCount,places.businessStatus,places.primaryType,places.types,places.location";
 const FOOD = /restaurant|cafe|coffee|bar|pub|lounge|bakery|food|grill|pizza|dessert|ice_cream|night_club/;
 const SIGHT = /tourist_attraction|museum|park|historical|landmark|zoo|wildlife|hiking|beach|waterfall|art_gallery|cultural|monument|amusement/;
@@ -59,7 +62,7 @@ async function main() {
     const centre = { lat: Number(d.lat), lng: Number(d.lng) };
     const r = Number(d.radius_km);
     const have = venues.filter((v) => v.lat != null && haversineKm(centre, { lat: +v.lat, lng: +v.lng }) <= r).length;
-    const need = 6 - have;
+    const need = TARGET - have;
     if (need <= 0) continue;
     const place = d.town && d.town !== d.name ? d.town : d.name;
     const found = new Map<string, Hit>();
@@ -88,7 +91,7 @@ async function main() {
       .sort((a, b) => b.rating * Math.log10(b.count + 1) - a.rating * Math.log10(a.count + 1))
       // One of each: the second "Afadjato Mountain" after "Mount Afadjato".
       .filter((h, i, all) => !all.slice(0, i).some((e) => words(e.name).some((x) => words(h.name).includes(x))));
-    const want = Math.min(8, need + 2);
+    const want = Math.min(10, need + 2);
     // Half to eat and drink (trip days can use these at an estimate), half sights and activities (owner: "not just restaurants").
     const food = ok.filter((h) => h.food).slice(0, Math.ceil(want / 2));
     const sights = ok.filter((h) => !h.food).slice(0, want - food.length);
