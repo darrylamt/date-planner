@@ -421,7 +421,13 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
       vibes: inputs.vibes,
       occasion: party === 1 ? "solo_day" : "friend_outing",
       ai: false,
-      estimates: false,
+      /*
+       * Outside Accra few places publish a menu, so a trip day there may use a
+       * place to eat or drink at its price band's estimate, labelled as one,
+       * the way the "places without menus" switch does for outings (owner,
+       * 10 Nov 2026). Accra has menus enough to keep to real prices.
+       */
+      estimates: city !== "Accra",
     }) as PlanInputs;
   /*
    * One shortlist a date, covering all its parts, read for every date at

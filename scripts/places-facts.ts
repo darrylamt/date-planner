@@ -18,7 +18,7 @@
  * photos from the venue itself or free-licensed only).
  */
 import { createClient } from "@supabase/supabase-js";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { fetchAllRows } from "../src/lib/fetchAll";
 
 const dry = process.argv.includes("--dry");
@@ -36,9 +36,13 @@ async function main() {
         .order("id")
         .range(a, b) as never
   );
-  const out: Record<string, { name: string; type: string; website: string | null; summary: string | null; status: string | null }> = {};
+  // Places already read keep their entry: one detail call each, once (the free tier is about 1,000 a month).
+  const out: Record<string, { name: string; type: string; website: string | null; summary: string | null; status: string | null }> = existsSync("scripts/data/places-facts.json")
+    ? JSON.parse(readFileSync("scripts/data/places-facts.json", "utf8"))
+    : {};
   let maps = 0, phones = 0, sites = 0, failed = 0;
   for (const v of venues) {
+    if (out[v.id]) continue;
     const r = await fetch(`https://places.googleapis.com/v1/places/${v.google_place_id}`, {
       headers: { "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY!, "X-Goog-FieldMask": MASK },
     });
