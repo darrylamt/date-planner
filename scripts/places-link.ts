@@ -36,6 +36,18 @@ const apply = args.includes("--apply");
 const acceptAll = args.includes("--all");
 const limitArg = args.indexOf("--limit");
 const limit = limitArg >= 0 ? Number(args[limitArg + 1]) : undefined;
+/*
+ * A person's verdicts on the dry run, by venue name, "|" between names:
+ *   --skip "Tagbo Falls|Market Circle"     wrong matches, never linked
+ *   --accept "Boti Falls"                  unsure matches that are right
+ * A name match is not proof: "Tagbo Falls" scored 100% against a lodge.
+ */
+const listArg = (flag: string) => {
+  const i = args.indexOf(flag);
+  return new Set(i >= 0 ? String(args[i + 1] ?? "").split("|").map((x) => x.trim().toLowerCase()).filter(Boolean) : []);
+};
+const skipNames = listArg("--skip");
+const acceptNames = listArg("--accept");
 
 /** Lowercase, strip punctuation and the noise words venue names collect. */
 function normalise(s: string): string {
@@ -138,7 +150,11 @@ async function main() {
 
     const best = ranked[0];
     const shut = isClosed(best.r.businessStatus);
-    const confident = best.score >= CONFIDENT;
+    if (skipNames.has(v.name.toLowerCase())) {
+      console.log(`  ${v.name}: skipped by hand (best was "${best.r.name}")`);
+      continue;
+    }
+    const confident = best.score >= CONFIDENT || acceptNames.has(v.name.toLowerCase());
     const flag = shut ? "  ← CLOSED ON GOOGLE" : "";
 
     if (shut) closedFound++;

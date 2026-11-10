@@ -10,13 +10,14 @@ async function venueOf(id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const { data } = await createServiceClient()
     .from("venues")
-    .select("name, type, image_url, is_active, areas(name, city)")
+    .select("name, type, image_url, image_credit, is_active, areas(name, city)")
     .eq("id", id)
     .maybeSingle();
-  const v = data as { name: string; type: string; image_url: string | null; is_active: boolean; areas: { name: string; city: string | null } | null } | null;
+  const v = data as { name: string; type: string; image_url: string | null; image_credit: string | null; is_active: boolean; areas: { name: string; city: string | null } | null } | null;
   if (!v || !v.is_active || v.type === "stay") return null;
   const where = v.areas ? [v.areas.name, v.areas.city && v.areas.city !== v.areas.name ? v.areas.city : null].filter(Boolean).join(", ") : null;
-  return { name: v.name, image: v.image_url, where };
+  // A free-licensed cover carries its author and licence (0105).
+  return { name: v.name, image: v.image_url, credit: v.image_credit, where };
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -31,5 +32,5 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 export default async function SharedVenuePage({ params }: { params: { id: string } }) {
   const v = await venueOf(params.id);
   if (!v) notFound();
-  return <AppOnly eyebrow="A place on Duro!" name={v.name} where={v.where} image={v.image} appPath={`venue/${params.id}`} />;
+  return <AppOnly eyebrow="A place on Duro!" name={v.name} where={v.where} image={v.image} credit={v.credit} appPath={`venue/${params.id}`} />;
 }

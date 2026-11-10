@@ -17,7 +17,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { ghs, instagramUrl, uberRideLink } from "../../src/lib/format";
 import { PLACEHOLDER_AVG_GHS } from "../../src/lib/budget";
 import { OCCASIONS } from "../../src/lib/planConstants";
-import { fetchMenu, fetchMyRecommendations, fetchVenue, isFeaturedToday, setRecommendation, type VenueDetail } from "../../src/lib/data";
+import { fetchMenu, fetchMyRecommendations, fetchPhotoCredit, fetchVenue, isFeaturedToday, setRecommendation, type VenueDetail } from "../../src/lib/data";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { track } from "../../src/lib/signals";
@@ -98,6 +98,15 @@ export default function VenuePage() {
   // Starred by this account (0103), and the Pro sheet when a free account is at its ten.
   const [starred, setStarred] = useState(false);
   const [proSheet, setProSheet] = useState(false);
+  // A free-licensed cover's author and licence, shown on the photo as the licence asks (0105).
+  const [photoCredit, setPhotoCredit] = useState<string | null>(null);
+  useEffect(() => {
+    let on = true;
+    void fetchPhotoCredit(id).then((c) => on && setPhotoCredit(c));
+    return () => {
+      on = false;
+    };
+  }, [id]);
   useEffect(() => {
     let on = true;
     void myStarIds().then((ids) => on && setStarred(ids.has(id)));
@@ -376,6 +385,23 @@ export default function VenuePage() {
           >
             <StopGallery images={images} alt={venue.name} />
             <View style={{ position: "absolute", top: 12, right: GUTTER }}>{cornerIcons(true)}</View>
+            {photoCredit ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  position: "absolute",
+                  top: 20,
+                  left: GUTTER,
+                  right: 110,
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.88)",
+                  textShadowColor: "rgba(0,0,0,0.6)",
+                  textShadowRadius: 3,
+                }}
+              >
+                {photoCredit}
+              </Text>
+            ) : null}
             {/* The photo fades into the page, and the name sits on the fade (redesign). */}
             <LinearGradient
               pointerEvents="none"

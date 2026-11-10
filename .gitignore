@@ -39,3 +39,6 @@ venues-to-research-place.csv
 research/
 venues-to-verify.txt
 venues-to-research-menu.csv
+
+# Google Places details cached for the photo and menu research (Google content: not committed)
+scripts/data/places-facts.json

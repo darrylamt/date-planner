@@ -213,6 +213,17 @@ export class SignInRequiredError extends Error {
   }
 }
 
+/**
+ * Who took the cover photo, for a free-licensed one (0105): CC BY and CC BY-SA
+ * pictures may be shown only with this line. Null when there is none, and
+ * before 0105 has run, when the column is not there to read.
+ */
+export async function fetchPhotoCredit(venueId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("venues").select("image_credit").eq("id", venueId).maybeSingle();
+  if (error) return null;
+  return (data as { image_credit?: string | null } | null)?.image_credit ?? null;
+}
+
 /** Save a plan for the signed-in user; returns the share slug. */
 export async function savePlan(inputs: PlanInputs, itinerary: Itinerary): Promise<string> {
   const {
