@@ -46,7 +46,7 @@ type Dest = { slug: string; name: string; region: string; town: string | null; l
 
 async function getText(url: string): Promise<{ html: string; url: string } | null> {
   try {
-    const r = await fetch(url, { headers: { "user-agent": UA }, redirect: "follow", signal: AbortSignal.timeout(15_000) });
+    const r = await fetch(url, { headers: { "user-agent": UA }, redirect: "follow", signal: AbortSignal.timeout(Number(process.env.STAY_TIMEOUT_MS ?? 15_000)) });
     if (!r.ok || !/html/i.test(r.headers.get("content-type") ?? "html")) return null;
     return { html: await r.text(), url: r.url || url };
   } catch {
