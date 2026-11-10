@@ -1598,6 +1598,15 @@ export function planOrders(
   // The meal is had at a table: never a dessert shop's waffles, nor a gallery's door.
   if (opts.meal && venue.type !== "restaurant" && venue.type !== "cafe" && venue.type !== "lounge") return null;
 
+  /*
+   * A restaurant or cafe with no menu we hold, in a plan that allows
+   * estimates: its head's guess stands for the meal (the estimate branch
+   * below, labelled as a guess). Without this the "no mains, no meal" refusal
+   * came first, so where no restaurant has a menu on file (every trip day in
+   * Takoradi, 10 Nov 2026) there was never a meal at all.
+   */
+  const estimateMeal = Boolean(venue.estimate) && !menu.length && (venue.type === "restaurant" || venue.type === "cafe");
+
   if ((venue.type === "restaurant" || venue.type === "cafe") && opts.course) {
     const small = (cats: string[]) => cats.map((c) => () => orderFrom(c, partySize)).reduce<OrderLine[]>((f, n) => (f.length ? f : n()), []);
     if (opts.course === "dessert") lines.push(...small(["dessert", "starter"]));
@@ -1612,7 +1621,7 @@ export function planOrders(
         ? [() => orderFrom("main", partySize), () => orderFrom("starter", partySize)]
         : [() => orderFrom("main", partySize), () => orderFrom("other", partySize), () => orderFrom("starter", partySize)]
     ).reduce<OrderLine[]>((found, next) => (found.length ? found : next()), []);
-    if (opts.meal && !mains.length) return null;
+    if (opts.meal && !mains.length && !estimateMeal) return null;
 
     /*
      * Courses around the mains, only at the fullest tier and only when there

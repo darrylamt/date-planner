@@ -33,7 +33,14 @@ export type Comfort = (typeof COMFORTS)[number];
  * start for a night out with friends (planConstants, GHS 400 each), and each
  * part of the trip asks for its hours' share: a full day about twice that.
  */
-const PER_HEAD_4H: Record<Comfort, number> = { easy: 250, mid: 400, treat: 700 };
+/*
+ * What four hours out costs a head at each comfort, the budget each part of a
+ * day is planned to. Raised 10 Nov 2026 (was 250 / 400 / 700): outside Accra
+ * most meals are estimates budgeted at the top of their band, and the rides
+ * between a stay and the sights are longer, so 400 a head fitted no evening
+ * in Takoradi. The plan still shows what it actually comes to.
+ */
+const PER_HEAD_4H: Record<Comfort, number> = { easy: 350, mid: 600, treat: 1000 };
 
 export const tripInputsSchema = z.object({
   to: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(40),
