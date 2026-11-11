@@ -24,7 +24,7 @@ const dry = process.argv.includes("--dry");
 // How many places a destination should hold: 6 makes it ready; more keeps a two-night trip from running out (--target 14).
 const targetAt = process.argv.indexOf("--target");
 const TARGET = targetAt >= 0 ? Number(process.argv[targetAt + 1]) : 6;
-const MASK = "places.id,places.displayName,places.rating,places.userRatingCount,places.businessStatus,places.primaryType,places.types,places.location";
+const MASK = "places.id,places.formattedAddress,places.displayName,places.rating,places.userRatingCount,places.businessStatus,places.primaryType,places.types,places.location";
 const FOOD = /restaurant|cafe|coffee|bar|pub|lounge|bakery|food|grill|pizza|dessert|ice_cream|night_club/;
 const SIGHT = /tourist_attraction|museum|park|historical|landmark|zoo|wildlife|hiking|beach|waterfall|art_gallery|cultural|monument|amusement/;
 
@@ -39,9 +39,10 @@ async function search(q: string, lat: number, lng: number, radiusM: number): Pro
     body: JSON.stringify({ textQuery: q, locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: radiusM } }, regionCode: "GH", languageCode: "en" }),
   });
   if (!r.ok) return [];
-  const j = (await r.json()) as { places?: { id: string; displayName?: { text: string }; rating?: number; userRatingCount?: number; businessStatus?: string; primaryType?: string; types?: string[]; location?: { latitude: number; longitude: number } }[] };
+  const j = (await r.json()) as { places?: { id: string; displayName?: { text: string }; rating?: number; userRatingCount?: number; businessStatus?: string; primaryType?: string; types?: string[]; location?: { latitude: number; longitude: number }; formattedAddress?: string }[] };
   return (j.places ?? [])
-    .filter((p) => p.businessStatus === "OPERATIONAL" && p.location)
+    // Ghana only: Wli and Afadjato sit on the Togo border, Paga on Burkina Faso's.
+    .filter((p) => p.businessStatus === "OPERATIONAL" && p.location && !/Togo|Burkina|Ivoire/i.test(p.formattedAddress ?? ""))
     .map((p) => {
       const types = p.types ?? [];
       const all = `${p.primaryType ?? ""} ${types.join(" ")}`;
@@ -80,7 +81,7 @@ async function main() {
     const taken = new Set<string>(nearNames);
     const placeWords = new Set(words(`${place} ${d.name}`));
     const ok = [...found.values()]
-      .filter((h) => !held.has(h.id) && h.rating >= 4 && h.count >= (small ? 8 : 15) && haversineKm(centre, h) <= r)
+      .filter((h) => !held.has(h.id) && h.rating >= 4 && h.count >= (small ? 5 : 15) && haversineKm(centre, h) <= r)
       // Judged by hand on the dry run of 10 Nov: already held under another name, or the town itself.
       .filter((h) => !["visit wli waterfalls", "mount afadjato", "elimina"].includes(h.name.toLowerCase()))
       .filter((h) => !/car ?park|office|entrance|gate\b|region|district|municipal|catering|trail$/i.test(h.name) && !h.types.some((t) => /locality|political|catering|administrative/.test(t)))
