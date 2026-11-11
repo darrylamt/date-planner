@@ -2341,8 +2341,10 @@ function planWith(
      * event's ticket is the event's, so either replaces the usual one rather
      * than adding to it: nobody pays the Friday cover and the ordinary one.
      */
+    // A visitor pays the visitor price where one is recorded (0106), else the usual one.
+    const visitorFee = inputs.visitor && venue.entry_fee_visitor_ghs != null ? Number(venue.entry_fee_visitor_ghs) : null;
     const usual =
-      !covers.length && ticket == null && venue.entry_fee_ghs != null ? Number(venue.entry_fee_ghs) : null;
+      !covers.length && ticket == null && venue.entry_fee_ghs != null ? (visitorFee ?? Number(venue.entry_fee_ghs)) : null;
 
     const door = fixtureCover + (ticket ?? 0) + (usual ?? 0);
     const doorTotal = Math.round(door * inputs.partySize);
@@ -2360,7 +2362,9 @@ function planWith(
       ? opts.doorLabel
       : fixtures.length
         ? `${fixtures.map((f) => f.title).join(" and ")} — entry`
-        : "Entry";
+        : usual != null && visitorFee != null
+          ? "Entry (visitor price)"
+          : "Entry";
     /*
      * A free door is still worth a line.
      *

@@ -119,6 +119,7 @@ export const MATERIAL: Record<string, AndroidSymbol> = {
   star: "star",
   "star.fill": "star",
   "suitcase.fill": "luggage",
+  globe: "public",
   "sun.max": "light_mode",
   ticket: "confirmation_number",
   timer: "timer",

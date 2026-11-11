@@ -96,6 +96,8 @@ export const planInputsSchema = z.object({
   diet: z.array(z.enum(["vegetarian", "vegan", "no_pork", "no_beef", "no_seafood"])).max(5).optional().catch(undefined),
   // Places with no menu, at an estimate (29 Oct 2026). Absent from older builds.
   estimates: z.boolean().optional().catch(undefined),
+  // "I'm visiting Ghana" (0106): sights charge their visitor price where one is known. Absent from older builds.
+  visitor: z.boolean().optional().catch(undefined),
   partner: z.object({
     name: z.string().max(60).default(""),
     gender: z.enum(["unspecified", "female", "male"]).default("unspecified"),

@@ -29,6 +29,7 @@ import { BILLER, CANCEL_WHERE, REVIEW_URL } from "../src/lib/store";
 import { IssueSheet } from "../src/components/IssueSheet";
 import { getAiConsent, setAiConsent } from "../src/lib/aiConsent";
 import { nudgesOn, setNudges } from "../src/lib/nudges";
+import { isVisitor, setVisitor } from "../src/lib/visitor";
 import { ProSheet } from "../src/components/profile/ProSheet";
 import { fetchAllowance } from "../src/lib/chat";
 import { clearDraft, loadDraft } from "../src/lib/draft";
@@ -97,6 +98,8 @@ export default function Profile() {
   const [aiAllowed, setAiAllowed] = useState(false);
   // Weekend ideas (nudges.ts): null when signed out or before the server has them.
   const [nudges, setNudgesState] = useState<boolean | null>(null);
+  // "I'm visiting Ghana" (visitor.ts).
+  const [visitor, setVisitorState] = useState(false);
   const [proOpen, setProOpen] = useState(false);
   const [allowance, setAllowance] = useState<Awaited<ReturnType<typeof fetchAllowance>>>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +111,7 @@ export default function Profile() {
       void loadDraft().then((d) => active && setHasDraft(Boolean(d?.inputs)));
       void getAiConsent().then((v) => active && setAiAllowed(v === "granted"));
       void nudgesOn().then((v) => active && setNudgesState(v));
+      void isVisitor().then((v) => active && setVisitorState(v));
       if (session) {
         void countSavedPlans().then((n) => active && setPlanCount(n));
         void fetchProfile().then((p) => active && setProfile(p));
@@ -496,6 +500,25 @@ export default function Profile() {
           />
         </Group>
       ) : null}
+
+      {/* Visitor prices (0106): castles and museums charge visitors from abroad more. */}
+      <Group header="Prices" footer="Castles, museums and parks charge visitors from abroad more than Ghanaians. Plans and trips use the right price.">
+        <Row
+          icon="globe"
+          title="I'm visiting Ghana"
+          subtitle="Show sights at their visitor price"
+          trailing={
+            <Toggle
+              value={visitor}
+              onValueChange={(on) => {
+                setVisitorState(on);
+                void setVisitor(on);
+              }}
+              accessibilityLabel="I'm visiting Ghana"
+            />
+          }
+        />
+      </Group>
 
       <Group header="Privacy">
         <Row

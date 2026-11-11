@@ -123,6 +123,8 @@ export interface Venue {
    * nothing. A weekly night's cover overrides it. Absent before 0075.
    */
   entry_fee_ghs?: number | null;
+  /** 0106. What a non-Ghanaian adult pays; null when only the Ghanaian price is known. */
+  entry_fee_visitor_ghs?: number | null;
   /**
    * local, continental, or both. Null means nobody has recorded it, which is
    * deliberately not the same as both and is never read as either.
@@ -584,6 +586,8 @@ export interface PlanInputs {
    * suggest it.
    */
   estimates?: boolean;
+  /** "I'm visiting Ghana" (0106): sights charge their visitor price where one is known. */
+  visitor?: boolean;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that

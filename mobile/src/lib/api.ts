@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { isVisitor } from "./visitor";
 import Constants from "expo-constants";
 import { getDeviceId } from "./deviceId";
 import { supabase } from "./supabase";
@@ -68,7 +69,8 @@ async function whoIsAsking(): Promise<Record<string, string>> {
 
 export async function generatePlan(inputs: PlanInputs): Promise<GenerateResponse> {
   try {
-    return await postJson<GenerateResponse>("/api/generate", inputs, await whoIsAsking());
+    // "I'm visiting Ghana" (visitor.ts): sights at their visitor price.
+    return await postJson<GenerateResponse>("/api/generate", { ...inputs, visitor: (await isVisitor()) || undefined }, await whoIsAsking());
   } catch (e) {
     const aborted = (e as Error)?.name === "AbortError";
     return {
@@ -508,7 +510,7 @@ export type TripResponse =
 export async function generateTrip(inputs: TripInputs): Promise<TripResponse> {
   if (!BASE) return { status: "error", message: "The app isn't connected to the planner." };
   try {
-    return await postJson<TripResponse>("/api/trip/generate", inputs, await whoIsAsking());
+    return await postJson<TripResponse>("/api/trip/generate", { ...inputs, visitor: await isVisitor() }, await whoIsAsking());
   } catch {
     return { status: "error", message: "We couldn't reach the planner. Check your connection and try again." };
   }

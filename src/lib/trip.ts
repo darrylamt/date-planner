@@ -51,6 +51,8 @@ export const tripInputsSchema = z.object({
   comfort: z.enum(COMFORTS).default("mid"),
   travel: z.enum(["any", "bus", "trotro", "car", "flight", "ferry"]).default("any"),
   vibes: z.array(z.string().max(60)).max(3).default([]),
+  // "I'm visiting Ghana": sights at their visitor price (0106).
+  visitor: z.boolean().default(false),
 });
 export type TripInputs = z.infer<typeof tripInputsSchema>;
 
@@ -426,6 +428,7 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
       hours,
       // Two stops a part outside Accra, a meal and a sight or activity: travel days are slower, and towns hold fewer places (10 Nov 2026).
       stops: city !== "Accra" ? 2 : 0,
+      visitor: inputs.visitor,
       vibes: inputs.vibes,
       occasion: party === 1 ? "solo_day" : "friend_outing",
       ai: false,

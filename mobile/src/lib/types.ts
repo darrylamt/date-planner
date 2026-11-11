@@ -589,6 +589,8 @@ export interface PlanInputs {
    * suggest it.
    */
   estimates?: boolean;
+  /** "I'm visiting Ghana" (0106): sights charge their visitor price where one is known. */
+  visitor?: boolean;
   /**
    * Answers to the occasion's own question, keyed by field. Whose birthday it
    * is, what someone graduated in, what a solo day is for, the things that
