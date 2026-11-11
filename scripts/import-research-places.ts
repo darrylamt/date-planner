@@ -58,12 +58,15 @@ async function main() {
   const header = cells(lines[0]);
   const rows = lines.slice(1).map((l) => Object.fromEntries(cells(l).map((c, i) => [header[i], c])) as Record<string, string>);
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data: dests } = await db.from("destinations").select("slug, name, town, lat, lng");
+  const { data: dests } = await db.from("destinations").select("slug, name, town, region, lat, lng");
+  // Exactly, by slug, name or town: "Kintampo waterfalls" contains "wa", and matching inside names sent Kintampo to Wa.
   const destFor = (name: string) =>
-    ((dests ?? []) as { slug: string; name: string; town: string | null; lat: number; lng: number }[]).find((d) =>
-      [d.slug, d.name, d.town].some((x) => x && compact(x) && (compact(x).includes(compact(name)) || compact(name).includes(compact(x))))
+    ((dests ?? []) as { slug: string; name: string; town: string | null; region: string; lat: number; lng: number }[]).find((d) =>
+      [d.slug, d.name, d.town].some((x) => x && compact(x).length >= 3 && (compact(x) === compact(name) || compact(name).startsWith(compact(x))))
     );
   const today = new Date().toISOString().slice(0, 10);
+  const { data: allVenues } = await db.from("venues").select("name, lat, lng").limit(5000);
+  const heldNames = (allVenues ?? []) as { name: string; lat: number | null; lng: number | null }[];
   let added = 0;
   for (const r of rows) {
     const label = `${r.name} (${r.town}, ${r.type})`;
@@ -78,10 +81,18 @@ async function main() {
     const dest = destFor(r.destination || r.town);
     const near = dest ? { lat: Number(dest.lat), lng: Number(dest.lng) } : undefined;
     const hits = await findPlaces(`${r.name}, ${r.town}, Ghana`, near, 30_000);
-    const want = compact(r.name);
+    /*
+     * Most of the name's own words must be in the listing's: "Lake Bosomtwe
+     * Information Centre" is not "Lake Bosomtwe Paradise Resort" though both
+     * start "Lake Bosomtwe".
+     */
+    const GENERIC = new Set(["the", "and", "of", "lake", "ghana", "national", "park", "hotel", "resort", "lodge", "guest", "house", "guesthouse", "centre", "center", "community"]);
+    const wordsOf = (n: string) => n.toLowerCase().replace(/'s/g, "").split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !GENERIC.has(w));
+    const mine = wordsOf(r.name);
     const hit = hits.find((h) => {
-      const got = compact(h.name);
-      const named = got.includes(want.slice(0, 8)) || want.includes(got.slice(0, 8));
+      const theirs = wordsOf(h.name);
+      const shared = mine.filter((w) => theirs.some((t) => t === w || (w.length >= 5 && (t.startsWith(w) || w.startsWith(t)))));
+      const named = mine.length > 0 && shared.length / mine.length >= 0.6;
       const close = !near || h.lat == null || haversineKm(near, { lat: h.lat, lng: h.lng! }) <= 40;
       return named && close && !/Togo|Burkina|Ivoire/i.test(h.address ?? "");
     });
@@ -90,7 +101,8 @@ async function main() {
       continue;
     }
     const { data: held } = await db.from("venues").select("id").eq("google_place_id", hit.id).maybeSingle();
-    if (held) {
+    const sameName = heldNames.find((v) => compact(v.name) === compact(hit.name) && (!near || v.lat == null || haversineKm(near, { lat: +v.lat, lng: +v.lng }) <= 40));
+    if (held || sameName) {
       console.log(`  ${label}: already held, skipped`);
       continue;
     }
@@ -121,7 +133,7 @@ async function main() {
     }
     if (Object.keys(patch).length) await db.from("venues").update(patch).eq("id", id);
     if (r.type === "stay") {
-      await db.from("stay_details").upsert({ venue_id: id, kind: "hotel", region: "Greater Accra", town: r.town, rates_checked_on: night != null ? today : null, notes: r.price_note ? `${r.price_note}${source}` : null }, { onConflict: "venue_id" });
+      await db.from("stay_details").upsert({ venue_id: id, kind: "hotel", region: dest?.region ?? "Greater Accra", town: r.town, rates_checked_on: night != null ? today : null, notes: r.price_note ? `${r.price_note}${source}` : null }, { onConflict: "venue_id" });
       if (night != null) {
         await db.from("stay_rooms").insert({ venue_id: id, name: (r.room_name || "Standard room").slice(0, 80), room_type: "double", sleeps: 2, price_per_night_ghs: night, notes: `As published${source}`.slice(0, 500) });
       }
