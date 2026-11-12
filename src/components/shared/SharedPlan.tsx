@@ -9,6 +9,7 @@ import { confetti, inkOn, useReducedMotion } from "@/components/fx/motion";
 import { SmartImage } from "@/components/SmartImage";
 import { DuroMark, Logo } from "@/components/Logo";
 import { storeLink } from "@/lib/links";
+import { PlanRsvp } from "./PlanRsvp";
 import { trackShare } from "@/lib/shareEvents";
 
 export interface SharedStop {
@@ -52,6 +53,8 @@ export interface SharedPlanProps {
   slug: string;
   /** Halloween season: the logo is the season's own. */
   halloween?: boolean;
+  /** Whether "Are you in?" is offered (0107): the table is there and the day has not passed. */
+  rsvp?: boolean;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -301,6 +304,8 @@ export function SharedPlan(p: SharedPlanProps) {
 
               <StartsIn now={now} startsAt={p.startsAt} endsAt={p.endsAt} />
               {p.note ? <Note text={p.note} reduced={reduced} /> : null}
+              {/* An invitation is answered: one tap, and the planner's phone is told (0107). */}
+              {p.rsvp ? <PlanRsvp slug={p.slug} colors={p.colors} ink={ink} day={p.weekday.replace(/,$/, "")} reduced={reduced} /> : null}
             </div>
           </section>
 

@@ -119,6 +119,13 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
   const startsAt = Date.parse(`${inputs.date}T${inputs.startTime}:00Z`);
   const length = stops.reduce((t, st) => t + (st.duration_mins ?? 0), 0) + hops.reduce((t, m) => t + m, 0);
 
+  /*
+   * "Are you in?" (0107): offered until the day after the plan, and only once
+   * the table is there, so this page can ship before its migration.
+   */
+  const upcoming = !Number.isNaN(startsAt) && startsAt + 2 * 86_400_000 > Date.now();
+  const rsvp = upcoming && !(await supabase.from("plan_responses").select("id", { count: "exact", head: true }).limit(1)).error;
+
   const shared: SharedStop[] = stops.map((st, i) => ({
     key: `${st.venue_id}-${i}`,
     name: st.name,
@@ -163,6 +170,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
       entrance={occasionEntrance(inputs.occasion)}
       slug={params.slug}
       halloween={isHalloween()}
+      rsvp={rsvp}
     />
   );
 }

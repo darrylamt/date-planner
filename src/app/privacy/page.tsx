@@ -183,6 +183,15 @@ export default function PrivacyPage() {
           The count holds which plan and its occasion, and nothing about the
           person: no account, no address, and nothing stored on their device.
         </p>
+        <p>
+          Somebody a plan was sent to can answer on its page: &quot;I&apos;m in&quot; or
+          &quot;Can&apos;t make it&quot;, with their name and a message if they choose to
+          type them. The answer goes to the person who made the plan and to
+          nobody else, and is deleted with the plan. So that answering again
+          changes the answer rather than adding one, their browser keeps a
+          random number; we store only a scrambled form of it, which cannot be
+          turned back into anything about them.
+        </p>
       </Section>
 
       <Section title="Deleting your account">

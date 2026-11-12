@@ -344,6 +344,34 @@ export async function updateSavedItinerary(
   return !error;
 }
 
+/** What somebody a plan was sent to answered on its page (0107): "I'm in" or "Can't make it". */
+export interface PlanResponse {
+  answer: "in" | "cant";
+  name: string | null;
+  note: string | null;
+  updated_at: string;
+}
+
+/**
+ * The answers to one of your own plans, newest first. Only the planner can
+ * read them (0107's policy). Empty before 0107 has run, or when nobody has
+ * answered: either way there is nothing to show.
+ */
+export async function fetchPlanResponses(slug: string): Promise<PlanResponse[]> {
+  try {
+    const { data, error } = await supabase
+      .from("plan_responses")
+      .select("answer, name, note, updated_at, plans!inner(share_slug)")
+      .eq("plans.share_slug", slug)
+      .order("updated_at", { ascending: false })
+      .limit(20);
+    if (error || !data) return [];
+    return (data as unknown as PlanResponse[]).map((r) => ({ answer: r.answer, name: r.name, note: r.note, updated_at: r.updated_at }));
+  } catch {
+    return [];
+  }
+}
+
 export async function setPlannerNote(slug: string, note: string): Promise<boolean> {
   const trimmed = note.trim().slice(0, 400);
   const { error } = await supabase

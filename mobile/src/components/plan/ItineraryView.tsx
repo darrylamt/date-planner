@@ -39,7 +39,7 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs, instagramUrl, longDate } from "../../lib/format";
 import { chargeableSubtotal, chargesOn, chargesTotal, isDriving, liveConfidence } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
-import { createReservation, fetchVenueContact, setPlannerNote } from "../../lib/data";
+import { createReservation, fetchPlanResponses, fetchVenueContact, setPlannerNote, type PlanResponse } from "../../lib/data";
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
 import { nativeOptional } from "../../lib/nativeOptional";
 import { chooseAction } from "../../lib/actionSheet";
@@ -121,6 +121,34 @@ export function ItineraryView({
   const [noteMode, setNoteMode] = useState<"share" | "edit">("share");
   const [note, setNote] = useState<string | null>(initialNote?.trim() || null);
   useEffect(() => setNote(initialNote?.trim() || null), [initialNote]);
+  /*
+   * What the people it was sent to answered on its page (0107), read whenever
+   * the plan comes back on screen: the push that says "Ama is in" opens here.
+   */
+  const [responses, setResponses] = useState<PlanResponse[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!shareSlug) return;
+      let live = true;
+      void fetchPlanResponses(shareSlug).then((r) => live && setResponses(r));
+      return () => {
+        live = false;
+      };
+    }, [shareSlug])
+  );
+  /*
+   * Who the button sends it to (owner, 12 Nov 2026): "Send to Ama" is a thing
+   * to do; "Save & share" was a thing the app could do. In thirty days about
+   * five plans in 435 were shared.
+   */
+  const sendTitle = (() => {
+    const first = inputs.partner?.name?.trim().split(/\s+/)[0];
+    const date = inputs.occasion === "first_date" || inputs.occasion === "date_night" || inputs.occasion === "anniversary";
+    if (date && first) return `Send to ${first.slice(0, 14)}`;
+    if (date) return "Send to your date";
+    if (inputs.occasion === "solo_day" || inputs.occasion === "business_meeting" || inputs.partySize < 2) return shareSlug ? "Share plan" : "Save & share";
+    return inputs.partySize > 2 ? "Send to the group" : "Send it to them";
+  })();
   const [pickupOpen, setPickupOpen] = useState(false);
   const [pickup, setPickup] = useState<PickupChoice | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
@@ -749,6 +777,33 @@ export function ItineraryView({
           to the shared page and never come back, so nobody who had written
           one could check it or change it.
         */}
+        {responses.length ? (
+          <View
+            style={{
+              marginHorizontal: GUTTER,
+              marginBottom: space.lg,
+              padding: space.lg,
+              borderRadius: radius.card,
+              backgroundColor: c.backgroundElement,
+              gap: space.sm,
+            }}
+          >
+            {responses.map((r, i) => (
+              <View key={`${r.updated_at}-${i}`} style={{ flexDirection: "row", alignItems: "flex-start", gap: space.sm }}>
+                <Symbol name={r.answer === "in" ? "checkmark.circle.fill" : "xmark.circle"} size={18} color={r.answer === "in" ? c.accent : c.textSecondary} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="headline">{`${r.name ?? "Your guest"} ${r.answer === "in" ? "is in" : "can't make it"}`}</Text>
+                  {r.note ? (
+                    <Text variant="subheadline" tone="secondary">
+                      {`"${r.note}"`}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {shareSlug && note ? (
           <Pressable
             onPress={() => {
@@ -989,10 +1044,14 @@ export function ItineraryView({
       </ScrollView>
 
       <ActionBar>
+        {/* What stops people sending a plan: the budget on show. The page they get has no prices on it. */}
+        <Text variant="caption1" tone="secondary" center>
+          They see the plan and can say they're in. The prices stay with you.
+        </Text>
         <View style={{ flexDirection: "row", gap: space.sm }}>
           <View style={{ flex: 1 }}>
             <Button
-              title={shareSlug ? "Share plan" : "Save & share"}
+              title={sendTitle}
               icon="square.and.arrow.up"
               onPress={handleShare}
               loading={saving}

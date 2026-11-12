@@ -18,6 +18,8 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   answers the server and refuses anon both ways; audit:smoke 23/23).
   0103_venue_stars.sql ran the same day (probed: a free account stops at
   10, Pro does not, nobody sees or writes another's stars; audit:smoke 23/23).
+- 0107_plan_responses.sql ran on 12 November 2026 (probed: the server reads
+  it, anon can neither read nor write); in `archive/`.
 - 0106_visitor_fees.sql ran on 11 November 2026 (entry_fee_visitor_ghs on
   venues, readable by the app); in `archive/`.
 - 0105_venue_photo_credit.sql ran on 10 November 2026 (image_credit and
