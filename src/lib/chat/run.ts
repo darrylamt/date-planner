@@ -1,5 +1,5 @@
 import { CHAT_TOOLS, planFrom, runTool, type ToolContext } from "./tools";
-import { buildCards, cardCandidates, namedIn } from "./cards";
+import { buildCards, cardCandidates, factCard, namedIn, usedFacts } from "./cards";
 import type { ChatCard } from "../types";
 import {
   MAX_TOKENS,
@@ -67,6 +67,8 @@ export async function* runChat(opts: {
   /** What the person just sent, already prefixed with any opening context. */
   userContent: string;
   ctx: ToolContext;
+  /** The app draws guide facts as cards (it sent cards: 2). Older apps would show them as films. */
+  factCards?: boolean;
 }): AsyncGenerator<ChatEvent> {
   const { provider, system, ctx } = opts;
 
@@ -163,7 +165,10 @@ export async function* runChat(opts: {
      * model reads it back), so they are there when the conversation reopens.
      */
     if (text && candidates.length) {
-      const cards = await buildCards(ctx.catalog, namedIn(text, candidates)).catch(() => [] as ChatCard[]);
+      const cards = [
+        ...(opts.factCards ? usedFacts(text, candidates).map(factCard) : []),
+        ...(await buildCards(ctx.catalog, namedIn(text, candidates)).catch(() => [] as ChatCard[])),
+      ];
       if (cards.length) {
         yield { type: "cards", cards };
         assistantTurn.content = [...assistantTurn.content, { type: "cards", cards } as unknown as ChatBlock];

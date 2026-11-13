@@ -32,7 +32,7 @@ export function ChatCards({ cards, inset }: { cards: ChatCard[]; inset: number }
       horizontal
       showsHorizontalScrollIndicator={false}
       decelerationRate="fast"
-      snapToInterval={WIDTH + space.sm}
+      snapToInterval={cards.every((x) => x.kind === "fact") ? WIDTH + 40 + space.sm : WIDTH + space.sm}
       snapToAlignment="start"
       // Out to the screen's edge, so the row scrolls under it rather than stopping short.
       style={{ marginHorizontal: -GUTTER, marginTop: space.xs, marginBottom: space.md }}
@@ -45,8 +45,94 @@ export function ChatCards({ cards, inset }: { cards: ChatCard[]; inset: number }
   );
 }
 
+/** A guide fact's topic: its label and icon (cards.ts factCard; 13 Nov 2026). */
+const TOPIC: Record<string, { label: string; icon: string }> = {
+  emergency: { label: "EMERGENCY", icon: "phone.fill" },
+  safety: { label: "SAFETY", icon: "shield.lefthalf.filled" },
+  getting_around: { label: "GETTING AROUND", icon: "car.fill" },
+  entry: { label: "VISAS AND ENTRY", icon: "airplane" },
+  health: { label: "HEALTH", icon: "cross.case.fill" },
+  law: { label: "THE LAW", icon: "building.columns.fill" },
+  money: { label: "MONEY", icon: "banknote.fill" },
+  costs: { label: "WHAT THINGS COST", icon: "tag.fill" },
+  phones: { label: "PHONES", icon: "simcard.fill" },
+  seasons: { label: "SEASONS", icon: "cloud.sun.fill" },
+  december: { label: "DECEMBER", icon: "sparkles" },
+};
+
+function FactCard({ card }: { card: ChatCard }) {
+  const c = useTheme();
+  const t = TOPIC[card.topic ?? ""] ?? { label: "GOOD TO KNOW", icon: "info.circle.fill" };
+  const urgent = card.topic === "emergency" || card.topic === "safety";
+  const tap = (fn: () => void) => () => {
+    void Haptics.selectionAsync();
+    fn();
+  };
+  const actions: { label: string; icon: string; onPress: () => void }[] = [
+    ...(card.phones ?? []).map((n) => ({ label: `Call ${n}`, icon: "phone.fill", onPress: () => void Linking.openURL(`tel:${n.replace(/\s+/g, "")}`) })),
+    ...(card.link ? [{ label: "Source", icon: "doc.text", onPress: () => void Linking.openURL(card.link!) }] : []),
+  ].slice(0, 3);
+  return (
+    <View
+      accessibilityLabel={[t.label, card.title, card.detail, card.subtitle].filter(Boolean).join(", ")}
+      style={{ width: WIDTH + 40, borderRadius: radius.card, overflow: "hidden", backgroundColor: c.backgroundElement, borderWidth: HAIRLINE, borderColor: c.border }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, backgroundColor: urgent ? c.accent : c.backgroundSunken }}>
+        <Symbol name={t.icon as never} size={16} color={urgent ? c.textOnBrand : c.accent} weight="semibold" />
+        <Text variant="caption1" weight="700" style={{ letterSpacing: 0.5, color: urgent ? c.textOnBrand : c.accent }}>
+          {t.label}
+        </Text>
+      </View>
+      <View style={{ padding: space.md, gap: 4, flex: 1 }}>
+        <Text variant="headline" numberOfLines={2}>
+          {card.title}
+        </Text>
+        {card.detail ? (
+          <Text variant="footnote" numberOfLines={6}>
+            {card.detail}
+          </Text>
+        ) : null}
+        {card.subtitle ? (
+          <Text variant="caption1" tone="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
+            {card.subtitle}
+          </Text>
+        ) : null}
+        {actions.length ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.xs, marginTop: space.sm }}>
+            {actions.map((a, i) => (
+              <Pressable
+                key={a.label}
+                onPress={tap(a.onPress)}
+                accessibilityRole="button"
+                accessibilityLabel={`${a.label}: ${card.title}`}
+                hitSlop={4}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: space.sm + 2,
+                  height: 32,
+                  borderRadius: radius.pill,
+                  backgroundColor: i === 0 ? c.accent : c.backgroundSelected,
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Symbol name={a.icon as never} size={12} color={i === 0 ? c.textOnBrand : c.text} weight="semibold" />
+                <Text variant="footnote" weight="700" style={{ color: i === 0 ? c.textOnBrand : c.text }}>
+                  {a.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function Card({ card }: { card: ChatCard }) {
   const c = useTheme();
+  if (card.kind === "fact") return <FactCard card={card} />;
   const tap = (fn: () => void) => () => {
     void Haptics.selectionAsync();
     fn();

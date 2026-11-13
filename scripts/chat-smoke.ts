@@ -100,7 +100,7 @@ async function main() {
     const userContent = `${buildOpeningContext(today, areaNames, { time })}\n\n${q.ask}`;
     let answer = "";
 
-    for await (const ev of runChat({ provider, system: SYSTEM, history: [], userContent, ctx })) {
+    for await (const ev of runChat({ provider, system: SYSTEM, history: [], userContent, ctx, factCards: true })) {
       if (ev.type === "tool") console.log(`\x1b[2m  · ${ev.label} (${ev.name})\x1b[0m`);
       else if (ev.type === "plan") {
         // The event the app turns into a "View plan" button.
@@ -114,6 +114,7 @@ async function main() {
           console.log(`\x1b[32m      ${st.arrival_time}  ${st.name} (${st.area})\x1b[0m`);
         }
       }
+      else if (ev.type === "cards") for (const cd of ev.cards) console.log(`[35m  [card ${cd.kind}] ${cd.title} | ${cd.subtitle} | ${cd.detail ?? ""}${cd.phones?.length ? ` | call ${cd.phones.join(", ")}` : ""}${cd.link && cd.kind === "fact" ? " | source link" : ""}[0m`);
       else if (ev.type === "text") answer += ev.text;
       else if (ev.type === "error") console.log(`\x1b[31m  error: ${ev.message}\x1b[0m`);
       else if (ev.type === "done") {

@@ -833,7 +833,8 @@ export interface StopAlternate {
  * instead of the same facts typed out as a list.
  */
 export interface ChatCard {
-  kind: "venue" | "event" | "film";
+  /** "fact": a guide answer (ghana_guide), sent only to apps that say they draw it. */
+  kind: "venue" | "event" | "film" | "fact";
   title: string;
   /** Where and when, in one line: "Osu · Restaurant", "Bistro 22 · Sat 31 Oct, 7pm". */
   subtitle: string;
@@ -847,8 +848,12 @@ export interface ChatCard {
   /** For planning around an event or a film: its day and start (YYYY-MM-DD, HH:MM). */
   date: string | null;
   start: string | null;
-  /** Tickets or showtimes, where there is a page for them. */
+  /** Tickets or showtimes, where there is a page for them; for a fact, its source. */
   link: string | null;
+  /** A fact's topic, for its icon: emergency, safety, entry, health, money... */
+  topic?: string;
+  /** Numbers a fact gives, each a call button. */
+  phones?: string[];
 }
 
 export interface PriceConfidence {

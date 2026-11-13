@@ -74,6 +74,7 @@ export const ghanaGuide: ChatTool<GhanaGuideArgs> = {
         fact: f.fact,
         ...(f.place ? { place: f.place } : {}),
         source: f.sources.map((s) => `${s.name} (${s.dated})`).join("; "),
+        ...((f.sources as { url?: string }[]).find((s) => s.url) ? { source_url: (f.sources as { url?: string }[]).find((s) => s.url)!.url } : {}),
         ...(f.unconfirmed ? { unconfirmed: "Sources disagree or a detail is unread: say it is to be confirmed." } : {}),
       })),
       read_on: guide.read_on,

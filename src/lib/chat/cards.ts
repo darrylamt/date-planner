@@ -20,7 +20,8 @@ type Candidate =
   | { kind: "venue"; id: string; name: string; area: string; type: string; price: string | null; open?: string }
   | { kind: "event"; title: string; venueId: string | null; venue: string | null; when: string | null; price: string | null }
   | { kind: "night"; venueId: string; venue: string; night: string }
-  | { kind: "film"; title: string; cinema: string | null; showing: string | null };
+  | { kind: "film"; title: string; cinema: string | null; showing: string | null }
+  | { kind: "fact"; title: string; fact: string; topic: string; source: string; url: string | null };
 
 const MAX_CARDS = 8;
 const TYPE_LABEL: Record<string, string> = {
@@ -90,8 +91,17 @@ export function cardCandidates(tool: string, content: unknown): Candidate[] {
   if (tool === "search_menu_items" && Array.isArray(c.matches)) {
     for (const m of c.matches as Record<string, unknown>[]) {
       if (typeof m.venue_id === "string" && typeof m.venue === "string") {
-        out.push({ kind: "venue", id: m.venue_id, name: m.venue, area: String(m.area ?? ""), type: "", price: null });
+        // The dish they asked about and its price, on the place's card (13 Nov 2026).
+        const item = (Array.isArray(m.items) ? (m.items as { name?: string; price_ghs?: number }[]) : [])[0];
+        const dish = item?.name && item.price_ghs != null ? `${item.name} · GHS ${item.price_ghs}` : null;
+        out.push({ kind: "venue", id: m.venue_id, name: m.venue, area: String(m.area ?? ""), type: "", price: dish });
       }
+    }
+  }
+  if (tool === "ghana_guide" && Array.isArray(c.facts)) {
+    for (const f of c.facts as Record<string, unknown>[]) {
+      if (typeof f.title !== "string" || typeof f.fact !== "string") continue;
+      out.push({ kind: "fact", title: f.title, fact: f.fact, topic: String(f.topic ?? ""), source: String(f.source ?? ""), url: typeof f.source_url === "string" ? f.source_url : null });
     }
   }
   return out;
@@ -111,11 +121,70 @@ function namesOf(name: string): string[] {
   return [...new Set([whole, short])].filter((n) => n.length >= 4);
 }
 
+type Fact = Extract<Candidate, { kind: "fact" }>;
+
+/** Phone numbers in a fact: Ghana's short emergency codes and full numbers. */
+function phonesIn(fact: Fact): string[] {
+  const full = fact.fact.match(/\+233[\d ]{8,13}\d/g) ?? [];
+  // Short codes only outside full numbers: "+233 59 185 4221" is not a call to 185.
+  const rest = full.reduce((t, n) => t.replace(n, " "), fact.fact);
+  const short = fact.topic === "emergency" ? (rest.match(/\b(1\d{2}|18555)\b/g) ?? []) : [];
+  return [...new Set([...short, ...full.map((n) => n.replace(/\s+/g, " ").trim())])].slice(0, 3);
+}
+
+/*
+ * The guide facts the reply actually used: one whose figures (a fee, a
+ * number to call) appear in it, or two words of its title. The model
+ * rewords facts, so names cannot be matched the way places are.
+ */
+const GENERIC = new Set(["ghana", "accra", "police", "service", "main", "your", "with", "from"]);
+
+export function usedFacts(text: string, candidates: Candidate[]): Fact[] {
+  const said = fold(text).toLowerCase();
+  const seen = new Set<string>();
+  const out: Fact[] = [];
+  for (const c of candidates) {
+    if (c.kind !== "fact" || seen.has(c.title)) continue;
+    // Whole figures only: "185" inside "18555" is not a match.
+    const figures = (c.fact.match(/\d[\d,.]*\d|\d{2,}/g) ?? []).filter((n) => n.length >= 2);
+    const whole = (n: string) => new RegExp(`(^|[^0-9])${n.replace(/[.,]/g, "\\$&")}([^0-9]|$)`).test(said);
+    const titleWords = fold(c.title).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !GENERIC.has(w));
+    // A fact with figures is used when its figures are; one without, when its title is.
+    const hits = figures.length ? figures.some(whole) : titleWords.length > 0 && titleWords.filter((w) => said.includes(w)).length >= Math.min(2, titleWords.length);
+    if (hits) {
+      seen.add(c.title);
+      out.push(c);
+    }
+  }
+  return out.slice(0, 4);
+}
+
+/** A fact as a card: no picture, its topic for the icon, its source and its numbers. */
+export function factCard(f: Fact): ChatCard {
+  const first = f.source.split("; ")[0] ?? "";
+  return {
+    kind: "fact",
+    title: f.title,
+    subtitle: first.length > 70 ? `${first.slice(0, 67)}...` : first,
+    detail: f.fact.length > 240 ? `${f.fact.slice(0, 237)}...` : f.fact,
+    image_url: null,
+    venue_id: null,
+    lat: null,
+    lng: null,
+    date: null,
+    start: null,
+    link: f.url,
+    topic: f.topic,
+    phones: phonesIn(f),
+  };
+}
+
 const keyOf = (c: Candidate) => (c.kind === "venue" ? c.id : c.kind === "night" ? `night:${c.venueId}` : `${c.kind}:${c.title.toLowerCase()}`);
-const nameOf = (c: Candidate) => (c.kind === "venue" ? c.name : c.kind === "night" ? c.venue : c.title);
+const nameOf = (c: Candidate) => (c.kind === "venue" ? c.name : c.kind === "night" ? c.venue : c.kind === "fact" ? c.title : c.title);
 
 /** The candidates the reply names, in the order it names them. */
-export function namedIn(text: string, candidates: Candidate[]): Candidate[] {
+export function namedIn(text: string, all: Candidate[]): Candidate[] {
+  const candidates = all.filter((c) => c.kind !== "fact");
   // Accents aside, so a reply that writes "A La Lune" still finds "À La Lune".
   const said = fold(text).replace(/\*+/g, "");
   const found = new Map<string, { at: number; c: Candidate }>();
@@ -165,6 +234,7 @@ export async function buildCards(db: SupabaseClient, picked: Candidate[]): Promi
   const events = (eventRows ?? []) as E[];
 
   return picked.flatMap((c): ChatCard[] => {
+    if (c.kind === "fact") return [factCard(c)];
     if (c.kind === "venue") {
       const v = venues.get(c.id);
       return [

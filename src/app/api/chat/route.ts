@@ -30,6 +30,8 @@ const bodySchema = z.object({
   conversation_id: z.string().uuid().optional(),
   /** The app is dressed for a season: its dates, or a preview from Profile. */
   season: z.enum(["halloween"]).optional(),
+  /** 2: the app draws guide facts as cards (13 Nov 2026). */
+  cards: z.number().int().min(1).max(9).optional(),
 });
 
 /** Halloween season, 10 October to 5 November, on Accra's clock (UTC all year). */
@@ -156,7 +158,7 @@ export async function POST(req: Request) {
       send({ type: "conversation", id: conversationId, remaining: spend.remaining, tier: spend.tier });
 
       try {
-        for await (const event of runChat({ provider, system: SYSTEM, history, userContent, ctx })) {
+        for await (const event of runChat({ provider, system: SYSTEM, history, userContent, ctx, factCards: (body.cards ?? 1) >= 2 })) {
           if (event.type === "done") {
             // What the person typed, not the context line it was sent with.
             const [first, ...rest] = event.turns;

@@ -91,6 +91,7 @@ export async function* streamChat(opts: {
       ...(deviceId ? { "x-duro-device": deviceId } : {}),
     },
     body: JSON.stringify({
+      cards: 2,
       message: opts.message,
       ...(opts.conversationId ? { conversation_id: opts.conversationId } : {}),
     }),

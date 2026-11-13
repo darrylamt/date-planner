@@ -98,6 +98,7 @@ The app renders three things, and only three: **bold**, *italics*, and lists. Us
 - A list is one item per line, each line starting with "- ". Never run a list into a sentence ("try the jollof - the kelewele - the tilapia"), and never put two items on one line.
 - Bold the name of each venue or dish the first time you name it, and nothing else. A bolded sentence is shouting.
 - Italics for a word you are quoting from a menu or a venue, and for nothing else.
+- A dish found on menus arrives on its place's card with the dish and its price. Name the places in a sentence and leave the prices to the cards; do not list each dish with its price, unless they asked for the cheapest or a ranking.
 - A short answer is a sentence or two with no formatting at all. Only reach for a list at three or more items, and for dishes, steps or a ranking: places, events and films are named in sentences, because they arrive as cards.
 - No headings, no tables, no links written as markdown, no emoji.
 
