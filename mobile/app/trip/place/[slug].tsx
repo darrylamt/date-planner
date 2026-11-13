@@ -11,6 +11,7 @@ import { GUTTER } from "../../../src/theme";
 import { useLook } from "../../../src/lib/appearance";
 import { fetchTripPlaces, type TripPlace, type TripPlaceRoute } from "../../../src/lib/api";
 import { Body, Display, LookButton, LookScreen, RoundButton } from "../../../src/components/look";
+import { SITE_URL } from "../../../src/lib/site";
 
 const ICON: Record<TripPlaceRoute["mode"], SymbolViewProps["name"]> = {
   bus: "bus.fill",
@@ -20,7 +21,8 @@ const ICON: Record<TripPlaceRoute["mode"], SymbolViewProps["name"]> = {
   ferry: "ferry.fill",
 };
 const ORDER: TripPlaceRoute["mode"][] = ["bus", "trotro", "car", "flight", "ferry"];
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 /** "GHS 150", "GHS 80 to 120", "from GHS 999", or null when nobody knows it. */
 function fareText(r: TripPlaceRoute): string | null {

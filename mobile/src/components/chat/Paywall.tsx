@@ -21,8 +21,10 @@ import {
 import type { SymbolViewProps } from "expo-symbols";
 import { SkeletonOffer } from "../Skeleton";
 import { MENUS_FREE_LABEL, SAY_MENUS_FREE_UNTIL, menusFree } from "../../lib/freeMenus";
+import { SITE_URL } from "../../lib/site";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 /** Pro's colours: the gold of the Pro star, with the sign-in screen's coral. */
 const GOLD = "#E5B04E";

@@ -13,10 +13,12 @@ import { afterSharing } from "../src/lib/review";
 import { billSource } from "../src/lib/bill";
 import { Sprite } from "../src/components/redesign/Sprite";
 import { Confetti } from "../src/components/redesign/Confetti";
+import { SITE_URL } from "../src/lib/site";
 
 const COIN = require("../assets/3d/coin-sheet.png");
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 /**
  * Who pays: everybody's name on a wheel, one spin, no arguing.

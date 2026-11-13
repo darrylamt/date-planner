@@ -12,8 +12,10 @@ import { fetchProfile } from "../src/lib/account";
 import { ghs } from "../src/lib/format";
 import { isMe, rememberMomo, rememberNames, rememberedMomo, rememberedNames, startingNames } from "../src/lib/people";
 import { afterSharing } from "../src/lib/review";
+import { SITE_URL } from "../src/lib/site";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 /**
  * Split the bill, evenly or by who had what.

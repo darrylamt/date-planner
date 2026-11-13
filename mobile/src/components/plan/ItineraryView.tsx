@@ -67,8 +67,10 @@ import { useLook } from "../../lib/appearance";
 import { RouteMap } from "../redesign/RouteMap";
 import { stopColours } from "../redesign/stopColours";
 import { FlipCard, ReserveBack, type ReserveChannel } from "../redesign/FlipCard";
+import { SITE_URL } from "../../lib/site";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 /*
  * The Mail composer arrived with the 1.1.0 build. Resolved defensively, so a

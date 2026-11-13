@@ -357,6 +357,30 @@ export interface PlanResponse {
  * read them (0107's policy). Empty before 0107 has run, or when nobody has
  * answered: either way there is nothing to show.
  */
+/**
+ * Every answer to every one of your plans, by share slug, newest first: for
+ * the Plans list, so "Ama is in" shows without opening each plan (owner,
+ * 13 Nov 2026). Empty when nobody has answered.
+ */
+export async function fetchMyPlanAnswers(): Promise<Map<string, PlanResponse[]>> {
+  const out = new Map<string, PlanResponse[]>();
+  try {
+    const { data, error } = await supabase
+      .from("plan_responses")
+      .select("answer, name, note, updated_at, plans!inner(share_slug)")
+      .order("updated_at", { ascending: false })
+      .limit(300);
+    if (error || !data) return out;
+    for (const r of data as unknown as (PlanResponse & { plans: { share_slug: string } })[]) {
+      const slug = r.plans.share_slug;
+      out.set(slug, [...(out.get(slug) ?? []), { answer: r.answer, name: r.name, note: r.note, updated_at: r.updated_at }]);
+    }
+  } catch {
+    /* nothing to show */
+  }
+  return out;
+}
+
 export async function fetchPlanResponses(slug: string): Promise<PlanResponse[]> {
   try {
     const { data, error } = await supabase

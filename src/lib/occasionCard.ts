@@ -95,7 +95,8 @@ export function occasionCard(inputs: PlanInputs): OccasionCard {
     },
     friend_outing: {
       eyebrow: size > 2 ? `A DAY FOR ${size}` : "A DAY WITH FRIENDS",
-      invitation: `Somewhere good, sorted out in advance, for ${partyWord(size)}.`,
+      // "you two" reads like a couple; two friends are "the both of you".
+      invitation: `Somewhere good, sorted out in advance, for ${size === 2 ? "the both of you" : partyWord(size)}.`,
       closing: "No candles, no speeches. Just a decent day out.",
       motif: "✳",
     },

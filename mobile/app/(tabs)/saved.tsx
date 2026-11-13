@@ -17,7 +17,7 @@ import { OccasionMark } from "../../src/components/OccasionMark";
 import { GUTTER, Spacing, TAB_BAR, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { useAuth } from "../../src/lib/useAuth";
-import { deletePlan, listPlans } from "../../src/lib/data";
+import { deletePlan, fetchMyPlanAnswers, listPlans, type PlanResponse } from "../../src/lib/data";
 import { ghs, longDate } from "../../src/lib/format";
 import type { SavedPlan } from "../../src/lib/types";
 import { SkeletonSaved } from "../../src/components/Skeleton";
@@ -27,12 +27,14 @@ import { useLook } from "../../src/lib/appearance";
 import { Body, Display, KenteBand } from "../../src/components/look";
 import { StarredList } from "../../src/components/redesign/StarredList";
 import { fetchAllowance } from "../../src/lib/chat";
+import { SITE_URL } from "../../src/lib/site";
 
 /** The last view chosen on Plans: the list, or the calendar. */
 const VIEW_KEY = "duro.plans.view";
 type PlansView = "list" | "calendar" | "starred";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 
 
@@ -68,6 +70,7 @@ export default function Plans() {
     void AsyncStorage.setItem(VIEW_KEY, v).catch(() => undefined);
   };
 
+  const [answers, setAnswers] = useState<Map<string, PlanResponse[]>>(new Map());
   const load = useCallback(async () => {
     if (!session) {
       setPlans([]);
@@ -78,6 +81,8 @@ export default function Plans() {
     } catch {
       setPlans([]);
     }
+    // Who said they're in, beside each plan (0107).
+    void fetchMyPlanAnswers().then(setAnswers);
   }, [session]);
 
   useEffect(() => {
@@ -190,6 +195,7 @@ export default function Plans() {
             <PlanCard
               key={plan.id}
               plan={plan}
+              answers={answers.get(plan.share_slug) ?? []}
               onOpen={() => router.push(`/plan/${plan.share_slug}`)}
               onRepeat={() => void repeat(plan)}
               onShare={() =>
@@ -248,14 +254,31 @@ function Empty({
  * fading into the card, the date, the evening's name, the route and the
  * total, and what can be done with it as pills: the plan opens on a tap.
  */
+/** "Ama is in", "Ama and Kofi are in, Esi can't make it", or nothing when nobody has answered. */
+function answerLine(list: PlanResponse[]): string | null {
+  if (!list.length) return null;
+  const names = (a: "in" | "cant") => list.filter((r) => r.answer === a).map((r) => r.name ?? "your guest");
+  const join = (n: string[]) => (n.length <= 2 ? n.join(" and ") : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const yes = names("in");
+  const no = names("cant");
+  const parts = [
+    yes.length ? `${join(yes)} ${yes.length === 1 ? "is" : "are"} in` : null,
+    no.length ? `${join(no)} can't make it` : null,
+  ].filter(Boolean) as string[];
+  return cap(parts.join(", "));
+}
+
 function PlanCard({
   plan,
+  answers,
   onOpen,
   onRepeat,
   onShare,
   onDelete,
 }: {
   plan: SavedPlan;
+  answers: PlanResponse[];
   onOpen: () => void;
   onRepeat: () => void;
   onShare: () => void;
@@ -310,6 +333,14 @@ function PlanCard({
           <Body size={15} weight="700" style={{ marginTop: 4 }}>
             {ghs(Number(plan.estimated_total_ghs))}
           </Body>
+          {answerLine(answers) ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+              <Symbol name={answers.some((r) => r.answer === "in") ? "checkmark.circle.fill" : "xmark.circle"} size={15} color={answers.some((r) => r.answer === "in") ? c.accent : c.textSecondary} />
+              <Body size={14} weight="600" style={{ flex: 1 }} numberOfLines={2}>
+                {answerLine(answers)}
+              </Body>
+            </View>
+          ) : null}
         </View>
       </Pressable>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingBottom: 16 }}>

@@ -46,6 +46,7 @@ import {
 import { Image } from "expo-image";
 import { nativeOptional } from "../src/lib/nativeOptional";
 import { resetLearning } from "../src/lib/signals";
+import { SITE_URL } from "../src/lib/site";
 
 /*
  * Added after the build on TestFlight, so it is resolved defensively. An
@@ -56,7 +57,8 @@ const ImagePicker = nativeOptional<typeof import("expo-image-picker")>(() =>
   require("expo-image-picker")
 );
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 const SUPPORT_EMAIL = "support@duroplans.com";
 
 export default function Profile() {

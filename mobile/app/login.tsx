@@ -44,11 +44,13 @@ import type { Occasion } from "../src/lib/types";
 import { KenteBand, LookBackground } from "../src/components/look";
 import { useLook } from "../src/lib/appearance";
 import { DurobotOrb } from "../src/components/redesign/DurobotOrb";
+import { SITE_URL } from "../src/lib/site";
 
 
 type Mode = "signin" | "signup";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 const CORAL = "#E4572E";
 const GOLD = "#E5B04E";
 const BUTTON_H = 56;

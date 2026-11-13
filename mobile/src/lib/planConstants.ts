@@ -771,7 +771,8 @@ export const PARTY_RULES: Record<Occasion, PartyRule> = {
   first_date: { min: 2, max: 2, fixed: 2, note: "A first date is the two of you." },
   date_night: { min: 2, max: 2, fixed: 2, note: "A date night is the two of you." },
   anniversary: { min: 2, max: 2, fixed: 2, note: "An anniversary is the two of you." },
-  friend_outing: { min: 3, max: 20, note: "Friends out starts at three." },
+  // From two (owner, 13 Nov 2026): two friends picking "Just the two of you" got a page made for a couple.
+  friend_outing: { min: 2, max: 20 },
   birthday: { min: 1, max: 20 },
   graduation: { min: 1, max: 20 },
   celebration: { min: 1, max: 20 },

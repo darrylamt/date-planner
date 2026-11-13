@@ -32,8 +32,10 @@ import { fold } from "../../src/lib/fold";
 import { useLook } from "../../src/lib/appearance";
 import { myStarIds, setStar } from "../../src/lib/stars";
 import { ProSheet } from "../../src/components/profile/ProSheet";
+import { SITE_URL } from "../../src/lib/site";
 
-const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+// Links people see go to the site's own name (site.ts).
+const WEB_URL = SITE_URL;
 
 const CATEGORY_LABEL: Record<string, string> = {
   main: "Mains",
