@@ -4,7 +4,7 @@ import { describeSchedule } from "../../schedules";
 import { weekdayOf } from "../../hours";
 import type { EventRow, VenueSchedule } from "../../types";
 import type { ChatTool } from "./types";
-import { keywordHits, keywordPatterns } from "./shared";
+import { keywordHits, keywordPatterns, noteMiss, NOTED } from "./shared";
 
 /**
  * What's on.
@@ -214,6 +214,7 @@ export const searchEvents: ChatTool<SearchEventsArgs> = {
 
     const total = groups.size;
     if (!listed.length && !nights.length) {
+      const noted = args.query ? await noteMiss(ctx.admin, "event", args.query, (args as { areas?: string[] }).areas?.[0]) : false;
       return {
         from,
         to,
@@ -221,7 +222,8 @@ export const searchEvents: ChatTool<SearchEventsArgs> = {
         weekly_nights: [],
         note:
           `Nothing listed ${args.query ? `matching "${args.query}" ` : ""}between ${from} and ${to}. ` +
-          "That means nobody has told Duro about one, not that nothing is on in Accra; say it that way.",
+          "That means nobody has told Duro about one, not that nothing is on in Accra; say it that way." +
+          (noted ? NOTED : ""),
       };
     }
     return {

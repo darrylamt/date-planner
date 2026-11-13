@@ -1,3 +1,4 @@
+import { noteMiss, NOTED } from "./shared";
 import { z } from "zod";
 import { VENUE_SELECT } from "../../venueColumns";
 import type { MenuItem, Venue } from "../../types";
@@ -89,9 +90,10 @@ export const searchMenuItems: ChatTool<SearchMenuItemsArgs> = {
       (m) => !seen.has(m.id) && (seen.add(m.id), foldIncludes(m.name, args.query.trim()))
     );
     if (!items.length) {
+      const noted = await noteMiss(ctx.admin, "dish", args.query, (args as { areas?: string[] }).areas?.[0]);
       return {
         matches: [],
-        note: `Nothing on any menu in the catalogue matches "${args.query}". Say we do not have it rather than offering something else as if it were the same.`,
+        note: `Nothing on any menu in the catalogue matches "${args.query}". Say we do not have it rather than offering something else as if it were the same.${noted ? NOTED : ""}`,
       };
     }
 

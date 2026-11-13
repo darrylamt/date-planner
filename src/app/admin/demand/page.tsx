@@ -56,6 +56,18 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const supabase = await adminDataClient();
 
+  // What Durobot was asked for and could not find (0108); empty before it runs.
+  const { data: missRows } = await supabase.from("chat_misses").select("kind, query, area").gte("created_at", since).order("created_at", { ascending: false }).limit(2000);
+  const misses = new Map<string, { kind: string; query: string; areas: Set<string>; n: number }>();
+  for (const r of (missRows ?? []) as { kind: string; query: string; area: string | null }[]) {
+    const key = `${r.kind}:${r.query.trim().toLowerCase()}`;
+    const m = misses.get(key) ?? { kind: r.kind, query: r.query.trim(), areas: new Set<string>(), n: 0 };
+    m.n++;
+    if (r.area) m.areas.add(r.area);
+    misses.set(key, m);
+  }
+  const missList = [...misses.values()].sort((a, b) => b.n - a.n);
+
   let rows: DemandRow[] = [];
   let missing = false;
   try {
@@ -409,6 +421,29 @@ export default async function AdminDemandPage({ searchParams }: { searchParams: 
           </div>
         </>
       )}
+
+      <section className="mt-8">
+        <h2 className="text-[18px] font-bold">Asked in Durobot, not held</h2>
+        <p className="mt-1 text-[13px] text-mutedbrown">
+          Places asked for by name, areas we don&apos;t cover, dishes on no menu and kinds of event nobody listed, most asked first. Each one is something to add.
+        </p>
+        {missList.length ? (
+          <div className="card mt-3 divide-y divide-black/5">
+            {missList.slice(0, 80).map((m) => (
+              <div key={`${m.kind}:${m.query}`} className="flex items-baseline gap-3 px-4 py-2 text-[14px]">
+                <span className="w-14 shrink-0 text-[12px] font-semibold uppercase text-mutedbrown">{m.kind}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {m.query}
+                  {m.areas.size ? <span className="text-mutedbrown"> · {[...m.areas].join(", ")}</span> : null}
+                </span>
+                <span className="font-mono text-[13px]">{m.n}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="card mt-3 p-4 text-[13px] text-mutedbrown">Nothing yet in this window.</p>
+        )}
+      </section>
     </div>
   );
 }

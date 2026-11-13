@@ -1,3 +1,4 @@
+import { noteMiss, NOTED } from "./shared";
 import { z } from "zod";
 import { fetchCandidates } from "../../matching";
 import { planItinerary, openOnDate, focusVenueTypes, stopCountFor } from "../../planner";
@@ -78,6 +79,8 @@ const argsSchema = z.object({
   movie: z.boolean().optional(),
   movie_genres: z.array(z.string().max(24)).max(6).optional(),
   events_night: z.boolean().optional(),
+  driving: z.boolean().optional(),
+  not_these: z.array(z.string().min(2).max(120)).max(10).optional(),
   /** The exact places they asked for, by name: the plan uses only these. */
   venue_names: z.array(z.string().min(2).max(120)).min(1).max(5).optional(),
 });
@@ -191,6 +194,18 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
         description:
           "When they name the exact places they want (\"start at Gallery 1957, then Bella Dolce Vita...\"), their names as the catalogue has them, in the order asked. The plan then uses only those places, with real orders, times, rides and the total. It may put them in a different order so meals land at sensible times; if it does, say so. Leave areas and vibes out when you send this.",
       },
+      driving: {
+        type: "boolean",
+        description:
+          "True when they said they are driving or have a car. The plan then has no taxi costs, and the whole budget goes on the outing.",
+      },
+      not_these: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 10,
+        description:
+          "When they want a different plan or a change to one they have seen ('more romantic', 'somewhere else', 'not that bar'): the names of the stops from that plan they did not ask to keep, as the plan gave them. The new plan will not use them, so it cannot come back the same.",
+      },
       events_night: {
         type: "boolean",
         description:
@@ -214,9 +229,10 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
      */
     const areas = await resolveAreas(ctx, args.areas ?? []);
     if (args.areas?.length && !areas.ids.length) {
+      const noted = await noteMiss(ctx.admin, "area", args.areas.join(", "));
       return {
         built: false as const,
-        reason: `We do not cover ${args.areas.join(" or ")}. Say which areas we do have and let them choose; do not plan somewhere else and call it theirs.`,
+        reason: `We do not cover ${args.areas.join(" or ")}. Offer the nearest area or two we do cover, by name, and plan there if they say yes; do not plan somewhere else and call it theirs.${noted ? NOTED : ""}`,
       };
     }
 
@@ -237,6 +253,7 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
       const found = args.venue_names.map((n) => ({ n, v: rows.find((r) => compact(r.name) === compact(n)) ?? rows.find((r) => foldIncludes(r.name, n)) }));
       const missing = found.filter((f) => !f.v).map((f) => f.n);
       if (missing.length) {
+        // Not noted here: the model is told to search each by name, and search_venues notes what is truly missing.
         return { built: false as const, reason: `Not found by those names: ${missing.join(", ")}. Search for each with search_venues and send the names exactly as the catalogue has them.` };
       }
       pickedIds = [...new Set(found.map((f) => f.v!.id))];
@@ -249,7 +266,19 @@ export const buildPlan: ChatTool<BuildPlanArgs> = {
     }
 
     // Leaning towards what they keep, as their plans in the app do (taste.ts).
-    const candidates = await fetchCandidates(ctx.catalog, inputs, { taste: await ctx.taste(), mustInclude: pickedIds ?? undefined });
+    /*
+     * "More romantic" came back as the very same plan (7 Nov 2026): the
+     * stops they did not keep are left out, so a change is a change.
+     */
+    let excludeVenueIds: string[] | undefined;
+    if (args.not_these?.length) {
+      const { data: all } = await ctx.catalog.from("venues").select("id, name").eq("is_active", true).limit(5000);
+      const rows = (all ?? []) as { id: string; name: string }[];
+      excludeVenueIds = args.not_these
+        .map((n) => rows.find((r) => compact(r.name) === compact(n))?.id)
+        .filter((id): id is string => Boolean(id) && !(pickedIds ?? []).includes(id!));
+    }
+    const candidates = await fetchCandidates(ctx.catalog, inputs, { taste: await ctx.taste(), mustInclude: pickedIds ?? undefined, excludeVenueIds });
     if (pickedIds) {
       const kept = new Set(candidates.venues.filter((v) => pickedIds!.includes(v.id)).map((v) => v.id));
       const dropped = pickedIds.filter((id) => !kept.has(id));
@@ -488,6 +517,7 @@ function toPlanInputs(args: BuildPlanArgs, areas: ResolvedAreas, start: string):
     occasionDetail: {},
     ...(args.movie ? { movie: true, movieGenres: args.movie_genres ?? [] } : {}),
     ...(args.events_night ? { eventNight: true } : {}),
+    ...(args.driving ? { driving: true } : {}),
     partner: {
       name: "",
       gender: "unspecified",

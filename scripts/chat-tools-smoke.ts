@@ -12,6 +12,8 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 
+// Searches here that find nothing on purpose are not recorded as demand (0108).
+process.env.DURO_SMOKE = "1";
 const envPath = path.join(process.cwd(), ".env.local");
 if (!fs.existsSync(envPath)) {
   console.error("No .env.local found. Run from the project root.");

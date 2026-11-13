@@ -4,7 +4,7 @@ import { VENUE_SELECT } from "../../venueColumns";
 import type { Venue } from "../../types";
 import { accentPattern, foldIncludes } from "../../fold";
 import type { ChatTool, ToolContext } from "./types";
-import { compactVenue, describePrice, isPriced, keywordHits, keywordPatterns, menusFor, openStateAt, type CompactVenue } from "./shared";
+import { compactVenue, describePrice, isPriced, keywordHits, keywordPatterns, menusFor, openStateAt, type CompactVenue, noteMiss, NOTED } from "./shared";
 
 /**
  * Find places, the way somebody asks for them out loud.
@@ -139,9 +139,29 @@ export const searchVenues: ChatTool<SearchVenuesArgs> = {
   async run(args, ctx): Promise<{ venues: (CompactVenue & { rating?: number | null; reviews?: number; matched_on?: string })[]; note?: string }> {
     const venues = await load(ctx, args);
     if (!venues.length) {
+      /*
+       * Noted when a place was asked for by name, or the area is one we do
+       * not cover at all (Batsona, 7 Nov 2026), not when filters were merely
+       * too narrow: "a chill place in Osu" coming back empty is not a gap.
+       */
+      let noted = false;
+      let uncovered: string[] = [];
+      if (args.areas?.length) {
+        const { data: known } = await ctx.catalog.from("areas").select("name").limit(1000);
+        const names = ((known ?? []) as { name: string }[]).map((a) => a.name.toLowerCase());
+        uncovered = args.areas.filter((a) => {
+          const w = a.trim().toLowerCase();
+          return w && !names.some((n) => n === w || n.includes(w) || w.includes(n));
+        });
+      }
+      if (args.name) noted = await noteMiss(ctx.admin, "place", args.name, args.areas?.[0]);
+      else if (uncovered.length) noted = await noteMiss(ctx.admin, "area", uncovered.join(", "));
       return {
         venues: [],
-        note: "Nothing in the catalogue matches that. Say so plainly rather than suggesting something that does not fit.",
+        note:
+          (uncovered.length
+            ? `We do not cover ${uncovered.join(" or ")} yet. Offer the nearest area or two we do cover, by name, from the list in the context, and search there if they say yes.`
+            : "Nothing in the catalogue matches that. Say so plainly rather than suggesting something that does not fit.") + (noted ? NOTED : ""),
       };
     }
 

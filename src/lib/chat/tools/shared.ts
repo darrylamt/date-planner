@@ -7,6 +7,32 @@ import { byTheGlass } from "../../bottles";
 import { fold } from "../../fold";
 
 /**
+ * Something somebody asked for that Duro does not hold (0108): a place by
+ * name, an area, a dish, an event. Recorded so the catalogue is filled from
+ * what people ask. Anonymous, and never allowed to fail a search: true only
+ * when the row was written, so the reply says "noted" only when it was.
+ */
+export async function noteMiss(
+  admin: SupabaseClient,
+  kind: "place" | "area" | "dish" | "event",
+  query: string,
+  area?: string | null
+): Promise<boolean> {
+  const q = query.trim().slice(0, 200);
+  // The smoke tests ask for things nobody serves on purpose; those are not demand.
+  if (!q || process.env.DURO_SMOKE) return false;
+  try {
+    const { error } = await admin.from("chat_misses").insert({ kind, query: q, area: area?.trim().slice(0, 120) || null });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** Said after an empty search, only when noteMiss wrote the row. */
+export const NOTED = " It has been noted for the Duro team so they can add it: you may say so in a few words.";
+
+/**
  * The pieces every catalogue tool needs, in one place so they cannot drift
  * apart between tools. Each of these encodes a rule this codebase has already
  * paid to learn.
@@ -47,9 +73,18 @@ export async function menusFor(
    * variable defeats the client's row inference, which is the same reason
    * matching.ts writes this query out in full.
    */
-  const rows = await fetchAllRows<MenuItem>((from, to) =>
-    supabase.from("menu_items").select("*").in("venue_id", ownerIds).range(from, to)
-  );
+  /*
+   * In batches of 150 ids. All at once, estimate_budget's whole-catalogue
+   * read made a 21,000-character address that the server refused (found
+   * 13 Nov 2026, once the catalogue passed about 500 places).
+   */
+  const batches: string[][] = [];
+  for (let i = 0; i < ownerIds.length; i += 150) batches.push(ownerIds.slice(i, i + 150));
+  const rows = (
+    await Promise.all(
+      batches.map((ids) => fetchAllRows<MenuItem>((from, to) => supabase.from("menu_items").select("*").in("venue_id", ids).range(from, to)))
+    )
+  ).flat();
 
   const byOwner = new Map<string, MenuItem[]>();
   for (const m of rows) {
