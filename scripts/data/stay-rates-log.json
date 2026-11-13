@@ -2500,5 +2500,62 @@
    }
   ],
   "read": "2026-11-10"
+ },
+ "ChIJh593c-yW2w8R1TUEZ8KXVxg": {
+  "destination": "kumasi",
+  "name": "Presbyterian Guest House",
+  "website": "http://presbyguesthouse.com/",
+  "source": "https://presbyguesthouse.com/room/executive-3/",
+  "rooms": [
+   {
+    "name": "Executive 3",
+    "room_type": "twin",
+    "sleeps": 1,
+    "price": 420,
+    "currency": "GHS",
+    "per": "night",
+    "breakfast_included": true,
+    "weekend": false,
+    "quote": "Executive 3 Price: ₵420.00 night",
+    "page": "https://presbyguesthouse.com/room/executive-3/"
+   },
+   {
+    "name": "Executive 2",
+    "room_type": "suite",
+    "sleeps": null,
+    "price": 380,
+    "currency": "GHS",
+    "per": "night",
+    "breakfast_included": null,
+    "weekend": false,
+    "quote": "Executive 2 Price: ₵380.00 night",
+    "page": "https://presbyguesthouse.com/roomsrate-2/"
+   },
+   {
+    "name": "Executive 1",
+    "room_type": "suite",
+    "sleeps": null,
+    "price": 320,
+    "currency": "GHS",
+    "per": "night",
+    "breakfast_included": null,
+    "weekend": false,
+    "quote": "Executive 1 Price: ₵320.00 night",
+    "page": "https://presbyguesthouse.com/roomsrate-2/"
+   },
+   {
+    "name": "Regular",
+    "room_type": "other",
+    "sleeps": null,
+    "price": 150,
+    "currency": "GHS",
+    "per": "night",
+    "breakfast_included": null,
+    "weekend": false,
+    "quote": "Regular Price: ₵150.00 night",
+    "page": "https://presbyguesthouse.com/roomsrate-2/"
+   }
+  ],
+  "read": "2026-11-13"
  }
 }

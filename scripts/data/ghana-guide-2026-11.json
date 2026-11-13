@@ -1,0 +1,924 @@
+{
+ "about": "Seed facts for a 'being in Ghana' guide Durobot could answer from. Researched 13 Nov 2026. Every entry is in our own words, with the source it came from and the date that source showed. Nothing here is live. Entries marked check:true need the owner's eye (conflicting sources, or a detail we could not read in full).",
+ "read_on": "2026-11-13",
+ "sources": {
+  "uk": {
+   "name": "UK Foreign Office travel advice for Ghana",
+   "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+   "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+  },
+  "ca": {
+   "name": "Government of Canada travel advice for Ghana",
+   "url": "https://travel.gc.ca/destinations/ghana",
+   "dated": "updated 2 Nov 2026"
+  },
+  "ca_emb": {
+   "name": "Government of Canada, embassies and emergency numbers in Ghana",
+   "url": "https://travel.gc.ca/assistance/embassies-consulates/ghana",
+   "dated": "18 Mar 2026"
+  },
+  "cdc": {
+   "name": "US CDC Travelers' Health, Ghana",
+   "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+   "dated": "notice of 9 Nov 2026"
+  },
+  "evisa": {
+   "name": "Ghana eVisa portal (Ghana Immigration Service)",
+   "url": "https://evisa.immigration.gov.gh/",
+   "dated": "read 13 Nov 2026"
+  },
+  "gis": {
+   "name": "Ghana Immigration Service",
+   "url": "https://www.gis.gov.gh/",
+   "dated": "newest item 11 Oct 2026"
+  },
+  "kpmg": {
+   "name": "KPMG Flash Alert 2026-138",
+   "url": "https://kpmg.com/xx/en/our-insights/gms-flash-alert/2026/flash-alert-2026-138.html",
+   "dated": "5 Jun 2026"
+  },
+  "bolt": {
+   "name": "Bolt, cities in Ghana",
+   "url": "https://bolt.eu/en-gh/cities/",
+   "dated": "read 13 Nov 2026"
+  },
+  "uber": {
+   "name": "Uber, Accra",
+   "url": "https://www.uber.com/global/en/cities/accra/",
+   "dated": "2026"
+  },
+  "yango": {
+   "name": "Yango Ghana",
+   "url": "https://yango.com/en_gh/",
+   "dated": "2026"
+  },
+  "gna_oct": {
+   "name": "Ghana News Agency, December in GH 2026 calendar",
+   "url": "https://gna.org.gh/2026/10/tourism-ministry-gta-unveils-december-in-gh-2026-events-calendar/",
+   "dated": "30 Oct 2026"
+  },
+  "gna_nov": {
+   "name": "Ghana News Agency, December in GH 2026 launch",
+   "url": "https://gna.org.gh/2026/11/ghana-launches-december-in-gh-2026-campaign-to-boost-tourism/",
+   "dated": "2 Nov 2026"
+  },
+  "nca": {
+   "name": "National Communications Authority, SIM registration FAQs 2026",
+   "url": "https://nca.org.gh/wp-content/uploads/2026/03/SIM-Reg-FAQs-2026.pdf",
+   "dated": "2026 (not read in full)"
+  },
+  "duro_menus": {
+   "name": "Duro's own catalogue: 21,856 priced menu items",
+   "url": null,
+   "dated": "computed 13 Nov 2026"
+  },
+  "joy_fares": {
+   "name": "MyJoyOnline, fares up 8% from 26 Sep 2026",
+   "url": "https://www.myjoyonline.com/public-transport-fares-go-up-by-8-from-september-26-check-how-much-you-will-pay/",
+   "dated": "23 Sep 2026"
+  },
+  "uk_hc": {
+   "name": "British High Commission Accra",
+   "url": "https://www.gov.uk/world/organisations/british-high-commission-accra",
+   "dated": "read 13 Nov 2026"
+  },
+  "de_emb": {
+   "name": "German Embassy Accra",
+   "url": "https://accra.diplo.de/gh-en",
+   "dated": "read 13 Nov 2026"
+  },
+  "fr_emb": {
+   "name": "French Embassy in Ghana",
+   "url": "https://gh.diplomatie.gouv.fr/fr/en-cas-durgence",
+   "dated": "read 13 Nov 2026"
+  },
+  "tth": {
+   "name": "Tamale Teaching Hospital",
+   "url": "https://tth.gov.gh/",
+   "dated": "read 13 Nov 2026"
+  },
+  "google_maps": {
+   "name": "Google Maps listings",
+   "url": null,
+   "dated": "read 13 Nov 2026"
+  },
+  "draft": {
+   "name": "Duro draft from general knowledge, to be confirmed by the owner",
+   "url": null,
+   "dated": "13 Nov 2026"
+  }
+ },
+ "not_read": [
+  "US State Department advisory and country page: refused automated reading (403). Not bypassed.",
+  "Australia Smartraveller: timed out twice.",
+  "Ministry of the Interior public holidays page: 404. Official 2027 list not found.",
+  "NCA SIM FAQ PDF: downloaded but could not be read as text here."
+ ],
+ "entries": [
+  {
+   "topic": "emergency",
+   "title": "Emergency numbers",
+   "body": "112 is the general emergency number. Police 191 or 18555, ambulance 193, fire 192.",
+   "source": [
+    "ca_emb",
+    "cdc"
+   ],
+   "check": true,
+   "note": "The UK page was reported as giving 999 or 112. The owner should confirm which lines actually answer."
+  },
+  {
+   "topic": "emergency",
+   "title": "Ghana Police headquarters",
+   "body": "General lines +233 302 773906 and +233 302 787373, Ring Road East, Accra. These are office lines, not emergency lines.",
+   "source_url": "https://police.gov.gh/en/index.php/contact-us/"
+  },
+  {
+   "topic": "emergency",
+   "title": "Immigration help line",
+   "body": "Ghana Immigration Service lists a 24-hour support line, +233 302 224 445. eVisa support is +233 308 249 682.",
+   "source": [
+    "gis",
+    "evisa"
+   ]
+  },
+  {
+   "topic": "safety",
+   "time": "night",
+   "title": "After dark, in general",
+   "body": "Both the UK and Canada advise extra care after nightfall: do not walk alone, and take a booked ride door to door rather than walking between places.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "time": "night",
+   "place": "Accra",
+   "title": "Accra neighbourhoods Canada says to avoid at night",
+   "body": "Canada names Agbogbloshie, Ashaiman, Avenor, Nima, Sowutuom and Sukura as areas where violent incidents have happened, and advises visitors to avoid them at night.",
+   "source": [
+    "ca"
+   ],
+   "note": "Say it as Canada's advice, with the date. Never as Duro's own judgement of a neighbourhood."
+  },
+  {
+   "topic": "safety",
+   "place": "Accra",
+   "title": "Accra roads the UK names for attacks on vehicles",
+   "body": "The UK lists attacks on stopped or slow vehicles, some armed, on Graphic Road, George Walker Bush Highway, around the Accra Mall roundabout, Awudome Cemetery Road, Pokuase-Amasaman Road, Teshie-Nungua Road, the Labadi beach area, the GIMPA road and the Kokrobite beach area. Keep doors locked and windows up.",
+   "source": [
+    "uk"
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Street crime",
+   "body": "Pickpocketing and bag snatching happen in crowded markets, on beaches, in parks and at tourist sites, sometimes from motorbikes. The UK says street crime is rising in Accra. Keep phones and bags out of sight on the street.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Robbery and burglary",
+   "body": "The UK reports more robberies and burglaries since 2021, some armed. It names burglaries in Airport Residential, Cantonments, Ridge and Kokrobite, more often around Christmas.",
+   "source": [
+    "uk"
+   ]
+  },
+  {
+   "topic": "safety",
+   "place": "Kotoka International Airport",
+   "title": "At the airport",
+   "body": "Thieves pose as porters, officials or drivers in arrivals. Real staff carry a photo ID card. Arrange your pick-up before you land and only go with the driver you booked.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "time": "night",
+   "title": "Beaches",
+   "body": "Theft is the main problem on beaches, with some violent crime and sexual assault reported. Do not go to a beach alone, and avoid isolated beaches.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Swimming in the sea",
+   "body": "Rip currents and undertow make swimming dangerous on much of the coast, and people drown every year. Swim only where locals or staff say it is safe.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Women travelling alone",
+   "body": "Canada notes that women on their own may face harassment and verbal abuse.",
+   "source": [
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Demonstrations",
+   "body": "Protests in Accra are usually peaceful but can start suddenly and block traffic. Leave the area and do not photograph them.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "safety",
+   "place": "Bawku, Upper East",
+   "title": "Bawku",
+   "body": "The UK advises against all but essential travel to Bawku Municipality because of violent incidents, with frequent curfews. Attacks linked to the conflict have happened on the Nasia-Walewale-Bolgatanga and Bolgatanga-Zebilla-Bawku-Pulmakom roads.",
+   "source_url": "https://www.gov.uk/foreign-travel-advice/ghana/regional-risks"
+  },
+  {
+   "topic": "safety",
+   "place": "Northern border",
+   "title": "Near the Burkina Faso border",
+   "body": "Canada advises against non-essential travel within 25 km of the Burkina Faso border.",
+   "source": [
+    "ca"
+   ],
+   "note": "Paga is on this border: relevant to the Paga day trip."
+  },
+  {
+   "topic": "safety",
+   "title": "Curfews",
+   "body": "Local curfews can be imposed during unrest, usually from 7pm to 5am. The Ministry of the Interior posts them.",
+   "source_url": "https://www.mint.gov.gh/category/press-release/"
+  },
+  {
+   "topic": "safety",
+   "title": "Scams",
+   "body": "Common ones: online romance and friendship scams, gold and business deals, fake tour operators or hotels with steep discounts, card skimming at ATMs, and people posing as police asking for money. Do not hand over cash or your passport; ask for a name and ID number.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "time": "night",
+   "title": "Taxis at night",
+   "body": "The UK says not to travel alone in a taxi after dark. Canada says robberies of foreigners in taxis at night are frequent: do not hail one on the street, use a marked taxi with no other passengers, and agree the fare first.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Ride apps",
+   "body": "Canada advises using a trusted ride app and checking the driver and car match the app before getting in. Drivers may ask for cash. The UK notes ride apps and tro-tros are not centrally licensed.",
+   "source": [
+    "ca",
+    "uk"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Where ride apps work",
+   "body": "Bolt lists Accra, Cape Coast, Ho, Koforidua, Kumasi, Sunyani, Takoradi and Tamale. Yango lists Accra and Kumasi. Uber confirms Accra.",
+   "source": [
+    "bolt",
+    "yango",
+    "uber"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Tro-tros and buses",
+   "body": "Canada describes tro-tros as overcrowded and poorly maintained, with a high accident record, and intercity coaches as better kept and safer.",
+   "source": [
+    "ca"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "time": "night",
+   "title": "Travelling between towns",
+   "body": "Travel between towns in daylight. Both advisories warn against road travel outside the main towns after dark: poor lighting, and armed robberies on highways including Accra-Tema and Accra-Kumasi-Tamale.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Driving",
+   "body": "You need an international driving permit or a Ghanaian licence. Police checkpoints are common. Do not pay cash at a checkpoint; ask for identification.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Visas",
+   "body": "Ghana has an official online visa portal run by the Ghana Immigration Service. It sorts travellers three ways: visa-free (ECOWAS and AES nationals), an electronic travel authorisation (other African nationals and countries with a waiver), and an eVisa for everyone else. Standard processing is listed as 96 hours. Use the portal's own eligibility checker.",
+   "source": [
+    "evisa"
+   ],
+   "check": true,
+   "note": "Fees were not readable. The GIS site still lists visa on arrival; KPMG says it ended for African business travellers."
+  },
+  {
+   "topic": "entry",
+   "title": "Tourist eVisa documents",
+   "body": "A passport valid six months past your departure with three blank pages, a recent photo, a return or onward ticket, proof of where you are staying, and proof of funds such as three months of statements.",
+   "source": [
+    "evisa"
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Yellow fever certificate",
+   "body": "Proof of yellow fever vaccination is required to enter, for travellers aged nine months and over.",
+   "source": [
+    "cdc",
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Health declaration",
+   "body": "The UK reports Ebola screening at the border: complete Ghana's online health declaration before you travel, and expect a temperature check on arrival.",
+   "source": [
+    "uk"
+   ],
+   "check": true
+  },
+  {
+   "topic": "entry",
+   "title": "Cash at the border",
+   "body": "Declare foreign currency on arrival. You may bring in up to the equivalent of US$10,000; more can be confiscated. Cedis cannot be taken out of the country.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Yellow fever outbreak, Upper West",
+   "body": "The US CDC has a level 2 notice dated 9 Nov 2026 for a yellow fever outbreak in the Upper West Region. Be vaccinated at least 10 days before travel and avoid mosquito bites.",
+   "source": [
+    "cdc"
+   ],
+   "note": "Relevant to trips to Wa."
+  },
+  {
+   "topic": "health",
+   "title": "Malaria",
+   "body": "Malaria is present across the whole country, cities included. The CDC recommends prescription anti-malaria tablets, plus repellent and nets. A fever during or after the trip needs a doctor quickly.",
+   "source": [
+    "cdc",
+    "ca"
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Other vaccines",
+   "body": "Typhoid is recommended for most travellers, and hepatitis A and B for anyone not vaccinated. Meningitis vaccine is advised for the north in the dry season, about December to June.",
+   "source": [
+    "cdc"
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Food and water",
+   "body": "Canada's rule of thumb is boil it, cook it, peel it or leave it. Avoid swimming in lakes and rivers because of bilharzia.",
+   "source": [
+    "ca",
+    "cdc"
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Medical care",
+   "body": "Care is limited outside Accra and serious cases may need evacuation. Hospitals often want payment up front. Carry insurance that covers evacuation, and bring your own medicines in their packaging.",
+   "source": [
+    "uk",
+    "ca",
+    "cdc"
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Dogs and rabies",
+   "body": "Rabies is common in dogs. Avoid stray animals, wash any bite and get care at once.",
+   "source": [
+    "cdc",
+    "ca"
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Drugs",
+   "body": "Penalties are severe, with long prison terms even for small amounts of cannabis, and bail is rarely given.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "LGBT+ travellers",
+   "body": "Same-sex sexual acts are illegal, with sentences of 3 to 25 years according to the UK. Convictions are rare but arrests, extortion and attacks are reported. Public affection between same-sex couples is not accepted. The UK says the Human Sexual Rights and Family Values Bill is not law.",
+   "source": [
+    "uk",
+    "ca"
+   ],
+   "note": "State as the advisories state it, with the date."
+  },
+  {
+   "topic": "law",
+   "title": "Photography",
+   "body": "It is illegal to photograph military sites and the airport. Ask before photographing guarded buildings or people.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Camouflage clothing",
+   "body": "Wearing military-style or camouflage clothing is illegal.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "ID",
+   "body": "Carry ID. A copy of your passport photo page is accepted; keep the original somewhere safe.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Smoking",
+   "body": "Smoking is banned in public places.",
+   "source": [
+    "ca"
+   ]
+  },
+  {
+   "topic": "money",
+   "title": "Cards and cash",
+   "body": "ATMs are common in large towns and scarce in rural areas. Many hotels and shops take cards, but Mastercard is not widely accepted, so carry a Visa or cash as back-up. Use ATMs at banks or in well-lit places.",
+   "source": [
+    "uk",
+    "ca"
+   ]
+  },
+  {
+   "topic": "money",
+   "title": "Changing money",
+   "body": "Change money only at banks or licensed forex bureaus.",
+   "source": [
+    "ca"
+   ]
+  },
+  {
+   "topic": "phones",
+   "title": "SIM cards for visitors",
+   "body": "Visitors register a SIM with their passport and proof of entry.",
+   "source": [
+    "nca"
+   ],
+   "check": true,
+   "note": "A 2021 report said visitor SIMs are switched off after 30 days unless extended. Not confirmed for 2026."
+  },
+  {
+   "topic": "seasons",
+   "title": "Rain and harmattan",
+   "body": "The rains run roughly March to November, with flooding in the north and at times in Accra. The harmattan, a dry dusty wind, blows from about December to March. Power and water cuts are more common in the dry season.",
+   "source": [
+    "ca",
+    "uk"
+   ]
+  },
+  {
+   "topic": "december",
+   "title": "December in GH 2026",
+   "body": "The official season runs from 1 December 2026 to 25 January 2027, themed 'Ghana to the World', with more than 100 events.",
+   "source": [
+    "gna_nov",
+    "gna_oct"
+   ],
+   "check": true,
+   "note": "An earlier report gave 3 January as the end date."
+  },
+  {
+   "topic": "december",
+   "title": "Named December events",
+   "body": "Christmas in Wonderland, Zen Gardens (1-31 Dec). Street Arts & Trade Festival, North Kaneshie (2 Dec). Tema Food Bazaar (4 Dec). Ghana-Jamaica Homecoming, University of Ghana stadium (4-5 Dec). African Food Festival, Bunso (4 Dec). EweZa concert, Ho (5 Dec). AFESTACC (9-11 Dec). Fufu Party, UG stadium (12 Dec). KIDDAFEST, National Theatre (17 Dec). Time with Ananse, National Theatre (19 Dec). BHIM Festival, UG stadium (24 Dec). Roverman Festival of Plays, National Theatre (24 Dec-4 Jan). A Night of 1033 Laughs and Music, La Palm (26 Dec).",
+   "source": [
+    "gna_oct",
+    "gna_nov"
+   ],
+   "note": "These belong in the events catalogue with prices, not only here."
+  },
+  {
+   "topic": "december",
+   "title": "Public holidays in December",
+   "body": "Farmers' Day is Friday 4 December 2026, Christmas Day Friday 25 December and Boxing Day Saturday 26 December.",
+   "source_url": "https://yen.com.gh/ghana/312634-ghana-holidays-list-dates-remaining-public-holidays-2026/",
+   "check": true
+  },
+  {
+   "topic": "costs",
+   "title": "What food and drink cost in Accra",
+   "body": "From the menus Duro holds (prices at sit-down places, not street food): jollof as a main about GH¢135 (most between 85 and 180), waakye about 100, banku with tilapia about 180, fufu with soup about 170, kelewele about 65, red red about 95, shawarma about 150, a whole pizza about 180. A local beer (Club, Star) about GH¢40, a soft drink about 34, bottled water about 15, a cappuccino about 60, a cocktail about 120.",
+   "source": [
+    "duro_menus"
+   ],
+   "note": "Recompute each month from menu_items; street food is much cheaper and not in our menus."
+  },
+  {
+   "topic": "costs",
+   "title": "Tro-tro and shared taxi fares",
+   "body": "From 26 September 2026 the lowest tro-tro fare inside a city is GH¢5.50 and the longest city rides about GH¢37. A shared (line) taxi starts at GH¢1.90 for up to a kilometre and is about GH¢20 at 40 km. Long-distance fares run from about GH¢27 to GH¢324.",
+   "source": [
+    "joy_fares"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "Main public hospitals by town",
+   "body": "Accra: Korle Bu Teaching Hospital; Accra: 37 Military Hospital; Accra: Greater Accra Regional Hospital; Accra: University Of Ghana Medical Centre; Kumasi: Komfo Anokye Teaching Hospital (KATH); Cape Coast: Central Regional Hospital; Takoradi: Effia Nkwanta Regional Hospital; Ho: Volta Regional Hospital; Tamale: Tamale Teaching Hospital; Bolgatanga: Upper East Regional Hospital; Wa: New Upper West Regional Hospital, Wa.; Sunyani: Sunyani Teaching Hospital; Koforidua: Koforidua Regional Hospital; Hohoe: Hohoe Government District Hospital; Winneba: Winneba Municipal Hospital; Akosombo: VRA Hospital SBU; Damongo (Mole): West Gonja Hospital; Kintampo: Kintampo Municipal Hospital, Kintampo North Municipal.",
+   "items": [
+    {
+     "town": "Accra",
+     "name": "Korle Bu Teaching Hospital",
+     "address": "Guggisberg Ave, Accra",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJmcgvVTSX3w8RJq690GBuuXM"
+    },
+    {
+     "town": "Accra",
+     "name": "37 Military Hospital",
+     "address": "HRQ8+7F3, Liberation Road, Accra",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJn-TYJ_Sa3w8RSSQ-Gvmn9Ks"
+    },
+    {
+     "town": "Accra",
+     "name": "Greater Accra Regional Hospital",
+     "address": "Castle Rd, Accra",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJN5yfMHaa3w8RdnVUzz6HULQ"
+    },
+    {
+     "town": "Accra",
+     "name": "University Of Ghana Medical Centre",
+     "address": "JRJ7+WJP, Accra",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJowDSNXab3w8RPdsuJXZo1pU"
+    },
+    {
+     "town": "Kumasi",
+     "name": "Komfo Anokye Teaching Hospital (KATH)",
+     "address": "Okomfo Anokye Road, Kumasi",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJI3Poh_qW2w8RIwndsZiMevQ"
+    },
+    {
+     "town": "Cape Coast",
+     "name": "Central Regional Hospital",
+     "address": "Central Regional Hospital, Cape Coast",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJvSk3oJn-3Q8RiVJRcSTRK6o"
+    },
+    {
+     "town": "Takoradi",
+     "name": "Effia Nkwanta Regional Hospital",
+     "address": "J. De Graft-Johnson Ave, Takoradi",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJJZiM3S965w8Rjy85VeJDglg"
+    },
+    {
+     "town": "Ho",
+     "name": "Volta Regional Hospital",
+     "address": "Volta Regional Hospital, Ho",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJpdCNbgslJxARVB7WqYni4fw"
+    },
+    {
+     "town": "Tamale",
+     "name": "Tamale Teaching Hospital",
+     "address": "95VG+6J2, Salaga/yendi Rd, Tamale",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJuc3PoGY71A8RPcITELbZYMg"
+    },
+    {
+     "town": "Bolgatanga",
+     "name": "Upper East Regional Hospital",
+     "address": "R44Q+G77, Unnamed Road, Bolgatanga",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJI_f3SgA5Kw4RgPrN9ko6UQE"
+    },
+    {
+     "town": "Wa",
+     "name": "New Upper West Regional Hospital, Wa.",
+     "address": "N12, Wa",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJRXA72KRjzQ8RPCZa1BCPtdE"
+    },
+    {
+     "town": "Sunyani",
+     "name": "Sunyani Teaching Hospital",
+     "address": "N12, Sunyani",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJa4iaJU3P2g8RGxPkspwPQ5s"
+    },
+    {
+     "town": "Koforidua",
+     "name": "Koforidua Regional Hospital",
+     "address": "3PWV+WC3, Koforidua",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJUR4anLFB3w8R_QS3I68Y0Uo"
+    },
+    {
+     "town": "Hohoe",
+     "name": "Hohoe Government District Hospital",
+     "address": "Hohoe, Ghana",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJh3-4wMGoJxARZ-BmC0i3-TU"
+    },
+    {
+     "town": "Winneba",
+     "name": "Winneba Municipal Hospital",
+     "address": "Winneba",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJlaCPUeY03g8RuROaT2bvcSs"
+    },
+    {
+     "town": "Akosombo",
+     "name": "VRA Hospital SBU",
+     "address": "7375+H27, Akosombo",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJ3zoXicGoIBARbAVj5i4rdzI"
+    },
+    {
+     "town": "Damongo (Mole)",
+     "name": "West Gonja Hospital",
+     "address": "Damongo, Accra",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJx4seI_t40Q8RIljEbetaqA4"
+    },
+    {
+     "town": "Kintampo",
+     "name": "Kintampo Municipal Hospital, Kintampo North Municipal",
+     "address": "Off Techiman - Tamale Road, Hospital Road, 27WF+98M, Techiman-Tamale Rd, Kintampo",
+     "maps": "https://www.google.com/maps/place/?q=place_id:ChIJ5YQ_CCOM0A8RYhMpohbATBA"
+    }
+   ],
+   "source": [
+    "google_maps"
+   ],
+   "note": "Locations from Google Maps. For a life-threatening emergency call 112 first. Private hospitals and 24-hour pharmacies are still to research."
+  },
+  {
+   "topic": "emergency",
+   "title": "Tamale Teaching Hospital",
+   "body": "On the Tamale-Salaga road in the east of Tamale. Phone +233 59 185 4221.",
+   "source": [
+    "tth"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "British High Commission, Accra",
+   "body": "Julius Nyerere Link, off Gamel Abdul Nasser Avenue, Accra. In an emergency call +233 59 711 1444. Visits are by appointment only.",
+   "source": [
+    "uk_hc"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "High Commission of Canada, Accra",
+   "body": "42 Independence Avenue, Accra. +233 302 211 521 or +233 302 228 555; accra-cs@international.gc.ca. Out of hours, Canada's Emergency Watch and Response Centre in Ottawa.",
+   "source": [
+    "ca_emb"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "German Embassy, Accra",
+   "body": "6 Kenneth Kaunda Road, North Ridge, Accra. +233 302 211 000. Emergency line for German nationals out of hours: +233 24 432 4889.",
+   "source": [
+    "de_emb"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "French Embassy, Accra",
+   "body": "Switchboard +233 302 214 550 in office hours. Emergency line for French nationals out of hours: +233 540 122 005.",
+   "source": [
+    "fr_emb"
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "US Embassy, Accra",
+   "body": "The US Embassy's site could not be read here; check gh.usembassy.gov for its emergency number.",
+   "source": [],
+   "check": true
+  },
+  {
+   "topic": "culture",
+   "title": "Greetings",
+   "body": "Greet before you ask anything: a 'good morning' or 'good evening' first, then the question. Shake hands with everyone in a small group, starting from your right. Elders are greeted first and with respect.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "culture",
+   "title": "The left hand",
+   "body": "Give, take and eat with the right hand. Passing money or food with the left is seen as rude.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "culture",
+   "title": "Dress",
+   "body": "Everyday dress is relaxed but modest. Swimwear is for the beach or the pool. Dress up for upscale bars and clubs, especially in East Legon and Osu at weekends. Church and visits to a chief's palace call for covered shoulders and knees.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "culture",
+   "title": "Photographs of people",
+   "body": "Ask before photographing people, especially in markets and villages; some will ask for a small tip.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "culture",
+   "title": "Time",
+   "body": "Ghana is on GMT all year, with no daylight saving. Things often start later than the stated time ('Ghana time'), but tours, buses and flights leave on time.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "language",
+   "title": "Languages",
+   "body": "English is the official language and is spoken everywhere you are likely to go. Twi is the most widely spoken Ghanaian language; Ga is Accra's own language, Ewe is spoken in the Volta Region and Dagbani around Tamale.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "language",
+   "title": "Useful Twi",
+   "body": "Akwaaba: welcome. Maakye: good morning. Maaha: good afternoon. Maadwo: good evening. Ɛte sɛn?: how are you? Me ho yɛ: I'm fine. Medaase: thank you. Aane: yes. Daabi: no. Ɛyɛ sɛn?: how much is it? Mepa wo kyɛw: please.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "language",
+   "title": "Useful Ga",
+   "body": "Ojekoo: well done, and a greeting. Oyiwaladonn: thank you. Mii-gbe: I'm going.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true,
+   "note": "Owner to correct spelling and meaning."
+  },
+  {
+   "topic": "language",
+   "title": "Words you will hear",
+   "body": "Chale: friend, mate. Obroni: a white or foreign person, usually said without offence. Dumsor: a power cut. Tro-tro: a shared minibus. Mate: the tro-tro conductor. Pure water: drinking water in a sealed sachet. Chop bar: a local eatery. Small small: slowly, a little.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "money",
+   "title": "Tipping",
+   "body": "Tipping is welcome, not required. At a sit-down restaurant about 10% if the bill has no service charge; check the bill first, as many add one with taxes and levies. Round up for drivers; a few cedis for porters and guides.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "money",
+   "title": "Bargaining",
+   "body": "Haggling is normal in markets, at craft stalls and with unmetered taxis; agree a price before you set off. Supermarkets, malls, restaurants and ride apps have fixed prices.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "money",
+   "title": "Mobile money",
+   "body": "Mobile money (MTN MoMo, Telecel Cash, AT Money) is used everywhere, from stalls to taxis. You need a registered Ghanaian SIM to use it. Cash in cedis is still needed for small places.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "practical",
+   "title": "Electricity and plugs",
+   "body": "230 volts. Most sockets are the UK three-pin type (G); some take two round pins (D). Power cuts happen, so carry a power bank.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "practical",
+   "title": "Drinking water",
+   "body": "Drink bottled water or sealed sachet ('pure') water; avoid tap water unless it is filtered or boiled. Ice in good restaurants and hotels is usually made from treated water.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "getting_around",
+   "title": "How tro-tros work",
+   "body": "Tro-tros are shared minibuses on fixed routes. The mate calls out the destination; get in, pay the mate the fixed fare during the ride, and say 'bus stop' when you want to get off. They are cheap and crowded and stop anywhere on the route. Ride apps are easier for visitors, especially at night.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "food",
+   "title": "Dishes to know",
+   "body": "Jollof: rice cooked in a spiced tomato sauce. Waakye: rice and beans, eaten with shito, gari, spaghetti and egg. Banku: fermented corn and cassava dough, often with grilled tilapia and pepper. Fufu: pounded cassava and plantain, eaten with light soup, groundnut soup or palm nut soup. Kenkey: fermented corn dough with fried fish and shito. Kelewele: spiced fried plantain. Red red: bean stew with fried plantain. Omo tuo: rice balls, with groundnut or palm nut soup. Tuo zaafi (TZ): a northern staple with green leaf soup. Chinchinga: grilled meat skewers. Sobolo: a cold drink of hibiscus and ginger. Shito: black pepper sauce.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "food",
+   "title": "How to eat fufu and banku",
+   "body": "Traditionally eaten with the right hand: wash your hands (a bowl of water is often brought), pinch off a piece, dip it in the soup and swallow rather than chew. Cutlery is always fine to ask for.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  },
+  {
+   "topic": "festivals",
+   "title": "Festivals through the year",
+   "body": "Homowo (Ga, Accra), around August and September. Chale Wote street art festival, Jamestown, August. Fetu Afahye, Cape Coast, the first Saturday of September. Aboakyir deer hunt, Winneba, May. Hogbetsotso (Anlo), Anloga, November. Akwasidae, Kumasi, a Sunday every six weeks. Kwahu Easter, with paragliding at Atibie. PANAFEST and Emancipation Day, Cape Coast, late July and early August in its years.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true,
+   "note": "Owner to confirm the 2027 dates; these move each year."
+  },
+  {
+   "topic": "practical",
+   "title": "Weather",
+   "body": "Hot all year, around 25 to 32°C on the coast. The main rains in the south are April to June, with a shorter season in September and October; the north has one rainy season, about May to October. December to February is dry, with the dusty harmattan wind.",
+   "source": [
+    "draft"
+   ],
+   "check": true,
+   "draft": true
+  }
+ ],
+ "missing_for_safe_place_answers": [
+  "We hold no safety-related facts about venues: door security, guarded parking, lit entrance, whether a ride can pick up at the door, inside a hotel or mall.",
+  "Area notes by time of day (day, evening, late) for the areas we cover. These need the owner's local knowledge and sign-off.",
+  "Culture, etiquette, tipping, language and typical costs: no official source; better written or approved by the owner."
+ ]
+}

@@ -1,0 +1,47 @@
+{
+  "about": "What Ghana tour operators publish, read 13 Nov 2026: facts only (days, towns, sights, hotels named, price). No text copied. Used to find places and stays we lack and the shape of the usual routes. Prices are the operators' own bundle prices in US dollars: benchmarks, never catalogue prices.",
+  "read_on": "2026-11-13",
+  "itineraries": [
+    { "operator": "Easy Track Ghana", "tour": "10 Day Wildlife, History & Culture", "days": 10, "price": "US$3,407 pp, 2 sharing (label May 2025)", "nights": "Accra 2, Mole 2, Kumasi 3, Elmina 2", "url": "https://easytrackghana.com/tour-plan-10-day-Mole.php" },
+    { "operator": "Easy Track Ghana", "tour": "3 Day Safari at Mole", "days": 3, "price": "US$1,235-2,949 pp with flight (label Mar 2025)", "nights": "Mole 2", "url": "https://easytrackghana.com/tour-plan-3-day-Mole.php" },
+    { "operator": "Easy Track Ghana", "tour": "2-day Waterfalls Tour of the Volta Region", "days": 2, "price": "US$470-613 pp (label Mar 2025)", "nights": "Wli 1", "url": "https://easytrackghana.com/overnight-Waterfalls.php" },
+    { "operator": "Easy Track Ghana", "tour": "3 Day Hippo and Elephant Safari", "days": 3, "price": "US$1,121-2,852 pp with flight (label Mar 2025)", "nights": "Mole 2", "url": "https://easytrackghana.com/wildlife-tour-3-day-Mole-Wechiau.php" },
+    { "operator": "Grassroot Tours", "tour": "14 Days Wildlife, Culture & History", "days": 14, "price": "not shown", "nights": "Accra, Volta, Wli, Tamale, Mole 2, Kumasi 3, Elmina/Cape Coast 2, Kokrobite 2", "hotels": ["Mole Motel", "Hans Cottage Botel"], "url": "https://grassroottours.com/14-days-wildlife-culture-history-tour/" },
+    { "operator": "BLASTours", "tour": "Weekend in Volta Region", "days": 3, "price": "on request", "nights": "Liate Wote 2", "hotels": ["Liate Wote Lodge"], "url": "https://blastours.com/tours/weekend-in-volta-region/" },
+    { "operator": "G Adventures", "tour": "Ghana Classic Adventure", "days": 9, "price": "from US$2,039 pp (Dec 29, 2026: US$2,099)", "nights": "Accra 2, Bonkro 2, Kumasi 2, Akosombo 2", "url": "https://www.gadventures.com/trips/ghana-classic-adventure-cultural-festivals-national-parks/10438/" },
+    { "operator": "G Adventures", "tour": "Complete Ghana", "days": 16, "price": "from US$3,739 pp", "nights": "as above, then Accra, Elmina 2, Ankasa", "hotels": ["Ankasa Reserve Lodge"], "url": "https://www.gadventures.com/trips/complete-ghana-the-beauty-of-travelling-west-africa/10444/" },
+    { "operator": "Tales of A Travel Bag", "tour": "Ghana AfroFuture and Detty December", "days": 10, "price": "US$3,750 pp, no flights (27 Dec 2026-5 Jan 2027)", "nights": "Accra, Eastern/Volta resort, Accra, Cape Coast 2, Accra", "url": "https://www.wetravel.com/trips/ghana-afrofuture-and-detty-december-9-night-2026-tales-of-a-travel-bag-15647834" },
+    { "operator": "Best Ghana Tours", "tour": "Cape Coast, Elmina and Kakum day trip from Accra", "days": 1, "price": "US$210", "url": "https://www.wetravel.com/trips/cape-coast-elmina-castles-with-kakum-canopy-walk-day-trip-from-acc-best-ghana-tours-68485265" },
+    { "operator": "Nyonkopa Eco Tours", "tour": "Cape Coast Kakum Day Tour", "days": 1, "price": "US$175", "url": "https://www.wetravel.com/trips/cape-coast-kakum-day-tour-nyonkopa-48275687" },
+    { "operator": "TravelLocal", "tour": "14-day Ghana coast & heritage", "days": 14, "price": "from US$2,870 pp", "nights": "Accra 2, Cape Coast/Elmina 1, Axim 3, Cape Coast 1, Kumasi 4, Accra 2", "url": "https://www.travellocal.com/en/ghana/tours/t/14days-ghana-tour" },
+    { "operator": "Across Africa Tours & Travel", "tour": "Ghanaian Adventure Safari", "days": 8, "price": "from US$2,815 pp", "nights": "Accra 3, Kumasi 2, Cape Coast 2", "hotels": ["Best Western Plus Accra Beach", "Noda Hotel, Kumasi", "Oasis Beach Hotel, Cape Coast"], "url": "https://www.tourradar.com/t/174558" },
+    { "operator": "Continent Tours", "tour": "Ghana Historical Tour", "days": 7, "price": "US$3,575 pp sharing", "nights": "Accra 3, Elmina 1, Kumasi 2", "hotels": ["Pelican Hotel, Accra", "Lemon Beach Resort", "Lancaster Kumasi"], "url": "https://www.tourradar.com/t/223547" },
+    { "operator": "Across Africa Tours & Travel", "tour": "Homowo Festival 2027", "days": 8, "price": "US$3,674 pp", "nights": "Accra 4, Ada Foah 1, Cape Coast 2", "url": "https://www.tourradar.com/t/365567" },
+    { "operator": "Landtours Ghana", "tour": "December In Ghana 2026", "days": 7, "price": "US$2,668-2,808 pp sharing", "nights": "Accra 5, Cape Coast 1", "url": "https://www.tourradar.com/t/313155" },
+    { "operator": "Hausa Tours", "tour": "December in Ghana Experience", "days": 7, "price": "US$4,200 pp (27 Dec 2026)", "nights": "Accra 5, one night unstated", "hotels": ["La Palm Royal Beach Hotel, Accra"], "url": "https://www.tourradar.com/t/300756" },
+    { "operator": "Eyali Tours", "tour": "Weekend Tour (Volta Region)", "days": 3, "price": "US$1,200 pp sharing", "url": "https://www.tourradar.com/t/155214" },
+    { "operator": "Hausa Tours", "tour": "Northern Ghana Safari & Culture", "days": 3, "price": "US$1,800 pp with flight", "nights": "Mole 2", "hotels": ["Mole Motel"], "url": "https://www.tourradar.com/t/346223" },
+    { "operator": "Continent Tours", "tour": "The Best of Ghana, private", "days": 12, "price": "US$9,475 pp", "nights": "Accra 3, Tamale 2, Mole 2, Kumasi 2, Cape Coast 2", "hotels": ["Pelican Hotel, Accra", "Jeyads Lodge, Tamale", "Zaina Lodge, Mole", "Lancaster Kumasi", "Coconut Grove, Elmina"], "url": "https://www.tourradar.com/t/367932" },
+    { "operator": "Landtours Ghana", "tour": "10 Days Culture, Nature and Adventure 2027", "days": 10, "price": "US$4,319 pp sharing", "nights": "Accra 5, Cape Coast 2, Kumasi 2", "url": "https://www.tourradar.com/t/344133" }
+  ],
+  "price_benchmarks_usd": {
+    "day_trip_accra_to_cape_coast_kakum": "170-269 per person",
+    "volta_2_to_3_days": "470-1,200 per person",
+    "mole_3_days_with_flight": "1,072-2,949 per person",
+    "classic_7_to_10_days": "1,800-4,319 per person, land only",
+    "december_packages_7_to_10_nights": "2,400-4,200 land only; 5,395-5,895 with flights",
+    "per_person_per_day": "about 200-800, most between 230 and 510"
+  },
+  "usual_route": "Accra 2-5 nights, Cape Coast or Elmina 1-2, Kumasi 2, then Mole 2 (flying to Tamale) or Akosombo/Volta 1-2. December versions keep 5 nights in Accra and add one at Cape Coast.",
+  "sights_we_do_not_hold": [
+    "Independence Square / Black Star Gate, Accra (12 of 21)", "Assin Manso Slave River (10)", "Arts Centre craft market, Accra (9)", "Shai Hills Resource Reserve (8)",
+    "W.E.B. Du Bois Centre, Accra (7)", "Jamestown lighthouse and old Accra (7)", "Ntonso Adinkra village (7)", "Mognori Eco-Village, Mole (6)", "Cedi Beads / Krobo bead makers (6)",
+    "Makola Market (5)", "Okomfo Anokye Sword site, Kumasi (4)", "Kokrobite beach (4)", "Ahwiaa woodcarving village (3)", "Fort Amsterdam, Abandze (3)",
+    "Adanwomase kente village (2)", "Bobiri Butterfly Sanctuary (2)", "Hans Cottage Botel crocodile pond (2)", "International Stingless Bee Centre (2)", "Tafi Abuipe kente village (2)",
+    "Artists Alliance Gallery (2)", "Brazil House, Jamestown (2)", "Boabeng-Fiema Monkey Sanctuary (1)", "Wechiau Hippo Sanctuary (1)", "Ankasa reserve (1)", "Savannah Centre for Contemporary Art, Tamale (1)", "Red Clay Studio, Tamale (1)"
+  ],
+  "stays_named": {
+    "held": ["Lemon Beach Resort", "Lancaster Kumasi City (no rates)", "Jeyads Lodge", "Liati-Wote Guest House"],
+    "not_held": ["Mole Motel", "Zaina Lodge", "Coconut Grove Beach Resort, Elmina", "Oasis Beach Resort, Cape Coast", "Noda Hotel, Kumasi", "Hans Cottage Botel", "Royal Senchi, Akosombo", "Ankasa Reserve Lodge", "Pelican Hotel, Accra", "La Palm Royal Beach Hotel, Accra", "Best Western Plus Accra Beach"]
+  }
+}
