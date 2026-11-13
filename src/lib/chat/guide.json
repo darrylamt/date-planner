@@ -1,0 +1,848 @@
+{
+ "read_on": "2026-11-13",
+ "facts": [
+  {
+   "topic": "emergency",
+   "title": "Emergency numbers",
+   "fact": "Police emergency 191, and the police toll-free line 18555 (both on the Ghana Police Service's own site). Canada's advice also lists 112 for all emergencies, 193 for an ambulance and 192 for fire.",
+   "sources": [
+    {
+     "name": "Ghana Police Service, TRAFFITECH-GH page",
+     "url": "https://police.gov.gh/en/index.php/traffitech-gh/",
+     "dated": "Sept 2026 (images), read 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada, embassies and emergency numbers in Ghana",
+     "url": "https://travel.gc.ca/assistance/embassies-consulates/ghana",
+     "dated": "18 Mar 2026"
+    }
+   ],
+   "unconfirmed": true
+  },
+  {
+   "topic": "emergency",
+   "title": "Ghana Police headquarters",
+   "fact": "General lines +233 302 773906 and +233 302 787373, Ring Road East, Accra. These are office lines, not emergency lines.",
+   "sources": [
+    {
+     "name": "police.gov.gh",
+     "url": "https://police.gov.gh/en/index.php/contact-us/",
+     "dated": "read 2026-11-13"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "Immigration help line",
+   "fact": "Ghana Immigration Service lists a 24-hour support line, +233 302 224 445. eVisa support is +233 308 249 682.",
+   "sources": [
+    {
+     "name": "Ghana Immigration Service",
+     "url": "https://www.gis.gov.gh/",
+     "dated": "newest item 11 Oct 2026"
+    },
+    {
+     "name": "Ghana eVisa portal (Ghana Immigration Service)",
+     "url": "https://evisa.immigration.gov.gh/",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "After dark, in general",
+   "fact": "Both the UK and Canada advise extra care after nightfall: do not walk alone, and take a booked ride door to door rather than walking between places.",
+   "time": "night",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Accra neighbourhoods Canada says to avoid at night",
+   "fact": "Canada names Agbogbloshie, Ashaiman, Avenor, Nima, Sowutuom and Sukura as areas where violent incidents have happened, and advises visitors to avoid them at night.",
+   "place": "Accra",
+   "time": "night",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Accra roads the UK names for attacks on vehicles",
+   "fact": "The UK lists attacks on stopped or slow vehicles, some armed, on Graphic Road, George Walker Bush Highway, around the Accra Mall roundabout, Awudome Cemetery Road, Pokuase-Amasaman Road, Teshie-Nungua Road, the Labadi beach area, the GIMPA road and the Kokrobite beach area. Keep doors locked and windows up.",
+   "place": "Accra",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Street crime",
+   "fact": "Pickpocketing and bag snatching happen in crowded markets, on beaches, in parks and at tourist sites, sometimes from motorbikes. The UK says street crime is rising in Accra. Keep phones and bags out of sight on the street.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Robbery and burglary",
+   "fact": "The UK reports more robberies and burglaries since 2021, some armed. It names burglaries in Airport Residential, Cantonments, Ridge and Kokrobite, more often around Christmas.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "At the airport",
+   "fact": "Thieves pose as porters, officials or drivers in arrivals. Real staff carry a photo ID card. Arrange your pick-up before you land and only go with the driver you booked.",
+   "place": "Kotoka International Airport",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Beaches",
+   "fact": "Theft is the main problem on beaches, with some violent crime and sexual assault reported. Do not go to a beach alone, and avoid isolated beaches.",
+   "time": "night",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Swimming in the sea",
+   "fact": "Rip currents and undertow make swimming dangerous on much of the coast, and people drown every year. Swim only where locals or staff say it is safe.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Women travelling alone",
+   "fact": "Canada notes that women on their own may face harassment and verbal abuse.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Demonstrations",
+   "fact": "Protests in Accra are usually peaceful but can start suddenly and block traffic. Leave the area and do not photograph them.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Bawku",
+   "fact": "The UK advises against all but essential travel to Bawku Municipality because of violent incidents, with frequent curfews. Attacks linked to the conflict have happened on the Nasia-Walewale-Bolgatanga and Bolgatanga-Zebilla-Bawku-Pulmakom roads.",
+   "place": "Bawku, Upper East",
+   "sources": [
+    {
+     "name": "gov.uk",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana/regional-risks",
+     "dated": "read 2026-11-13"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Near the Burkina Faso border",
+   "fact": "Canada advises against non-essential travel within 25 km of the Burkina Faso border.",
+   "place": "Northern border",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Curfews",
+   "fact": "Local curfews can be imposed during unrest, usually from 7pm to 5am. The Ministry of the Interior posts them.",
+   "sources": [
+    {
+     "name": "mint.gov.gh",
+     "url": "https://www.mint.gov.gh/category/press-release/",
+     "dated": "read 2026-11-13"
+    }
+   ]
+  },
+  {
+   "topic": "safety",
+   "title": "Scams",
+   "fact": "Common ones: online romance and friendship scams, gold and business deals, fake tour operators or hotels with steep discounts, card skimming at ATMs, and people posing as police asking for money. Do not hand over cash or your passport; ask for a name and ID number.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Taxis at night",
+   "fact": "The UK says not to travel alone in a taxi after dark. Canada says robberies of foreigners in taxis at night are frequent: do not hail one on the street, use a marked taxi with no other passengers, and agree the fare first.",
+   "time": "night",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Ride apps",
+   "fact": "Canada advises using a trusted ride app and checking the driver and car match the app before getting in. Drivers may ask for cash. The UK notes ride apps and tro-tros are not centrally licensed.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    },
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Where ride apps work",
+   "fact": "Bolt lists Accra, Cape Coast, Ho, Koforidua, Kumasi, Sunyani, Takoradi and Tamale. Yango lists Accra and Kumasi. Uber confirms Accra.",
+   "sources": [
+    {
+     "name": "Bolt, cities in Ghana",
+     "url": "https://bolt.eu/en-gh/cities/",
+     "dated": "read 13 Nov 2026"
+    },
+    {
+     "name": "Yango Ghana",
+     "url": "https://yango.com/en_gh/",
+     "dated": "2026"
+    },
+    {
+     "name": "Uber, Accra",
+     "url": "https://www.uber.com/global/en/cities/accra/",
+     "dated": "2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Tro-tros and buses",
+   "fact": "Canada describes tro-tros as overcrowded and poorly maintained, with a high accident record, and intercity coaches as better kept and safer.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Travelling between towns",
+   "fact": "Travel between towns in daylight. Both advisories warn against road travel outside the main towns after dark: poor lighting, and armed robberies on highways including Accra-Tema and Accra-Kumasi-Tamale.",
+   "time": "night",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "getting_around",
+   "title": "Driving",
+   "fact": "You need an international driving permit or a Ghanaian licence. Police checkpoints are common. Do not pay cash at a checkpoint; ask for identification.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Visas",
+   "fact": "Apply on the official eVisa portal, evisa.immigration.gov.gh. A tourist eVisa costs US$260 (decided within 96 hours), US$338 (48 hours) or US$442 (5 hours), the same for every nationality. ECOWAS nationals need no visa. The Immigration Service says nationals of other African Union countries can get a visa on arrival after paying the fee.",
+   "sources": [
+    {
+     "name": "Ghana eVisa portal, visa information",
+     "url": "https://evisa.immigration.gov.gh/visa-information",
+     "dated": "(c) 2026, read 13 Nov 2026"
+    },
+    {
+     "name": "Ghana Immigration Service, permits and visas",
+     "url": "https://gis.gov.gh/permits-and-visas/",
+     "dated": "(c) 2026, read 13 Nov 2026"
+    },
+    {
+     "name": "Ghana eVisa portal (Ghana Immigration Service)",
+     "url": "https://evisa.immigration.gov.gh/",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Tourist eVisa documents",
+   "fact": "A passport valid six months past your departure with three blank pages, a recent photo, a return or onward ticket, proof of where you are staying, and proof of funds such as three months of statements.",
+   "sources": [
+    {
+     "name": "Ghana eVisa portal (Ghana Immigration Service)",
+     "url": "https://evisa.immigration.gov.gh/",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Yellow fever certificate",
+   "fact": "Proof of yellow fever vaccination is required to enter, for travellers aged nine months and over.",
+   "sources": [
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    },
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "entry",
+   "title": "Health declaration",
+   "fact": "The UK reports Ebola screening at the border: complete Ghana's online health declaration before you travel, and expect a temperature check on arrival.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    }
+   ],
+   "unconfirmed": true
+  },
+  {
+   "topic": "entry",
+   "title": "Cash at the border",
+   "fact": "Declare foreign currency on arrival. You may bring in up to the equivalent of US$10,000; more can be confiscated. Cedis cannot be taken out of the country.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Yellow fever outbreak, Upper West",
+   "fact": "The US CDC has a level 2 notice dated 9 Nov 2026 for a yellow fever outbreak in the Upper West Region. Be vaccinated at least 10 days before travel and avoid mosquito bites.",
+   "sources": [
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Malaria",
+   "fact": "Malaria is present across the whole country, cities included. The CDC recommends prescription anti-malaria tablets, plus repellent and nets. A fever during or after the trip needs a doctor quickly.",
+   "sources": [
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Other vaccines",
+   "fact": "Typhoid is recommended for most travellers, and hepatitis A and B for anyone not vaccinated. Meningitis vaccine is advised for the north in the dry season, about December to June.",
+   "sources": [
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Food and water",
+   "fact": "Canada's rule of thumb is boil it, cook it, peel it or leave it. Avoid swimming in lakes and rivers because of bilharzia.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    },
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Medical care",
+   "fact": "Care is limited outside Accra and serious cases may need evacuation. Hospitals often want payment up front. Carry insurance that covers evacuation, and bring your own medicines in their packaging.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    },
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "health",
+   "title": "Dogs and rabies",
+   "fact": "Rabies is common in dogs. Avoid stray animals, wash any bite and get care at once.",
+   "sources": [
+    {
+     "name": "US CDC Travelers' Health, Ghana",
+     "url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/ghana",
+     "dated": "notice of 9 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Drugs",
+   "fact": "Penalties are severe, with long prison terms even for small amounts of cannabis, and bail is rarely given.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "LGBT+ travellers",
+   "fact": "Same-sex sexual acts are illegal, with sentences of 3 to 25 years according to the UK. Convictions are rare but arrests, extortion and attacks are reported. Public affection between same-sex couples is not accepted. The UK says the Human Sexual Rights and Family Values Bill is not law.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Photography",
+   "fact": "It is illegal to photograph military sites and the airport. Ask before photographing guarded buildings or people.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Camouflage clothing",
+   "fact": "Wearing military-style or camouflage clothing is illegal.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "ID",
+   "fact": "Carry ID. A copy of your passport photo page is accepted; keep the original somewhere safe.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "law",
+   "title": "Smoking",
+   "fact": "Smoking is banned in public places.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "money",
+   "title": "Cards and cash",
+   "fact": "ATMs are common in large towns and scarce in rural areas. Many hotels and shops take cards, but Mastercard is not widely accepted, so carry a Visa or cash as back-up. Use ATMs at banks or in well-lit places.",
+   "sources": [
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    },
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "money",
+   "title": "Changing money",
+   "fact": "Change money only at banks or licensed forex bureaus.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "phones",
+   "title": "SIM cards for visitors",
+   "fact": "Visitors register a SIM with their passport and proof of entry.",
+   "sources": [
+    {
+     "name": "National Communications Authority, SIM registration FAQs 2026",
+     "url": "https://nca.org.gh/wp-content/uploads/2026/03/SIM-Reg-FAQs-2026.pdf",
+     "dated": "2026 (not read in full)"
+    }
+   ],
+   "unconfirmed": true
+  },
+  {
+   "topic": "seasons",
+   "title": "Rain and harmattan",
+   "fact": "The rains run roughly March to November, with flooding in the north and at times in Accra. The harmattan, a dry dusty wind, blows from about December to March. Power and water cuts are more common in the dry season.",
+   "sources": [
+    {
+     "name": "Government of Canada travel advice for Ghana",
+     "url": "https://travel.gc.ca/destinations/ghana",
+     "dated": "updated 2 Nov 2026"
+    },
+    {
+     "name": "UK Foreign Office travel advice for Ghana",
+     "url": "https://www.gov.uk/foreign-travel-advice/ghana",
+     "dated": "updated 4 Nov 2026, current at 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "december",
+   "title": "December in GH 2026",
+   "fact": "The official season runs from 1 December 2026 to 25 January 2027, themed 'Ghana to the World', with more than 100 events.",
+   "sources": [
+    {
+     "name": "Ghana News Agency, December in GH 2026 launch",
+     "url": "https://gna.org.gh/2026/11/ghana-launches-december-in-gh-2026-campaign-to-boost-tourism/",
+     "dated": "2 Nov 2026"
+    },
+    {
+     "name": "Ghana News Agency, December in GH 2026 calendar",
+     "url": "https://gna.org.gh/2026/10/tourism-ministry-gta-unveils-december-in-gh-2026-events-calendar/",
+     "dated": "30 Oct 2026"
+    }
+   ],
+   "unconfirmed": true
+  },
+  {
+   "topic": "december",
+   "title": "Named December events",
+   "fact": "Christmas in Wonderland, Zen Gardens (1-31 Dec). Street Arts & Trade Festival, North Kaneshie (2 Dec). Tema Food Bazaar (4 Dec). Ghana-Jamaica Homecoming, University of Ghana stadium (4-5 Dec). African Food Festival, Bunso (4 Dec). EweZa concert, Ho (5 Dec). AFESTACC (9-11 Dec). Fufu Party, UG stadium (12 Dec). KIDDAFEST, National Theatre (17 Dec). Time with Ananse, National Theatre (19 Dec). BHIM Festival, UG stadium (24 Dec). Roverman Festival of Plays, National Theatre (24 Dec-4 Jan). A Night of 1033 Laughs and Music, La Palm (26 Dec).",
+   "sources": [
+    {
+     "name": "Ghana News Agency, December in GH 2026 calendar",
+     "url": "https://gna.org.gh/2026/10/tourism-ministry-gta-unveils-december-in-gh-2026-events-calendar/",
+     "dated": "30 Oct 2026"
+    },
+    {
+     "name": "Ghana News Agency, December in GH 2026 launch",
+     "url": "https://gna.org.gh/2026/11/ghana-launches-december-in-gh-2026-campaign-to-boost-tourism/",
+     "dated": "2 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "december",
+   "title": "Public holidays in December",
+   "fact": "Farmers' Day is the first Friday of December, Friday 4 December 2026. Christmas Day is Friday 25 December and Boxing Day Saturday 26 December.",
+   "sources": [
+    {
+     "name": "yen.com.gh",
+     "url": "https://yen.com.gh/ghana/312634-ghana-holidays-list-dates-remaining-public-holidays-2026/",
+     "dated": "read 2026-11-13"
+    }
+   ],
+   "unconfirmed": true
+  },
+  {
+   "topic": "costs",
+   "title": "What food and drink cost in Accra",
+   "fact": "From the menus Duro holds (prices at sit-down places, not street food): jollof as a main about GH¢135 (most between 85 and 180), waakye about 100, banku with tilapia about 180, fufu with soup about 170, kelewele about 65, red red about 95, shawarma about 150, a whole pizza about 180. A local beer (Club, Star) about GH¢40, a soft drink about 34, bottled water about 15, a cappuccino about 60, a cocktail about 120.",
+   "sources": [
+    {
+     "name": "Duro's own catalogue: 21,856 priced menu items",
+     "dated": "computed 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "costs",
+   "title": "Tro-tro and shared taxi fares",
+   "fact": "From 26 September 2026 the lowest tro-tro fare inside a city is GH¢5.50 and the longest city rides about GH¢37. A shared (line) taxi starts at GH¢1.90 for up to a kilometre and is about GH¢20 at 40 km. Long-distance fares run from about GH¢27 to GH¢324.",
+   "sources": [
+    {
+     "name": "MyJoyOnline, fares up 8% from 26 Sep 2026",
+     "url": "https://www.myjoyonline.com/public-transport-fares-go-up-by-8-from-september-26-check-how-much-you-will-pay/",
+     "dated": "23 Sep 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "Main public hospitals by town",
+   "fact": "Accra: Korle Bu Teaching Hospital; Accra: 37 Military Hospital; Accra: Greater Accra Regional Hospital; Accra: University Of Ghana Medical Centre; Kumasi: Komfo Anokye Teaching Hospital (KATH); Cape Coast: Central Regional Hospital; Takoradi: Effia Nkwanta Regional Hospital; Ho: Volta Regional Hospital; Tamale: Tamale Teaching Hospital; Bolgatanga: Upper East Regional Hospital; Wa: New Upper West Regional Hospital, Wa.; Sunyani: Sunyani Teaching Hospital; Koforidua: Koforidua Regional Hospital; Hohoe: Hohoe Government District Hospital; Winneba: Winneba Municipal Hospital; Akosombo: VRA Hospital SBU; Damongo (Mole): West Gonja Hospital; Kintampo: Kintampo Municipal Hospital, Kintampo North Municipal.",
+   "sources": [
+    {
+     "name": "Google Maps listings",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "Tamale Teaching Hospital",
+   "fact": "On the Tamale-Salaga road in the east of Tamale. Phone +233 59 185 4221.",
+   "sources": [
+    {
+     "name": "Tamale Teaching Hospital",
+     "url": "https://tth.gov.gh/",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "British High Commission, Accra",
+   "fact": "Julius Nyerere Link, off Gamel Abdul Nasser Avenue, Accra. In an emergency call +233 59 711 1444. Visits are by appointment only.",
+   "sources": [
+    {
+     "name": "British High Commission Accra",
+     "url": "https://www.gov.uk/world/organisations/british-high-commission-accra",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "High Commission of Canada, Accra",
+   "fact": "42 Independence Avenue, Accra. +233 302 211 521 or +233 302 228 555; accra-cs@international.gc.ca. Out of hours, Canada's Emergency Watch and Response Centre in Ottawa.",
+   "sources": [
+    {
+     "name": "Government of Canada, embassies and emergency numbers in Ghana",
+     "url": "https://travel.gc.ca/assistance/embassies-consulates/ghana",
+     "dated": "18 Mar 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "German Embassy, Accra",
+   "fact": "6 Kenneth Kaunda Road, North Ridge, Accra. +233 302 211 000. Emergency line for German nationals out of hours: +233 24 432 4889.",
+   "sources": [
+    {
+     "name": "German Embassy Accra",
+     "url": "https://accra.diplo.de/gh-en",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  },
+  {
+   "topic": "emergency",
+   "title": "French Embassy, Accra",
+   "fact": "Switchboard +233 302 214 550 in office hours. Emergency line for French nationals out of hours: +233 540 122 005.",
+   "sources": [
+    {
+     "name": "French Embassy in Ghana",
+     "url": "https://gh.diplomatie.gouv.fr/fr/en-cas-durgence",
+     "dated": "read 13 Nov 2026"
+    }
+   ]
+  }
+ ]
+}

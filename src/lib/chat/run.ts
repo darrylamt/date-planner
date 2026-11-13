@@ -55,6 +55,8 @@ const TOOL_LABEL: Record<string, string> = {
   search_events: "Checking what's on",
   list_past_outings: "Looking at your past plans",
   request_reservation: "Logging a table request",
+  search_films: "Checking the cinema times",
+  ghana_guide: "Checking the guide",
 };
 
 export async function* runChat(opts: {
