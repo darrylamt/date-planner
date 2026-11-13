@@ -453,12 +453,26 @@ export interface TripStay {
   ratesCheckedOn: string | null;
 }
 
+/** A day out to a destination too small to stay in yet, from the town you stay in (13 Nov 2026). */
+export interface TripDayTrip {
+  slug: string;
+  name: string;
+  from: string;
+  km: number;
+  minutes: number;
+  lastLeg: string | null;
+  places: TripSight[];
+  fees: number;
+  feesComplete: boolean;
+}
+
 export interface TripPart {
   label: string;
   startTime: string;
   hours: number;
   itinerary: Itinerary | null;
   note: string | null;
+  dayTrip?: TripDayTrip | null;
 }
 
 export interface TripSight {
@@ -485,6 +499,8 @@ export interface Trip {
     imageCredit: string | null;
     blurb: string | null;
     highlights: string[];
+    /** Where you stay when it's a day trip from a nearby town. */
+    stayIn?: { slug: string; name: string; km: number } | null;
   };
   inputs: TripInputs;
   leave: string;

@@ -10,7 +10,7 @@ import { haversineKm } from "./transport";
 import { CITY_CENTRES } from "./neighbourhoods";
 import { BUDGET_MAX } from "./budget";
 import { fetchAllRows } from "./fetchAll";
-import { photoCredit, routesTo, type Destination, type IntercityRoute, type TravelMode } from "./trips";
+import { DAY_TRIP_KM, missingFor, photoCredit, routesTo, type Destination, type IntercityRoute, type TravelMode } from "./trips";
 import type { Itinerary, PlanInputs } from "./types";
 
 /**
@@ -105,6 +105,27 @@ export interface TripStay {
   ratesCheckedOn: string | null;
 }
 
+export { DAY_TRIP_KM };
+
+/**
+ * A day out to a destination too small to stay and plan whole days in yet
+ * (owner, 13 Nov 2026): its sights at their fees, a place to eat there if we
+ * hold one, and how long the road is from the town you stay in.
+ */
+export interface TripDayTrip {
+  slug: string;
+  name: string;
+  from: string;
+  km: number;
+  /** Each way by road, about: the straight line, a third longer, at 50 km/h. */
+  minutes: number;
+  lastLeg: string | null;
+  places: TripSight[];
+  /** Known entry fees for the whole party; places with no fee on record add nothing. */
+  fees: number;
+  feesComplete: boolean;
+}
+
 /** A stretch of a day the one-day planner fills on its own: an afternoon, an evening, a morning. */
 export interface TripPart {
   label: string;
@@ -112,6 +133,7 @@ export interface TripPart {
   hours: number;
   itinerary: Itinerary | null;
   note: string | null;
+  dayTrip?: TripDayTrip | null;
 }
 
 export interface TripDay {
@@ -144,6 +166,8 @@ export interface Trip {
     imageCredit: string | null;
     blurb: string | null;
     highlights: string[];
+    /** Where you stay when the destination is a day trip from a nearby town; null when you stay there. */
+    stayIn: { slug: string; name: string; km: number } | null;
   };
   inputs: TripInputs;
   leave: string;
@@ -295,15 +319,11 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
   const { data: destRow } = await db.from("destinations").select("*").eq("slug", inputs.to).eq("is_active", true).maybeSingle();
   if (!destRow) throw new UnknownDestination(inputs.to);
   const d = destRow as Destination;
-  const here = d.lat != null && d.lng != null ? { lat: Number(d.lat), lng: Number(d.lng) } : null;
-  const radius = Number(d.radius_km);
-  const within = (p: { lat: number | null; lng: number | null }, km = radius) =>
-    here != null && p.lat != null && p.lng != null && haversineKm(here, { lat: Number(p.lat), lng: Number(p.lng) }) <= km;
   const party = inputs.partySize;
   const leave = addDays(inputs.arrive, inputs.nights);
   const gaps: string[] = [];
 
-  const [routesRes, staysRaw, placesRaw] = await Promise.all([
+  const [routesRes, staysRaw, placesRaw, destsRes] = await Promise.all([
     db.from("intercity_routes").select("*").eq("is_active", true),
     fetchAllRows<Record<string, unknown>>((a, b) =>
       db
@@ -326,14 +346,50 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
           .order("id")
           .range(a, b)
     ),
+    db.from("destinations").select("*").eq("is_active", true),
   ]);
   // A stay's details are one row (venue_id is its key), embedded as an object.
   const staysRows = staysRaw as unknown as StayRow[];
   const placeRows = placesRaw as unknown as PlaceRow[];
+  const allRoutes = (routesRes.data ?? []) as IntercityRoute[];
+
+  /*
+   * Where the trip is based. A destination with too few places, or no stay
+   * with rates, is a day trip from the nearest ready destination within
+   * DAY_TRIP_KM when there is one (owner, 13 Nov 2026): you stay in Cape
+   * Coast and spend a day at Kakum. "Ready" is the admin's own test (missingFor).
+   */
+  const centre = (x: Destination) => (x.lat != null && x.lng != null ? { lat: Number(x.lat), lng: Number(x.lng) } : null);
+  const inside = (x: Destination, p: { lat: number | null; lng: number | null }) => {
+    const c = centre(x);
+    return c != null && p.lat != null && p.lng != null && haversineKm(c, { lat: Number(p.lat), lng: Number(p.lng) }) <= Number(x.radius_km);
+  };
+  const readyAlone = (x: Destination) =>
+    !missingFor({
+      pricedStays: staysRows.filter((s) => inside(x, s) && s.stay_rooms.some((r) => r.is_active && r.price_per_night_ghs != null)).length,
+      routes: routesTo(x, allRoutes).length,
+      venues: placeRows.filter((v) => inside(x, v)).length,
+    }).length;
+  const dc = centre(d);
+  const base =
+    dc && !readyAlone(d)
+      ? (((destsRes.data ?? []) as Destination[])
+          .filter((x) => x.slug !== d.slug && centre(x) != null)
+          .map((x) => ({ x, km: haversineKm(dc, centre(x)!) }))
+          .filter((b) => b.km <= DAY_TRIP_KM)
+          .sort((a, b) => a.km - b.km)
+          .find((b) => readyAlone(b.x)) ?? null)
+      : null;
+  const hub = base?.x ?? d;
+  const here = centre(hub);
+  const radius = Number(hub.radius_km);
+  const within = (p: { lat: number | null; lng: number | null }, km = radius) =>
+    here != null && p.lat != null && p.lng != null && haversineKm(here, { lat: Number(p.lat), lng: Number(p.lng) }) <= km;
+  if (base) gaps.push(`You stay in ${hub.name} and spend a day at ${d.name}, ${Math.round(base.km)} km away: we don't have enough in ${d.name} yet for whole days there.`);
 
   // ── getting there ────────────────────────────────────────────────────
   const from = inputs.from.toLowerCase();
-  const ways: TripWay[] = routesTo(d, (routesRes.data ?? []) as IntercityRoute[])
+  const ways: TripWay[] = routesTo(hub, allRoutes)
     .filter((r) => r.from_town.toLowerCase() === from || (r.both_ways && r.to_town.toLowerCase() === from))
     .map((r) => {
       const oneWay = partyFare(r, party);
@@ -366,14 +422,19 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
     priced[0] ??
     ways[0] ??
     null;
-  if (!ways.length) gaps.push(`We don't have a way from ${inputs.from} to ${d.gateway_town} yet.`);
-  else if (inputs.travel !== "any" && chosen?.mode !== inputs.travel) gaps.push(`We don't have a ${inputs.travel} to ${d.gateway_town} yet, so this uses the ${chosen?.mode}.`);
+  if (!ways.length) gaps.push(`We don't have a way from ${inputs.from} to ${hub.gateway_town} yet.`);
+  else if (inputs.travel !== "any" && chosen?.mode !== inputs.travel) gaps.push(`We don't have a ${inputs.travel} to ${hub.gateway_town} yet, so this uses the ${chosen?.mode}.`);
   if (chosen && !chosen.oneWay) gaps.push(`${chosen.operator} doesn't publish fares: ask when you book.`);
   if (chosen && !chosen.return) gaps.push(`The way back isn't in the total: we only have ${chosen.operator}'s fare one way.`);
-  if (d.last_leg && d.gateway_town !== (d.town ?? d.name)) gaps.push(`From ${d.gateway_town}: ${d.last_leg.charAt(0).toLowerCase()}${d.last_leg.slice(1)}. Not in the total.`);
+  if (hub.last_leg && hub.gateway_town !== (hub.town ?? hub.name)) gaps.push(`From ${hub.gateway_town}: ${hub.last_leg.charAt(0).toLowerCase()}${hub.last_leg.slice(1)}. Not in the total.`);
 
   // ── where to stay ────────────────────────────────────────────────────
-  const townNames = new Set([d.town, d.gateway_town, d.name].filter(Boolean).map((t) => t!.toLowerCase()));
+  /*
+   * Stays filed under the destination's own town, as well as those within its
+   * radius. Not its gateway town: the bus may stop in Tamale, but a stay
+   * there is 114 km from Mole and the days were planned round it (13 Nov 2026).
+   */
+  const townNames = new Set([hub.town, hub.name].filter(Boolean).map((t) => t!.toLowerCase()));
   const nightDates = Array.from({ length: inputs.nights }, (_, i) => addDays(inputs.arrive, i));
   const nearStays = staysRows.filter((s) => within(s) || townNames.has(String(s.stay_details?.town ?? "").toLowerCase()));
   const fitted = nearStays.map((s) => ({ s, fit: fitRoom(s, party, nightDates) }));
@@ -405,21 +466,66 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
     .filter((x) => x.fit.total == null)
     .slice(0, 5)
     .map(({ s }) => ({ id: s.id, name: s.name, phone: s.phone, whatsapp: s.whatsapp_phone, bookingUrl: s.booking_url }));
-  if (!stays.length) gaps.push(askForRates.length ? `Places to stay near ${d.name} haven't given us their rates yet.` : `We don't have places to stay in ${d.name} yet.`);
+  if (!stays.length) gaps.push(askForRates.length ? `Places to stay near ${hub.name} haven't given us their rates yet.` : `We don't have places to stay in ${hub.name} yet.`);
 
   // ── each day ─────────────────────────────────────────────────────────
   const places = placeRows.map((v) => ({ ...v, city: v.areas?.city ?? null }));
   const nearPlaces = places.filter((v) => within(v));
-  const city = plannerCity(d, nearPlaces);
-  const base = stays[0]?.lat != null && stays[0]?.lng != null ? { lat: stays[0].lat!, lng: stays[0].lng! } : here;
+  const city = plannerCity(hub, nearPlaces);
+  const sleepAt = stays[0]?.lat != null && stays[0]?.lng != null ? { lat: stays[0].lat!, lng: stays[0].lng! } : here;
   const flying = chosen?.mode === "flight";
   const shapes = dayShapes(inputs.arrive, inputs.nights, flying);
+
+  // ── the day trip ─────────────────────────────────────────────────────
+  const toSight = (v: (typeof places)[number]): TripSight => ({
+    id: v.id,
+    name: v.name,
+    type: v.type,
+    description: v.description || null,
+    image: v.image_url,
+    mapsUrl: v.google_maps_url,
+    fee: v.entry_fee_ghs == null ? (v.is_free ? 0 : null) : Number(v.entry_fee_ghs),
+    chargesNote: v.charges_note,
+  });
+  let dayTrip: TripDayTrip | null = null;
+  if (base) {
+    const there = places.filter((v) => inside(d, v));
+    const isSight = (v: (typeof places)[number]) => v.type === "activity" || v.type === "outdoor";
+    // Its sights, those with a fee on record first; then up to two places to eat there.
+    const seen = there.filter(isSight).sort((a, b) => Number(b.entry_fee_ghs != null || b.is_free) - Number(a.entry_fee_ghs != null || a.is_free)).slice(0, 4);
+    const eat = there.filter((v) => !isSight(v)).slice(0, 2);
+    const list = [...seen, ...eat].map(toSight);
+    const fees = seen.map(toSight);
+    const km = Math.round(base.km);
+    dayTrip = {
+      slug: d.slug,
+      name: d.name,
+      from: hub.name,
+      km,
+      minutes: Math.max(20, Math.round(((km * 1.33) / 50) * 60 / 5) * 5),
+      lastLeg: d.last_leg,
+      places: list,
+      fees: fees.reduce((s, x) => s + (x.fee ?? 0) * party, 0),
+      feesComplete: fees.every((x) => x.fee != null),
+    };
+    /*
+     * The first full day goes to it, morning to late afternoon, with the
+     * evening back in town. A one-night trip has no full day: the last
+     * morning goes to it, and the way home starts after.
+     */
+    const at = shapes.length > 2 ? 1 : shapes.length - 1;
+    const label = `Day trip to ${d.name}`;
+    shapes[at].parts = shapes.length > 2 ? [{ label, startTime: "08:30", hours: 8 }, ...shapes[at].parts.filter((p) => p.label !== "Afternoon")] : [{ label, startTime: "08:00", hours: 5 }];
+    if (!dayTrip.places.length) gaps.push(`We don't have ${d.name}'s sights on record yet.`);
+    else if (!dayTrip.feesComplete) gaps.push(`Some entry fees at ${d.name} aren't on record, so they aren't in the total.`);
+    gaps.push(`The ride from ${hub.name} to ${d.name} and back isn't in the total.`);
+  }
   const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   const inputsFor = (date: string, startTime: string, hours: number) =>
     planInputsSchema.parse({
       ...defaultInputs(),
       city,
-      near: base ?? undefined,
+      near: sleepAt ?? undefined,
       radiusKm: Math.min(20, Math.max(3, radius)),
       partySize: party,
       budget: Math.min(BUDGET_MAX, Math.round((PER_HEAD_4H[inputs.comfort] * party * hours) / 4)),
@@ -446,11 +552,13 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
    * its date's list, less what earlier parts used, so no place comes twice;
    * the planner checks each part's own opening hours.
    */
-  const shortlists = base
+  const shortlists = sleepAt
     ? await Promise.all(
         shapes.map((shape) => {
-          const first = shape.parts[0];
-          const last = shape.parts[shape.parts.length - 1];
+          const own = shape.parts.filter((p) => !p.label.startsWith("Day trip"));
+          if (!own.length) return Promise.resolve(null);
+          const first = own[0];
+          const last = own[own.length - 1];
           const span = (toMin(last.startTime) + last.hours * 60 - toMin(first.startTime)) / 60;
           return fetchCandidates(db, inputsFor(shape.date, first.startTime, Math.min(12, span))).catch((e) => {
             console.error("trip day shortlist failed", d.slug, shape.date, e);
@@ -463,7 +571,17 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
   const days: TripDay[] = shapes.map((shape, i) => ({
     date: shape.date,
     label: shape.label,
-    parts: shape.parts.map((part) => {
+    parts: shape.parts.map((part): TripPart => {
+      if (dayTrip && part.label.startsWith("Day trip")) {
+        // Read by apps from before day trips as the note, so they still show it.
+        const names = dayTrip.places.map((p) => (p.fee ? `${p.name} (GHS ${p.fee} each)` : p.name)).join(", ");
+        return {
+          ...part,
+          itinerary: null,
+          dayTrip,
+          note: `About ${dayTrip.minutes} minutes each way from ${dayTrip.from}.${names ? ` ${names}.` : ""}`,
+        };
+      }
       const pi = inputsFor(shape.date, part.startTime, part.hours);
       const list = shortlists[i];
       let itinerary: Itinerary | null = null;
@@ -480,33 +598,25 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
           console.error("trip part failed", d.slug, shape.date, part.label, e);
         }
       }
-      return { ...part, itinerary, note: itinerary ? null : `Not enough places with prices near ${d.name} for this yet.` };
+      return { ...part, itinerary, note: itinerary ? null : `Not enough places with prices near ${hub.name} for this yet.` };
     }),
   }));
   const parts = days.flatMap((x) => x.parts);
-  const unplanned = parts.filter((x) => !x.itinerary).length;
-  if (unplanned) gaps.push(unplanned === parts.length ? `We can't plan the days in ${d.name} yet: too few places there have prices.` : `${unplanned} of the ${parts.length} parts of the trip couldn't be planned: too few places near ${d.name} have prices.`);
+  const unplanned = parts.filter((x) => !x.itinerary && !x.dayTrip?.places.length).length;
+  if (unplanned) gaps.push(unplanned === parts.length ? `We can't plan the days in ${hub.name} yet: too few places there have prices.` : `${unplanned} of the ${parts.length} parts of the trip couldn't be planned: too few places near ${hub.name} have prices.`);
 
   // ── worth seeing ─────────────────────────────────────────────────────
+  const onDayTrip = new Set(dayTrip?.places.map((p) => p.id) ?? []);
   const sights: TripSight[] = nearPlaces
-    .filter((v) => (v.type === "activity" || v.type === "outdoor") && !used.has(v.id))
+    .filter((v) => (v.type === "activity" || v.type === "outdoor") && !used.has(v.id) && !onDayTrip.has(v.id))
     .sort((a, b) => Number(b.entry_fee_ghs != null) - Number(a.entry_fee_ghs != null))
     .slice(0, 8)
-    .map((v) => ({
-      id: v.id,
-      name: v.name,
-      type: v.type,
-      description: v.description || null,
-      image: v.image_url,
-      mapsUrl: v.google_maps_url,
-      fee: v.entry_fee_ghs == null ? (v.is_free ? 0 : null) : Number(v.entry_fee_ghs),
-      chargesNote: v.charges_note,
-    }));
+    .map(toSight);
 
   // ── what it comes to ─────────────────────────────────────────────────
   const travel = chosen ? (chosen.return ?? chosen.oneWay) : null;
   const stay = stays[0]?.total ?? null;
-  const dayTotal = Math.round(parts.reduce((sum, x) => sum + (x.itinerary?.est_total_ghs ?? 0), 0));
+  const dayTotal = Math.round(parts.reduce((sum, x) => sum + (x.itinerary?.est_total_ghs ?? 0) + (x.dayTrip?.fees ?? 0), 0));
   const total = plus({ min: (stay ?? 0) + dayTotal, max: (stay ?? 0) + dayTotal }, travel);
   const complete = Boolean(chosen?.return) && stay != null && !unplanned;
 
@@ -515,13 +625,15 @@ export async function buildTrip(db: SupabaseClient, inputs: TripInputs): Promise
       slug: d.slug,
       name: d.name,
       region: d.region,
-      town: d.town,
-      gatewayTown: d.gateway_town,
-      lastLeg: d.last_leg,
+      // Getting there reads these: the town you travel to, which is where you stay.
+      town: base ? (hub.town ?? hub.name) : d.town,
+      gatewayTown: hub.gateway_town,
+      lastLeg: hub.last_leg,
       image: d.hero_image,
       imageCredit: photoCredit(d),
       blurb: d.blurb,
       highlights: d.highlights ?? [],
+      stayIn: base ? { slug: hub.slug, name: hub.name, km: Math.round(base.km) } : null,
     },
     inputs,
     leave,

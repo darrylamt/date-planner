@@ -81,6 +81,14 @@ export function routesTo(d: Pick<Destination, "gateway_town" | "town">, routes: 
  * enough places to fill the days. Empty means ready.
  */
 export const VENUES_FOR_READY = 6;
+
+/**
+ * How far a day trip goes from the town you stay in, in a straight line: about
+ * an hour and a half by road at most. A destination not ready on its own is a
+ * day trip from the nearest ready one this close (src/lib/trip.ts). Kakum from
+ * Cape Coast is 29 km, Nzulezo from Busua 78 (13 Nov 2026).
+ */
+export const DAY_TRIP_KM = 80;
 export function missingFor(c: { pricedStays: number; routes: number; venues: number }): string[] {
   const out: string[] = [];
   if (c.pricedStays < 1) out.push("a stay with rates");

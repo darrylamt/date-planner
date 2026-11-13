@@ -47,11 +47,20 @@ async function check(label: string, raw: Record<string, unknown>): Promise<Trip>
   ok(`${label}: no place twice`, new Set(stops.map((s) => s.venue_id)).size === stops.length, stops.map((s) => s.name).join(", "));
   if (stops.length) {
     const { data: rows } = await db.from("venues").select("id, type, lat, lng").in("id", stops.map((s) => s.venue_id));
-    const { data: dest } = await db.from("destinations").select("lat, lng, radius_km").eq("slug", inputs.to).single();
+    // A day trip's days are planned round the town you stay in.
+    const { data: dest } = await db.from("destinations").select("lat, lng, radius_km").eq("slug", trip.destination.stayIn?.slug ?? inputs.to).single();
     ok(`${label}: never a stay`, (rows ?? []).every((r) => r.type !== "stay"));
     const far = (rows ?? []).filter((r) => r.lat != null && haversineKm({ lat: dest!.lat, lng: dest!.lng }, { lat: +r.lat, lng: +r.lng }) > Math.max(20, +dest!.radius_km) + 5);
     ok(`${label}: stops near ${inputs.to}`, !far.length, far.map((r) => r.id).join(", "));
   }
+  const trips = trip.days.flatMap((d) => d.parts.filter((p) => p.dayTrip));
+  if (trip.destination.stayIn) {
+    ok(`${label}: one day trip, to ${inputs.to}`, trips.length === 1 && trips[0].dayTrip!.slug === inputs.to, trips.length);
+    ok(`${label}: day trip within reach`, trip.destination.stayIn.km <= 80, trip.destination.stayIn.km);
+    ok(`${label}: day trip shows what to see`, (trips[0]?.dayTrip?.places.length ?? 0) > 0);
+    const planned = trip.days.flatMap((d) => d.parts.map((p) => (p.itinerary?.est_total_ghs ?? 0) + (p.dayTrip?.fees ?? 0)));
+    ok(`${label}: day trip fees in the days`, Math.round(planned.reduce((a, b) => a + b, 0)) === t.days, `${planned} vs ${t.days}`);
+  } else ok(`${label}: no day trip when you stay there`, trips.length === 0, trips.length);
   for (const s of trip.stays) ok(`${label}: ${s.name} sleeps the party`, s.room != null && s.rooms * s.room.sleeps >= inputs.partySize, `${s.rooms} × ${s.room?.sleeps}`);
   if (!trip.ready) ok(`${label}: says what is missing`, trip.gaps.length > 0);
   if (!t.complete) ok(`${label}: an incomplete total is not called complete`, !trip.ready || !trip.gaps.length || true);
@@ -61,7 +70,7 @@ async function check(label: string, raw: Record<string, unknown>): Promise<Trip>
   console.log(`  way: ${way ? `${way.operator}${way.service ? " " + way.service : ""} ${way.oneWay ? `GHS ${way.oneWay.min}${way.oneWay.max == null ? "+" : ""} one way` : "fare unknown"}` : "none"} (${trip.ways.length} ways)`);
   console.log(`  stays: ${trip.stays.map((s) => `${s.name} GHS ${s.total}`).join("; ") || "none"}${trip.askForRates.length ? ` · ask: ${trip.askForRates.map((s) => s.name).join(", ")}` : ""}`);
   for (const d of trip.days)
-    for (const p of d.parts) console.log(`  ${d.date} ${d.label}, ${p.label}: ${p.itinerary ? p.itinerary.stops.map((s) => `${s.arrival_time} ${s.name} [${s.label}] (GHS ${s.est_cost_ghs})`).join(" → ") : p.note}`);
+    for (const p of d.parts) console.log(`  ${d.date} ${d.label}, ${p.label}: ${p.dayTrip ? `[day trip ${p.dayTrip.minutes} min from ${p.dayTrip.from}, fees GHS ${p.dayTrip.fees}] ${p.dayTrip.places.map((x) => x.name).join(", ")}` : p.itinerary ? p.itinerary.stops.map((s) => `${s.arrival_time} ${s.name} [${s.label}] (GHS ${s.est_cost_ghs})`).join(" → ") : p.note}`);
   console.log(`  sights: ${trip.sights.map((s) => `${s.name}${s.fee == null ? " (fee?)" : s.fee === 0 ? " (free)" : ` (GHS ${s.fee})`}`).join(", ")}`);
   console.log(`  total: GHS ${t.total.min}${t.total.max == null ? "+" : t.total.max !== t.total.min ? `–${t.total.max}` : ""} (travel ${t.travel ? t.travel.min : "?"}, stay ${t.stay ?? "?"}, days ${t.days}) ${t.complete ? "complete" : "partial"} · ready: ${trip.ready}`);
   console.log(`  gaps: ${trip.gaps.join(" | ") || "none"}`);
@@ -72,8 +81,13 @@ async function main() {
   await check("Kumasi", { to: "kumasi", nights: 2, partySize: 2, comfort: "mid" });
   await check("Cape Coast", { to: "cape-coast", nights: 2, partySize: 4, comfort: "easy", travel: "bus" });
   await check("Wli", { to: "wli", nights: 1, partySize: 2, comfort: "mid" });
+  const kakum = await check("Kakum", { to: "kakum", nights: 2, partySize: 2, comfort: "mid" });
+  ok("Kakum: stays in Cape Coast", kakum.destination.stayIn?.slug === "cape-coast", kakum.destination.stayIn?.slug);
+  await check("Bosomtwe", { to: "bosomtwe", nights: 3, partySize: 3, comfort: "easy" });
+  await check("Paga", { to: "paga", nights: 2, partySize: 2, comfort: "mid" });
   const mole = await check("Mole", { to: "mole", nights: 2, partySize: 5, comfort: "treat", travel: "flight" });
   ok("Mole: not ready without stays or places", !mole.ready);
+  ok("Mole: too far for a day trip from Tamale", mole.destination.stayIn == null, mole.destination.stayIn?.slug);
   await check("Busua", { to: "busua", nights: 3, partySize: 1, comfort: "easy" });
 
   console.log("");

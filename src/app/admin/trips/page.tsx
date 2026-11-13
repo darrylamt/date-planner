@@ -2,7 +2,7 @@ import Link from "next/link";
 import { adminDataClient } from "@/lib/adminAuth";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { haversineKm } from "@/lib/transport";
-import { missingFor, routesTo, type Destination, type IntercityRoute } from "@/lib/trips";
+import { DAY_TRIP_KM, missingFor, routesTo, type Destination, type IntercityRoute } from "@/lib/trips";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +127,20 @@ export default async function AdminTripsPage() {
     const c = { stays: here.length, pricedStays: priced, routes: ways.length, pricedRoutes: ways.filter((r) => r.fare_min_ghs != null || r.fare_max_ghs != null).length, venues: venues.filter((v) => near(d, v)).length };
     return { d, c, missing: missingFor(c) };
   });
-  const ready = rows.filter((r) => r.d.is_active && !r.missing.length).length;
+  // A destination not ready on its own is planned as a day trip from the nearest ready one within reach (trip.ts).
+  const readyRows = rows.filter((r) => r.d.is_active && !r.missing.length);
+  const dayTripFrom = new Map<string, { name: string; km: number }>();
+  for (const r of rows) {
+    if (!r.missing.length || r.d.lat == null || r.d.lng == null) continue;
+    const at = { lat: Number(r.d.lat), lng: Number(r.d.lng) };
+    const b = readyRows
+      .filter((x) => x.d.slug !== r.d.slug && x.d.lat != null && x.d.lng != null)
+      .map((x) => ({ name: x.d.name, km: haversineKm(at, { lat: Number(x.d.lat), lng: Number(x.d.lng) }) }))
+      .filter((x) => x.km <= DAY_TRIP_KM)
+      .sort((a, b) => a.km - b.km)[0];
+    if (b) dayTripFrom.set(r.d.slug, { name: b.name, km: Math.round(b.km) });
+  }
+  const ready = readyRows.length;
   const priced = allRoutes.filter((r) => r.fare_min_ghs != null || r.fare_max_ghs != null).length;
 
   return (
@@ -147,7 +160,7 @@ export default async function AdminTripsPage() {
         </div>
       </div>
       <p className="mt-1 max-w-[720px] text-[14px] text-mutedbrown">
-        {destinations.length} destinations, {ready} ready for a trip. {allRoutes.length} ways to get there, {priced} with a fare. Ready
+        {destinations.length} destinations, {ready} ready for a trip, {dayTripFrom.size} more as a day trip from one of those. {allRoutes.length} ways to get there, {priced} with a fare. Ready
         means a stay with rates, a way there, and at least six places within the destination&apos;s radius. Not in the app until
         Trips is built.
       </p>
@@ -164,7 +177,11 @@ export default async function AdminTripsPage() {
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline justify-between gap-2">
                 <span className="truncate font-semibold">{d.name}</span>
-                {missing.length ? null : <span className="badge b-ok shrink-0">ready</span>}
+                {missing.length ? (
+                  dayTripFrom.get(d.slug) ? <span className="badge shrink-0">day trip</span> : null
+                ) : (
+                  <span className="badge b-ok shrink-0">ready</span>
+                )}
               </span>
               <span className="block text-[12.5px] text-mutedbrown">
                 {d.region}
@@ -176,7 +193,13 @@ export default async function AdminTripsPage() {
                 {c.pricedStays}/{c.stays} stays priced · {c.pricedRoutes}/{c.routes} ways priced · {c.venues} places
                 {asks.get(d.slug) ? <b> · {asks.get(d.slug)} asked in 30 days</b> : null}
               </span>
-              {missing.length ? <span className="mt-0.5 block text-[12.5px] text-staletext">Needs {missing.join(", ")}</span> : null}
+              {missing.length && dayTripFrom.get(d.slug) ? (
+                <span className="mt-0.5 block text-[12.5px] text-mutedbrown">
+                  Planned as a day trip from {dayTripFrom.get(d.slug)!.name}, {dayTripFrom.get(d.slug)!.km} km. To stay there it needs {missing.join(", ")}.
+                </span>
+              ) : missing.length ? (
+                <span className="mt-0.5 block text-[12.5px] text-staletext">Needs {missing.join(", ")}</span>
+              ) : null}
             </span>
           </Link>
         ))}

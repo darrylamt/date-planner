@@ -164,7 +164,7 @@ export default function TripPlan() {
   const travel = way ? (way.return ?? way.oneWay) : null;
   const sum = (stay?.total ?? 0) + trip.totals.days;
   const total: TripRange = travel ? { min: sum + travel.min, max: travel.max == null ? null : sum + travel.max } : { min: sum, max: sum };
-  const complete = Boolean(way?.return) && stay?.total != null && trip.days.every((x) => x.parts.every((p) => p.itinerary));
+  const complete = Boolean(way?.return) && stay?.total != null && trip.days.every((x) => x.parts.every((p) => p.itinerary || p.dayTrip?.places.length));
   const heroH = Math.round(width * 0.9);
   const forParty = people === 1 ? "for you" : `for ${people}`;
 
@@ -273,6 +273,11 @@ export default function TripPlan() {
               <Display size={42} weight="800" color="#FFFFFF">
                 {d.name}
               </Display>
+              {d.stayIn ? (
+                <Body size={14} weight="700" color="rgba(255,255,255,0.9)">
+                  {`A day trip from ${d.stayIn.name}, where you stay`}
+                </Body>
+              ) : null}
               {d.imageCredit ? (
                 <Body size={10} color="rgba(255,255,255,0.7)" numberOfLines={1}>
                   {d.imageCredit}
@@ -394,7 +399,39 @@ export default function TripPlan() {
                     <Body size={12} weight="700" tone="tertiary">
                       {part.label.toUpperCase()}
                     </Body>
-                    {part.itinerary ? (
+                    {part.dayTrip ? (
+                      <View style={{ gap: 10 }}>
+                        <Body size={14} tone="secondary">
+                          {`About ${part.dayTrip.minutes} minutes each way from ${part.dayTrip.from}, ${part.dayTrip.km} km. The ride isn't in the total.`}
+                        </Body>
+                        {part.dayTrip.places.map((s) => {
+                          const sight = s.type === "activity" || s.type === "outdoor";
+                          return (
+                            <Pressable
+                              key={s.id}
+                              accessibilityRole="button"
+                              onPress={() => router.push(`/venue/${s.id}`)}
+                              style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}
+                            >
+                              <Symbol name={sight ? "binoculars.fill" : "fork.knife"} size={16} color={c.accent} />
+                              <View style={{ flex: 1 }}>
+                                <Body size={15} weight="600">
+                                  {s.name}
+                                </Body>
+                                <Body size={13} tone="secondary" numberOfLines={2}>
+                                  {sight ? (s.description ?? "") : "Somewhere to eat there"}
+                                </Body>
+                              </View>
+                              {sight ? (
+                                <Body size={13} weight="600" color={s.fee == null ? c.textSecondary : c.accent}>
+                                  {s.fee == null ? "Fee?" : s.fee === 0 ? "Free" : `${ghs(s.fee)} each`}
+                                </Body>
+                              ) : null}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ) : part.itinerary ? (
                       part.itinerary.stops.map((s) => (
                         <Pressable
                           key={s.venue_id}
@@ -489,7 +526,7 @@ export default function TripPlan() {
         </View>
         {!complete ? (
           <Body size={12} tone="tertiary" style={{ maxWidth: 140, textAlign: "right" }}>
-            {[!travel ? "no fare" : null, stay?.total == null ? "no stay" : null, trip.days.some((x) => x.parts.some((p) => !p.itinerary)) ? "some days open" : null].filter(Boolean).join(", ")}
+            {[!travel ? "no fare" : null, stay?.total == null ? "no stay" : null, trip.days.some((x) => x.parts.some((p) => !p.itinerary && !p.dayTrip?.places.length)) ? "some days open" : null].filter(Boolean).join(", ")}
           </Body>
         ) : null}
       </View>
