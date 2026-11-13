@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { menuPath } from "@/lib/menuPage";
 import { adminDataClient } from "@/lib/adminAuth";
 import { VenueForm } from "@/components/admin/VenueForm";
 import { areaCentroids } from "@/lib/areaCentroids";
@@ -23,6 +25,7 @@ export default async function EditVenuePage({ params }: { params: { id: string }
     ]);
 
   if (!venue) notFound();
+  const areaName = ((areas ?? []) as Area[]).find((x) => x.id === (venue as Venue).area_id)?.name ?? null;
   // A place to stay has its own form (0099), which knows its rooms and region.
   if ((venue as { type?: string }).type === "stay") redirect(`/admin/stays/${params.id}`);
 
@@ -50,7 +53,17 @@ export default async function EditVenuePage({ params }: { params: { id: string }
       area: ((o.areas as { name?: string } | null)?.name ?? "") as string,
     }));
 
+  const v = venue as Venue & { areas?: { name?: string } | null };
   return (
+    <>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Link href={`/admin/venues/${params.id}/qr`} className="btn2 btnsm">
+          QR stickers (A4)
+        </Link>
+        <a href={menuPath(params.id, v.name, areaName)} target="_blank" rel="noopener" className="btn2 btnsm">
+          Public menu page
+        </a>
+      </div>
     <VenueForm
       areas={(areas ?? []) as Area[]}
       areaCentres={centroids}
@@ -59,5 +72,6 @@ export default async function EditVenuePage({ params }: { params: { id: string }
       menuItems={(items ?? []) as MenuItem[]}
       schedules={(fixtures ?? []) as VenueSchedule[]}
     />
+    </>
   );
 }
