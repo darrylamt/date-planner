@@ -106,6 +106,21 @@
    "name": "Duro draft from general knowledge, to be confirmed by the owner",
    "url": null,
    "dated": "13 Nov 2026"
+  },
+  "police_tt": {
+   "name": "Ghana Police Service, TRAFFITECH-GH page",
+   "url": "https://police.gov.gh/en/index.php/traffitech-gh/",
+   "dated": "Sept 2026 (images), read 13 Nov 2026"
+  },
+  "evisa_fees": {
+   "name": "Ghana eVisa portal, visa information",
+   "url": "https://evisa.immigration.gov.gh/visa-information",
+   "dated": "(c) 2026, read 13 Nov 2026"
+  },
+  "gis_visas": {
+   "name": "Ghana Immigration Service, permits and visas",
+   "url": "https://gis.gov.gh/permits-and-visas/",
+   "dated": "(c) 2026, read 13 Nov 2026"
   }
  },
  "not_read": [
@@ -118,13 +133,13 @@
   {
    "topic": "emergency",
    "title": "Emergency numbers",
-   "body": "112 is the general emergency number. Police 191 or 18555, ambulance 193, fire 192.",
+   "body": "Police emergency 191, and the police toll-free line 18555 (both on the Ghana Police Service's own site). Canada's advice also lists 112 for all emergencies, 193 for an ambulance and 192 for fire.",
    "source": [
-    "ca_emb",
-    "cdc"
+    "police_tt",
+    "ca_emb"
    ],
    "check": true,
-   "note": "The UK page was reported as giving 999 or 112. The owner should confirm which lines actually answer."
+   "note": "191 and 18555 confirmed on police.gov.gh (Sept 2026). 112, 192 and 193 come from Canada (Mar 2026) and the French Embassy; no Ghanaian official page read yet confirms them. A Gemini claim citing mint.gov.gh was not on that page."
   },
   {
    "topic": "emergency",
@@ -325,12 +340,13 @@
   {
    "topic": "entry",
    "title": "Visas",
-   "body": "Ghana has an official online visa portal run by the Ghana Immigration Service. It sorts travellers three ways: visa-free (ECOWAS and AES nationals), an electronic travel authorisation (other African nationals and countries with a waiver), and an eVisa for everyone else. Standard processing is listed as 96 hours. Use the portal's own eligibility checker.",
+   "body": "Apply on the official eVisa portal, evisa.immigration.gov.gh. A tourist eVisa costs US$260 (decided within 96 hours), US$338 (48 hours) or US$442 (5 hours), the same for every nationality. ECOWAS nationals need no visa. The Immigration Service says nationals of other African Union countries can get a visa on arrival after paying the fee.",
    "source": [
+    "evisa_fees",
+    "gis_visas",
     "evisa"
    ],
-   "check": true,
-   "note": "Fees were not readable. The GIS site still lists visa on arrival; KPMG says it ended for African business travellers."
+   "note": "Fees shown in dollars only, so no cedi figure. Visa-on-arrival fee not published. ETA fee unconfirmed."
   },
   {
    "topic": "entry",
@@ -536,9 +552,10 @@
   {
    "topic": "december",
    "title": "Public holidays in December",
-   "body": "Farmers' Day is Friday 4 December 2026, Christmas Day Friday 25 December and Boxing Day Saturday 26 December.",
+   "body": "Farmers' Day is the first Friday of December, Friday 4 December 2026. Christmas Day is Friday 25 December and Boxing Day Saturday 26 December.",
    "source_url": "https://yen.com.gh/ghana/312634-ghana-holidays-list-dates-remaining-public-holidays-2026/",
-   "check": true
+   "check": true,
+   "note": "Official Ministry of the Interior list not readable. A Gemini answer gave 6 December for Farmers' Day; that is wrong."
   },
   {
    "topic": "costs",
