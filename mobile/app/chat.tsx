@@ -1049,7 +1049,7 @@ function Composer({
           }}
         >
           <Text variant="caption1" weight="600" tone={remaining > 0 ? "secondary" : "tint"}>
-            {remaining > 0 ? `${remaining} free ${remaining === 1 ? "message" : "messages"} left` : "No free messages left"}
+            {remaining > 0 ? `${remaining} free ${remaining === 1 ? "message" : "messages"} left this month` : `Free messages are back on ${nextMonthStart()}`}
           </Text>
         </View>
       ) : null}
@@ -1075,7 +1075,7 @@ function Composer({
           value={value}
           onChangeText={onChange}
           editable={!disabled}
-          placeholder={disabled ? "You have used your free messages" : listening ? "Listening…" : "Ask Durobot anything…"}
+          placeholder={disabled ? `Free messages are back on ${nextMonthStart()}` : listening ? "Listening…" : "Ask Durobot anything…"}
           placeholderTextColor={c.textSecondary}
           multiline
           style={{
@@ -1186,4 +1186,11 @@ function SignedOut({ onSignIn, onContinue }: { onSignIn: () => void; onContinue:
       </Pressable>
     </View>
   );
+}
+
+/** "1 December": when the free monthly messages come back (entitlements.ts counts by UTC month, Accra's calendar). */
+function nextMonthStart(): string {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return next.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
 }

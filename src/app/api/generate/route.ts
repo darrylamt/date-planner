@@ -104,6 +104,68 @@ async function reachFurther(
   });
 }
 
+/*
+ * Never an empty plan when one can honestly be made (owner, 14 Nov 2026:
+ * 22% of plan attempts in 30 days came back with nothing, most of them
+ * "couldn't fill the whole evening at GHS X"). After every softer answer has
+ * failed, the closest plan we can make, said plainly: the same budget across
+ * the whole city first, then the same place a little dearer, then both. The
+ * plan's own total is the real figure, so going over the budget is shown, never
+ * hidden. Not for a free budget, a named setting, a spa or an events night,
+ * which have answers of their own.
+ */
+const CLOSEST_MULTIPLIERS = [1.25, 1.5, 2, 2.5];
+
+async function closestFit(
+  supabase: SupabaseClient,
+  inputs: PlanInputs,
+  requestStart: number,
+  taste: Taste | null
+): Promise<NextResponse<GenerateResponse> | null> {
+  if (inputs.budget <= 0 || inputs.eventNight || inputs.occasion === "business_meeting" || (inputs.wellness && wellnessAllowed(inputs))) return null;
+  const city = inputs.city || "Accra";
+  const here = inputs.surpriseMe ? city : inputs.near ? "near you" : `in ${listOf(inputs.areaNames)}`;
+  const wide: PlanInputs | null = inputs.surpriseMe ? null : { ...inputs, surpriseMe: true, near: undefined };
+  const budgets = [...new Set(CLOSEST_MULTIPLIERS.map((m) => Math.min(BUDGET_MAX, Math.ceil((inputs.budget * m) / 50) * 50)))].filter((b) => b > inputs.budget);
+
+  const tries: { inputs: PlanInputs; why: "area" | "budget" }[] = [];
+  if (wide) tries.push({ inputs: wide, why: "area" });
+  for (const b of budgets) {
+    tries.push({ inputs: { ...inputs, budget: b }, why: "budget" });
+    if (wide) tries.push({ inputs: { ...wide, budget: b }, why: "budget" });
+  }
+
+  for (const t of tries) {
+    // Inside the route's time: the copy and the check still need theirs.
+    if (Date.now() - requestStart > 30_000) return null;
+    let candidates;
+    try {
+      candidates = await fetchCandidates(supabase, t.inputs, { taste });
+    } catch {
+      continue;
+    }
+    if (candidates.venues.length < 2) continue;
+    const first = planItinerary(t.inputs, candidates);
+    if (!first) continue;
+    const plan = await checkPlan(candidates, t.inputs, first, createServiceClient(), requestStart);
+    const written = t.inputs.ai === false || !(await copyBudget()) ? null : await writePlanCopy(t.inputs, plan);
+    const copy = written?.ok ? written.copy : fallbackCopy(t.inputs, plan);
+    const itinerary = assembleItinerary(t.inputs, plan, copy);
+    const total = Math.round(itinerary.est_total_ghs);
+    const elsewhere = t.inputs.surpriseMe && !inputs.surpriseMe;
+    itinerary.notice =
+      t.why === "area"
+        ? `Nothing ${here} fit GHS ${inputs.budget.toLocaleString()} for the whole evening, so this is the closest across ${city}.`
+        : total > inputs.budget
+          ? `GHS ${inputs.budget.toLocaleString()} wasn't enough for a whole evening ${elsewhere ? `${here} or across ${city}` : here}. This is the closest we could make, and it comes to GHS ${total.toLocaleString()}.`
+          : `This is the closest we could make${elsewhere ? ` across ${city}` : ""}.`;
+    const missed = movieNotice(t.inputs, plan);
+    if (missed) itinerary.notice = `${missed} ${itinerary.notice}`;
+    return NextResponse.json({ status: "ok", itinerary });
+  }
+  return null;
+}
+
 /**
  * Build a plan.
  *
@@ -284,6 +346,8 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
   if (candidates.venues.length < 2) {
     const reached = await reachFurther(supabase, inputs, requestStart, taste);
     if (reached) return reached;
+    const closest = await closestFit(supabase, inputs, requestStart, taste);
+    if (closest) return closest;
     /*
      * The whole city already searched and still nothing: a city we are only
      * starting on. Said as that, with no "widen" to tap, because widening a
@@ -489,6 +553,9 @@ async function generate(req: Request): Promise<NextResponse<GenerateResponse>> {
         });
       }
     }
+
+    const closest = await closestFit(supabase, inputs, requestStart, taste);
+    if (closest) return closest;
 
     return NextResponse.json({
       status: "no_match",
