@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runNudges, type NudgeKind } from "@/lib/nudges";
+import { runStarAlerts } from "@/lib/starAlerts";
 
 /**
  * Weekend ideas, new this week, and "it's been a while" (src/lib/nudges.ts).
@@ -30,13 +31,26 @@ export async function GET(req: Request) {
     .split(",")
     .filter((k): k is NudgeKind => (KINDS as string[]).includes(k));
 
-  const run = await runNudges(createServiceClient(), new Date(), {
+  /*
+   * Star alerts (0113, Pro) ride on this job, every day: Hobby allows one
+   * run a day per job, and 17:00 suits both. Their own opt-in and their own
+   * daily claim; a failure here never stops the nudges.
+   */
+  const db = createServiceClient();
+  const stars = await runStarAlerts(db, new Date(), { dry }).catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
+
+  const run = await runNudges(db, new Date(), {
     dry,
     everyone: dry && url.searchParams.get("everyone") === "1",
     ...(asked.length ? { kinds: asked } : {}),
   });
   return NextResponse.json({
     dry,
+    // The star alerts' counts and copy, never who they went to.
+    starAlerts:
+      "error" in stars
+        ? stars
+        : { watching: stars.watching, venues: stars.venues, baselined: stars.baselined, sending: stars.messages.length, sent: stars.sent ?? 0, skipped: stars.skipped, copy: stars.messages.map((m) => m.alert) },
     kinds: run.kinds,
     optedIn: run.optedIn,
     sending: run.messages.length,

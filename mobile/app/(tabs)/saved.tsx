@@ -26,6 +26,7 @@ import { PlansCalendar } from "../../src/components/plans/PlansCalendar";
 import { useLook } from "../../src/lib/appearance";
 import { Body, Display, KenteBand } from "../../src/components/look";
 import { StarredList } from "../../src/components/redesign/StarredList";
+import { ProSheet } from "../../src/components/profile/ProSheet";
 import { fetchAllowance } from "../../src/lib/chat";
 import { SITE_URL } from "../../src/lib/site";
 
@@ -45,6 +46,7 @@ export default function Plans() {
   const [plans, setPlans] = useState<SavedPlan[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [pro, setPro] = useState(false);
+  const [proSheet, setProSheet] = useState(false);
   useEffect(() => {
     if (session) void fetchAllowance().then((a) => setPro(a?.tier === "pro")).catch(() => undefined);
   }, [session]);
@@ -188,7 +190,7 @@ export default function Plans() {
       </View>
 
       {view === "calendar" ? <PlansCalendar plans={plans} /> : null}
-      {view === "starred" ? <StarredList pro={pro} /> : null}
+      {view === "starred" ? <StarredList pro={pro} onPro={() => setProSheet(true)} /> : null}
       {view !== "list" ? null : (
         <View style={{ paddingHorizontal: GUTTER, gap: 16 }}>
           {plans.map((plan) => (
@@ -209,6 +211,7 @@ export default function Plans() {
           ))}
         </View>
       )}
+      <ProSheet visible={proSheet} onClose={() => setProSheet(false)} tier={pro ? "pro" : "free"} onPurchased={() => (setProSheet(false), setPro(true))} />
     </ScrollView>
   );
 }

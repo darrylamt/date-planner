@@ -10,6 +10,11 @@ type AndroidSymbol = NonNullable<Extract<SymbolViewProps["name"], object>["andro
  */
 export const MATERIAL: Record<string, AndroidSymbol> = {
   "app.badge": "app_badging",
+  bell: "notifications",
+  "bell.fill": "notifications_active",
+  circle: "radio_button_unchecked",
+  "folder.badge.plus": "create_new_folder",
+  "folder.fill": "folder",
   "arrow.clockwise": "refresh",
   "arrow.right": "arrow_forward",
   "arrow.triangle.2.circlepath": "sync",
