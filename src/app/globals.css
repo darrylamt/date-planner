@@ -2,6 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Colour tokens (owner, 15 Nov 2026: redesign the website to match the
+   app, following the device). Daylight in light mode and Night in dark
+   mode, the app's own two looks (mobile/src/lib/looks.ts). Tailwind's
+   colour names (cream, ink, flame...) read these, so every page follows.
+   ?theme=light or ?theme=dark pins one (layout.tsx sets data-theme).
+   Admin and the venue portal keep the colours they were built in.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+    --c-cream: 255 255 255;
+    --c-sand: 242 242 245;
+    --c-shell: 245 245 247;
+    --c-parchment: 255 255 255;
+    --c-blush: 255 255 255;
+    --c-flame: 225 29 72;
+    --c-flame-deep: 190 18 60;
+    --c-flame-dark: 159 18 57;
+    --c-amber: 180 83 9;
+    --c-amber-deep: 146 64 14;
+    --c-lagoon: 245 245 247;
+    --c-lagoon-mid: 236 236 240;
+    --c-lagoon-soft: 103 107 119;
+    --c-lagoon-faint: 11 11 15;
+    --c-ink: 11 11 15;
+    --c-cocoa: 94 98 112;
+    --c-mutedbrown: 103 107 119;
+    --c-line: 236 237 241;
+    --c-linesoft: 242 242 245;
+    --c-chipborder: 201 203 211;
+    --c-track: 236 236 240;
+    --c-whybg: 253 232 236;
+    --c-avoidbg: 242 242 245;
+    --c-stale: 236 237 241;
+    --c-staletext: 190 18 60;
+    --c-shadow: 0 1px 2px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.06);
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-cream: 12 10 22;
+    --c-sand: 23 19 42;
+    --c-shell: 23 19 42;
+    --c-parchment: 12 10 22;
+    --c-blush: 23 15 43;
+    --c-flame: 255 181 71;
+    --c-flame-deep: 255 196 110;
+    --c-flame-dark: 255 208 138;
+    --c-amber: 255 181 71;
+    --c-amber-deep: 245 158 11;
+    --c-lagoon: 36 29 63;
+    --c-lagoon-mid: 38 31 64;
+    --c-lagoon-soft: 148 142 170;
+    --c-lagoon-faint: 245 243 255;
+    --c-ink: 245 243 255;
+    --c-cocoa: 180 174 200;
+    --c-mutedbrown: 148 142 170;
+    --c-line: 38 31 64;
+    --c-linesoft: 31 25 54;
+    --c-chipborder: 61 52 96;
+    --c-track: 36 29 63;
+    --c-whybg: 46 35 24;
+    --c-avoidbg: 36 29 63;
+    --c-stale: 38 31 64;
+    --c-staletext: 255 181 71;
+    --c-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --c-cream: 12 10 22;
+    --c-sand: 23 19 42;
+    --c-shell: 23 19 42;
+    --c-parchment: 12 10 22;
+    --c-blush: 23 15 43;
+    --c-flame: 255 181 71;
+    --c-flame-deep: 255 196 110;
+    --c-flame-dark: 255 208 138;
+    --c-amber: 255 181 71;
+    --c-amber-deep: 245 158 11;
+    --c-lagoon: 36 29 63;
+    --c-lagoon-mid: 38 31 64;
+    --c-lagoon-soft: 148 142 170;
+    --c-lagoon-faint: 245 243 255;
+    --c-ink: 245 243 255;
+    --c-cocoa: 180 174 200;
+    --c-mutedbrown: 148 142 170;
+    --c-line: 38 31 64;
+    --c-linesoft: 31 25 54;
+    --c-chipborder: 61 52 96;
+    --c-track: 36 29 63;
+    --c-whybg: 46 35 24;
+    --c-avoidbg: 36 29 63;
+    --c-stale: 38 31 64;
+    --c-staletext: 255 181 71;
+    --c-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+}
+.admin,
+.planner {
+    --c-cream: 26 13 20;
+    --c-sand: 51 26 38;
+    --c-shell: 38 19 29;
+    --c-parchment: 32 15 24;
+    --c-blush: 255 241 246;
+    --c-flame: 226 61 109;
+    --c-flame-deep: 201 44 88;
+    --c-flame-dark: 175 33 72;
+    --c-amber: 229 176 78;
+    --c-amber-deep: 209 154 50;
+    --c-lagoon: 58 21 38;
+    --c-lagoon-mid: 85 32 58;
+    --c-lagoon-soft: 188 140 163;
+    --c-lagoon-faint: 248 224 234;
+    --c-ink: 247 233 240;
+    --c-cocoa: 214 175 193;
+    --c-mutedbrown: 168 126 146;
+    --c-line: 74 35 54;
+    --c-linesoft: 61 28 44;
+    --c-chipborder: 90 42 64;
+    --c-track: 64 32 47;
+    --c-whybg: 46 21 34;
+    --c-avoidbg: 53 23 38;
+    --c-stale: 74 35 54;
+    --c-staletext: 242 162 192;
+    --c-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+
+
 /*
   Shared component patterns from the design style tile
   (buttons, chips, cards, kente strip, timeline connector, budget bar).
@@ -11,15 +139,9 @@
 @layer base {
   body {
     @apply bg-cream text-ink font-sans antialiased;
-    /*
-     * Rose glow above, candlelight below, and a fine grid of soft dots
-     * (owner, 13 Nov 2026: no hearts, and no kente).
-     */
-    background-image:
-      radial-gradient(1100px 520px at 50% -8%, rgba(226, 61, 109, 0.16), transparent 62%),
-      radial-gradient(900px 600px at 100% 105%, rgba(229, 176, 78, 0.08), transparent 60%),
-      radial-gradient(circle at 1px 1px, rgba(247, 233, 240, 0.07) 1px, transparent 1.6px);
-    background-size: auto, auto, 22px 22px;
+    /* A soft wash of the accent at the top, nothing else (no hearts, no kente). */
+    background-image: radial-gradient(1000px 420px at 50% -10%, rgb(var(--c-flame) / 0.08), transparent 65%);
+    background-repeat: no-repeat;
   }
 }
 

@@ -16,46 +16,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Surfaces, dark romantic: deep plum-black velvet
-        cream: "#1A0D14", // app background
-        sand: "#331A26", // secondary surface
-        shell: "#26131D", // card background
-        parchment: "#200F18", // itinerary page bg
-        blush: "#FFF1F6", // light text on accents / photos
-        // Brand
-        flame: {
-          DEFAULT: "#E23D6D", // primary accent, deep rose
-          deep: "#C92C58", // hover
-          dark: "#AF2148", // pressed / link hover
-        },
-        amber: {
-          DEFAULT: "#E5B04E", // candlelight gold accent
-          deep: "#D19A32",
-        },
-        lagoon: {
-          DEFAULT: "#3A1526", // raised dark surface, velvet wine
-          mid: "#55203A", // budget bar track
-          soft: "#BC8CA3", // muted text on dark
-          faint: "#F8E0EA", // light text on dark
-        },
-        // Ink & muted text
-        ink: "#F7E9F0", // main text
-        cocoa: "#D6AFC1", // secondary text
-        mutedbrown: "#A87E92", // captions
-        // Lines & chips
-        line: "#4A2336", // borders
-        linesoft: "#3D1C2C", // dashed dividers
-        chipborder: "#5A2A40", // chip outline
-        track: "#40202F", // progress rail / slider rail
-        whybg: "#2E1522", // "why this fits" note bg
-        avoidbg: "#351726", // avoid-note bg
-        stale: "#4A2336", // stale badge bg
-        staletext: "#F2A2C0", // stale badge text
+        // Daylight and Night, from CSS variables (globals.css; owner 15 Nov 2026).
+        cream: "rgb(var(--c-cream) / <alpha-value>)", // page background
+        sand: "rgb(var(--c-sand) / <alpha-value>)", // secondary surface
+        shell: "rgb(var(--c-shell) / <alpha-value>)", // card background
+        parchment: "rgb(var(--c-parchment) / <alpha-value>)",
+        blush: "rgb(var(--c-blush) / <alpha-value>)", // text on the accent
+        flame: { DEFAULT: "rgb(var(--c-flame) / <alpha-value>)", deep: "rgb(var(--c-flame-deep) / <alpha-value>)", dark: "rgb(var(--c-flame-dark) / <alpha-value>)" }, // the accent
+        amber: { DEFAULT: "rgb(var(--c-amber) / <alpha-value>)", deep: "rgb(var(--c-amber-deep) / <alpha-value>)" },
+        lagoon: { DEFAULT: "rgb(var(--c-lagoon) / <alpha-value>)", mid: "rgb(var(--c-lagoon-mid) / <alpha-value>)", soft: "rgb(var(--c-lagoon-soft) / <alpha-value>)", faint: "rgb(var(--c-lagoon-faint) / <alpha-value>)" },
+        ink: "rgb(var(--c-ink) / <alpha-value>)", // main text
+        cocoa: "rgb(var(--c-cocoa) / <alpha-value>)", // secondary text
+        mutedbrown: "rgb(var(--c-mutedbrown) / <alpha-value>)", // captions
+        line: "rgb(var(--c-line) / <alpha-value>)",
+        linesoft: "rgb(var(--c-linesoft) / <alpha-value>)",
+        chipborder: "rgb(var(--c-chipborder) / <alpha-value>)",
+        track: "rgb(var(--c-track) / <alpha-value>)",
+        whybg: "rgb(var(--c-whybg) / <alpha-value>)",
+        avoidbg: "rgb(var(--c-avoidbg) / <alpha-value>)",
+        stale: "rgb(var(--c-stale) / <alpha-value>)",
+        staletext: "rgb(var(--c-staletext) / <alpha-value>)",
       },
       fontFamily: {
         // One sans face throughout, matches the iOS app, which uses the
         // system sans. Weight and size carry hierarchy, not a change of face.
-        display: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         // Roboto Mono for prices, times and labels (design used ui-monospace)
         mono: ["var(--font-roboto-mono)", "ui-monospace", "monospace"],
@@ -80,7 +65,7 @@ const config: Config = {
         swap: "11px", // swap button
       },
       boxShadow: {
-        card: "0 6px 22px rgba(0, 0, 0, 0.45)",
+        card: "var(--c-shadow)",
         phone: "0 16px 48px rgba(0, 0, 0, 0.6)",
         chip: "0 4px 14px rgba(226, 61, 109, 0.45)",
         knob: "0 3px 10px rgba(226, 61, 109, 0.5)",

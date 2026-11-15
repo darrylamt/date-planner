@@ -222,7 +222,7 @@ export default async function LandingPage() {
             <Stat value={String(data.places)} label="places to go" />
             <Stat value={atLeast(data.menuPrices)} label="menu prices" />
             <Stat value={String(data.areas)} label="neighbourhoods" />
-            <Stat value={String(data.cities.length)} label={data.cities.length === 1 ? "city" : `cities, ${data.cities.join(" and ")}`} />
+            <Stat value={String(data.cities.length)} label={data.cities.length === 1 ? "city" : data.cities.length <= 3 ? `cities: ${data.cities.join(", ")}` : `towns, from ${data.cities.slice(0, 2).join(" and ")} to ${data.cities.length - 2} more`} />
           </div>
         </section>
       ) : null}

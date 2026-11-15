@@ -31,6 +31,7 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
 - 0109_qr_scans.sql ran by 15 November 2026 (probed: a 'qr' / 'menu'
   share_events row inserts); in `archive/`.
 - 0108_chat_misses.sql ran on 13 November 2026; in `archive/`.
-- 0110_paystack_pro.sql is waiting to be run (Paystack Pro on the website).
+- 0110_paystack_pro.sql ran on 15 November 2026 (probed: entitlements has the
+  paystack columns); in `archive/`.
 - New migrations go here, at the top level, numbered on from 0100. Move them
   into `archive/` once they have been run.
