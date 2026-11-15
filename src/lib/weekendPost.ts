@@ -19,6 +19,8 @@ export type WeekendPick = {
   price: string | null;
   image: string | null;
   link: string;
+  /** The event's date, for the flyer's date column. */
+  iso?: string;
 };
 
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -77,6 +79,7 @@ export async function weekendPicks(db: SupabaseClient, now = new Date()): Promis
       price: e.cost_ghs == null ? null : Number(e.cost_ghs) === 0 ? "Free" : `${ghs(Number(e.cost_ghs))} a person`,
       image: e.image_url ?? e.venues?.image_url ?? null,
       link: SITE_URL,
+      iso: e.event_date,
     });
   }
 

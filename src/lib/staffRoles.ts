@@ -2,7 +2,7 @@
  * The staff roles (0095) as plain values, safe in the browser. The access
  * checks that use them are in staff.ts, which is server-only.
  */
-export const STAFF_ROLES = ["photos", "menus", "events", "stays"] as const;
+export const STAFF_ROLES = ["photos", "menus", "events", "stays", "social"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const ROLE_LABEL: Record<StaffRole, string> = {
@@ -10,6 +10,7 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   menus: "Menus & prices",
   events: "Events",
   stays: "Stays",
+  social: "Social media",
 };
 
 export const ROLE_BLURB: Record<StaffRole, string> = {
@@ -17,6 +18,7 @@ export const ROLE_BLURB: Record<StaffRole, string> = {
   menus: "Dishes and prices, menu import, cuisines and per-person figures.",
   events: "Events and Gaderin listings.",
   stays: "Places to stay: where they are, rooms and nightly rates, amenities and things to do there (0099). And Trips: destinations and the ways to get there (0101).",
+  social: "The weekend post, lineups of what is on, and the Flyer maker, ready for Instagram and the WhatsApp Channel (0114). Reads the catalogue; changes nothing in it.",
 };
 
 /** Where each role starts when they sign in. */
@@ -25,6 +27,7 @@ export const ROLE_HOME: Record<StaffRole, string> = {
   menus: "/admin/menu",
   events: "/admin/events",
   stays: "/admin/stays",
+  social: "/admin/social",
 };
 
 /** Staff usernames sign in as an address on a domain that cannot receive mail. */
