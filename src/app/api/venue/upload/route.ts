@@ -31,13 +31,15 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Sign in again, then try once more." }, { status: 401 });
 
   const db = createServiceClient();
-  const [{ data: runs }, { data: planner }, { data: vendor }] = await Promise.all([
+  const [{ data: runs }, { data: planner }, { data: vendor }, { data: me }] = await Promise.all([
     db.from("venue_users").select("venue_id").eq("user_id", user.id).limit(1),
     db.from("event_planners").select("is_active").eq("user_id", user.id).maybeSingle(),
     // Cake and flower vendors (0078); before it the table is missing and this is simply null.
     db.from("vendor_users").select("vendor_id").eq("user_id", user.id).maybeSingle(),
+    // Admins, for the menu page look edited from the admin (0111).
+    db.from("profiles").select("is_admin").eq("id", user.id).maybeSingle(),
   ]);
-  if (!runs?.length && !planner?.is_active && !vendor) {
+  if (!runs?.length && !planner?.is_active && !vendor && !(me as { is_admin?: boolean } | null)?.is_admin) {
     return NextResponse.json({ error: "Uploads are for venue, planner and vendor accounts." }, { status: 403 });
   }
 

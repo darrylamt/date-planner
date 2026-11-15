@@ -60,6 +60,9 @@ export default async function EditVenuePage({ params }: { params: { id: string }
         <Link href={`/admin/venues/${params.id}/qr`} className="btn2 btnsm">
           QR stickers (A4)
         </Link>
+        <Link href={`/admin/venues/${params.id}/style`} className="btn2 btnsm">
+          Menu page look
+        </Link>
         <a href={menuPath(params.id, v.name, areaName)} target="_blank" rel="noopener" className="btn2 btnsm">
           Public menu page
         </a>

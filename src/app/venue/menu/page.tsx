@@ -23,6 +23,16 @@ export default async function VenueMenuPage({ searchParams }: { searchParams: { 
 
   return (
     <VenueShell venues={session.venues} current={venue} imageUrl={imageUrl}>
+      <a
+        href={session.venues.length > 1 ? `/venue/menu/style?venue=${venue.id}` : "/venue/menu/style"}
+        className="pl-card mb-5 flex items-center justify-between gap-3 p-4 hover:bg-[var(--p-sunken)]"
+      >
+        <span>
+          <span className="block text-[16px] font-bold">Menu page look</span>
+          <span className="block text-[14px] text-[var(--p-muted)]">Your logo, cover photo, colours and fonts on the menu page your QR stickers open.</span>
+        </span>
+        <span aria-hidden="true" className="text-[22px] font-bold">›</span>
+      </a>
       <MenuManager scope={scope} items={items} />
     </VenueShell>
   );
