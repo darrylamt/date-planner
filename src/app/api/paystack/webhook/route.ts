@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { grantPaystackPro, planIdOf, signedByPaystack, userForCustomer } from "@/lib/paystack";
+import { grantPaystackPro, periodFrom, planIdOf, signedByPaystack, userForCustomer } from "@/lib/paystack";
 
 /*
  * Paystack tells us about payments and subscriptions here (Settings → API
@@ -21,6 +21,7 @@ type Ev = {
   data: {
     reference?: string;
     status?: string;
+    paid_at?: string | null;
     metadata?: { user_id?: string } | string | null;
     customer?: { customer_code?: string; email?: string };
     plan?: { plan_code?: string } | string | null;
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
       if (!plan) return NextResponse.json({ ignored: "not a Pro plan" });
       const userId = await userForCustomer(customer, meta(d.metadata));
       if (!userId) return NextResponse.json({ ignored: "no account for this payment" });
-      await grantPaystackPro(userId, { plan, customer });
+      await grantPaystackPro(userId, { plan, customer, until: periodFrom(d.paid_at, plan) });
       return NextResponse.json({ ok: true });
     }
 

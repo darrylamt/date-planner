@@ -319,8 +319,8 @@ export default async function LandingPage() {
                 >
                   <SmartImage src={p.image} alt={p.name} className="h-[150px] md:h-[170px]" sizes="260px" />
                   <figcaption className="absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-black/75 to-transparent px-3.5 pb-3 pt-8">
-                    <div className="truncate text-[14px] font-bold text-blush">{p.name}</div>
-                    {p.area ? <div className="text-[12px] text-blush/75">{p.area}</div> : null}
+                    <div className="truncate text-[14px] font-bold text-white">{p.name}</div>
+                    {p.area ? <div className="text-[12px] text-white/80">{p.area}</div> : null}
                   </figcaption>
                 </figure>
               ))}

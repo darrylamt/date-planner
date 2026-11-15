@@ -63,11 +63,13 @@ export async function planPrice(id: PlanId): Promise<number | null> {
 }
 
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
-const addMonths = (d: Date, n: number) => {
+/** One plan period on from when a payment was made, not from now: re-reading a payment must never extend Pro. */
+export const periodFrom = (paidAt: string | null | undefined, plan: PlanId): Date | null => (paidAt ? addMonths(new Date(paidAt), PLANS[plan].months) : null);
+function addMonths(d: Date, n: number): Date {
   const x = new Date(d);
   x.setUTCMonth(x.getUTCMonth() + n);
   return x;
-};
+}
 
 /**
  * Turn Pro on, or extend it, for a Paystack payment.
