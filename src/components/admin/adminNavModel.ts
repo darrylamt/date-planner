@@ -83,6 +83,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
       { href: "/admin/pull", label: "Pull", icon: "pulse", keywords: "kept swapped signals ranking popular" },
       { href: "/admin/meals", label: "Meal quality", icon: "chef", keywords: "food dishes drinks dessert breakfast check report", roles: ["menus"] },
       { href: "/admin/sharing", label: "Sharing", icon: "share", keywords: "shares links" },
+      { href: "/admin/weekend-post", label: "Weekend post", icon: "calendar", keywords: "instagram whatsapp channel social post thursday marketing" },
       { href: "/admin/poll", label: "Name poll", icon: "vote", keywords: "votes" },
     ],
   },
