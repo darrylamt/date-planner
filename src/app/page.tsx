@@ -238,15 +238,10 @@ export default async function LandingPage() {
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {OCCASIONS.map((o) => (
               <div key={o.id} className="group rounded-card border border-white/5 bg-shell p-4 transition-colors hover:border-flame/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/mascots/${o.id}.png`}
-                  alt=""
-                  width={72}
-                  height={72}
-                  className="-ml-1 h-[72px] w-[72px] transition-transform duration-300 [image-rendering:pixelated] group-hover:-translate-y-1"
-                />
-                <div className="mt-2 text-[15px] font-bold">{o.title}</div>
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-flame/10 text-flame transition-transform duration-300 group-hover:-translate-y-0.5">
+                  <OccasionIcon id={o.id} />
+                </span>
+                <div className="mt-3 text-[15px] font-bold">{o.title}</div>
                 <div className="mt-0.5 text-[13px] leading-snug text-mutedbrown">{o.sub}</div>
               </div>
             ))}
@@ -364,15 +359,7 @@ export default async function LandingPage() {
 
         {/* Last word */}
         <section className="py-16 text-center md:py-24">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/mascots/scene_table.png"
-            alt=""
-            width={112}
-            height={112}
-            className="mx-auto h-[112px] w-[112px] [image-rendering:pixelated]"
-          />
-          <h2 className="mx-auto mt-4 max-w-[640px] font-display text-[34px] font-bold leading-[1.1] tracking-[-0.02em] md:text-[46px]">
+          <h2 className="mx-auto max-w-[640px] font-display text-[34px] font-bold leading-[1.1] tracking-[-0.02em] md:text-[46px]">
             This Saturday is <span className="text-flame">sorted</span>.
           </h2>
           <p className="mx-auto mt-4 max-w-[460px] text-[16px] text-cocoa">
@@ -472,8 +459,6 @@ function PlanPhone() {
         <div className="overflow-hidden rounded-[36px] bg-cream px-4 pb-5 pt-3">
           <div className="mx-auto h-[22px] w-[92px] rounded-full bg-black" />
           <div className="mt-4 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mascots/date_night.png" alt="" width={52} height={52} className="h-[52px] w-[52px] [image-rendering:pixelated]" />
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-mutedbrown">Saturday</div>
               <div className="text-[17px] font-bold leading-tight">Just the two of you</div>
@@ -578,5 +563,30 @@ function EventCard({ event: e }: { event: SoonEvent }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/*
+ * Line icons for the occasions (owner, 15 Nov 2026: no mascots on the
+ * website). 24 x 24, stroked in the accent.
+ */
+const OCCASION_ICONS: Record<string, string> = {
+  first_date: "M12 3l1.9 4.6L19 9l-4 3.4 1.2 5.1L12 15l-4.2 2.5L9 12.4 5 9l5.1-1.4z",
+  anniversary: "M12 8a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM9 2h6l-1.5 3.5h-3z",
+  date_night: "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z",
+  birthday: "M4 20h16M5 20v-7h14v7M8 13V10M12 13V10M16 13V10M8 6.5a1 1 0 0 0 0-2M12 6.5a1 1 0 0 0 0-2M16 6.5a1 1 0 0 0 0-2",
+  graduation: "M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6",
+  celebration: "M4 20l5-14 9 9zM14 4l1 2M19 6l-2 1M20 11h-2M9 6l1-3",
+  friend_outing: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20c0-3.3 3.1-6 7-6s7 2.7 7 6M16 4a3.5 3.5 0 0 1 0 7M22 20c0-2.7-2-5-5-5.7",
+  solo_day: "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4",
+  business_meeting: "M3 7h18v13H3zM8 7V4h8v3M3 12h18",
+  family_day: "M3 11l9-7 9 7M5 9.5V20h14V9.5M10 20v-5h4v5",
+};
+
+function OccasionIcon({ id }: { id: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={OCCASION_ICONS[id] ?? OCCASION_ICONS.date_night} />
+    </svg>
   );
 }

@@ -141,6 +141,8 @@ function LoginInner() {
 
         {mode !== "forgot" ? (
           <div className="mt-6 flex flex-col gap-3">
+            {/* Apple on the web waits for its Services ID and secret in Supabase (owner, 15 Nov 2026). */}
+            {process.env.NEXT_PUBLIC_APPLE_WEB_SIGNIN === "1" ? (
             <button
               type="button"
               disabled={busy}
@@ -152,6 +154,7 @@ function LoginInner() {
               </svg>
               Continue with Apple
             </button>
+            ) : null}
             <button
               type="button"
               disabled={busy}
