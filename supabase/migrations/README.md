@@ -26,5 +26,11 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   image_source on venues, readable by the app); in `archive/`.
 - 0104_featured_events.sql ran on 5 November 2026 (probed: featured_venues
   carries event_id and the rugby final's slot pointed at its event); in `archive/`.
+- 0111_venue_menu_style.sql ran on 15 November 2026 (probed: anyone reads a
+  style, a signed-out insert is refused; audit:smoke 23/23); in `archive/`.
+- 0109_qr_scans.sql ran by 15 November 2026 (probed: a 'qr' / 'menu'
+  share_events row inserts); in `archive/`.
+- 0108_chat_misses.sql ran on 13 November 2026; in `archive/`.
+- 0110_paystack_pro.sql is waiting to be run (Paystack Pro on the website).
 - New migrations go here, at the top level, numbered on from 0100. Move them
   into `archive/` once they have been run.
