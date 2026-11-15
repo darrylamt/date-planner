@@ -137,6 +137,14 @@
 */
 
 @layer base {
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
   body {
     @apply bg-cream text-ink font-sans antialiased;
     /* A soft wash of the accent at the top, nothing else (no hearts, no kente). */

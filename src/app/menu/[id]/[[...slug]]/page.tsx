@@ -188,7 +188,7 @@ export default async function MenuPage({ params }: { params: { id: string; slug?
         <section className="relative mt-5 overflow-hidden rounded-[28px]" style={{ background: c.tint }}>
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt={name} className="h-[260px] w-full object-cover sm:h-[380px]" />
+            <img src={cover} alt={name} fetchPriority="high" className="h-[260px] w-full object-cover sm:h-[380px]" />
           ) : (
             <div className="h-[200px] w-full sm:h-[260px]" style={{ background: `radial-gradient(120% 120% at 15% 0%, ${c.accent}55, transparent 60%), radial-gradient(100% 100% at 100% 100%, ${c.accent}33, transparent 60%)` }} />
           )}
@@ -286,7 +286,7 @@ export default async function MenuPage({ params }: { params: { id: string; slug?
                       <div className={`flex ${i.image_url ? "aspect-square" : "aspect-[4/3]"} items-center justify-center overflow-hidden rounded-[14px]`} style={{ background: c.surface }}>
                         {i.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={i.image_url} alt={dishName(i.name)} loading="lazy" className="h-full w-full object-cover" />
+                          <img src={i.image_url} alt={dishName(i.name)} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                         ) : (
                           <Silhouette category={i.category} color={`${c.accent}40`} />
                         )}

@@ -179,8 +179,11 @@ function LoginInner() {
 
         <form onSubmit={submit} className={`${mode === "forgot" ? "mt-6" : ""} flex flex-col gap-3`}>
           <div>
-            <span className="flbl">Email</span>
+            <label htmlFor="login-email" className="flbl">Email</label>
             <input
+              id="login-email"
+              name="email"
+              inputMode="email"
               type="email"
               required
               autoComplete="email"
@@ -193,8 +196,10 @@ function LoginInner() {
 
           {mode !== "forgot" && (
             <div>
-              <span className="flbl">Password</span>
+              <label htmlFor="login-password" className="flbl">Password</label>
               <input
+                id="login-password"
+                name="password"
                 type="password"
                 required
                 minLength={MIN_PASSWORD}
