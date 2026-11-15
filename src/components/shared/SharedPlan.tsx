@@ -27,6 +27,10 @@ export interface SharedStop {
   image: string | null;
   instagram: string | null;
   emoji: string;
+  /** Surprise mode (0112): a stop not yet revealed. Its real name was never sent. */
+  hidden?: boolean;
+  /** When it is revealed, in ms. */
+  revealAt?: number;
 }
 
 export interface SharedPlanProps {
@@ -170,6 +174,15 @@ export function SharedPlan(p: SharedPlanProps) {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Surprise mode: when the next stop's time comes, fetch the page again and it is there.
+  const nextReveal = Math.min(...p.stops.map((st) => (st.hidden && st.revealAt ? st.revealAt : Infinity)));
+  const reloaded = useRef(false);
+  useEffect(() => {
+    if (now == null || !Number.isFinite(nextReveal) || now < nextReveal || reloaded.current) return;
+    reloaded.current = true;
+    window.location.reload();
+  }, [now, nextReveal]);
 
   // The entrance, once: paper for a birthday, hearts for a date, nothing for a meeting.
   useEffect(() => {
@@ -321,6 +334,22 @@ export function SharedPlan(p: SharedPlanProps) {
                   <span aria-hidden className={s.node} style={{ background: `linear-gradient(135deg, ${c1}, ${c2})`, animationDelay: `${900 + i * 280}ms` }}>
                     {st.emoji}
                   </span>
+                  {st.hidden ? (
+                    <div className={`${s.card} rounded-[24px] border border-dashed border-white/20 p-4 sm:p-5`}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full px-2.5 py-1 font-mono text-[13px] font-bold" style={{ background: `linear-gradient(90deg, ${c1}, ${c2})`, color: ink }}>
+                          {st.time}
+                        </span>
+                        <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-white/50">{st.label}</span>
+                      </div>
+                      <h2 className="mt-2 text-[23px] font-extrabold leading-tight tracking-[-0.01em]">A surprise 🎁</h2>
+                      <p className="mt-1.5 text-[15px] leading-relaxed text-white/70">
+                        {now != null && st.revealAt && st.revealAt - now < 3_600_000 && st.revealAt > now
+                          ? `Revealed in ${Math.max(1, Math.ceil((st.revealAt - now) / 60_000))} min. Keep this page open.`
+                          : "Where you go next is a secret until it is time to leave. This page will show it then."}
+                      </p>
+                    </div>
+                  ) : (
                   <div className={`${s.card} rounded-[24px] p-4 sm:p-5`} onMouseMove={tilt} onMouseLeave={untilt}>
                     {st.image ? <SmartImage src={st.image} alt={st.name} className="mb-4 h-[170px] rounded-[16px] sm:h-[210px]" fit="auto" zoomable /> : null}
                     <div className="flex flex-wrap items-center gap-2">
@@ -376,6 +405,7 @@ export function SharedPlan(p: SharedPlanProps) {
                       </a>
                     ) : null}
                   </div>
+                  )}
                   {i < p.stops.length - 1 ? (
                     <div className="flex items-center gap-2 py-4 text-[14px] text-white/55">
                       <span className={s.car} aria-hidden>

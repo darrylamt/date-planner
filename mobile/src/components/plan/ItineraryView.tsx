@@ -39,7 +39,9 @@ import { useTheme } from "../../lib/useTheme";
 import { ghs, instagramUrl, longDate } from "../../lib/format";
 import { chargeableSubtotal, chargesOn, chargesTotal, isDriving, liveConfidence } from "../../lib/budget";
 import { partyLabel } from "../../lib/planConstants";
-import { createReservation, fetchPlanResponses, fetchVenueContact, setPlannerNote, type PlanResponse } from "../../lib/data";
+import { createReservation, fetchPlanResponses, fetchSurprise, fetchVenueContact, setPlannerNote, setSurprise, type PlanResponse } from "../../lib/data";
+import { fetchAllowance } from "../../lib/chat";
+import { ProSheet } from "../profile/ProSheet";
 import { planEmailHtml, planMailto } from "../../lib/planEmail";
 import { nativeOptional } from "../../lib/nativeOptional";
 import { chooseAction } from "../../lib/actionSheet";
@@ -154,6 +156,36 @@ export function ItineraryView({
   const [pickupOpen, setPickupOpen] = useState(false);
   const [pickup, setPickup] = useState<PickupChoice | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  /*
+   * Surprise mode (0112, Pro): read when the share sheet opens, switched from
+   * it. Free accounts see the row locked, and tapping it offers Pro.
+   */
+  const [surprise, setSurpriseState] = useState(false);
+  const [tier, setTier] = useState<"free" | "pro" | null>(null);
+  const [proOpen, setProOpen] = useState(false);
+  async function readSurprise(slug: string) {
+    const [on, allowance] = await Promise.all([fetchSurprise(slug), fetchAllowance().catch(() => null)]);
+    setSurpriseState(on);
+    setTier(allowance?.tier ?? null);
+  }
+  async function toggleSurprise() {
+    const slug = pendingSlug ?? shareSlug;
+    if (!slug) return;
+    if (tier !== "pro") {
+      setNoteOpen(false);
+      setPendingSlug(null);
+      await waitForModalToClose();
+      setProOpen(true);
+      return;
+    }
+    const next = !surprise;
+    setSurpriseState(next);
+    void Haptics.selectionAsync();
+    if (!(await setSurprise(slug, next))) {
+      setSurpriseState(!next);
+      setToast("Surprise mode did not switch. Try again.");
+    }
+  }
   /*
    * Tonight on the Lock Screen. Offered from six hours before the first stop
    * until the last one ends, on a saved plan (the activity opens it by its
@@ -499,6 +531,7 @@ export function ItineraryView({
     // The sheet decides; sharing continues in shareWith once it closes.
     setPendingSlug(slug);
     setNoteMode("share");
+    void readSurprise(slug);
     setNoteOpen(true);
   }
 
@@ -1094,7 +1127,9 @@ export function ItineraryView({
           setPendingSlug(null);
         }}
         onDone={(text) => void (noteMode === "edit" ? saveNoteOnly(text) : shareWith(text))}
+        surprise={tier ? { on: surprise, locked: tier !== "pro", onToggle: () => void toggleSurprise() } : null}
       />
+      <ProSheet visible={proOpen} onClose={() => setProOpen(false)} tier={tier ?? "free"} onPurchased={() => (setProOpen(false), setTier("pro"))} />
 
       <Toast message={toast} onDone={() => setToast(null)} />
     </View>

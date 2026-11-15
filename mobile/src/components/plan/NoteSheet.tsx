@@ -27,6 +27,7 @@ export function NoteSheet({
   mode = "share",
   onClose,
   onDone,
+  surprise = null,
 }: {
   visible: boolean;
   initial: string;
@@ -35,6 +36,12 @@ export function NoteSheet({
   onClose: () => void;
   /** Null means skip. A string, including empty, means save that. */
   onDone: (note: string | null) => void;
+  /**
+   * Surprise mode (Pro): shown on the way to sharing. Null hides the row
+   * (no account, or editing the note). "locked" is a free account: tapping
+   * it offers Pro instead.
+   */
+  surprise?: { on: boolean; locked: boolean; onToggle: () => void } | null;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -100,6 +107,36 @@ export function NoteSheet({
           >
             {text.length} / {MAX}
           </Text>
+
+          {mode === "share" && surprise ? (
+            <Pressable
+              onPress={surprise.onToggle}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: surprise.on }}
+              style={{
+                marginTop: space.md,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space.md,
+                padding: space.md,
+                borderRadius: radius.control,
+                backgroundColor: c.backgroundElement,
+              }}
+            >
+              <Text style={{ fontSize: 26 }}>🎁</Text>
+              <View style={{ flex: 1 }}>
+                <Text variant="headline">Keep the next stops a surprise{surprise.locked ? " · Pro" : ""}</Text>
+                <Text variant="footnote" tone="secondary">
+                  They see the first stop only. Each next one appears on the link when it is time to leave for it.
+                </Text>
+              </View>
+              <Symbol
+                name={surprise.locked ? "lock.fill" : surprise.on ? "checkmark.circle.fill" : "circle"}
+                size={26}
+                color={surprise.on ? c.accent : c.textTertiary}
+              />
+            </Pressable>
+          ) : null}
 
           {mode === "edit" ? (
             <View style={{ marginTop: space.lg, gap: space.sm }}>

@@ -59,7 +59,7 @@ async function font(weight: 600 | 800): Promise<ArrayBuffer | null> {
 export default async function Image({ params }: { params: { slug: string } }) {
   const supabase = createServiceClient();
   const [{ data }, semi, bold] = await Promise.all([
-    supabase.from("plans").select("inputs, itinerary").eq("share_slug", params.slug).maybeSingle(),
+    supabase.from("plans").select("*").eq("share_slug", params.slug).maybeSingle(),
     font(600),
     font(800),
   ]);
@@ -69,7 +69,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
   ];
   const family = fonts.length ? "Figtree" : "sans-serif";
 
-  const plan = data as Pick<SavedPlan, "inputs" | "itinerary"> | null;
+  const plan = data as (Pick<SavedPlan, "inputs" | "itinerary"> & { surprise?: boolean }) | null;
 
   // A dead link still needs a picture; an empty one renders as a broken card.
   if (!plan) {
@@ -107,8 +107,9 @@ export default async function Image({ params }: { params: { slug: string } }) {
   const gap = date.indexOf(" ");
   const weekday = gap > 0 ? date.slice(0, gap) : date;
   const dayMonth = gap > 0 ? date.slice(gap + 1) : "";
-  const route = (itinerary.summary_route ?? "").split(/\s*→\s*/).filter(Boolean).slice(0, 4);
-  const shown = stops.slice(0, 3);
+  // Surprise mode (0112): the preview gives away the first stop only, like the page.
+  const route = plan.surprise ? [stops[0]?.area, "?"].filter(Boolean) as string[] : (itinerary.summary_route ?? "").split(/\s*→\s*/).filter(Boolean).slice(0, 4);
+  const shown = stops.slice(0, 3).map((st, i) => (plan.surprise && i > 0 ? { ...st, name: "A surprise" } : st));
 
   return new ImageResponse(
     (

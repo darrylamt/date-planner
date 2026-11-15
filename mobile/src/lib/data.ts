@@ -407,6 +407,22 @@ export async function setPlannerNote(slug: string, note: string): Promise<boolea
   return !error;
 }
 
+/**
+ * Surprise mode (0112, Pro): the shared page shows the first stop only, and
+ * each later one when it is time to leave for it. False when the column is
+ * not there yet, so the app can ship before the migration.
+ */
+export async function fetchSurprise(slug: string): Promise<boolean> {
+  const { data, error } = await supabase.from("plans").select("surprise").eq("share_slug", slug).maybeSingle();
+  if (error) return false;
+  return Boolean((data as { surprise?: boolean } | null)?.surprise);
+}
+
+export async function setSurprise(slug: string, on: boolean): Promise<boolean> {
+  const { error } = await supabase.from("plans").update({ surprise: on }).eq("share_slug", slug);
+  return !error;
+}
+
 export async function deletePlan(id: string): Promise<void> {
   const { error } = await supabase.from("plans").delete().eq("id", id);
   if (error) throw error;

@@ -7,6 +7,7 @@ import { AUDIENCE_BADGE, OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConst
 import { occasionCard, occasionColors, occasionEntrance } from "@/lib/occasionCard";
 import type { ItineraryStop, SavedPlan } from "@/lib/types";
 import { isHalloween } from "@/components/Logo";
+import { isProUser } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -31,19 +32,19 @@ export async function generateMetadata({
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("plans")
-    .select("inputs, itinerary")
+    .select("*")
     .eq("share_slug", params.slug)
     .maybeSingle();
 
-  const plan = data as Pick<SavedPlan, "inputs" | "itinerary"> | null;
+  const plan = data as (Pick<SavedPlan, "inputs" | "itinerary"> & { surprise?: boolean }) | null;
   if (!plan) return { title: "Duro!", robots: { index: false, follow: false } };
 
   const card = occasionCard(plan.inputs);
   const stops = plan.itinerary.stops?.length ?? 0;
   const title = `${card.eyebrow}, ${longDate(plan.inputs.date)}`;
-  const description = `${plan.itinerary.summary_route}. ${stops} stop${
-    stops === 1 ? "" : "s"
-  }, from ${time12(plan.inputs.startTime)}.`;
+  // Surprise mode: the preview names the first stop only, like the page.
+  const route = plan.surprise ? `${plan.itinerary.stops?.[0]?.name ?? "A night out"}, then a surprise` : plan.itinerary.summary_route;
+  const description = `${route}. ${stops} stop${stops === 1 ? "" : "s"}, from ${time12(plan.inputs.startTime)}.`;
 
   return {
     title,
@@ -126,7 +127,7 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
   const upcoming = !Number.isNaN(startsAt) && startsAt + 2 * 86_400_000 > Date.now();
   const rsvp = upcoming && !(await supabase.from("plan_responses").select("id", { count: "exact", head: true }).limit(1)).error;
 
-  const shared: SharedStop[] = stops.map((st, i) => ({
+  const visible: SharedStop[] = stops.map((st, i) => ({
     key: `${st.venue_id}-${i}`,
     name: st.name,
     area: st.area,
@@ -149,6 +150,38 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
     emoji: stopEmoji(st),
   }));
 
+  /*
+   * Surprise mode (0112, Pro): each stop after the first stays hidden until
+   * it is time to leave for it, which is when the stop before it ends. The
+   * hidden stop is replaced here, on the server, so its name is never sent.
+   */
+  // A Pro feature, checked here too: the column is the owner's to write, Pro or not.
+  const surprise =
+    Boolean((plan as SavedPlan & { surprise?: boolean }).surprise) && !Number.isNaN(startsAt) && Boolean(plan.user_id) && (await isProUser(plan.user_id!));
+  let clock = Number.isNaN(startsAt) ? 0 : startsAt;
+  const shared: SharedStop[] = visible.map((st, i) => {
+    if (i > 0) clock += (stops[i - 1].duration_mins ?? 0) * 60_000;
+    const revealAt = clock;
+    if (i > 0) clock += (hops[i - 1] ?? 12) * 60_000;
+    if (!surprise || i === 0 || Date.now() >= revealAt) return st;
+    return {
+      key: `hidden-${i}`,
+      name: "A surprise",
+      area: "",
+      time: st.time,
+      label: `Revealed at ${time12(new Date(revealAt).toISOString().slice(11, 16))}`,
+      what: "",
+      whatsOn: [],
+      host: null,
+      dishes: [],
+      image: null,
+      instagram: null,
+      emoji: "🎁",
+      hidden: true,
+      revealAt,
+    };
+  });
+
   return (
     <SharedPlan
       eyebrow={card.eyebrow}
@@ -157,7 +190,11 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
       closing={card.closing}
       weekday={gap > 0 ? date.slice(0, gap) : date}
       dayMonth={gap > 0 ? date.slice(gap + 1) : ""}
-      route={itinerary.summary_route.split(/\s*→\s*/).filter(Boolean)}
+      route={
+        surprise
+          ? shared.map((st, i) => (st.hidden ? "?" : stops[i].area || st.name))
+          : itinerary.summary_route.split(/\s*→\s*/).filter(Boolean)
+      }
       from={time12(inputs.startTime)}
       startsAt={Number.isNaN(startsAt) ? null : startsAt}
       endsAt={Number.isNaN(startsAt) ? null : startsAt + Math.max(length, 60) * 60_000}
