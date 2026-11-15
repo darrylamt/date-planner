@@ -124,9 +124,6 @@ export default async function MenuPage({ params }: { params: { id: string; slug?
   const week = describeWeek(parsePeriods(v.opening_periods));
   const hasHours = week.some((d) => d.hours && !/not known|unknown/i.test(d.hours));
   const latest = items.map((i) => i.updated_at).filter(Boolean).sort().pop();
-  const prices = items.map((i) => Number(i.price_ghs));
-  const mains = items.filter((i) => i.category === "main").map((i) => Number(i.price_ghs)).sort((a, b) => a - b);
-  const typicalMain = mains.length ? mains[Math.floor(mains.length / 2)] : null;
 
   // What Google reads: a restaurant with a priced menu (schema.org).
   const jsonLd = {
@@ -150,12 +147,6 @@ export default async function MenuPage({ params }: { params: { id: string; slug?
       })),
     },
   };
-
-  const facts = [
-    prices.length ? { label: "Prices", value: `${ghs(Math.min(...prices))} to ${ghs(Math.max(...prices))}` } : null,
-    typicalMain != null ? { label: "A main, typically", value: ghs(typicalMain) } : null,
-    items.length ? { label: "On the menu", value: `${items.length} items` } : null,
-  ].filter(Boolean) as { label: string; value: string }[];
 
   const pill = "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-full px-5 text-[14px] font-semibold";
 
@@ -209,18 +200,6 @@ export default async function MenuPage({ params }: { params: { id: string; slug?
           </div>
         </section>
         {v.image_credit && !style.cover_url ? <div className="mt-1 text-[11px]" style={{ color: c.muted }}>{v.image_credit}</div> : null}
-
-        {/* At a glance */}
-        <section className="mt-5 grid grid-cols-3 gap-2 sm:max-w-[620px]">
-          {facts.map((f) => (
-            <div key={f.label} className="rounded-2xl px-3 py-3" style={{ background: c.surface, border: `1px solid ${c.line}` }}>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: c.muted }}>
-                {f.label}
-              </div>
-              <div className="mt-1 text-[15px] font-bold">{f.value}</div>
-            </div>
-          ))}
-        </section>
 
         {v.description ? (
           <p className="mt-5 max-w-[680px] text-[16px] leading-relaxed" style={{ color: c.muted }}>
