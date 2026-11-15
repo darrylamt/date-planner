@@ -2109,6 +2109,8 @@ function planWith(
    * any of the three is worse than leaving it out.
    */
   type Anchor = { event: EventRow; venue: Venue; at: number | null };
+  /** Every showing in reach, best first, when a film was asked for: the next one is tried when the first will not fit. */
+  let filmOrder: Anchor[] = [];
   const anchor: Anchor | null = (() => {
     const byId = new Map(candidates.venues.map((v) => [v.id, v]));
     const endMinutes = startMinutes + Math.round(inputs.hours * 60);
@@ -2172,7 +2174,21 @@ function planWith(
       if (films.length) {
         const room = (x: Anchor) => Math.abs((x.at ?? startMinutes) - (startMinutes + 60));
         const fits = (x: Anchor) => genreFits(x.event.vibe_tags, inputs.movieGenres);
-        return [...films].sort((a, b) => fits(b) - fits(a) || room(a) - room(b))[0];
+        /*
+         * The nearer cinema, too. Showings were ranked by genre and time
+         * alone, so with two cinemas an Osu plan was handed West Hills, an
+         * hour's ride away; the film could not be reached in time and the
+         * plan quietly dropped it (15 Nov 2026). Distance from where the plan
+         * is, in 2 km steps so the time still decides between near ones.
+         */
+        const here = candidates.venues.filter((v) => v.lat != null && v.lng != null && (!inputs.areaIds?.length || inputs.areaIds.includes(v.area_id)));
+        const centre = here.length
+          ? { lat: here.reduce((s, v) => s + Number(v.lat), 0) / here.length, lng: here.reduce((s, v) => s + Number(v.lng), 0) / here.length }
+          : null;
+        const away = (x: Anchor) =>
+          centre && x.venue.lat != null && x.venue.lng != null ? Math.round(haversineKm(centre, { lat: Number(x.venue.lat), lng: Number(x.venue.lng) }) / 2) : 0;
+        filmOrder = [...films].sort((a, b) => fits(b) - fits(a) || away(a) - away(b) || room(a) - room(b));
+        return filmOrder[0];
       }
     }
     /*
@@ -3588,6 +3604,20 @@ function planWith(
    * the stops are paid for. An evening without the event beats no evening, so
    * try again without the pin rather than report that nothing fits.
    */
+  /*
+   * A film asked for: the next showings in turn before giving the film up.
+   * The first can fail for reasons the ranking cannot see (the ride there,
+   * the stop before it), and another time or the other cinema often fits.
+   */
+  if (anchor && !named) {
+    for (const film of filmOrder.slice(1, 10)) {
+      for (let count = wanted; count >= floor; count--) {
+        const plan = attempt(count, film);
+        if (plan) return plan;
+      }
+    }
+  }
+
   if (anchor) {
     for (let count = wanted; count >= floor; count--) {
       const plan = attempt(count, null);
