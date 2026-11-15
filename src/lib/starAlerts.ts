@@ -38,7 +38,7 @@ type News = { venueId: string; venue: string; line: string; rank: number };
 const ghs = (n: number) => `GHS ${Math.round(n).toLocaleString("en-GB")}`;
 
 /** What is new at each watched place since it was last looked at; notes it all as seen unless dry. */
-async function newsByVenue(db: SupabaseClient, venueIds: string[], today: string, dry: boolean) {
+async function newsByVenue(db: SupabaseClient, venueIds: string[], today: string, dry: boolean, closedToo = false) {
   const news = new Map<string, News[]>();
   let baselined = 0;
   for (let i = 0; i < venueIds.length; i += 100) {
@@ -54,7 +54,7 @@ async function newsByVenue(db: SupabaseClient, venueIds: string[], today: string
     for (const r of (seenRows ?? []) as { venue_id: string; kind: string; key: string; value: string | null }[]) seen.set(`${r.venue_id}:${r.kind}:${r.key}`, r.value);
     const has = (v: string, kind: string, key: string) => seen.has(`${v}:${kind}:${key}`);
     const valueOf = (v: string, kind: string, key: string) => seen.get(`${v}:${kind}:${key}`) ?? null;
-    const name = new Map(((venues ?? []) as { id: string; name: string; is_active: boolean }[]).filter((v) => v.is_active).map((v) => [v.id, tidyName(v.name)]));
+    const name = new Map(((venues ?? []) as { id: string; name: string; is_active: boolean }[]).filter((v) => v.is_active || closedToo).map((v) => [v.id, tidyName(v.name)]));
 
     const writes: { venue_id: string; kind: string; key: string; value: string | null }[] = [];
     for (const id of ids) {
@@ -140,8 +140,12 @@ export function alertFor(items: News[]): StarAlert | null {
   };
 }
 
-/** `users` limits the run to those accounts (the smoke test's own), so a test never alerts anybody real. */
-export async function runStarAlerts(db: SupabaseClient, now: Date, opts: { dry?: boolean; users?: string[] } = {}): Promise<StarAlertRun> {
+/**
+ * `users` limits the run to those accounts (the smoke test's own), so a test
+ * never alerts anybody real; `closedToo` lets it watch the switched-off Duro
+ * Test Kitchen. A closed place is otherwise never news.
+ */
+export async function runStarAlerts(db: SupabaseClient, now: Date, opts: { dry?: boolean; users?: string[]; closedToo?: boolean } = {}): Promise<StarAlertRun> {
   const skipped: Record<string, number> = {};
   const skip = (why: string) => (skipped[why] = (skipped[why] ?? 0) + 1);
   const run: StarAlertRun = { watching: 0, venues: 0, baselined: 0, messages: [], skipped };
@@ -172,7 +176,7 @@ export async function runStarAlerts(db: SupabaseClient, now: Date, opts: { dry?:
   if (!venueIds.length) return run;
 
   const today = now.toISOString().slice(0, 10);
-  const { news, baselined } = await newsByVenue(db, venueIds, today, Boolean(opts.dry));
+  const { news, baselined } = await newsByVenue(db, venueIds, today, Boolean(opts.dry), Boolean(opts.closedToo));
   run.baselined = baselined;
 
   const tokens = await tokensForUsers(db, users);

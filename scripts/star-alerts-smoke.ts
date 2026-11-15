@@ -42,7 +42,7 @@ async function login(label: string, pro: boolean): Promise<{ db: SupabaseClient;
 }
 
 (async () => {
-  const { data: venue } = await admin.from("venues").select("id, name").ilike("name", "Duro Test Kitchen%").single();
+  const { data: venue } = await admin.from("venues").select("id, name, area_id").ilike("name", "Duro Test Kitchen%").single();
   if (!venue) throw new Error("Duro Test Kitchen not found");
   const venueId = (venue as { id: string }).id;
   const { data: dish } = await admin.from("menu_items").select("id, price_ghs").eq("venue_id", venueId).limit(1).single();
@@ -79,12 +79,12 @@ async function login(label: string, pro: boolean): Promise<{ db: SupabaseClient;
     }
     // Before the first look, the Test Kitchen's own history is not news to anybody.
     await admin.from("star_watch_seen").delete().eq("venue_id", venueId);
-    const first = await runStarAlerts(admin, new Date(), { users });
+    const first = await runStarAlerts(admin, new Date(), { users, closedToo: true });
     check("the first look notes the place", first.baselined === 1, `baselined ${first.baselined}`);
     check("and says nothing", first.messages.length === 0);
     check("free accounts are not alerted", first.skipped["not Pro"] === 1, JSON.stringify(first.skipped));
 
-    const ev = await admin.from("events").insert({ title: "Smoke Jazz Night", venue_id: venueId, event_date: date, start_time: "19:00", is_active: true, category: "other" }).select("id").single();
+    const ev = await admin.from("events").insert({ title: "Smoke Jazz Night", venue_id: venueId, area_id: (venue as { area_id: string }).area_id, event_date: date, start_time: "19:00", is_active: true, category: "other" }).select("id").single();
     if (ev.error) throw new Error(`event: ${ev.error.message}`);
     eventId = (ev.data as { id: string }).id;
     const nd = await admin.from("menu_items").insert({ venue_id: venueId, name: "Smoke Jollof", price_ghs: 99, category: "main" }).select("id").single();
@@ -93,19 +93,19 @@ async function login(label: string, pro: boolean): Promise<{ db: SupabaseClient;
     await admin.from("menu_items").update({ price_ghs: Number(oldPrice) + 5 }).eq("id", (dish as { id: string }).id);
 
     await admin.from("push_tokens").insert({ token: `ExponentPushToken[smoke-${Date.now()}]`, user_id: pro.id, platform: "ios" });
-    const dry = await runStarAlerts(admin, new Date(), { users, dry: true });
+    const dry = await runStarAlerts(admin, new Date(), { users, dry: true, closedToo: true });
     const mine = dry.messages.find((m) => m.userId === pro.id)?.alert;
     check("an event and a dish make an alert", Boolean(mine && /Smoke Jazz Night/.test(mine.body) && /Smoke Jollof/.test(mine.body)), JSON.stringify(mine));
     check("it opens the place", mine?.url === `/venue/${venueId}`);
     check("only for Pro", dry.messages.length === 1);
 
     await admin.from("push_tokens").delete().eq("user_id", pro.id);
-    await runStarAlerts(admin, new Date(), { users });
+    await runStarAlerts(admin, new Date(), { users, closedToo: true });
     const { data: noted } = await admin.from("star_watch_seen").select("kind, key, value").eq("venue_id", venueId);
     const rows = (noted ?? []) as { kind: string; key: string; value: string | null }[];
     check("a run notes the news as seen", rows.some((r) => r.kind === "event" && r.key.startsWith("smoke jazz night")) && rows.some((r) => r.kind === "dish" && r.key === "smoke jollof"));
     await admin.from("push_tokens").insert({ token: `ExponentPushToken[smoke2-${Date.now()}]`, user_id: pro.id, platform: "ios" });
-    const again = await runStarAlerts(admin, new Date(), { users, dry: true });
+    const again = await runStarAlerts(admin, new Date(), { users, dry: true, closedToo: true });
     check("so it is not news twice", again.messages.length === 0, JSON.stringify(again.skipped));
   } catch (e) {
     check("ran to the end", false, e instanceof Error ? e.message : String(e));
