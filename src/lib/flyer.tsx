@@ -78,6 +78,11 @@ async function fonts(origin: string) {
 
 /** The cedi sign is missing from these fonts, so prices read "GHS 50". */
 export const cedis = (t: string | undefined | null) => (t ? t.replace(/GH₵\s?/g, "GHS ") : "");
+/** "#E11D48" at an opacity, for gradients: the renderer wants rgba, not 8-digit hex. */
+const rgba = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
 const cut = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 
 export async function renderFlyer(spec: FlyerSpec, origin: string): Promise<ImageResponse> {
@@ -158,7 +163,13 @@ export async function renderFlyer(spec: FlyerSpec, origin: string): Promise<Imag
       </div>
     );
   } else if (spec.layout === "photo") {
-    const photoH = Math.round(size.height * (spec.format === "square" ? 0.52 : 0.58));
+    /*
+     * The photo runs taller and fades into the flyer's colour, and the words
+     * start over the fade, so picture and text are one piece rather than a
+     * photo with a block under it (owner, 15 Nov 2026).
+     */
+    const photoH = Math.round(size.height * (spec.format === "square" ? 0.62 : spec.format === "story" ? 0.74 : 0.68));
+    const overlap = Math.round(photoH * 0.3);
     body = (
       <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
         <div style={{ display: "flex", position: "relative", width: size.width, height: photoH }}>
@@ -168,13 +179,26 @@ export async function renderFlyer(spec: FlyerSpec, origin: string): Promise<Imag
           ) : (
             <div style={{ display: "flex", width: size.width, height: photoH, background: t.foot }} />
           )}
+          {/* A shade at the top for the badge, and the long fade into the page at the bottom. */}
+          <div style={{ display: "flex", position: "absolute", left: 0, right: 0, top: 0, height: 220, background: "linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0))" }} />
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: Math.round(photoH * 0.62),
+              background: `linear-gradient(to bottom, ${rgba(t.bg, 0)} 0%, ${rgba(t.bg, 0.55)} 45%, ${rgba(t.bg, 0.92)} 78%, ${rgba(t.bg, 1)} 100%)`,
+            }}
+          />
           {spec.badge ? (
             <div style={{ display: "flex", position: "absolute", top: 48, left: pad, padding: "14px 28px", borderRadius: 999, background: t.bg, color: t.text, fontSize: 30, fontWeight: 700 }}>
               {cut(spec.badge, 40)}
             </div>
           ) : null}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", padding: `${pad - 16}px ${pad}px`, flex: 1, position: "relative" }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: `0 ${pad}px ${pad - 16}px`, marginTop: -overlap, flex: 1, position: "relative" }}>
           {spec.eyebrow ? <div style={{ display: "flex", fontSize: 32, fontWeight: 700, color: t.ink, marginBottom: 10 }}>{cut(spec.eyebrow, 44)}</div> : null}
           <div style={{ display: "flex", fontFamily: "Bricolage", fontSize: spec.title.length > 26 ? 70 : 92, lineHeight: 0.98, letterSpacing: -3, color: t.text }}>{cut(spec.title, 60)}</div>
           {spec.sub ? <div style={{ display: "flex", fontSize: 36, color: t.soft, marginTop: 18 }}>{cut(cedis(spec.sub), 70)}</div> : null}
