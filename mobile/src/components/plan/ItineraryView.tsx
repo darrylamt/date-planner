@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   InteractionManager,
@@ -94,6 +94,7 @@ export function ItineraryView({
   initialNote = null,
   askVibe = false,
   top = null,
+  autoShare = false,
 }: {
   /** Shown above the title: a saved plan's "Did you go?" (WentCard). */
   top?: React.ReactNode;
@@ -109,6 +110,8 @@ export function ItineraryView({
   initialNote?: string | null;
   /** Ask whether the plan fits the vibe they chose. Fresh plans only. */
   askVibe?: boolean;
+  /** Open the share sheet as soon as the plan is up: the Plans list's share button lands here. */
+  autoShare?: boolean;
 }) {
   const c = useTheme();
   const look = useLook();
@@ -168,8 +171,23 @@ export function ItineraryView({
     setSurpriseState(on);
     setTier(allowance?.tier ?? null);
   }
+  /*
+   * Shown on the plan itself, beside Send, not only inside the share sheet:
+   * tucked in there, people sharing never found it (owner, 16 Nov 2026).
+   */
+  useEffect(() => {
+    let live = true;
+    void fetchAllowance()
+      .catch(() => null)
+      .then((a) => live && setTier(a?.tier ?? null));
+    if (shareSlug) void fetchSurprise(shareSlug).then((on) => live && setSurpriseState(on));
+    return () => {
+      live = false;
+    };
+  }, [shareSlug]);
   async function toggleSurprise() {
-    const slug = pendingSlug ?? shareSlug;
+    // A plan not saved yet is saved first: the switch lives on the saved plan.
+    const slug = pendingSlug ?? shareSlug ?? (tier === "pro" ? await onSave() : "unsaved");
     if (!slug) return;
     if (tier !== "pro") {
       setNoteOpen(false);
@@ -523,6 +541,15 @@ export function ItineraryView({
    * when someone actually knows what they want to say, and skippable because
    * a card with no note is the normal case rather than an unfinished one.
    */
+  const autoShared = useRef(false);
+  useEffect(() => {
+    if (!autoShare || !shareSlug || autoShared.current) return;
+    autoShared.current = true;
+    const t = setTimeout(() => void handleShare(), 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoShare, shareSlug]);
+
   async function handleShare() {
     const slug = shareSlug ?? (await onSave());
     if (!slug) return; // onSave surfaced the sign-in prompt
@@ -1079,6 +1106,24 @@ export function ItineraryView({
       </ScrollView>
 
       <ActionBar>
+        {tier ? (
+          <Pressable
+            onPress={() => void toggleSurprise()}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: surprise }}
+            accessibilityLabel="Surprise mode: they see the first stop only, and each next one when it is time to leave for it"
+            style={{ flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: 2 }}
+          >
+            <Text style={{ fontSize: 18 }}>🎁</Text>
+            <Text variant="footnote" style={{ flex: 1 }}>
+              <Text variant="footnote" style={{ fontWeight: "700" }}>
+                Surprise mode{tier !== "pro" ? " · Pro" : ""}
+              </Text>
+              {surprise ? ": on. They see the first stop, the rest as you go." : ": keep the next stops hidden until it's time."}
+            </Text>
+            <Symbol name={tier !== "pro" ? "lock.fill" : surprise ? "checkmark.circle.fill" : "circle"} size={22} color={surprise ? c.accent : c.textTertiary} />
+          </Pressable>
+        ) : null}
         {/* What stops people sending a plan: the budget on show. The page they get has no prices on it. */}
         <Text variant="caption1" tone="secondary" center>
           They see the plan and can say they're in. The prices stay with you.

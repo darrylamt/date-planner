@@ -27,7 +27,7 @@ import { WentCard } from "../../src/components/plan/WentCard";
  * the failure this codebase has already had twice with menus and vibe tags.
  */
 export default function SavedPlanScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, share } = useLocalSearchParams<{ slug: string; share?: string }>();
   const navigation = useNavigation();
   const c = useTheme();
 
@@ -104,6 +104,8 @@ export default function SavedPlanScreen() {
         inputs={plan.inputs}
         top={<WentCard slug={plan.share_slug} date={plan.inputs.date} firstStop={itinerary.stops[0]?.name} occasion={plan.inputs.occasion} />}
         initialNote={plan.planner_note}
+        // From the Plans list's share button: straight to the share sheet, where the note and Surprise mode are.
+        autoShare={share === "1"}
         itinerary={itinerary}
         onItineraryChange={handleChange}
         /*

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -28,14 +28,11 @@ import { Body, Display, KenteBand } from "../../src/components/look";
 import { StarredList } from "../../src/components/redesign/StarredList";
 import { ProSheet } from "../../src/components/profile/ProSheet";
 import { fetchAllowance } from "../../src/lib/chat";
-import { SITE_URL } from "../../src/lib/site";
 
 /** The last view chosen on Plans: the list, or the calendar. */
 const VIEW_KEY = "duro.plans.view";
 type PlansView = "list" | "calendar" | "starred";
 
-// Links people see go to the site's own name (site.ts).
-const WEB_URL = SITE_URL;
 
 
 
@@ -200,12 +197,8 @@ export default function Plans() {
               answers={answers.get(plan.share_slug) ?? []}
               onOpen={() => router.push(`/plan/${plan.share_slug}`)}
               onRepeat={() => void repeat(plan)}
-              onShare={() =>
-                void Share.share({
-                  message: `Our plan for ${longDate(plan.inputs.date)}, ${WEB_URL}/p/${plan.share_slug}`,
-                  url: `${WEB_URL}/p/${plan.share_slug}`,
-                })
-              }
+              // Through the plan's own share sheet, so the note and Surprise mode are offered (16 Nov 2026).
+              onShare={() => router.push(`/plan/${plan.share_slug}?share=1`)}
               onDelete={() => confirmDelete(plan)}
             />
           ))}
