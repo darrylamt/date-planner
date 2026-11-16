@@ -43,15 +43,22 @@ export function createServiceClient(): SupabaseClient {
   return createBareClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    /*
-     * Never from Next's data cache. A shared plan switched to Surprise mode
-     * kept showing every stop in production while the same code locally hid
-     * them (16 Nov 2026): a read saved before the switch was being served.
-     * Service reads are rows that change (plans, entitlements, admin), so
-     * each is fetched fresh.
-     */
-    { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } }
+    { auth: { persistSession: false } }
   );
+}
+
+/**
+ * The service client, but every read fetched fresh, never from Next's data
+ * cache. For pages whose rows change under them and must show it at once:
+ * a shared plan switched to Surprise mode kept showing every stop in
+ * production while the same code locally hid them (16 Nov 2026). Not the
+ * default: pages built ahead of time (areas, menus, the sitemap) rely on it.
+ */
+export function createFreshServiceClient(): SupabaseClient {
+  return createBareClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+  });
 }
 
 /**

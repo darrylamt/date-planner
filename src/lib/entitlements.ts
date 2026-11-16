@@ -228,7 +228,7 @@ function currentPeriodStart(): string {
   return `${now.getUTCFullYear()}-${month}-01`;
 }
 
-function isPro(row: {
+export function isPro(row: {
   tier: string | null;
   status: string | null;
   expires_at: string | null;

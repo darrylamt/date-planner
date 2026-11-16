@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SharedPlan, type SharedStop } from "@/components/shared/SharedPlan";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createFreshServiceClient as createServiceClient } from "@/lib/supabase/server";
 import { instagramUrl, longDate, time12 } from "@/lib/format";
 import { AUDIENCE_BADGE, OCCASION_GLYPHS, OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors, occasionEntrance } from "@/lib/occasionCard";
 import type { ItineraryStop, SavedPlan } from "@/lib/types";
 import { isHalloween } from "@/components/Logo";
-import { isProUser } from "@/lib/entitlements";
+import { isPro } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +157,8 @@ export default async function SharedPlanPage({ params }: { params: { slug: strin
    */
   // A Pro feature, checked here too: the column is the owner's to write, Pro or not.
   const surprise =
-    Boolean((plan as SavedPlan & { surprise?: boolean }).surprise) && !Number.isNaN(startsAt) && Boolean(plan.user_id) && (await isProUser(plan.user_id!));
+    Boolean((plan as SavedPlan & { surprise?: boolean }).surprise) && !Number.isNaN(startsAt) && Boolean(plan.user_id) &&
+    isPro(((await supabase.from("entitlements").select("tier,status,expires_at").eq("user_id", plan.user_id!).maybeSingle()).data ?? { tier: "free", status: "none", expires_at: null }) as never);
   let clock = Number.isNaN(startsAt) ? 0 : startsAt;
   const shared: SharedStop[] = visible.map((st, i) => {
     if (i > 0) clock += (stops[i - 1].duration_mins ?? 0) * 60_000;

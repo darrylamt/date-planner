@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createFreshServiceClient as createServiceClient } from "@/lib/supabase/server";
 import { longDate, time12 } from "@/lib/format";
 import { OCCASION_THEME } from "@/lib/planConstants";
 import { occasionCard, occasionColors } from "@/lib/occasionCard";
