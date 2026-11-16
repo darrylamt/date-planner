@@ -43,7 +43,14 @@ export function createServiceClient(): SupabaseClient {
   return createBareClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
+    /*
+     * Never from Next's data cache. A shared plan switched to Surprise mode
+     * kept showing every stop in production while the same code locally hid
+     * them (16 Nov 2026): a read saved before the switch was being served.
+     * Service reads are rows that change (plans, entitlements, admin), so
+     * each is fetched fresh.
+     */
+    { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } }
   );
 }
 

@@ -27,6 +27,8 @@ const MOTIF: Record<Occasion, string> = {
 };
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// Drawn fresh each time: switching Surprise mode on must change the preview at once.
+export const dynamic = "force-dynamic";
 
 /*
  * Figtree, the site's own face, fetched as the picture is drawn. A preview is
