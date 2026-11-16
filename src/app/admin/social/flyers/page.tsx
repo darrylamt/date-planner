@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * announcement; four colours, three sizes. Photos are chosen from the
  * catalogue, never uploaded or linked, so a flyer only shows what Duro! holds.
  */
-export default async function FlyerMakerPage({ searchParams }: { searchParams: { d?: string } }) {
+export default async function FlyerMakerPage({ searchParams }: { searchParams: { d?: string; venue?: string } }) {
   const db = await adminDataClient(["social"]);
   const today = new Date().toISOString().slice(0, 10);
   const [{ data: events }, { data: venues }] = await Promise.all([
@@ -42,7 +42,7 @@ export default async function FlyerMakerPage({ searchParams }: { searchParams: {
         Make a flyer in Duro!&apos;s look: a lineup of dates, one event or place with its photo, or an announcement. The picture updates as you type;
         download it when it looks right. Keep names, dates and prices to what is in Duro!.
       </p>
-      <FlyerMaker photos={photos} initial={initial} />
+      <FlyerMaker photos={photos} initial={initial} pick={photos.find((p) => p.kind === "venue" && p.id === searchParams.venue) ?? null} />
     </div>
   );
 }

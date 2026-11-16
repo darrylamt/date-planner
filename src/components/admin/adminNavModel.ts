@@ -85,6 +85,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
       { href: "/admin/sharing", label: "Sharing", icon: "share", keywords: "shares links" },
       { href: "/admin/social", label: "Social posts", icon: "share", keywords: "weekend post lineup instagram whatsapp channel social thursday marketing", roles: ["social"] },
       { href: "/admin/social/flyers", label: "Flyer maker", icon: "sparkles", keywords: "flyer poster design instagram story social marketing", roles: ["social"] },
+      { href: "/admin/social/venues", label: "Venue outreach", icon: "store", keywords: "venues partners instagram dm bio link portal pro outreach social", roles: ["social"] },
       { href: "/admin/poll", label: "Name poll", icon: "vote", keywords: "votes" },
     ],
   },

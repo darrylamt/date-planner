@@ -44,6 +44,9 @@ export default async function SocialPage({ searchParams }: { searchParams: { the
       return { ...l, items, total, d: flyerParam(spec), caption: lineupCaption(`${l.title} ${l.title2.replace(/\.$/, "")},`, l.from, l.to, items) };
     })
   );
+  // The blog (0116): the newest posts, to share each morning.
+  const { data: postRows } = await db.from("blog_posts").select("slug, title, published_at, status").order("published_at", { ascending: false }).limit(7);
+  const posts = (postRows ?? []) as { slug: string; title: string; published_at: string; status: string }[];
   const cards = [0, ...picks.map((_, n) => n + 1)];
   const aspect = format === "story" ? "aspect-[9/16]" : format === "square" ? "aspect-square" : "aspect-[4/5]";
 
@@ -100,6 +103,28 @@ export default async function SocialPage({ searchParams }: { searchParams: { the
           </>
         ) : (
           <div className="card mt-3 p-5 text-[14px]">Nothing listed for this weekend yet.</div>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-[20px] font-bold">From the blog · a new post every morning</h2>
+        <p className="mt-1 text-[13px] text-mutedbrown">Share the day&apos;s post on the WhatsApp Channel and in Instagram Stories with a link sticker.</p>
+        {posts.length ? (
+          <div className="mt-3 grid gap-2">
+            {posts.map((p) => (
+              <div key={p.slug} className="card flex flex-wrap items-center gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] text-mutedbrown">{new Date(p.published_at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</div>
+                  <div className="font-semibold">{p.title}</div>
+                </div>
+                <a href={`/blog/${p.slug}`} target="_blank" rel="noopener" className="btn2 btnsm">
+                  Open
+                </a>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card mt-3 p-4 text-[14px]">The first post is written at 6am once migration 0116 has run.</div>
         )}
       </section>
 

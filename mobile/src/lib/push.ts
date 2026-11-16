@@ -103,15 +103,18 @@ export async function registerForPush(): Promise<PushOutcome> {
      * back on every launch. Keyed on the token, a repeat is a no-op instead of
      * a duplicate that sends somebody two of everything.
      */
-    const { error } = await supabase.from("push_tokens").upsert(
-      {
-        token,
-        user_id: user.id,
-        platform: Platform.OS === "ios" ? "ios" : "android",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "token" }
-    );
+    /*
+     * Claimed for whoever is signed in now (0115). The plain upsert failed for
+     * anyone who had used another account on this phone: the row was that
+     * account's, RLS refused the update, and notifications could never be
+     * turned on (16 Nov 2026). The upsert stays as the fallback until 0115 runs.
+     */
+    const platform = Platform.OS === "ios" ? "ios" : "android";
+    const claimed = await supabase.rpc("claim_push_token", { p_token: token, p_platform: platform });
+    if (!claimed.error) return "granted";
+    const { error } = await supabase
+      .from("push_tokens")
+      .upsert({ token, user_id: user.id, platform, updated_at: new Date().toISOString() }, { onConflict: "token" });
 
     return error ? "failed" : "granted";
   } catch {

@@ -310,10 +310,11 @@ const QUICK: Record<"venue" | "event", { id: string; label: string; hint: string
  * or an event and a kind of post, and the flyer and its caption are filled in
  * from Duro!; then change anything below, or start from blank.
  */
-export function FlyerMaker({ photos, initial }: { photos: PhotoChoice[]; initial: unknown }) {
+export function FlyerMaker({ photos, initial, pick = null }: { photos: PhotoChoice[]; initial: unknown; pick?: PhotoChoice | null }) {
   const [seed, setSeed] = useState<{ n: number; spec: unknown; caption: string | null }>({ n: 0, spec: initial, caption: null });
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<PhotoChoice | null>(null);
+  // Venue outreach's "Make their flyer" opens here on that place.
+  const [picked, setPicked] = useState<PhotoChoice | null>(pick);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState("rose");
