@@ -10,6 +10,7 @@ import { ImageField } from "./ImageField";
 import { PosterStart } from "@/components/planner/PosterStart";
 import { guessVenue } from "@/lib/menuRead";
 import { PlaceAdder } from "./PlaceAdder";
+import { VenuePicker } from "./VenuePicker";
 import { fold } from "@/lib/fold";
 
 const CATEGORIES = ["live_music", "sip_and_paint", "festival", "run_club", "workshop", "film_night", "other"];
@@ -251,21 +252,12 @@ export function EventsManager({
         */}
         <div className="md:col-span-2">
           <span className="flbl">Venue (optional)</span>
-          <select
-            className="inp h-[42px]"
+          <VenuePicker
+            venues={venueList}
+            areaName={(id) => areaList.find((a) => a.id === id)?.name}
             value={form.venue_id}
-            onChange={(e) => {
-              const id = e.target.value;
-              setForm({ ...form, venue_id: id, area_id: (id && areaOfVenue(id)) || form.area_id });
-            }}
-          >
-            <option value="">No venue</option>
-            {venueList.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => setForm((cur) => ({ ...cur, venue_id: id, area_id: (id && areaOfVenue(id)) || cur.area_id }))}
+          />
           <PlaceAdder
             onAdded={(v) => {
               setVenueList((cur) => (cur.some((x) => x.id === v.id) ? cur : [...cur, { id: v.id, name: v.name, area_id: v.area_id }].sort((a, b) => a.name.localeCompare(b.name))));
