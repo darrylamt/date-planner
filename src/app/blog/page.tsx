@@ -31,7 +31,13 @@ export default async function BlogIndex() {
     <main className="mx-auto w-full max-w-[760px] px-6 py-12">
       <Logo size={26} href="/" />
       <h1 className="mt-8 font-display text-[34px] font-bold leading-tight">Where to go in Accra</h1>
-      <p className="mt-2 text-body text-mutedbrown">Date nights, cheap eats, cafés and what&apos;s on, with real prices from each menu.</p>
+      <p className="mt-2 text-body text-mutedbrown">
+        Date nights, cheap eats, cafés and what&apos;s on, with real prices from each menu. Or browse{" "}
+        <Link href="/menus" className="font-semibold text-flame">
+          every menu by area
+        </Link>
+        .
+      </p>
       <div className="mt-8 grid gap-4">
         {posts.length ? (
           posts.map((p) => (

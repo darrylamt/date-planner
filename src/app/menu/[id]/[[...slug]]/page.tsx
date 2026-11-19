@@ -85,8 +85,19 @@ export async function generateMetadata({ params }: { params: { id: string; slug?
   const prices = items.map((i) => i.price_ghs);
   const range = prices.length ? ` Prices from ${ghs(Math.min(...prices))} to ${ghs(Math.max(...prices))}.` : "";
   const latest = items.map((i) => i.updated_at).filter(Boolean).sort().pop();
-  const title = `${name} menu and prices${latest ? ` ${new Date(latest).getUTCFullYear()}` : ""} · ${v.areas?.name ?? "Accra"}`;
-  const description = `${name}, ${where(v)}: the full menu with prices${items.length ? ` (${items.length} items)` : ""}.${range} Plan a date or a night out here with Duro!.`;
+  /*
+   * What Google shows (owner's Search Console, 19 Nov 2026: shown 97 times
+   * for "flicks and licks menu", clicked none). The title said the area
+   * twice, "Flicks & Licks - East Legon menu and prices 2026 · East Legon",
+   * and the prices came last in the description. Now the branch's area is
+   * said once, the month shows the prices are current, and the description
+   * opens with them.
+   */
+  const area = v.areas?.name ?? "Accra";
+  const tail = [" - ", " – ", " — ", ", ", " · ", " | "].map((s) => `${s}${area}`.toLowerCase()).find((s) => name.toLowerCase().endsWith(s));
+  const base = (tail ? name.slice(0, -tail.length) : name).trim() || name;
+  const title = `${base} menu and prices, ${area}${latest ? ` (${monthYear(latest).replace(/^(\w{3})\w*/, "$1")})` : ""}`;
+  const description = `${range.trim() ? `${range.trim().replace(/\.$/, "")}, ` : ""}${items.length ? `${items.length} dishes and drinks` : "the full menu"} at ${base}, ${where(v)}. Updated ${latest ? monthYear(latest) : "recently"}. Plan a date or a night out here with Duro!.`;
   const canonical = menuUrl(v.id, v.name, v.areas?.name);
   const image = style.cover_url ?? v.image_url;
   return {

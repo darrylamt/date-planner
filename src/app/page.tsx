@@ -378,7 +378,14 @@ export default async function LandingPage() {
           <div className="kente" />
           <div className="mt-3 flex flex-col gap-2 text-caption text-mutedbrown sm:flex-row sm:justify-between">
             <span>Duro! · Plan outings in Ghana</span>
-            <span className="flex gap-4">
+            <span className="flex flex-wrap gap-4">
+              {/* Into the menu pages and the blog, for people and for Google (Search Console, 19 Nov 2026). */}
+              <Link href="/menus" className="hover:text-flame">
+                Menus and prices
+              </Link>
+              <Link href="/blog" className="hover:text-flame">
+                Blog
+              </Link>
               <Link href="/privacy" className="hover:text-flame">
                 Privacy
               </Link>
