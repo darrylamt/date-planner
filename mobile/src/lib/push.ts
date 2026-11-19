@@ -181,3 +181,14 @@ export function subscribeToNotificationTaps(open: (url: string) => void): () => 
 
   return () => sub.remove();
 }
+
+/** Whether this phone already lets Duro notify, and whether iOS would still show its prompt. */
+export async function pushPermission(): Promise<{ granted: boolean; canAskAgain: boolean } | null> {
+  if (!Notifications) return null;
+  try {
+    const p = await Notifications.getPermissionsAsync();
+    return { granted: p.status === "granted", canAskAgain: p.canAskAgain };
+  } catch {
+    return null;
+  }
+}

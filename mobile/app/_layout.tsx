@@ -34,6 +34,7 @@ import { Geist_700Bold } from "@expo-google-fonts/geist/700Bold";
 import { Geist_800ExtraBold } from "@expo-google-fonts/geist/800ExtraBold";
 import { useIsDark, useTheme } from "../src/lib/useTheme";
 import { AppearanceProvider } from "../src/lib/appearance";
+import { askNotificationsOnOpen } from "../src/lib/nudges";
 import { BurstProvider } from "../src/components/Burst";
 import {
   configureNotificationHandler,
@@ -182,6 +183,8 @@ function RootShell() {
    */
   useEffect(() => {
     void refreshWidgets();
+    // Once per phone: anyone signed in without notifications set up is asked (nudges.ts).
+    const askLater = setTimeout(() => void askNotificationsOnOpen(), 4000);
     // The day's first open, for how many come back (usage.ts records later ones on return to the front).
     void recordOpen();
     // Tonight's Live Activity moves along only when the app runs, so every opening moves it.
@@ -198,6 +201,7 @@ function RootShell() {
       if (event === "SIGNED_OUT") void unfollow();
     });
     return () => {
+      clearTimeout(askLater);
       sub.remove();
       auth.subscription.unsubscribe();
     };

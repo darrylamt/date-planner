@@ -1,7 +1,7 @@
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { registerForPush } from "./push";
+import { pushPermission, registerForPush } from "./push";
 
 /*
  * Weekend ideas, new this week and "it's been a while" (the server's
@@ -76,6 +76,57 @@ export async function askForNudgesOnce(): Promise<void> {
             void setNudges(true).then((r) => {
               if (!r.ok && r.message) Alert.alert("Not turned on", r.message);
             }),
+        },
+      ]
+    );
+  } catch {
+    // Asked another time.
+  }
+}
+
+/*
+ * Asked once on the next open (owner, 19 Nov 2026): notifications came after
+ * many people installed, and a bug (fixed by 0115) stopped some who said yes
+ * from ever getting them. So anyone signed in who is not fully set up (the
+ * phone allows Duro, the token is saved, the notes are on) is asked once.
+ * A phone that already refused iOS's own prompt cannot be shown it again, so
+ * the yes there opens Duro in Settings instead.
+ */
+const ASKED_ON_OPEN = "duro.notifs.asked-on-open.v3";
+
+export async function askNotificationsOnOpen(): Promise<void> {
+  try {
+    if (await AsyncStorage.getItem(ASKED_ON_OPEN)) return;
+    const { data: auth } = await supabase.auth.getSession();
+    const user = auth.session?.user;
+    if (!user || user.is_anonymous) return;
+    const perm = await pushPermission();
+    if (!perm) return; // a build without notifications
+    const [on, { count }] = await Promise.all([
+      nudgesOn(),
+      supabase.from("push_tokens").select("token", { count: "exact", head: true }).eq("user_id", user.id),
+    ]);
+    if (on === null) return; // the server is not ready for it
+    await AsyncStorage.setItem(ASKED_ON_OPEN, "1");
+    if (perm.granted && on && (count ?? 0) > 0) return; // already set up
+    const blocked = !perm.granted && !perm.canAskAgain;
+    Alert.alert(
+      "Turn on notifications?",
+      "A reminder before each plan, what's on in Accra every Thursday, and news from places you star. At most twice a week, and you can turn it off in Profile." +
+        (blocked ? "\n\nNotifications are off for Duro on this phone, so this opens Settings: turn on Allow Notifications, then come back." : ""),
+      [
+        { text: "Not now", style: "cancel" },
+        {
+          text: blocked ? "Open Settings" : "Turn on",
+          onPress: () => {
+            if (blocked) {
+              void Linking.openSettings();
+              return;
+            }
+            void setNudges(true).then((r) => {
+              if (!r.ok && r.message) Alert.alert("Not turned on", r.message);
+            });
+          },
         },
       ]
     );
