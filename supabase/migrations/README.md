@@ -26,6 +26,9 @@ ledger, so a file here is not proof it ran: probe the live schema if in doubt.
   image_source on venues, readable by the app); in `archive/`.
 - 0104_featured_events.sql ran on 5 November 2026 (probed: featured_venues
   carries event_id and the rugby final's slot pointed at its event); in `archive/`.
+- 0115_claim_push_token.sql and 0116_blog_and_outreach.sql ran by 19 November 2026
+  (probed: a second account claims a phone's token, signed out is refused;
+  blog_posts readable, venue_outreach not; audit:smoke 23/23); in `archive/`.
 - 0114_social_role.sql ran on 15 November 2026 (probed: a 'social' role row is
   accepted; staff:smoke 20/20); in `archive/`.
 - 0113_star_lists_alerts.sql ran on 15 November 2026 (probed: stars:smoke 15/15,
