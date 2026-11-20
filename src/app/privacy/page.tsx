@@ -147,6 +147,13 @@ export default function PrivacyPage() {
           account has used this month, and how much each request to Anthropic
           cost, so we can keep the free allowance fair and the bill paid.
         </p>
+        <p>
+          <strong>When you enter a giveaway:</strong> that your account entered
+          and when, so we can pick the winner and tell everyone who entered who
+          won. That message names the winner by their email address with most
+          of it hidden (for example A****56@gmail.com), or by first name and
+          initial if they signed in with a hidden Apple email.
+        </p>
       </Section>
 
       <Section title="What we do not collect">
@@ -242,7 +249,8 @@ export default function PrivacyPage() {
           venues, using data that does not say who you are. Records of how the
           app is used and error reports: our legitimate interest in making the
           app work and better. Weekend ideas: your consent, given and withdrawn
-          with the switch in the app.
+          with the switch in the app. Giveaway entries: to run the giveaway you
+          chose to enter (contract).
         </p>
         <p>
           <strong>How long we keep it.</strong> Account data, plans and
