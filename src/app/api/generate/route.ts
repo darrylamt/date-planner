@@ -17,6 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkPlan } from "@/lib/planCheck";
 import { tasteFor, type Taste } from "@/lib/taste";
 import { getCaller } from "@/lib/supabase/server";
+import { enterFromPlan } from "@/lib/giveaway";
 import { BUDGET_MAX, freeToVisit } from "@/lib/budget";
 import { DEFAULT_RADIUS_KM, DEFAULT_WELLNESS_KIND, REACH_FALLBACK_KM, WELLNESS_KINDS, wellnessAllowed } from "@/lib/planConstants";
 import type {
@@ -213,7 +214,12 @@ export async function POST(req: Request): Promise<NextResponse<GenerateResponse>
   const res = await generate(req);
   try {
     const parsed = planInputsSchema.safeParse(await copy.json());
-    if (parsed.success) await recordDemand(parsed.data as PlanInputs, (await res.clone().json()) as GenerateResponse, meta ?? undefined);
+    const answer = (await res.clone().json()) as GenerateResponse;
+    if (parsed.success) await recordDemand(parsed.data as PlanInputs, answer, meta ?? undefined);
+    // A signed-in account that got a plan is entered into any open giveaway (giveaway.ts).
+    if (answer.status === "ok" && meta?.who?.startsWith("u:") && !meta.team) {
+      await enterFromPlan(createServiceClient(), meta.who.slice(2)).catch(() => undefined);
+    }
   } catch {
     /* never a failed plan over statistics */
   }

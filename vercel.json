@@ -23,7 +23,7 @@
     },
     {
       "path": "/api/cron/giveaways",
-      "schedule": "0 19 * * *"
+      "schedule": "0 21 * * *"
     }
   ]
 }

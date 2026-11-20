@@ -123,6 +123,23 @@ export async function enterGiveaway(db: SupabaseClient, g: Giveaway, userId: str
   return lost("entered");
 }
 
+/**
+ * A plan made by a signed-in account enters it into every open giveaway
+ * (owner, 20 Nov 2026: the Tickets tap needed an app update most phones had
+ * not loaded, so "anyone who creates a plan before 9pm" is in). No instant
+ * win here: these are drawn at draw_at. A plan made after the draw time
+ * draws any giveaway that is due, so the draw never waits on the cron.
+ */
+export async function enterFromPlan(db: SupabaseClient, userId: string, now = new Date()): Promise<void> {
+  await drawDue(db, now);
+  const { data } = await db.from("giveaways").select("id").is("winner_user_id", null).gt("draw_at", now.toISOString());
+  const open = ((data ?? []) as { id: string }[]).map((g) => g.id);
+  if (!open.length || (await isAdmin(db, userId))) return;
+  await db
+    .from("giveaway_entries")
+    .upsert(open.map((giveaway_id) => ({ giveaway_id, user_id: userId })), { onConflict: "giveaway_id,user_id", ignoreDuplicates: true });
+}
+
 /** Draw one of those who tried, if nobody has won yet. Returns the giveaway as it now stands. */
 export async function drawOne(db: SupabaseClient, g: Giveaway): Promise<Giveaway | null> {
   if (g.winner_user_id) return g;
