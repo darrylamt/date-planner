@@ -14,6 +14,7 @@ import { useIsDark, useTheme } from "../../lib/useTheme";
 import { MorphButton, MoreRow, type MoreItem } from "../redesign/MoreActions";
 import { ghs, instagramUrl, time12 } from "../../lib/format";
 import { track } from "../../lib/signals";
+import { openTicketLink } from "../../lib/giveaway";
 import { QtyStepper } from "./QtyStepper";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
@@ -486,7 +487,7 @@ export function StopCard({
                 label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
                 onPress={() => {
                   track("book_tapped", stop.venue_id);
-                  void Linking.openURL(tickets);
+                  void openTicketLink(tickets);
                 }}
                 grow
               />

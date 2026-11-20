@@ -56,6 +56,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
       { href: "/admin/gifts", label: "Flowers and cakes", icon: "gift", keywords: "add-ons gifts" },
       { href: "/admin/vendors", label: "Cake and flower shops", icon: "bag", badge: "vendorApplications", urgent: true, keywords: "vendor applications" },
       { href: "/admin/featured", label: "Featured this week", icon: "star", keywords: "shelf promote" },
+      { href: "/admin/giveaways", label: "Giveaways", icon: "gift", keywords: "free ticket win winner draw contest" },
     ],
   },
   {
