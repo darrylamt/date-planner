@@ -10,7 +10,6 @@ import { GUTTER, radius, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { longDate } from "../../src/lib/format";
 import { bookingOf, eventPrice, eventTime, fetchEvent, type EventDetail } from "../../src/lib/events";
-import { openTicketLink } from "../../src/lib/giveaway";
 
 /**
  * One event (owner, 5 Nov 2026: "the featured event card should take me to
@@ -82,7 +81,7 @@ export default function EventPage() {
           </View>
 
           <View style={{ gap: space.sm, marginTop: space.sm }}>
-            {book ? <Button title={book.label} icon="ticket.fill" onPress={() => void openTicketLink(book.url)} /> : null}
+            {book ? <Button title={book.label} icon="ticket.fill" onPress={() => void Linking.openURL(book.url)} /> : null}
             {e.contact_phone ? (
               <Button title="Call the organiser" kind="tinted" icon="phone.fill" onPress={() => void Linking.openURL(`tel:${e.contact_phone!.replace(/\s/g, "")}`)} />
             ) : null}

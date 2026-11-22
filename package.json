@@ -21,7 +21,6 @@
     "taste:smoke": "tsx --env-file=.env.local scripts/taste-smoke.ts",
     "staff:smoke": "tsx --env-file=.env.local scripts/staff-smoke.ts",
     "stars:smoke": "tsx --env-file=.env.local scripts/star-alerts-smoke.ts",
-    "giveaway:smoke": "tsx scripts/giveaway-smoke.ts",
     "menu:understand": "tsx --env-file=.env.local scripts/understand-menus.ts",
     "menu:audit": "tsx --env-file=.env.local scripts/menu-audit.ts",
     "meal:smoke": "tsx --env-file=.env.local scripts/meal-smoke.ts",

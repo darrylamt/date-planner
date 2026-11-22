@@ -9,6 +9,5 @@
  */
 export const SPOTLIGHT_EVENT_IDS: ReadonlySet<string> = new Set<string>([
   // Friday Night Footy (6 Nov 2026) was here; taken out once its night was over.
-  // CTRL - Control the Night, Enzo, 20 Nov 2026: the ticket giveaway (giveaways.md). Take out after the night.
-  "b7ec3848-cc96-4889-ae61-5eaf28d719cf",
+  // CTRL - Control the Night (20 Nov 2026) was here; taken out once its night was over.
 ]);

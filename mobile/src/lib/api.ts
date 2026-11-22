@@ -531,21 +531,3 @@ export async function generateTrip(inputs: TripInputs): Promise<TripResponse> {
     return { status: "error", message: "We couldn't reach the planner. Check your connection and try again." };
   }
 }
-
-/**
- * A tap on Tickets for an event with a giveaway (0117, src/lib/giveaway.ts on
- * the server). Always answers with a page to open: the winner's ticket, or
- * the event's normal ticket page.
- */
-export type GiveawayAnswer = {
-  status: "none" | "signin" | "notifications" | "won" | "entered" | "tried-before" | "closed" | "admin" | "error";
-  url: string | null;
-};
-
-export async function enterGiveaway(eventId: string): Promise<GiveawayAnswer> {
-  try {
-    return await postJson<GiveawayAnswer>("/api/giveaway/enter", { eventId }, await whoIsAsking());
-  } catch {
-    return { status: "error", url: null };
-  }
-}

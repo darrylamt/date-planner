@@ -53,7 +53,6 @@ import { NextSpotSheet } from "./NextSpotSheet";
 import { afterSharing } from "../../lib/review";
 import { billFromPlan, setBillSource } from "../../lib/bill";
 import { track, trackStops } from "../../lib/signals";
-import { openTicketLink } from "../../lib/giveaway";
 import { swapStopLocally } from "../../lib/swapStop";
 import { NoteSheet } from "./NoteSheet";
 import { PickupSheet } from "./PickupSheet";
@@ -408,7 +407,7 @@ export function ItineraryView({
     if (booking) {
       channels.push({
         text: "Booking page",
-        open: () => openTicketLink(booking),
+        open: () => Linking.openURL(booking),
         toast: "Opening their booking page.",
       });
     }
