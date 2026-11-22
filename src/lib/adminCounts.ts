@@ -1,4 +1,4 @@
-import { avgIsNotAPrice, freeToVisit } from "./budget";
+import { waitingOnPrice } from "./budget";
 import { cache } from "react";
 import { createServiceClient } from "./supabase/server";
 import { menuStats } from "./menuStats";
@@ -125,13 +125,8 @@ export const adminCounts = cache(async (): Promise<AdminCounts> => {
      * branches, and there are eight branches in the catalogue now.
      */
     // Switched-off venues waiting on a price count too; closed ones do not.
-    unpriced: rows.filter((v: any) => {
-      if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
-      if (freeToVisit(v)) return false;
-      const hasMenu = (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) > 0;
-      // The GHS 100 import default is not a price either.
-      return avgIsNotAPrice(v, hasMenu) || (Number(v.avg_cost_per_person_ghs) <= 0 && !hasMenu);
-    }).length,
+    // The same rule as the Unpriced page (budget.ts waitingOnPrice).
+    unpriced: rows.filter((v: any) => waitingOnPrice(v, (menuCount.get((v.menu_shared_from as string | null) || v.id) ?? 0) > 0)).length,
     // Counted across every venue, not just active ones: a number on a paused
     // venue is still a number that could be dialled if it is switched back on.
     phonesPending: rows.filter((v: any) => v.phone_status === "pending").length,

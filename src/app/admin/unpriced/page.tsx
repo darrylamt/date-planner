@@ -1,6 +1,6 @@
 import { adminDataClient } from "@/lib/adminAuth";
 import { UnpricedVenues } from "@/components/admin/UnpricedVenues";
-import { avgIsNotAPrice } from "@/lib/budget";
+import { waitingOnPrice } from "@/lib/budget";
 import { fetchAllRows } from "@/lib/fetchAll";
 import type { LoggedStop } from "@/lib/mealChecks";
 
@@ -17,7 +17,7 @@ export default async function AdminUnpricedPage({ searchParams }: { searchParams
   const { data: venues } = await supabase
     .from("venues")
     .select(
-      "id, name, type, is_free, is_active, business_status, menu_shared_from, avg_cost_per_person_ghs, price_source, areas(name), menu_items(id)"
+      "id, name, type, is_free, is_active, business_status, menu_shared_from, avg_cost_per_person_ghs, price_source, entry_fee_ghs, areas(name), menu_items(id)"
     )
     .order("name");
 
@@ -58,26 +58,8 @@ export default async function AdminUnpricedPage({ searchParams }: { searchParams
   );
 
   const rows = (venues ?? [])
-    .filter((v: any) => {
-      if (v.is_free === true) return false;
-      /*
-       * Switched off for want of a price belongs here too, so the queue is
-       * the one place every venue waiting on a price can be found. Closed is
-       * different: no price brings back a place that has shut.
-       */
-      if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
-      /*
-       * Marked "unknown" is withheld by the planner whatever else the row
-       * holds, so it belongs here even with a figure or a menu on file.
-       */
-      if (v.price_source === "unknown") return true;
-      const hasMenu = ownIds.has((v.menu_shared_from as string | null) || v.id);
-      // The GHS 100 import default counts as no price: see PLACEHOLDER_AVG_GHS.
-      // The import default, or a place to eat with no menu: neither is a price.
-      if (avgIsNotAPrice(v, hasMenu)) return true;
-      if (Number(v.avg_cost_per_person_ghs) > 0) return false;
-      return !hasMenu;
-    })
+    // One rule with the badge, following what the planner withholds (budget.ts waitingOnPrice).
+    .filter((v: any) => waitingOnPrice(v, ownIds.has((v.menu_shared_from as string | null) || v.id)))
     .map((v: any) => ({
       id: v.id,
       name: v.name,
