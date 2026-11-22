@@ -208,7 +208,16 @@ export async function renderFlyer(spec: FlyerSpec, origin: string): Promise<Imag
             : null;
         title = twoLines && !twoLines.cut ? twoLines : fitText(r.title, { face: boldTight, width: titleW, max: Math.round(big * 0.78), min: Math.round(big * 0.66) });
       }
-      const sub = withSub && r.sub ? fitText(cedis(r.sub), { face: regular, width: titleW, max: subMax, min: Math.round(subMax * 0.8) }) : null;
+      // The line under it: one line, or two when the row has the height left over, before any ellipsis.
+      const titleBlock = title.lines.length * title.size * 1.05;
+      const subMin = Math.round(subMax * 0.8);
+      const one = withSub && r.sub ? fitText(cedis(r.sub), { face: regular, width: titleW, max: subMax, min: subMin }) : null;
+      // Two lines only at a size whose two lines still fit the row's height.
+      const twoAt = Math.min(subMax, Math.floor((rowH - 8 - titleBlock) / (2 * 1.2)));
+      const two = one?.cut && twoAt >= subMin ? fitText(cedis(r.sub!), { face: regular, width: titleW, max: twoAt, min: subMin, lines: 2 }) : null;
+      // Still too long: a little smaller on one line, and only then the ellipsis.
+      const small = one?.cut && !(two && !two.cut) ? fitText(cedis(r.sub!), { face: regular, width: titleW, max: subMin, min: Math.round(subMax * 0.7) }) : null;
+      const sub = two && !two.cut ? two : small ?? one;
       return { title, sub };
     };
 
