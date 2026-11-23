@@ -51,6 +51,12 @@ export function EventsManager({
   const supabase = createClient();
   const [form, setForm] = useState({ ...EMPTY, area_id: areas[0]?.id ?? "" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  /*
+   * Every day a poster lists, when it lists more than one: an exhibition runs
+   * for weeks, and the form holds one date. Saving a new event adds a row for
+   * each (as the planner's own editor does); editing changes one row only.
+   */
+  const [posterDates, setPosterDates] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +86,7 @@ export function EventsManager({
   });
 
   function startEdit(e: EventRow) {
+    setPosterDates([]);
     setEditingId(e.id);
     setForm({
       title: e.title,
@@ -150,9 +157,13 @@ export function EventsManager({
       // the database lacks fails the whole save.
       ...(form.audience !== "everyone" || events.some((e) => "audience" in e) ? { audience: form.audience } : {}),
     };
+    // A new event from a poster with several days: one row a day, starting from the date in the form.
+    const days = !editingId && posterDates.length > 1 ? posterDates.filter((d) => d >= form.event_date) : [];
     const q = editingId
       ? supabase.from("events").update(payload).eq("id", editingId)
-      : supabase.from("events").insert(payload);
+      : days.length > 1
+        ? supabase.from("events").insert(days.map((event_date) => ({ ...payload, event_date })))
+        : supabase.from("events").insert(payload);
     const { error } = await q;
     setBusy(false);
     if (error) {
@@ -161,7 +172,8 @@ export function EventsManager({
     }
     setForm({ ...EMPTY, area_id: areas[0]?.id ?? "" });
     setEditingId(null);
-    setToast("Event saved");
+    setPosterDates([]);
+    setToast(days.length > 1 ? `Event saved on ${days.length} days` : "Event saved");
     setTimeout(() => setToast(null), 1800);
     router.refresh();
   }
@@ -208,7 +220,14 @@ export function EventsManager({
               booking_url: p.bookingUrl || form.booking_url,
               audience: p.title ? p.audience : form.audience,
             });
-            if (p.dates.length > 1) setToast(`The poster lists ${p.dates.length} dates: ${p.dates.join(", ")}. This fills the first.`);
+            // Several days (an exhibition, a run of nights): all of them are saved with the event.
+            setPosterDates(editingId ? [] : p.dates);
+            if (p.dates.length > 1 && !editingId)
+              setToast(
+                p.runsUntil
+                  ? `Runs until ${p.runsUntil}: saving adds it on ${p.dates.length} days, from ${p.dates[0]}.`
+                  : `The poster lists ${p.dates.length} dates. Saving adds it on each.`,
+              );
           }}
         />
       </div>
@@ -390,13 +409,14 @@ export function EventsManager({
             onClick={save}
             disabled={busy || !form.title.trim() || !form.event_date}
           >
-            {editingId ? "Update event" : "Add event"}
+            {editingId ? "Update event" : posterDates.filter((d) => d >= form.event_date).length > 1 ? `Add on ${posterDates.filter((d) => d >= form.event_date).length} days` : "Add event"}
           </button>
           {editingId && (
             <button
               className="btn2 btnsm"
               onClick={() => {
                 setEditingId(null);
+                setPosterDates([]);
                 setForm({ ...EMPTY, area_id: areas[0]?.id ?? "" });
               }}
             >

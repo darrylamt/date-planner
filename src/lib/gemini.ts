@@ -44,6 +44,7 @@ export async function geminiJSON<T>({
   models = GEMINI_MODELS,
   timeoutMs = 45_000,
   deadlineMs,
+  retryPauseMs = 0,
 }: {
   parts: GeminiPart[];
   prompt: string;
@@ -56,6 +57,8 @@ export async function geminiJSON<T>({
    * read that failed took a minute to say so.
    */
   deadlineMs?: number;
+  /** A pause before asking a model a second time, when the list names it twice (a busy 503 passes quickly). */
+  retryPauseMs?: number;
 }): Promise<GeminiResult<T>> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return { ok: false, reason: "no_key", message: "GEMINI_API_KEY is not set on the server." };
@@ -67,7 +70,10 @@ export async function geminiJSON<T>({
 
   let limited = false;
   const end = deadlineMs ? Date.now() + deadlineMs : Infinity;
+  const asked = new Set<string>();
   for (const model of models) {
+    if (asked.has(model) && retryPauseMs) await new Promise((r) => setTimeout(r, retryPauseMs));
+    asked.add(model);
     const left = end - Date.now();
     if (left < 4000) break;
     // Gemma takes no response schema: the JSON is asked for in words and read the same way.

@@ -111,6 +111,7 @@ const EMPTY_DRAFT: FlyerDraft = {
   kind: "other",
   otherKind: "",
   dates: [],
+  runsUntil: "",
   time: "",
   endTime: "",
   venueName: "",
