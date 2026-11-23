@@ -16,7 +16,7 @@
 
 export const MENU_READ_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
 
-import { GEMINI_LIGHT_MODELS, geminiJSON } from "./gemini";
+import { geminiJSON } from "./gemini";
 
 export type MenuPart = { mime: string; data: Buffer } | { text: string; name: string };
 
@@ -126,16 +126,26 @@ type ReadOut = { items?: ReadItem[]; chargesNotes?: string[]; skipped?: string[]
  * very long"); one request each runs side by side and each answer is short.
  * The fast models first: Flash Lite reads a menu page in seconds and allows
  * 500 a day, the full Flash models think first and allow 20.
+ *
+ * Owner, 23 Nov 2026: reads still failed. A dense page is a long answer,
+ * and writing it out ran past the 30 seconds each model was given, so both
+ * fast models timed out and the read gave up at the route's minute. Each
+ * try now has two minutes inside the route's three, a busy 503 is asked
+ * again after a short pause (it rarely lasts), and Gemma, slower and
+ * busier, is left out.
  */
+const MENU_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
+
 async function readOne(p: MenuPart) {
   return geminiJSON<ReadOut>({
     parts: ["text" in p ? { text: `File "${p.name}":
 ${p.text.slice(0, 200_000)}` } : { inline: { mime: p.mime, data: p.data } }],
     prompt: PROMPT,
     schema: SCHEMA,
-    models: GEMINI_LIGHT_MODELS,
-    timeoutMs: 30_000,
-    deadlineMs: 52_000,
+    models: MENU_MODELS,
+    timeoutMs: 120_000,
+    deadlineMs: 170_000,
+    retryPauseMs: 1_200,
   });
 }
 

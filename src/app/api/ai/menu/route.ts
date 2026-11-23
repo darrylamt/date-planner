@@ -11,7 +11,8 @@ import { MENU_READ_TYPES, readMenu, type MenuPart } from "@/lib/menuReader";
  * shrunk in the browser first, because a Vercel function takes about 4.5 MB
  * a request; nothing sent here is kept.
  */
-export const maxDuration = 60;
+// Three minutes: a dense menu page can take over a minute to write out (menuReader.ts). Hobby allows five.
+export const maxDuration = 180;
 
 const MAX_FILES = 6;
 const MAX_BYTES = 4_000_000;
