@@ -179,11 +179,20 @@ export async function refreshPull(db: SupabaseClient): Promise<{ venues: number;
       1000,
       4
     ),
-    db.from("venues").select("id").eq("is_active", true),
+    db.from("venues").select("id, is_active").order("id").range(0, 9999),
   ]);
   if (error) throw new Error(`venues: ${error.message}`);
+  const all = (venues ?? []) as { id: string; is_active: boolean }[];
 
-  const { rows, average } = computePull(signals, ((venues ?? []) as { id: string }[]).map((v) => v.id));
+  const computed = computePull(signals, all.filter((v) => v.is_active).map((v) => v.id));
+  /*
+   * Only venues that still exist. Signals outlive the venues they name, and
+   * one deleted venue's row broke the foreign key and stopped every night's
+   * refresh from 19 Nov 2026 until this filter (owner, 23 Nov).
+   */
+  const exists = new Set(all.map((v) => v.id));
+  const rows = computed.rows.filter((r) => exists.has(r.venue_id));
+  const average = computed.average;
   const computed_at = new Date().toISOString();
   for (let i = 0; i < rows.length; i += 500) {
     const { error: e } = await db.from("venue_pull").upsert(rows.slice(i, i + 500).map((r) => ({ ...r, computed_at })));
