@@ -27,7 +27,8 @@ export function MenuReaderPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [read, setRead] = useState<MenuReadResponse | null>(null);
-  const [venue, setVenue] = useState("");
+  // One venue offered (its own menu page): already chosen.
+  const [venue, setVenue] = useState(venues.length === 1 ? venues[0].name : "");
 
   const sorted = [...venues].sort((a, b) => a.name.localeCompare(b.name));
   const chosen = venues.find((v) => v.name.toLowerCase() === venue.trim().toLowerCase()) ?? null;

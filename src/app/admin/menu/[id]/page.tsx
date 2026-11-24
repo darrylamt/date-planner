@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { adminDataClient } from "@/lib/adminAuth";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { MenuManager, type MenuScope } from "@/components/venue/MenuManager";
+import { CsvImporter } from "@/components/admin/CsvImporter";
 import type { MenuItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,18 @@ export default async function AdminMenuPage({ params }: { params: { id: string }
       {/* The portal's editor wears the portal's theme. */}
       <div className="planner mt-5 rounded-[18px] p-4 md:p-6">
         <MenuManager scope={scope} items={items} />
+      </div>
+      {/*
+        The import tools on the menu itself (owner, 24 Nov 2026): photos or a
+        PDF read by Gemini, a CSV file, or pasted rows, all filed under this
+        menu (the shared one, for a branch) and checked before anything saves.
+      */}
+      <div className="card mt-6 p-5">
+        <CsvImporter
+          areas={[]}
+          venues={[]}
+          onlyVenue={{ id: ownerId, name: (owner.data as { name: string } | null)?.name ?? venue.name }}
+        />
       </div>
     </div>
   );

@@ -24,13 +24,20 @@ import type { Area } from "@/lib/types";
 export function CsvImporter({
   areas,
   venues,
+  onlyVenue,
 }: {
   areas: Area[];
   venues: { id: string; name: string; hasPin?: boolean; hasPhone?: boolean }[];
+  /**
+   * On a venue's own menu page (Admin → Menus → a venue, owner 24 Nov 2026):
+   * menu items only, every row filed under this venue, the venue column
+   * optional, and the photo reader starting with it chosen.
+   */
+  onlyVenue?: { id: string; name: string };
 }) {
   const router = useRouter();
   const supabase = createClient();
-  const [mode, setMode] = useState<"venues" | "menu_items" | "enrich">("venues");
+  const [mode, setMode] = useState<"venues" | "menu_items" | "enrich">(onlyVenue ? "menu_items" : "venues");
   const [report, setReport] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   /** What a long import is doing right now, so a wait never looks like a hang. */
@@ -339,7 +346,8 @@ export function CsvImporter({
       };
 
       for (const [i, r] of rows.entries()) {
-        const venueId = venueByName.get(fold((r.venue ?? "").trim()));
+        // On a venue's own page every row is that venue's, whatever the column says or if there is none.
+        const venueId = onlyVenue ? onlyVenue.id : venueByName.get(fold((r.venue ?? "").trim()));
         if (!r.name) {
           log.push(`Row ${i + 2}: skipped, no item name`);
           continue;
@@ -549,12 +557,24 @@ export function CsvImporter({
 
   return (
     <div className="max-w-[720px]">
-      <h1 className="font-display text-[24px] font-bold">Import CSV</h1>
-      <div className="text-[14px] text-mutedbrown">
-        Bulk-load venues or menu items. First row must be the header.
-      </div>
+      {onlyVenue ? (
+        <>
+          <h2 className="font-display text-[20px] font-bold">Add dishes in bulk</h2>
+          <div className="text-[14px] text-mutedbrown">
+            Read them from menu photos or a PDF, choose a CSV, or paste one. Everything goes to {onlyVenue.name}, is
+            checked first, and nothing is saved until you import.
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="font-display text-[24px] font-bold">Import CSV</h1>
+          <div className="text-[14px] text-mutedbrown">
+            Bulk-load venues or menu items. First row must be the header.
+          </div>
+        </>
+      )}
 
-      <div className="mt-5 flex gap-2.5">
+      <div className={onlyVenue ? "hidden" : "mt-5 flex gap-2.5"}>
         <button
           className={`chip ${mode === "venues" ? "chip-on" : ""}`}
           onClick={() => setMode("venues")}
@@ -637,7 +657,7 @@ export function CsvImporter({
               </span>
               <br />
               <span className="text-mutedbrown">
-                venue must match an existing venue name exactly. Category is
+                {onlyVenue ? `The venue column can be left out here: every row goes to ${onlyVenue.name}. ` : "venue must match an existing venue name exactly. "}Category is
                 forgiving: Main, Mains, Starters, Drinks and the like all land in
                 the right place.
               </span>
@@ -647,7 +667,7 @@ export function CsvImporter({
 
         {mode === "menu_items" ? (
           <MenuReaderPanel
-            venues={venues}
+            venues={onlyVenue ? [onlyVenue] : venues}
             disabled={busy}
             onCsv={async (csv, notes) => {
               setRaw(csv);
