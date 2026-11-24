@@ -93,8 +93,6 @@ export function Bookings({ rows }: { rows: ReservationRequest[] }) {
         </div>
       ) : (
         <div className="pl-card pl-up flex items-center gap-4 p-5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascots/scene_table.png" alt="" className="h-16 w-16 shrink-0 [image-rendering:pixelated]" />
           <div>
             <div className="text-[16px] font-bold">No new bookings</div>
             <p className="text-[14px] leading-snug text-[var(--p-muted)]">They appear here the moment somebody asks for a table through Duro.</p>

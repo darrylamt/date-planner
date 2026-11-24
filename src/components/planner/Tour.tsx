@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { IconArrow, IconCheck, IconImage, IconTicket, IconUser } from "./icons";
+import { IconArrow, IconCheck, IconImage, IconSparkle, IconTicket, IconUser } from "./icons";
 
 const SEEN_KEY = "duro.planner.tour";
 
@@ -146,8 +146,10 @@ const SLIDES: { title: (name: string) => string; body: string; art: (name: strin
     art: () => (
       <div className="relative">
         <div className="absolute inset-0 -z-10 m-auto h-48 w-48 rounded-full bg-[var(--p-accent-soft)]" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mascots/celebration.png" alt="" className="pl-float h-48 w-48 [image-rendering:pixelated]" />
+        {/* No mascot: the website has none (owner, 24 Nov 2026). */}
+        <div className="pl-float grid h-48 w-48 place-items-center text-[var(--p-accent)]">
+          <IconSparkle size={84} />
+        </div>
       </div>
     ),
   },

@@ -211,9 +211,7 @@ function NightCard({
 function EmptyNights({ hasPast }: { hasPast: boolean }) {
   return (
     <div className="pl-card pl-up flex flex-col items-center px-6 py-10 text-center">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/mascots/friend_outing.png" alt="" className="pl-float h-28 w-28 [image-rendering:pixelated]" />
-      <h3 className="mt-4 text-[20px] font-bold">{hasPast ? "Nothing coming up" : "No nights yet"}</h3>
+      <h3 className="text-[20px] font-bold">{hasPast ? "Nothing coming up" : "No nights yet"}</h3>
       <p className="mt-1.5 max-w-[340px] text-[15px] text-[var(--p-muted)]">
         {hasPast
           ? "Your last nights are below. Run one again, or put on something new."
