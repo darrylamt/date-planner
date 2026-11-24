@@ -596,7 +596,74 @@ export function CsvImporter({
       </div>
 
       <div className="card mt-4 p-5">
-        <div className="text-[14px] leading-relaxed text-cocoa">
+        {/* Paste or choose. Pasting is how most of these arrive. */}
+        <textarea
+          className="ta min-h-[140px] font-mono text-[12.5px]"
+          placeholder={"Paste the CSV here, header row first…"}
+          value={raw}
+          disabled={busy}
+          onChange={(e) => setRaw(e.target.value)}
+        />
+
+        <div className="mt-3 flex flex-wrap items-center gap-2.5">
+          <button
+            className="btn btnsm px-6"
+            disabled={busy || !raw.trim()}
+            onClick={() => void run(raw, true)}
+          >
+            {busy ? "Reading…" : "Check this file"}
+          </button>
+
+          <label className="btn2 btnsm inline-flex w-fit cursor-pointer px-5">
+            Choose a file
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={busy}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const text = await f.text();
+                setRaw(text);
+                // Straight into the check, never straight into the catalogue.
+                void run(text, true);
+              }}
+            />
+          </label>
+
+          {raw.trim() && (
+            <button
+              className="text-[13px] font-semibold text-mutedbrown hover:text-flame"
+              onClick={() => {
+                setRaw("");
+                setStaged(null);
+                setReport([]);
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {mode === "menu_items" ? (
+          <MenuReaderPanel
+            venues={onlyVenue ? [onlyVenue] : venues}
+            disabled={busy}
+            onCsv={async (csv, notes) => {
+              setRaw(csv);
+              // Straight into the check, never straight into the catalogue; the reader's notes go first.
+              await run(csv, true);
+              setReport((r) => [...notes, ...r]);
+            }}
+          />
+        ) : null}
+
+        {/* The column guide, folded: on a phone it was a screen and a half before the box (owner, 24 Nov 2026). */}
+        <details className="mt-4 rounded-lg border border-line px-3 py-2 text-[14px] leading-relaxed text-cocoa">
+          <summary className="cursor-pointer select-none text-[14px] font-semibold">How to lay out the CSV</summary>
+          <div className="mt-2">
           {mode === "enrich" ? (
             <>
               <b>Headers:</b>{" "}
@@ -663,71 +730,8 @@ export function CsvImporter({
               </span>
             </>
           )}
-        </div>
-
-        {mode === "menu_items" ? (
-          <MenuReaderPanel
-            venues={onlyVenue ? [onlyVenue] : venues}
-            disabled={busy}
-            onCsv={async (csv, notes) => {
-              setRaw(csv);
-              // Straight into the check, never straight into the catalogue; the reader's notes go first.
-              await run(csv, true);
-              setReport((r) => [...notes, ...r]);
-            }}
-          />
-        ) : null}
-
-        {/* Paste or choose. Pasting is how most of these arrive. */}
-        <textarea
-          className="ta mt-4 min-h-[140px] font-mono text-[12.5px]"
-          placeholder={"Paste the CSV here, header row first…"}
-          value={raw}
-          disabled={busy}
-          onChange={(e) => setRaw(e.target.value)}
-        />
-
-        <div className="mt-3 flex flex-wrap items-center gap-2.5">
-          <button
-            className="btn btnsm px-6"
-            disabled={busy || !raw.trim()}
-            onClick={() => void run(raw, true)}
-          >
-            {busy ? "Reading…" : "Check this file"}
-          </button>
-
-          <label className="btn2 btnsm inline-flex w-fit cursor-pointer px-5">
-            Choose a file
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              disabled={busy}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                const text = await f.text();
-                setRaw(text);
-                // Straight into the check, never straight into the catalogue.
-                void run(text, true);
-              }}
-            />
-          </label>
-
-          {raw.trim() && (
-            <button
-              className="text-[13px] font-semibold text-mutedbrown hover:text-flame"
-              onClick={() => {
-                setRaw("");
-                setStaged(null);
-                setReport([]);
-              }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
+          </div>
+        </details>
       </div>
 
       {/*

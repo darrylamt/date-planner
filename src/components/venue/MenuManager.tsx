@@ -232,9 +232,8 @@ export function MenuManager({ scope, items }: { scope: MenuScope; items: MenuIte
 
       {!rows.length ? (
         <div className="pl-card pl-up flex flex-col items-center px-6 py-10 text-center" style={{ animationDelay: "80ms" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mascots/scene_table.png" alt="" className="pl-float h-28 w-28 [image-rendering:pixelated]" />
-          <h2 className="mt-4 text-[22px] font-bold">Your menu is empty</h2>
+          {/* No mascot: the website has none (owner, 24 Nov 2026). */}
+          <h2 className="text-[22px] font-bold">Your menu is empty</h2>
           <p className="mt-2 max-w-[400px] text-[15px] leading-relaxed text-[var(--p-muted)]">
             Every plan has a budget, so Duro only sends people to places with prices. Add your dishes and you can start showing up.
           </p>
