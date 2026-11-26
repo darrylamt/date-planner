@@ -85,6 +85,8 @@ export const planInputsSchema = z.object({
   movie: z.boolean().optional(),
   // A night of events only (eventNight.ts). Absent from older builds.
   eventNight: z.boolean().optional().catch(undefined),
+  // Plan around this event (types.ts PlanInputs.eventId).
+  eventId: z.string().uuid().optional().catch(undefined),
   movieGenres: z.array(z.string().regex(/^[A-Za-z -]{1,24}$/)).max(12).optional().catch(undefined),
   ai: z.boolean().optional(),
   // Which entry point started the plan (0085). Lenient: a value this server

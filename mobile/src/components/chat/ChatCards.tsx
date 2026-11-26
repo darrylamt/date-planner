@@ -138,6 +138,8 @@ function Card({ card }: { card: ChatCard }) {
     fn();
   };
   const openVenue = card.venue_id ? () => router.push(`/venue/${card.venue_id}`) : null;
+  // An event card opens the event, not the place it is at (owner, 26 Nov 2026).
+  const openEvent = card.event_id ? () => router.push(`/event/${card.event_id}`) : null;
   const directions = () =>
     void Linking.openURL(
       card.lat != null && card.lng != null
@@ -146,7 +148,13 @@ function Card({ card }: { card: ChatCard }) {
     );
   const planAround =
     card.date && card.kind !== "film"
-      ? () => void startNewPlan(undefined, "chat", { date: card.date!, ...(before(card.start) ? { start: before(card.start) } : {}) })
+      ? () =>
+          void startNewPlan(undefined, "chat", {
+            date: card.date!,
+            ...(before(card.start) ? { start: before(card.start) } : {}),
+            // The event goes in the plan, not only its date (owner, 26 Nov 2026).
+            ...(card.event_id ? { eventId: card.event_id } : {}),
+          })
       : null;
 
   // Two at most: the thing most people want next, then the other one.
@@ -156,13 +164,15 @@ function Card({ card }: { card: ChatCard }) {
     actions.push({ label: "Directions", icon: "map", onPress: directions });
   } else if (card.kind === "event") {
     if (planAround) actions.push({ label: "Plan around it", icon: "sparkles", onPress: planAround });
-    if (openVenue) actions.push({ label: "The place", icon: "building.2", onPress: openVenue });
+    if (openEvent) actions.push({ label: "Details", icon: "info.circle", onPress: openEvent });
+    else if (openVenue) actions.push({ label: "The place", icon: "building.2", onPress: openVenue });
     else if (card.link) actions.push({ label: "Tickets", icon: "ticket", onPress: () => void Linking.openURL(card.link!) });
   } else {
     if (card.link) actions.push({ label: "Showtimes", icon: "ticket", onPress: () => void Linking.openURL(card.link!) });
     if (openVenue) actions.push({ label: "The cinema", icon: "building.2", onPress: openVenue });
   }
-  const main = actions[0];
+  // Tapping the card itself: an event's own page when there is one; otherwise the first action.
+  const main = card.kind === "event" && openEvent ? { onPress: openEvent } : actions[0];
 
   return (
     <Pressable

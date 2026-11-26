@@ -22,7 +22,6 @@ const FILES = [
   "budget.ts",
   "fold.ts",
   "format.ts",
-  "groups.ts",
   "planConstants.ts",
   "pickups.ts",
   "pronouns.ts",

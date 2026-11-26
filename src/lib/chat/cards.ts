@@ -218,7 +218,7 @@ export async function buildCards(db: SupabaseClient, picked: Candidate[]): Promi
     eventTitles.length
       ? db
           .from("events")
-          .select("title, venue_id, event_date, start_time, image_url, booking_url")
+          .select("id, title, venue_id, event_date, start_time, image_url, booking_url")
           .eq("is_active", true)
           .gte("event_date", today)
           .in("title", eventTitles)
@@ -230,7 +230,7 @@ export async function buildCards(db: SupabaseClient, picked: Candidate[]): Promi
   ]);
   type V = { id: string; name: string; type: string; image_url: string | null; lat: number | null; lng: number | null; areas: { name: string } | null };
   const venues = new Map(((venueRows ?? []) as unknown as V[]).map((v) => [v.id, v]));
-  type E = { title: string; venue_id: string | null; event_date: string; start_time: string | null; image_url: string | null; booking_url: string | null };
+  type E = { id: string; title: string; venue_id: string | null; event_date: string; start_time: string | null; image_url: string | null; booking_url: string | null };
   const events = (eventRows ?? []) as E[];
 
   return picked.flatMap((c): ChatCard[] => {
@@ -265,6 +265,7 @@ export async function buildCards(db: SupabaseClient, picked: Candidate[]): Promi
           detail: c.kind === "event" ? c.price : null,
           image_url: e?.image_url ?? v?.image_url ?? null,
           venue_id: c.venueId,
+          event_id: e?.id ?? null,
           lat: v?.lat == null ? null : Number(v.lat),
           lng: v?.lng == null ? null : Number(v.lng),
           date: e?.event_date ?? null,

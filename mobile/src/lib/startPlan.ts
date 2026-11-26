@@ -15,11 +15,11 @@ export async function startNewPlan(
   occasion?: PlanInputs["occasion"],
   entry?: PlanEntry,
   /** A night already decided, like Halloween: the day (YYYY-MM-DD) and start (HH:MM). */
-  preset?: { date?: string; start?: string }
+  preset?: { date?: string; start?: string; eventId?: string }
 ): Promise<void> {
   // entry says which door this was (0085), so the Home redesign can be judged by use.
   const from = entry ? `&from=${entry}` : "";
-  const when = `${preset?.date ? `&date=${preset.date}` : ""}${preset?.start ? `&start=${encodeURIComponent(preset.start)}` : ""}`;
+  const when = `${preset?.date ? `&date=${preset.date}` : ""}${preset?.start ? `&start=${encodeURIComponent(preset.start)}` : ""}${preset?.eventId ? `&event=${preset.eventId}` : ""}`;
   const href = occasion
     ? `/plan/new?fresh=1&occasion=${occasion}${from}${when}`
     : `/plan/new?fresh=1${from}${when}`;

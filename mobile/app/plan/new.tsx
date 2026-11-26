@@ -107,7 +107,7 @@ export default function PlanNew() {
    * only available action was "Edit my answers", so a new plan could not be
    * started at all.
    */
-  const params = useLocalSearchParams<{ occasion?: string; fresh?: string; from?: string; date?: string; start?: string }>();
+  const params = useLocalSearchParams<{ occasion?: string; fresh?: string; from?: string; date?: string; start?: string; event?: string }>();
   // Which entry point opened the planner, for counting (0085). Shape-checked, never trusted further.
   const entry = /^[a-z_]{1,32}$/.test(params.from ?? "") ? (params.from as PlanInputs["entry"]) : undefined;
   /*
@@ -117,6 +117,8 @@ export default function PlanNew() {
   const todayISO = new Date().toISOString().slice(0, 10);
   const presetDate = /^\d{4}-\d{2}-\d{2}$/.test(params.date ?? "") && (params.date as string) >= todayISO ? params.date : undefined;
   const presetStart = /^([01]\d|2[0-3]):[0-5]\d$/.test(params.start ?? "") ? params.start : undefined;
+  // An event to build the plan around (Durobot's "Plan around it"): the planner puts it in.
+  const presetEvent = /^[0-9a-f-]{36}$/i.test(params.event ?? "") ? params.event : undefined;
 
   /**
    * Arriving from an occasion card means that question is answered, so the
@@ -158,11 +160,31 @@ export default function PlanNew() {
       if (startFresh) {
         // Home has already confirmed replacing any existing draft.
         await clearDraft();
+        /*
+         * Planning around an event: it goes in the plan, and the area starts
+         * as the event's own, so the rest of the outing is near it rather
+         * than across town. Both can be changed in the questions.
+         */
+        let around: Partial<PlanInputs> = {};
+        if (presetEvent) {
+          const { data: ev } = await supabase
+            .from("events")
+            .select("id, venues(area_id, areas(name))")
+            .eq("id", presetEvent)
+            .maybeSingle()
+            .then((r) => r, () => ({ data: null }));
+          const v = (ev as { venues?: { area_id?: string | null; areas?: { name?: string } | null } | null } | null)?.venues;
+          around = {
+            eventId: presetEvent,
+            ...(v?.area_id && v.areas?.name ? { areaIds: [v.area_id], areaNames: [v.areas.name], surpriseMe: false } : {}),
+          };
+        }
         const base = {
           ...defaultInputs(),
           ...(entry ? { entry } : {}),
           ...(presetDate ? { date: presetDate } : {}),
           ...(presetStart ? { startTime: presetStart } : {}),
+          ...around,
         };
         const withOccasion =
           seeded && isOccasion(seeded)

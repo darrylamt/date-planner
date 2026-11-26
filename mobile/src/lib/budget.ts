@@ -155,6 +155,41 @@ export function freeToVisit(v: { type?: string | null; is_free?: boolean | null 
   return v.is_free === true && FREE_TYPES.has(String(v.type ?? ""));
 }
 
+/**
+ * Waiting on a price: what Admin → Unpriced venues lists and its badge
+ * counts, as one rule (owner, 22 Nov 2026: the count was inflated).
+ *
+ * It follows what the shortlist actually withholds (matching.ts): a place
+ * free to visit, or with its usual entry fee on record, has a price, even
+ * with no per-head figure (Cape Coast Castle at GHS 20 was counted as
+ * unpriced while the planner priced it from the fee). Stays are priced by
+ * their rooms (Admin → Stays) and are never an outing stop, and a closed
+ * place needs no price at all.
+ */
+export function waitingOnPrice(
+  v: {
+    type?: string | null;
+    is_free?: boolean | null;
+    is_active?: boolean | null;
+    business_status?: string | null;
+    avg_cost_per_person_ghs?: number | null;
+    price_source?: string | null;
+    entry_fee_ghs?: number | null;
+  },
+  hasMenu: boolean
+): boolean {
+  if (!v.is_active && String(v.business_status ?? "").startsWith("CLOSED")) return false;
+  if (v.type === "stay") return false;
+  if (v.is_free === true) return false;
+  if (v.entry_fee_ghs != null) return false;
+  // Marked "unknown" is withheld whatever else the row holds.
+  if (v.price_source === "unknown") return true;
+  // The GHS 100 import default, or a place to eat with no menu: neither is a price.
+  if (avgIsNotAPrice(v, hasMenu)) return true;
+  if (Number(v.avg_cost_per_person_ghs) > 0) return false;
+  return !hasMenu;
+}
+
 /** Whether a venue's per-head figure must not be used as its price. */
 export function avgIsNotAPrice(
   v: { type?: string | null; avg_cost_per_person_ghs?: number | null; price_source?: string | null },

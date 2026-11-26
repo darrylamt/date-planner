@@ -128,6 +128,8 @@ export interface Venue {
    * nothing. A weekly night's cover overrides it. Absent before 0075.
    */
   entry_fee_ghs?: number | null;
+  /** 0106. What a non-Ghanaian adult pays; null when only the Ghanaian price is known. */
+  entry_fee_visitor_ghs?: number | null;
   /**
    * local, continental, or both. Null means nobody has recorded it, which is
    * deliberately not the same as both and is never read as either.
@@ -564,6 +566,12 @@ export interface PlanInputs {
    * parties dropped into while they are on. No meal unless one is an event.
    */
   eventNight?: boolean;
+  /**
+   * An event this plan is built around (Durobot's "Plan around it", owner
+   * 26 Nov 2026): the planner puts it in, wherever it is, and plans the rest
+   * of the outing around it, as a spotlit event is (spotlight.ts).
+   */
+  eventId?: string;
   movieGenres?: string[];
   /**
    * False when the person declined sending their answers to Anthropic
@@ -846,6 +854,8 @@ export interface ChatCard {
   image_url: string | null;
   /** The venue to open, for a venue or an event held at one. */
   venue_id: string | null;
+  /** The event itself, for an event card: its own page, and the plan built around it. */
+  event_id?: string | null;
   lat: number | null;
   lng: number | null;
   /** For planning around an event or a film: its day and start (YYYY-MM-DD, HH:MM). */

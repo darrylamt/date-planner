@@ -10,6 +10,7 @@ import { GUTTER, radius, space } from "../../src/theme";
 import { useTheme } from "../../src/lib/useTheme";
 import { longDate } from "../../src/lib/format";
 import { bookingOf, eventPrice, eventTime, fetchEvent, type EventDetail } from "../../src/lib/events";
+import { startNewPlan } from "../../src/lib/startPlan";
 
 /**
  * One event (owner, 5 Nov 2026: "the featured event card should take me to
@@ -44,6 +45,18 @@ export default function EventPage() {
   const price = eventPrice(e.cost_ghs);
   const book = bookingOf(e);
   const picture = e.image_url ?? e.venue?.image_url ?? null;
+  /*
+   * A plan with this event in it (owner, 26 Nov 2026): its day, starting an
+   * hour and a half before so there is time to eat or get there first, and
+   * the event itself, which the planner puts in.
+   */
+  const upcoming = e.event_date >= new Date().toISOString().slice(0, 10);
+  const planAround = () => {
+    const m = e.start_time?.match(/^(\d{1,2}):(\d{2})/);
+    const at = m ? Math.max(10 * 60, Number(m[1]) * 60 + Number(m[2]) - 90) : null;
+    const start = at == null ? undefined : `${String(Math.floor(at / 60)).padStart(2, "0")}:${String(at % 60).padStart(2, "0")}`;
+    void startNewPlan(undefined, "chat", { date: e.event_date, ...(start ? { start } : {}), eventId: e.id });
+  };
   const facts: { icon: "calendar" | "clock" | "ticket" | "mappin.and.ellipse"; text: string }[] = [
     { icon: "calendar", text: longDate(e.event_date) },
     ...(time ? [{ icon: "clock" as const, text: time }] : []),
@@ -81,6 +94,7 @@ export default function EventPage() {
           </View>
 
           <View style={{ gap: space.sm, marginTop: space.sm }}>
+            {upcoming ? <Button title="Plan around it" icon="sparkles" onPress={planAround} /> : null}
             {book ? <Button title={book.label} icon="ticket.fill" onPress={() => void Linking.openURL(book.url)} /> : null}
             {e.contact_phone ? (
               <Button title="Call the organiser" kind="tinted" icon="phone.fill" onPress={() => void Linking.openURL(`tel:${e.contact_phone!.replace(/\s/g, "")}`)} />

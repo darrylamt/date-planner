@@ -2155,7 +2155,8 @@ function planWith(
          */
         const once = x.event.recurring ? 0 : 2;
         // A spotlit night (spotlight.ts) comes first whatever was asked for.
-        const lit = SPOTLIGHT_EVENT_IDS.has(x.event.id) ? 100 : 0;
+        // And the event this plan was built around (PlanInputs.eventId) above everything.
+        const lit = x.event.id === inputs.eventId ? 1000 : SPOTLIGHT_EVENT_IDS.has(x.event.id) ? 100 : 0;
         return { ...x, fit: wantedTags.filter((t) => tags.has(t)).length + once + lit };
       })
       .sort((a, b) => b.fit - a.fit || (a.at ?? startMinutes) - (b.at ?? startMinutes));
@@ -2211,7 +2212,7 @@ function planWith(
       );
     };
     return (
-      placeable.find((x) => x.event.kind !== "movie" && (SPOTLIGHT_EVENT_IDS.has(x.event.id) || !(talking && !wantsNoise && tooLoud(x)))) ?? null
+      placeable.find((x) => x.event.kind !== "movie" && (x.event.id === inputs.eventId || SPOTLIGHT_EVENT_IDS.has(x.event.id) || !(talking && !wantsNoise && tooLoud(x)))) ?? null
     );
   })();
 

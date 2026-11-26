@@ -445,13 +445,15 @@ export async function fetchCandidates(
    * and its venue join the shortlist as a cinema does, so every plan that
    * day can offer it.
    */
-  if (SPOTLIGHT_EVENT_IDS.size) {
+  // And the one event this plan was asked to be built around (PlanInputs.eventId), the same way.
+  const litIds = [...SPOTLIGHT_EVENT_IDS, ...(inputs.eventId ? [inputs.eventId] : [])];
+  if (litIds.length) {
     const { data: lit } = await supabase
       .from("events")
       .select("*")
       .eq("is_active", true)
       .eq("event_date", inputs.date)
-      .in("id", [...SPOTLIGHT_EVENT_IDS]);
+      .in("id", litIds);
     const add = ((lit ?? []) as typeof events).filter((e) => !events.some((x) => x.id === e.id));
     events = [...events, ...add];
     const missing = [...new Set(add.map((e) => e.venue_id).filter((id): id is string => Boolean(id)))].filter((id) => !venues.some((v) => v.id === id));
