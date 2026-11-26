@@ -8,6 +8,7 @@ import { GUTTER, HAIRLINE, radius, space } from "../../theme";
 import { useTheme } from "../../lib/useTheme";
 import { startNewPlan } from "../../lib/startPlan";
 import type { ChatCard } from "../../lib/types";
+import { GaderinMark, isGaderin } from "../GaderinMark";
 
 /*
  * The places, events and films Durobot named, as a row of cards under its
@@ -158,7 +159,7 @@ function Card({ card }: { card: ChatCard }) {
       : null;
 
   // Two at most: the thing most people want next, then the other one.
-  const actions: { label: string; icon: string; onPress: () => void }[] = [];
+  const actions: { label: string; icon: string; onPress: () => void; gaderin?: boolean }[] = [];
   if (card.kind === "venue") {
     if (openVenue) actions.push({ label: "View", icon: "building.2", onPress: openVenue });
     actions.push({ label: "Directions", icon: "map", onPress: directions });
@@ -166,7 +167,7 @@ function Card({ card }: { card: ChatCard }) {
     if (planAround) actions.push({ label: "Plan around it", icon: "sparkles", onPress: planAround });
     if (openEvent) actions.push({ label: "Details", icon: "info.circle", onPress: openEvent });
     else if (openVenue) actions.push({ label: "The place", icon: "building.2", onPress: openVenue });
-    else if (card.link) actions.push({ label: "Tickets", icon: "ticket", onPress: () => void Linking.openURL(card.link!) });
+    else if (card.link) actions.push({ label: "Tickets", icon: "ticket", gaderin: isGaderin(card.link), onPress: () => void Linking.openURL(card.link!) });
   } else {
     if (card.link) actions.push({ label: "Showtimes", icon: "ticket", onPress: () => void Linking.openURL(card.link!) });
     if (openVenue) actions.push({ label: "The cinema", icon: "building.2", onPress: openVenue });
@@ -237,7 +238,7 @@ function Card({ card }: { card: ChatCard }) {
                 opacity: pressed ? 0.8 : 1,
               })}
             >
-              <Symbol name={a.icon as never} size={12} color={i === 0 ? c.textOnBrand : c.text} weight="semibold" />
+              {a.gaderin ? <GaderinMark size={14} /> : <Symbol name={a.icon as never} size={12} color={i === 0 ? c.textOnBrand : c.text} weight="semibold" />}
               <Text variant="footnote" weight="700" style={{ color: i === 0 ? c.textOnBrand : c.text }}>
                 {a.label}
               </Text>

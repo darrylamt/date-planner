@@ -17,6 +17,8 @@ export interface ButtonProps {
   kind?: Kind;
   size?: Size;
   icon?: SymbolViewProps["name"];
+  /** A mark of its own in place of the icon (Gaderin's, on its tickets). */
+  leading?: React.ReactNode;
   disabled?: boolean;
   loading?: boolean;
   /** Fill the parent's width. Large buttons do this by default. */
@@ -33,6 +35,7 @@ export function Button({
   kind = "filled",
   size = "large",
   icon,
+  leading,
   disabled,
   loading,
   block,
@@ -104,7 +107,7 @@ export function Button({
         <ActivityIndicator color={fg} />
       ) : (
         <>
-          {icon ? <Symbol name={icon} size={size === "small" ? 14 : 17} color={fg} weight="semibold" /> : null}
+          {leading ?? (icon ? <Symbol name={icon} size={size === "small" ? 14 : 17} color={fg} weight="semibold" /> : null)}
           <Text
             variant={size === "small" ? "subheadline" : "body"}
             weight="700"

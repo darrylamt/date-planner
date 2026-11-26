@@ -11,6 +11,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { longDate } from "../../src/lib/format";
 import { bookingOf, eventPrice, eventTime, fetchEvent, type EventDetail } from "../../src/lib/events";
 import { startNewPlan } from "../../src/lib/startPlan";
+import { GaderinMark, isGaderin } from "../../src/components/GaderinMark";
 
 /**
  * One event (owner, 5 Nov 2026: "the featured event card should take me to
@@ -95,7 +96,14 @@ export default function EventPage() {
 
           <View style={{ gap: space.sm, marginTop: space.sm }}>
             {upcoming ? <Button title="Plan around it" icon="sparkles" onPress={planAround} /> : null}
-            {book ? <Button title={book.label} icon="ticket.fill" onPress={() => void Linking.openURL(book.url)} /> : null}
+            {book ? (
+              <Button
+                title={book.label}
+                icon="ticket.fill"
+                leading={isGaderin(book.url) ? <GaderinMark size={22} /> : undefined}
+                onPress={() => void Linking.openURL(book.url)}
+              />
+            ) : null}
             {e.contact_phone ? (
               <Button title="Call the organiser" kind="tinted" icon="phone.fill" onPress={() => void Linking.openURL(`tel:${e.contact_phone!.replace(/\s/g, "")}`)} />
             ) : null}
