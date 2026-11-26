@@ -63,7 +63,7 @@ export async function fetchUpcomingEvents(days = 28): Promise<EventDetail[]> {
 export function bookingOf(e: Pick<EventDetail, "booking_url" | "source_url">): { url: string; label: string } | null {
   const url = e.booking_url || e.source_url;
   if (!url) return null;
-  return { url, label: /gaderin/i.test(url) ? "Book on Gaderin" : "Get tickets" };
+  return { url, label: /gaderin/i.test(url) ? "Book on Gaderin" : /ayatickets\.com/i.test(url) ? "Get tickets on Aya" : /passa\.live/i.test(url) ? "Get tickets on passa" : "Get tickets" };
 }
 
 /** "7:00 PM", or null when no time is on file. */

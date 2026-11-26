@@ -14,7 +14,7 @@ import { useIsDark, useTheme } from "../../lib/useTheme";
 import { MorphButton, MoreRow, type MoreItem } from "../redesign/MoreActions";
 import { ghs, instagramUrl, time12 } from "../../lib/format";
 import { track } from "../../lib/signals";
-import { GaderinMark, isGaderin } from "../GaderinMark";
+import { TicketMark, ticketBrand } from "../GaderinMark";
 import { QtyStepper } from "./QtyStepper";
 import type { ItineraryOrder, ItineraryStop } from "../../lib/types";
 
@@ -484,7 +484,7 @@ export function StopCard({
             {tickets ? (
               <StopAction
                 icon="ticket"
-                glyph={isGaderin(tickets) ? () => <GaderinMark size={20} /> : undefined}
+                glyph={ticketBrand(tickets) ? () => <TicketMark brand={ticketBrand(tickets)!} size={20} /> : undefined}
                 label={movie ? "Book seats" : stop.event?.reservation_required ? "Book a spot" : "Tickets"}
                 onPress={() => {
                   track("book_tapped", stop.venue_id);

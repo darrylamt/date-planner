@@ -41,6 +41,7 @@
     "route:check": "tsx scripts/route-check.ts",
     "reach:check": "tsx scripts/reach-check.ts",
     "gaderin": "tsx scripts/scrape-gaderin.ts",
+    "tickets": "tsx scripts/scrape-tickets.ts",
     "silverbird": "tsx scripts/scrape-silverbird.ts",
     "study-venues": "tsx scripts/study-venues.ts",
     "brand:assets": "tsx scripts/brand-assets.ts",

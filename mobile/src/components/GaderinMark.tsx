@@ -1,13 +1,28 @@
-import { Image } from "react-native";
+import { Image, type ImageSourcePropType } from "react-native";
 
 /*
- * Gaderin's own "g", on its tickets buttons (owner, 26 Nov 2026): a booking
- * that goes to Gaderin says so with Gaderin's mark rather than a ticket. A
- * white rounded badge, so the orange reads on any button colour.
+ * The ticketing site's own mark on its tickets buttons (owner, 26 Nov 2026):
+ * a booking that goes to Gaderin, Aya Tickets or passa says so with that
+ * site's logo rather than a ticket. Gaderin's and Aya's sit on a white
+ * rounded badge so they read on any button colour; passa's is its own ticket.
  */
-export function GaderinMark({ size = 18 }: { size?: number }) {
-  return <Image source={require("../../assets/brands/gaderin.png")} style={{ width: size, height: size }} accessibilityIgnoresInvertColors />;
+export type TicketBrand = "gaderin" | "aya" | "passa";
+
+const MARKS: Record<TicketBrand, ImageSourcePropType> = {
+  gaderin: require("../../assets/brands/gaderin.png"),
+  aya: require("../../assets/brands/aya.png"),
+  passa: require("../../assets/brands/passa.png"),
+};
+
+/** Which site a ticket link goes to, when it is one with a mark. */
+export function ticketBrand(url: string | null | undefined): TicketBrand | null {
+  const u = url ?? "";
+  if (/(^|\/\/|\.)thegaderin\.com/i.test(u)) return "gaderin";
+  if (/(^|\/\/|\.)ayatickets\.com/i.test(u)) return "aya";
+  if (/(^|\/\/|\.)passa\.live/i.test(u)) return "passa";
+  return null;
 }
 
-/** Whether a ticket link goes to Gaderin. */
-export const isGaderin = (url: string | null | undefined) => /(^|\/\/|\.)thegaderin\.com/i.test(url ?? "");
+export function TicketMark({ brand, size = 18 }: { brand: TicketBrand; size?: number }) {
+  return <Image source={MARKS[brand]} style={{ width: size, height: size }} accessibilityIgnoresInvertColors />;
+}

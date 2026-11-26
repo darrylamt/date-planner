@@ -1,0 +1,30 @@
+# Events from ticketing sites into Admin -> Event listings, once a day
+# (scripts/scrape-tickets.ts). Here rather than a Vercel cron: a few hundred
+# pages 1.5 s apart takes longer than a serverless function may run.
+name: Ticket listings
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # 03:30 Accra (UTC), after Gaderin's run
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Fetch every page, changed or not"
+        type: boolean
+        default: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsx scripts/scrape-tickets.ts ${{ (github.event_name == 'workflow_dispatch' && inputs.full) && '--full' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

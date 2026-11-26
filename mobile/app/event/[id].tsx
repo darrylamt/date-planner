@@ -12,7 +12,7 @@ import { longDate } from "../../src/lib/format";
 import { bookingOf, eventPrice, eventTime, fetchEvent, type EventDetail } from "../../src/lib/events";
 import { startNewPlan } from "../../src/lib/startPlan";
 import { SITE_URL } from "../../src/lib/site";
-import { GaderinMark, isGaderin } from "../../src/components/GaderinMark";
+import { TicketMark, ticketBrand } from "../../src/components/GaderinMark";
 
 /**
  * One event (owner, 5 Nov 2026: "the featured event card should take me to
@@ -101,7 +101,7 @@ export default function EventPage() {
               <Button
                 title={book.label}
                 icon="ticket.fill"
-                leading={isGaderin(book.url) ? <GaderinMark size={22} /> : undefined}
+                leading={ticketBrand(book.url) ? <TicketMark brand={ticketBrand(book.url)!} size={22} /> : undefined}
                 onPress={() => void Linking.openURL(book.url)}
               />
             ) : null}

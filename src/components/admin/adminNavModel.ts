@@ -74,6 +74,7 @@ export const ADMIN_GROUPS: { label: string; links: AdminLink[] }[] = [
       { href: "/admin/discover", label: "Discover venues", icon: "compass", keywords: "google find search" },
       { href: "/admin/import", label: "Import", icon: "upload", keywords: "csv menu photo reader gemini", roles: ["menus"] },
       { href: "/admin/gaderin", label: "Gaderin", icon: "sparkles", badge: "gaderinWaiting", keywords: "activities", roles: ["events"] },
+      { href: "/admin/listings", label: "Event listings", icon: "calendar", badge: "listingsWaiting", keywords: "aya passa tickets ticketing imported events review", roles: ["events"] },
     ],
   },
   {

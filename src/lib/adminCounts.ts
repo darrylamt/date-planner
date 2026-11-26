@@ -50,6 +50,8 @@ export interface AdminCounts {
   thinMenus: number;
   /** Gaderin activities still needing a venue (0073, 0074). Zero before those run. */
   gaderinWaiting: number;
+  /** Events read from ticketing sites waiting for review (0118). */
+  listingsWaiting: number;
   /** Cake and flower shops waiting on an answer (0078). Zero before it runs. */
   vendorApplications: number;
 }
@@ -65,7 +67,7 @@ const STALE_DAYS = 90;
  */
 export const adminCounts = cache(async (): Promise<AdminCounts> => {
   const supabase = createServiceClient();
-  const [{ data: venues }, stats, { data: reports }, { data: issues }, { count: gaderinWaiting }, { count: vendorApplications }] =
+  const [{ data: venues }, stats, { data: reports }, { data: issues }, { count: gaderinWaiting }, { count: vendorApplications }, { count: listingsWaiting }] =
     await Promise.all([
       /*
        * Deliberately `*` rather than a column list. Naming is_free here would
@@ -93,6 +95,8 @@ export const adminCounts = cache(async (): Promise<AdminCounts> => {
         .eq("dismissed", false)
         .is("venue_id", null),
       supabase.from("vendor_applications").select("id", { count: "exact", head: true }).eq("status", "new"),
+      // Null before 0118 runs: the badge stays off.
+      supabase.from("ticket_listings").select("id", { count: "exact", head: true }).eq("status", "new").gte("starts_at", new Date().toISOString()),
     ]);
 
   const menuCount = new Map<string, number>();
@@ -112,6 +116,7 @@ export const adminCounts = cache(async (): Promise<AdminCounts> => {
 
   return {
     gaderinWaiting: gaderinWaiting ?? 0,
+    listingsWaiting: listingsWaiting ?? 0,
     vendorApplications: vendorApplications ?? 0,
     venues: rows.length,
     /*
