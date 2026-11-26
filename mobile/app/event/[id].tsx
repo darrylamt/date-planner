@@ -11,6 +11,7 @@ import { useTheme } from "../../src/lib/useTheme";
 import { longDate } from "../../src/lib/format";
 import { bookingOf, eventPrice, eventTime, fetchEvent, type EventDetail } from "../../src/lib/events";
 import { startNewPlan } from "../../src/lib/startPlan";
+import { SITE_URL } from "../../src/lib/site";
 import { GaderinMark, isGaderin } from "../../src/components/GaderinMark";
 
 /**
@@ -141,7 +142,8 @@ export default function EventPage() {
               title="Share"
               kind="plain"
               icon="square.and.arrow.up"
-              onPress={() => void Share.share({ message: `${e.title}, ${longDate(e.event_date)}${time ? ` at ${time}` : ""}${book ? `: ${book.url}` : ""}` })}
+              // A link to the event on Duro!, not its ticket page (owner, 26 Nov 2026).
+              onPress={() => void Share.share({ message: `${e.title}, ${longDate(e.event_date)}${time ? ` at ${time}` : ""}, on Duro!: ${SITE_URL}/e/${e.id}`, url: `${SITE_URL}/e/${e.id}` })}
             />
           </View>
         </View>
